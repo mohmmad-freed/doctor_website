@@ -1,0 +1,86 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Register as Main Doctor - Clinic Website{% endblock %}
+
+{% block content %}
+<h2>Register Your Clinic</h2>
+
+<form method="post">
+    {% csrf_token %}
+    
+    <h3 style="color: #667eea; margin-top: 0; margin-bottom: 20px;">Personal Information</h3>
+    
+    <div class="form-group">
+        <label for="name">Full Name</label>
+        <input type="text" id="name" name="name" value="{{ form.name.value|default:'' }}" required>
+        {{ form.name.errors }}
+    </div>
+    
+    <div class="form-group">
+        <label for="email">Email Address</label>
+        <input type="email" id="email" name="email" value="{{ form.email.value|default:'' }}" required>
+        {{ form.email.errors }}
+    </div>
+    
+    <div class="form-group">
+        <label for="phone">Phone Number</label>
+        <input type="text" id="phone" name="phone" value="{{ form.phone.value|default:'' }}" required>
+        {{ form.phone.errors }}
+    </div>
+    
+    <div class="form-group">
+        <label for="activation_code">Activation Code</label>
+        <input type="text" id="activation_code" name="activation_code" value="{{ form.activation_code.value|default:'' }}" placeholder="Enter your clinic activation code" required>
+        <p class="help-text">Contact admin to get an activation code</p>
+        {{ form.activation_code.errors }}
+    </div>
+    
+    <h3 style="color: #667eea; margin-top: 30px; margin-bottom: 20px;">Clinic Information</h3>
+    
+    <div class="form-group">
+        <label for="clinic_address">Clinic Address</label>
+        <textarea id="clinic_address" name="clinic_address" rows="3" required>{{ form.clinic_address.value|default:'' }}</textarea>
+        {{ form.clinic_address.errors }}
+    </div>
+    
+    <div class="form-group">
+        <label for="clinic_phone">Clinic Phone</label>
+        <input type="text" id="clinic_phone" name="clinic_phone" value="{{ form.clinic_phone.value|default:'' }}" required>
+        {{ form.clinic_phone.errors }}
+    </div>
+    
+    <div class="form-group">
+        <label for="clinic_email">Clinic Email</label>
+        <input type="email" id="clinic_email" name="clinic_email" value="{{ form.clinic_email.value|default:'' }}" required>
+        {{ form.clinic_email.errors }}
+    </div>
+    
+    <div class="form-group">
+        <label for="clinic_description">Clinic Description (Optional)</label>
+        <textarea id="clinic_description" name="clinic_description" rows="4">{{ form.clinic_description.value|default:'' }}</textarea>
+        <p class="help-text">Tell patients about your clinic, services, specialties, etc.</p>
+        {{ form.clinic_description.errors }}
+    </div>
+    
+    <h3 style="color: #667eea; margin-top: 30px; margin-bottom: 20px;">Account Security</h3>
+    
+    <div class="form-group">
+        <label for="password1">Password</label>
+        <input type="password" id="password1" name="password1" required>
+        {{ form.password1.errors }}
+    </div>
+    
+    <div class="form-group">
+        <label for="password2">Confirm Password</label>
+        <input type="password" id="password2" name="password2" required>
+        {{ form.password2.errors }}
+    </div>
+    
+    <button type="submit" class="btn">Register Clinic</button>
+</form>
+
+<div class="text-center">
+    <p><a href="{% url 'accounts:register' %}">← Back to registration options</a></p>
+    <p>Already have an account? <a href="{% url 'accounts:login' %}">Login here</a></p>
+</div>
+{% endblock %}

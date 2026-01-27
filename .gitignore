@@ -1,0 +1,43 @@
+# =====================
+# Python
+# =====================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# =====================
+# Django
+# =====================
+*.log
+db.sqlite3
+db.sqlite3-journal
+media/
+
+# =====================
+# Migrations (ignore all migration files)
+# WARNING: Not recommended for production teams,
+# but OK for personal/academic projects
+# =====================
+*/migrations/
+!*/migrations/__init__.py
+
+# =====================
+# Virtual Environment
+# =====================
+myenv/
+venv/
+env/
+.venv/
+
+# =====================
+# Environment Variables
+# =====================
+.env
+
+# =====================
+# IDE / OS
+# =====================
+.vscode/
+.idea/
+.DS_Store
