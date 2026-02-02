@@ -133,6 +133,16 @@ STATIC_URL = 'static/'
 # Custom User Model
 AUTH_USER_MODEL = 'accounts.CustomUser'
 
+# ============================================
+# AUTHENTICATION BACKENDS - NEW ADDITION
+# ============================================
+# Custom authentication backend for phone number login
+# Supports both formats: 0594073157 and +970594073157
+AUTHENTICATION_BACKENDS = [
+    'accounts.backends.PhoneNumberAuthBackend',  # Custom backend for phone normalization
+    'django.contrib.auth.backends.ModelBackend',  # Keep default backend as fallback
+]
+
 # Redirect to home URL after login
 LOGIN_REDIRECT_URL = '/'
 LOGIN_URL = '/login/'

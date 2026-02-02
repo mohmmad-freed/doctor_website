@@ -1,17 +1,23 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser
+from .models import CustomUser, City
+
+
+@admin.register(City)
+class CityAdmin(admin.ModelAdmin):
+    list_display = ['name']
+    search_fields = ['name']
 
 
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
     model = CustomUser
-    list_display = ['email', 'name', 'role', 'is_staff', 'is_active']
-    list_filter = ['role', 'is_staff', 'is_active']
+    list_display = ['phone', 'name', 'email', 'role', 'city', 'is_staff', 'is_active']
+    list_filter = ['role', 'city', 'is_staff', 'is_active']
     
     fieldsets = (
-        (None, {'fields': ('email', 'password')}),
-        ('Personal Info', {'fields': ('name', 'phone', 'role')}),
+        (None, {'fields': ('phone', 'password')}),
+        ('Personal Info', {'fields': ('name', 'email', 'national_id', 'city', 'role')}),
         ('Permissions', {'fields': ('is_staff', 'is_active', 'is_superuser', 'groups', 'user_permissions')}),
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
@@ -19,9 +25,9 @@ class CustomUserAdmin(UserAdmin):
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'name', 'phone', 'role', 'password1', 'password2', 'is_staff', 'is_active')}
+            'fields': ('phone', 'name', 'email', 'national_id', 'city', 'role', 'password1', 'password2', 'is_staff', 'is_active')}
         ),
     )
     
-    search_fields = ('email', 'name')
-    ordering = ('email',)
+    search_fields = ('phone', 'name', 'email', 'national_id')
+    ordering = ('-date_joined',)
