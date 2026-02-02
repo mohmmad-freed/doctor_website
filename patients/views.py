@@ -5,7 +5,7 @@ from django.http import HttpResponse
 
 @login_required
 def dashboard(request):
-    return HttpResponse("Patient Dashboard - Coming Soon!")
+    return render(request, "patients/dashboard.html")
 
 
 @login_required

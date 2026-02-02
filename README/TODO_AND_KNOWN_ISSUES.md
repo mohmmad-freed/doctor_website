@@ -25,7 +25,14 @@
 
 ### Authentication
 -   **Current**: Session (Web) + JWT (API).
--   **Risk**: Ensuring consistent logout across devices. JWT revocation strategy needed.
+-   **Risk**: Ensuring consistent logout across devices.
+-   **API Logout**: Server-side invalidation uses DB persistence. If `rest_framework_simplejwt.token_blacklist` app is not installed/migrated, the API Logout endpoint returns success but is Client-Side only (browser deletes tokens).
+
+### Phone Verification Enforcement
+-   **Feature Flag**: `ENFORCE_PHONE_VERIFICATION` (env var).
+-   **Default**: `True` (secure-by-default).
+-   **Purpose**: Controls whether phone verification is strictly enforced during login (Web & API).
+-   **Temporary**: This switch is intended to be used only until full OTP verification is implemented. Once OTP is live, this should be removed and verification should be mandatory.
 
 ### File Attachments & Storage
 -   **Risk**: User uploads (Documents/Images) can be large or malicious.

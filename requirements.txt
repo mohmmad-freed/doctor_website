@@ -4,3 +4,5 @@ psycopg2-binary==2.9.11
 python-dotenv==1.2.1
 sqlparse==0.5.5
 tzdata==2025.3
+djangorestframework
+djangorestframework-simplejwt

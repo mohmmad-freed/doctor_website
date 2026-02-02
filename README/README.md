@@ -26,7 +26,7 @@ Our solution enforces **strict tenant isolation** while enabling **global resour
 
 -   **Backend**: Python, Django (MVT + DRF)
 -   **Database**: PostgreSQL (Relational integrity is critical)
--   **Frontend**: Django Templates + HTMX + Tailwind CSS (suggested)
+-   **Frontend**: Django Templates + HTMX + (bootsrtap or tailwind CSS or CSS) (suggested)
 -   **Authentication**:
     -   **Web**: Session-based auth for Clinic Staff / Admins.
     -   **API**: JWT (JSON Web Tokens) for mobile apps or external integrations.
