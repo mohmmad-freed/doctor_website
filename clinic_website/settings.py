@@ -36,6 +36,13 @@ DEBUG = True
 # Set ENFORCE_PHONE_VERIFICATION=0 in .env to disable.
 ENFORCE_PHONE_VERIFICATION = os.environ.get("ENFORCE_PHONE_VERIFICATION", "1") == "1"
 
+# ============================================
+# TWILIO
+# ============================================
+TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
+TWILIO_VERIFY_SID = os.environ.get("TWILIO_VERIFY_SID")
+
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 
@@ -99,6 +106,17 @@ DATABASES = {
         "PASSWORD": os.environ.get("DB_PASSWORD", ""),
         "HOST": os.environ.get("DB_HOST", "localhost"),
         "PORT": os.environ.get("DB_PORT", "5432"),
+    }
+}
+
+
+# ============================================
+# CACHE - REDIS
+# ============================================
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": os.environ.get("REDIS_URL", "redis://127.0.0.1:6379"),
     }
 }
 

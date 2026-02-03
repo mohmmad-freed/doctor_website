@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.conf import settings
 from django.utils import timezone
 from .forms import LoginForm, PatientRegistrationForm, MainDoctorRegistrationForm
+from .otp_utils import request_otp, verify_otp, is_in_cooldown, get_remaining_resends
 from clinics.models import Clinic
 from patients.models import PatientProfile
 
@@ -17,7 +18,6 @@ def home_redirect(request):
     """Redirect users to their role-specific dashboard with welcome message"""
     user = request.user
 
-    # Check if this is a new registration (you can use session flag)
     if request.session.get("just_registered", False):
         messages.success(
             request,
@@ -48,41 +48,27 @@ def login_view(request):
             phone = form.cleaned_data["phone"]
             password = form.cleaned_data["password"]
 
-            # 1. Check if user exists & Role & Verification Logic
-            # Note: We do this before authenticate() for granular error messages,
-            # OR we inspect why authenticate returned None.
-
-            # Normalize phone (form already does it, but let's be sure)
             from accounts.backends import PhoneNumberAuthBackend
-
             normalized_phone = PhoneNumberAuthBackend.normalize_phone_number(phone)
 
-            user_exists = False
             try:
                 user_obj = User.objects.get(phone=normalized_phone)
-                user_exists = True
 
-                # 2. Check Verification (if enforced)
-                if settings.ENFORCE_PHONE_VERIFICATION and not getattr(
-                    user_obj, "is_verified", True
-                ):
+                if settings.ENFORCE_PHONE_VERIFICATION and not user_obj.is_verified:
                     messages.error(
                         request,
                         "Your phone number is not verified. Please contact support.",
                     )
                     return render(request, "accounts/login.html", {"form": form})
 
-                # 3. Check Password (if we want safely explicit error)
                 if not user_obj.check_password(password):
                     messages.error(request, "Incorrect phone number or password.")
                     return render(request, "accounts/login.html", {"form": form})
 
             except User.DoesNotExist:
-                # 4. Handle non-existent user
                 messages.error(request, "Incorrect phone number or password.")
                 return render(request, "accounts/login.html", {"form": form})
 
-            # If we reached here, manual checks passed. Now standard authenticate/login
             user = authenticate(request, username=phone, password=password)
 
             if user is not None:
@@ -91,10 +77,8 @@ def login_view(request):
                 next_url = request.GET.get("next") or "accounts:home"
                 return redirect(next_url)
             else:
-                # Should technically not verify reach here if logic above is sound
                 messages.error(request, "Authentication failed.")
         else:
-            # Form invalid
             messages.error(request, "Please correct the errors below.")
     else:
         form = LoginForm()
@@ -110,41 +94,149 @@ def register_view(request):
     return render(request, "accounts/register_choice.html")
 
 
-def register_patient(request):
+# ============================================
+# STEP 1: Enter phone number and request OTP
+# ============================================
+def register_patient_phone(request):
+    """First step: Enter phone number and send OTP"""
     if request.user.is_authenticated:
         return redirect("accounts:home")
 
     if request.method == "POST":
+        phone = request.POST.get("phone", "").strip()
+
+        from accounts.backends import PhoneNumberAuthBackend
+        phone = PhoneNumberAuthBackend.normalize_phone_number(phone)
+
+        # Validate format
+        if not PhoneNumberAuthBackend.is_valid_phone_number(phone):
+            messages.error(request, "Invalid phone number. Must start with 059 or 056 and be 10 digits.")
+            return render(request, "accounts/register_patient_phone.html")
+
+        # Check if already registered
+        if User.objects.filter(phone=phone).exists():
+            messages.error(request, "This phone number is already registered.")
+            return render(request, "accounts/register_patient_phone.html")
+
+        # Request OTP
+        success, message = request_otp(phone)
+        if success:
+            request.session["registration_phone"] = phone
+            messages.success(request, message)
+            return redirect("accounts:register_patient_verify")
+        else:
+            messages.error(request, message)
+
+    return render(request, "accounts/register_patient_phone.html")
+
+
+# ============================================
+# STEP 2: Enter OTP to verify phone
+# ============================================
+def register_patient_verify(request):
+    """Second step: Verify OTP"""
+    if request.user.is_authenticated:
+        return redirect("accounts:home")
+
+    phone = request.session.get("registration_phone")
+    if not phone:
+        messages.error(request, "Session expired. Please start registration again.")
+        return redirect("accounts:register_patient_phone")
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+
+        # Handle resend OTP
+        if action == "resend":
+            remaining = get_remaining_resends(phone)
+            if remaining <= 0:
+                messages.error(request, "You have reached the maximum OTP requests for today.")
+            else:
+                success, message = request_otp(phone)
+                if success:
+                    messages.success(request, message)
+                else:
+                    messages.error(request, message)
+            return redirect("accounts:register_patient_verify")
+
+        # Handle OTP verification
+        entered_otp = request.POST.get("otp", "").strip()
+
+        if not entered_otp:
+            messages.error(request, "Please enter the OTP code.")
+            return render(request, "accounts/register_patient_verify.html", {
+                "phone": phone,
+                "remaining_resends": get_remaining_resends(phone),
+                "cooldown": is_in_cooldown(phone),
+            })
+
+        success, message = verify_otp(phone, entered_otp)
+
+        if success:
+            request.session["phone_verified"] = True
+            messages.success(request, message)
+            return redirect("accounts:register_patient_details")
+        else:
+            messages.error(request, message)
+
+    remaining_resends = get_remaining_resends(phone)
+    cooldown = is_in_cooldown(phone)
+
+    return render(request, "accounts/register_patient_verify.html", {
+        "phone": phone,
+        "remaining_resends": remaining_resends,
+        "cooldown": cooldown,
+    })
+
+
+# ============================================
+# STEP 3: Fill in registration details
+# ============================================
+def register_patient_details(request):
+    """Third step: Fill in registration details"""
+    if request.user.is_authenticated:
+        return redirect("accounts:home")
+
+    phone = request.session.get("registration_phone")
+    phone_verified = request.session.get("phone_verified", False)
+
+    if not phone or not phone_verified:
+        messages.error(request, "Please verify your phone number first.")
+        return redirect("accounts:register_patient_phone")
+
+    if request.method == "POST":
         form = PatientRegistrationForm(request.POST)
+        form.data = form.data.copy()
+        form.data["phone"] = phone
+        form._phone_pre_verified = True
+
         if form.is_valid():
             try:
-                # Save user
                 user = form.save()
+                user.is_verified = True
+                user.save()
 
-                # Create patient profile
                 PatientProfile.objects.create(user=user)
 
-                # Log the user in with your custom backend
-                login(request, user, backend="accounts.backends.PhoneNumberAuthBackend")
+                # Clear registration session data
+                if "registration_phone" in request.session:
+                    del request.session["registration_phone"]
+                if "phone_verified" in request.session:
+                    del request.session["phone_verified"]
 
-                # Set session flag for welcome message
+                login(request, user, backend="accounts.backends.PhoneNumberAuthBackend")
                 request.session["just_registered"] = True
 
                 return redirect("accounts:home")
 
             except Exception as e:
-                messages.error(
-                    request, f"An error occurred during registration: {str(e)}"
-                )
+                messages.error(request, f"An error occurred during registration: {str(e)}")
         else:
-            # Print errors to console for debugging
-            print("FORM FIELD ERRORS:", form.errors)
-            print("FORM NON-FIELD ERRORS:", form.non_field_errors())
             messages.error(request, "Please correct the errors below.")
     else:
-        form = PatientRegistrationForm()
+        form = PatientRegistrationForm(initial={"phone": phone})
 
-    return render(request, "accounts/register_patient.html", {"form": form})
+    return render(request, "accounts/register_patient_details.html", {"form": form})
 
 
 def register_main_doctor(request):
@@ -156,13 +248,10 @@ def register_main_doctor(request):
         form = MainDoctorRegistrationForm(request.POST)
         if form.is_valid():
             try:
-                # Save user
                 user = form.save()
 
-                # Get activation code and clinic name
                 activation_code_obj = form.cleaned_data["activation_code_obj"]
 
-                # Create clinic
                 clinic = Clinic.objects.create(
                     name=activation_code_obj.clinic_name,
                     address=form.cleaned_data["clinic_address"],
@@ -172,19 +261,14 @@ def register_main_doctor(request):
                     main_doctor=user,
                 )
 
-                # Mark activation code as used
                 activation_code_obj.is_used = True
                 activation_code_obj.used_by = user
                 activation_code_obj.used_at = timezone.now()
                 activation_code_obj.save()
 
-                # Log the user in
                 login(request, user, backend="accounts.backends.PhoneNumberAuthBackend")
-
-                # Set session flag for welcome message
                 request.session["just_registered"] = True
 
-                # Additional success message for clinic creation
                 messages.success(
                     request,
                     f'Welcome, Dr. {user.name}! Your clinic "{clinic.name}" has been successfully created.',
@@ -193,13 +277,11 @@ def register_main_doctor(request):
                 return redirect("accounts:home")
 
             except Exception as e:
-                # Handle any unexpected errors during save
                 messages.error(
                     request,
                     f"An error occurred during registration. Please try again. Error: {str(e)}",
                 )
         else:
-            # Form validation failed
             messages.error(request, "Please correct the errors below.")
     else:
         form = MainDoctorRegistrationForm()

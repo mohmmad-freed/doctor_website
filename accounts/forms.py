@@ -14,40 +14,29 @@ class LoginForm(forms.Form):
     password = forms.CharField(
         widget=forms.PasswordInput(attrs={'placeholder': 'Enter your password'})
     )
-    
+
     def clean_phone(self):
-        """Normalize phone number for login"""
         phone = self.cleaned_data.get('phone', '').strip()
         return self.normalize_phone_number(phone)
-    
+
     @staticmethod
     def normalize_phone_number(phone):
-        """
-        Normalize phone number to standard format (059XXXXXXX or 056XXXXXXX)
-        Accepts: 059XXXXXXX, 056XXXXXXX, +97059XXXXXXX, +97056XXXXXXX
-        Returns: 059XXXXXXX or 056XXXXXXX
-        """
         phone = phone.strip().replace(' ', '').replace('-', '')
-        
-        # If starts with +97059 or +97056, convert to 059/056
         if phone.startswith('+97059'):
             phone = '059' + phone[6:]
         elif phone.startswith('+97056'):
             phone = '056' + phone[6:]
-        
         return phone
 
 
 class PatientRegistrationForm(forms.ModelForm):
     password1 = forms.CharField(
-        label="Password", 
+        label="Password",
         widget=forms.PasswordInput,
-        help_text="Enter a strong password"
     )
     password2 = forms.CharField(
-        label="Confirm Password", 
+        label="Confirm Password",
         widget=forms.PasswordInput,
-        help_text="Re-enter your password"
     )
 
     class Meta:
@@ -65,83 +54,67 @@ class PatientRegistrationForm(forms.ModelForm):
     def clean_phone(self):
         phone = (self.cleaned_data.get('phone') or '').strip()
         phone = self.normalize_phone_number(phone)
-        
+
         if not self.is_valid_phone_number(phone):
             raise ValidationError(
-                "Invalid phone number format. Phone must start with 059 or 056 and be 10 digits "
-                "(e.g., 059XXXXXXX or +97059XXXXXXX)."
+                "Invalid phone number format. Phone must start with 059 or 056 and be 10 digits."
             )
-        
-        if CustomUser.objects.filter(phone=phone).exists():
-            raise ValidationError("This phone number is already registered.")
-        
+
+        # Skip duplicate check if phone is already verified via OTP
+        if not getattr(self, '_phone_pre_verified', False):
+            if CustomUser.objects.filter(phone=phone).exists():
+                raise ValidationError("This phone number is already registered.")
+
         return phone
 
     def clean_national_id(self):
         national_id = (self.cleaned_data.get('national_id') or '').strip()
         national_id = national_id.replace(' ', '').replace('-', '')
-        
+
         if national_id and not re.match(r'^\d{9}$', national_id):
             raise ValidationError("National ID must be exactly 9 digits.")
-        
+
         if national_id and CustomUser.objects.filter(national_id=national_id).exists():
             raise ValidationError("This national ID is already registered.")
-        
+
         return national_id or None
 
     def clean_email(self):
         email = (self.cleaned_data.get('email') or '').strip()
         if not email:
             return None
-        
+
         if CustomUser.objects.filter(email=email).exists():
             raise ValidationError("This email is already registered.")
-        
+
         return email
-    
+
     def clean_password1(self):
-        """Validate password1"""
         password1 = self.cleaned_data.get('password1')
-        
-        # You can add custom password validation here if needed
         if password1 and len(password1) < 8:
             raise ValidationError("Password must be at least 8 characters long.")
-        
         return password1
-    
+
     def clean_password2(self):
-        """Validate password2 and check if it matches password1"""
         password1 = self.cleaned_data.get('password1')
         password2 = self.cleaned_data.get('password2')
-        
+
         if password1 and password2 and password1 != password2:
             raise ValidationError("Passwords do not match.")
-        
+
         return password2
 
     @staticmethod
     def normalize_phone_number(phone):
-        """
-        Normalize phone number to standard format (059XXXXXXX or 056XXXXXXX)
-        Accepts: 059XXXXXXX, 056XXXXXXX, +97059XXXXXXX, +97056XXXXXXX
-        Returns: 059XXXXXXX or 056XXXXXXX
-        """
         phone = phone.replace(' ', '').replace('-', '')
-        
-        # If starts with +97059 or +97056, convert to 059/056
         if phone.startswith('+97059'):
             phone = '059' + phone[6:]
         elif phone.startswith('+97056'):
             phone = '056' + phone[6:]
-        
         return phone
 
     @staticmethod
     def is_valid_phone_number(phone):
-        """
-        Validate Palestinian phone number format
-        Must start with 059 or 056 and be 10 digits total
-        """
         return bool(re.match(r'^(059|056)\d{7}$', phone))
 
     def save(self, commit=True):
@@ -158,65 +131,50 @@ class MainDoctorRegistrationForm(UserCreationForm):
     email = forms.EmailField(required=True)
     phone = forms.CharField(max_length=20, required=True)
     activation_code = forms.CharField(max_length=20, required=True)
-    
-    # Clinic information
+
     clinic_address = forms.CharField(widget=forms.Textarea(attrs={'rows': 3}), required=True)
     clinic_phone = forms.CharField(max_length=20, required=True)
     clinic_email = forms.EmailField(required=True)
     clinic_description = forms.CharField(widget=forms.Textarea(attrs={'rows': 4}), required=False)
-    
+
     class Meta:
         model = CustomUser
         fields = ['name', 'email', 'phone', 'password1', 'password2']
-    
+
     def clean_phone(self):
-        """Validate and normalize phone number"""
         phone = self.cleaned_data.get('phone', '').strip()
-        
-        # Normalize phone number
         phone = self.normalize_phone_number(phone)
-        
-        # Validate format
+
         if not self.is_valid_phone_number(phone):
             raise ValidationError(
-                "Invalid phone number format. Phone must start with 059 or 056 and be 10 digits "
-                "(e.g., 059XXXXXXX or +97059XXXXXXX)."
+                "Invalid phone number format. Phone must start with 059 or 056 and be 10 digits."
             )
-        
-        # Check for duplicates
+
         if CustomUser.objects.filter(phone=phone).exists():
             raise ValidationError("This phone number is already registered.")
-        
+
         return phone
-    
+
     def clean_clinic_phone(self):
-        """Validate clinic phone number"""
         phone = self.cleaned_data.get('clinic_phone', '').strip()
-        
-        # Normalize phone number
         phone = self.normalize_phone_number(phone)
-        
-        # Validate format
+
         if not self.is_valid_phone_number(phone):
             raise ValidationError(
                 "Invalid clinic phone number format. Phone must start with 059 or 056 and be 10 digits."
             )
-        
+
         return phone
-    
+
     def clean_email(self):
-        """Validate email"""
         email = self.cleaned_data.get('email', '').strip()
-        
         if CustomUser.objects.filter(email=email).exists():
             raise ValidationError("This email is already registered.")
-        
         return email
-    
+
     def clean_activation_code(self):
-        """Validate activation code"""
         code = self.cleaned_data.get('activation_code', '').strip()
-    
+
         try:
             activation_code = ClinicActivationCode.objects.get(code=code, is_used=False)
             self.cleaned_data['activation_code_obj'] = activation_code
@@ -226,32 +184,20 @@ class MainDoctorRegistrationForm(UserCreationForm):
                 raise ValidationError("This activation code has already been used.")
             else:
                 raise ValidationError("Invalid activation code. Please check and try again.")
-    
+
     @staticmethod
     def normalize_phone_number(phone):
-        """
-        Normalize phone number to standard format (059XXXXXXX or 056XXXXXXX)
-        Accepts: 059XXXXXXX, 056XXXXXXX, +97059XXXXXXX, +97056XXXXXXX
-        Returns: 059XXXXXXX or 056XXXXXXX
-        """
         phone = phone.replace(' ', '').replace('-', '')
-        
-        # If starts with +97059 or +97056, convert to 059/056
         if phone.startswith('+97059'):
             phone = '059' + phone[6:]
         elif phone.startswith('+97056'):
             phone = '056' + phone[6:]
-        
         return phone
-    
+
     @staticmethod
     def is_valid_phone_number(phone):
-        """
-        Validate Palestinian phone number format
-        Must start with 059 or 056 and be 10 digits total
-        """
         return bool(re.match(r'^(059|056)\d{7}$', phone))
-    
+
     def save(self, commit=True):
         user = super().save(commit=False)
         user.role = 'MAIN_DOCTOR'
