@@ -1,38 +1,49 @@
 {% extends 'accounts/base.html' %}
 
-{% block title %}Register - Clinic Website{% endblock %}
+{% block title %}إنشاء حساب جديد - منصتي الطبية{% endblock %}
 
 {% block content %}
-<h2>Create an Account</h2>
+<section class="auth-wrapper">
+    <div class="container" style="display: flex; justify-content: center;">
+        <div class="auth-card reveal-on-scroll">
+            <div class="auth-header">
+                <h2 class="text-h2">إنشاء حساب جديد</h2>
+                <p class="text-body-m text-muted">اختر نوع الحساب الذي تود إنشاءه للمتابعة</p>
+            </div>
 
-<p style="text-align: center; margin-bottom: 30px; color: #666;">
-    Choose your registration type
-</p>
+            <div class="auth-selection-grid">
+                <!-- Patient Choice -->
+                <a href="{% url 'accounts:register_patient_phone' %}">
+                    <div class="selection-card">
+                        <div class="selection-icon">
+                            <i class="fa-solid fa-user-injured"></i>
+                        </div>
+                        <div class="selection-info">
+                            <h3>مريض</h3>
+                            <p>سجل كمريض لحجز المواعيد وإدارة ملفك الطبي</p>
+                        </div>
+                    </div>
+                </a>
 
-<div style="display: flex; gap: 20px; flex-direction: column;">
-    <a href="{% url 'accounts:register_patient_phone' %}" style="text-decoration: none;">
-        <div style="border: 2px solid #667eea; border-radius: 8px; padding: 20px; text-align: center; transition: all 0.3s; cursor: pointer;">
-            <h3 style="color: #667eea; margin-bottom: 10px;">Patient</h3>
-            <p style="color: #666; margin: 0;">Register as a patient to book appointments</p>
+                <!-- Doctor Choice -->
+                <a href="{% url 'accounts:register_main_doctor' %}">
+                    <div class="selection-card">
+                        <div class="selection-icon" style="background-color: #E0E7FF; color: #4338CA;">
+                            <i class="fa-solid fa-user-doctor"></i>
+                        </div>
+                        <div class="selection-info">
+                            <h3>طبيب (صاحب عيادة)</h3>
+                            <p>سجل عيادتك وأدر مواعيد المرضى بكفاءة</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="text-center" style="margin-top: 1.5rem;">
+                <p class="text-body-m">لديك حساب بالفعل؟ <a href="{% url 'accounts:login' %}" class="text-primary"
+                        style="font-weight: 600;">سجل دخولك هنا</a></p>
+            </div>
         </div>
-    </a>
-    
-    <a href="{% url 'accounts:register_main_doctor' %}" style="text-decoration: none;">
-        <div style="border: 2px solid #764ba2; border-radius: 8px; padding: 20px; text-align: center; transition: all 0.3s; cursor: pointer;">
-            <h3 style="color: #764ba2; margin-bottom: 10px;">Main Doctor (Clinic Owner)</h3>
-            <p style="color: #666; margin: 0;">Register your clinic with an activation code</p>
-        </div>
-    </a>
-</div>
-
-<div class="text-center">
-    <p>Already have an account? <a href="{% url 'accounts:login' %}">Login here</a></p>
-</div>
-
-<style>
-    a > div:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-</style>
+    </div>
+</section>
 {% endblock %}

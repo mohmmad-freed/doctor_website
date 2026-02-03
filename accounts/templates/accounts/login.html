@@ -1,41 +1,52 @@
 {% extends 'accounts/base.html' %}
 
-{% block title %}Login - Clinic Website{% endblock %}
+{% block title %}تسجيل الدخول - منصتي الطبية{% endblock %}
 
 {% block content %}
-<h2>Login to Your Account</h2>
+<section class="auth-wrapper">
+    <div class="container" style="display: flex; justify-content: center;">
+        <div class="auth-card reveal-on-scroll">
+            <div class="auth-header">
+                <h2 class="text-h2">مرحباً بعودتك</h2>
+                <p class="text-body-m text-muted">سجل الدخول للمتابعة إلى حسابك</p>
+            </div>
 
-<form method="post">
-    {% csrf_token %}
-    
-    <div class="form-group">
-        <label for="phone">Phone Number</label>
-        <input type="text" id="phone" name="phone" placeholder="05XXXXXXXX" required>
-        {% if form.phone.errors %}
-            <ul class="errorlist">
-                {% for error in form.phone.errors %}
-                <li>{{ error }}</li>
-                {% endfor %}
-            </ul>
-        {% endif %}
-    </div>
-    
-    <div class="form-group">
-        <label for="password">Password</label>
-        <input type="password" id="password" name="password" required>
-        {% if form.password.errors %}
-            <ul class="errorlist">
-                {% for error in form.password.errors %}
-                <li>{{ error }}</li>
-                {% endfor %}
-            </ul>
-        {% endif %}
-    </div>
-    
-    <button type="submit" class="btn">Login</button>
-</form>
+            <form method="post">
+                {% csrf_token %}
 
-<div class="text-center">
-    <p>Don't have an account? <a href="{% url 'accounts:register' %}">Register here</a></p>
-</div>
+                <div class="form-group">
+                    <label for="phone">رقم الهاتف</label>
+                    <input type="text" id="phone" name="phone" placeholder="05XXXXXXXX" required dir="ltr"
+                        style="text-align: right;">
+                    {% if form.phone.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.phone.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="password">كلمة المرور</label>
+                    <input type="password" id="password" name="password" required>
+                    {% if form.password.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.password.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;">تسجيل الدخول</button>
+            </form>
+
+            <div class="text-center" style="margin-top: 1.5rem;">
+                <p class="text-body-m">ليس لديك حساب؟ <a href="{% url 'accounts:register' %}" class="text-primary"
+                        style="font-weight: 600;">أنشئ حساباً جديداً</a></p>
+            </div>
+        </div>
+    </div>
+</section>
 {% endblock %}

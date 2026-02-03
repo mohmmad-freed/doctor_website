@@ -1,62 +1,41 @@
 {% extends 'accounts/base.html' %}
 
-{% block title %}Register - Verify Phone{% endblock %}
+{% block title %}التحقق من رقم الهاتف{% endblock %}
 
 {% block content %}
-<h2>Verify Your Phone</h2>
+<section class="auth-wrapper">
+    <div class="container" style="display: flex; justify-content: center;">
+        <div class="auth-card reveal-on-scroll">
+            <div class="auth-header">
+                <div
+                    style="width: 60px; height: 60px; background: #E0F2F1; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; color: #00BFA5; font-size: 24px;">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <h2 class="text-h2">التحقق من الرمز</h2>
+                <p class="text-body-m text-muted">تم إرسال رمز التحقق إلى الرقم <strong>{{ phone }}</strong></p>
+            </div>
 
-<div style="text-align: center; margin-bottom: 25px;">
-    <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 10px;">
-        <div style="width: 40px; height: 4px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 2px;"></div>
-        <div style="width: 40px; height: 4px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 2px;"></div>
-        <div style="width: 40px; height: 4px; background: #e0e0e0; border-radius: 2px;"></div>
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="form-group">
+                    <label for="otp_code">رمز التحقق (OTP)</label>
+                    <input type="text" id="otp_code" name="otp_code" placeholder="XXXX" required
+                        style="letter-spacing: 4px; text-align: center; font-size: 24px;">
+                    {% if error %}
+                    <ul class="errorlist">
+                        <li>{{ error }}</li>
+                    </ul>
+                    {% endif %}
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;">تحقق</button>
+            </form>
+
+            <div class="text-center" style="margin-top: 1.5rem;">
+                <p class="text-body-m text-muted">لم يصلك الرمز؟ <a href="#" class="text-primary">إعادة الإرسال</a></p>
+            </div>
+        </div>
     </div>
-    <p style="color: #666; margin: 0;">Step 2 of 3: Enter the OTP sent to your phone</p>
-</div>
-
-<p style="text-align: center; color: #555; margin-bottom: 20px;">
-    We sent an OTP to <strong>{{ phone }}</strong>
-</p>
-
-<form method="post">
-    {% csrf_token %}
-
-    <div class="form-group">
-        <label for="otp">OTP Code *</label>
-        <input type="text" id="otp" name="otp" placeholder="Enter 6-digit OTP" maxlength="6" required
-               style="font-size: 22px; text-align: center; letter-spacing: 8px;">
-        <p class="help-text">OTP is valid for 5 minutes</p>
-    </div>
-
-    <button type="submit" class="btn">Verify</button>
-</form>
-
-<div style="text-align: center; margin-top: 20px;">
-    {% if cooldown %}
-        <p style="color: #999;" id="cooldown-msg">Please wait before requesting a new OTP...</p>
-    {% elif remaining_resends > 0 %}
-        <form method="post" style="display: inline;">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="resend">
-            <button type="submit" style="background: none; border: none; color: #667eea; cursor: pointer; padding: 0; text-decoration: underline; font-size: 14px;">
-                Resend OTP ({{ remaining_resends }} left)
-            </button>
-        </form>
-    {% else %}
-        <p style="color: #c33;">No resend attempts left. Try again tomorrow.</p>
-    {% endif %}
-</div>
-
-<div class="text-center">
-    <p><a href="{% url 'accounts:register_patient_phone' %}">← Change phone number</a></p>
-</div>
-
-<script>
-    // Auto-refresh page after 60 seconds if in cooldown to show resend button
-    {% if cooldown %}
-    setTimeout(function() {
-        location.reload();
-    }, 61000);
-    {% endif %}
-</script>
+</section>
 {% endblock %}

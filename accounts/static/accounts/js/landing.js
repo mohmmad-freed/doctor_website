@@ -38,7 +38,32 @@ document.addEventListener('DOMContentLoaded', () => {
         const activeTheme = document.documentElement.getAttribute('data-theme');
         const newTheme = activeTheme === 'dark' ? 'light' : 'dark';
         setTheme(newTheme);
+        setTheme(newTheme);
     });
+
+    // =========================================
+    // Mobile Menu Toggle
+    // =========================================
+    const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
+    const navbarMenu = document.querySelector('.navbar-menu');
+
+    if (mobileMenuBtn && navbarMenu) {
+        mobileMenuBtn.addEventListener('click', () => {
+            navbarMenu.classList.toggle('is-active');
+
+            // Optional: Toggle icon state (bars to xmark)
+            const icon = mobileMenuBtn.querySelector('i');
+            if (icon) {
+                if (navbarMenu.classList.contains('is-active')) {
+                    icon.classList.remove('fa-bars');
+                    icon.classList.add('fa-xmark');
+                } else {
+                    icon.classList.remove('fa-xmark');
+                    icon.classList.add('fa-bars');
+                }
+            }
+        });
+    }
 
     // =========================================
     // Scroll Reveal Interactions

@@ -1,33 +1,43 @@
 {% extends 'accounts/base.html' %}
 
-{% block title %}Register - Enter Phone Number{% endblock %}
+{% block title %}تسجيل مريض - رقم الهاتف{% endblock %}
 
 {% block content %}
-<h2>Register as Patient</h2>
+<section class="auth-wrapper">
+    <div class="container" style="display: flex; justify-content: center;">
+        <div class="auth-card reveal-on-scroll">
+            <div class="auth-header">
+                <h2 class="text-h2">رقم الهاتف</h2>
+                <p class="text-body-m text-muted">أدخل رقم هاتفك للتحقق وإنشاء الحساب</p>
+            </div>
 
-<div style="text-align: center; margin-bottom: 25px;">
-    <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 10px;">
-        <div style="width: 40px; height: 4px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 2px;"></div>
-        <div style="width: 40px; height: 4px; background: #e0e0e0; border-radius: 2px;"></div>
-        <div style="width: 40px; height: 4px; background: #e0e0e0; border-radius: 2px;"></div>
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="form-group">
+                    <label for="phone">رقم الهاتف</label>
+                    <input type="text" id="phone" name="phone" placeholder="05XXXXXXXX" required dir="ltr"
+                        style="text-align: right;">
+                    {% if form.phone.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.phone.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    إرسال رمز التحقق
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </form>
+
+            <div class="text-center" style="margin-top: 1.5rem;">
+                <a href="{% url 'accounts:register' %}" class="text-muted"><i class="fa-solid fa-arrow-right"></i>
+                    العودة للخلف</a>
+            </div>
+        </div>
     </div>
-    <p style="color: #666; margin: 0;">Step 1 of 3: Enter your phone number</p>
-</div>
-
-<form method="post">
-    {% csrf_token %}
-
-    <div class="form-group">
-        <label for="phone">Phone Number *</label>
-        <input type="text" id="phone" name="phone" placeholder="059XXXXXXX or +97059XXXXXXX" required>
-        <p class="help-text">Must start with 059 or 056</p>
-    </div>
-
-    <button type="submit" class="btn">Send OTP</button>
-</form>
-
-<div class="text-center">
-    <p><a href="{% url 'accounts:register' %}">← Back to registration options</a></p>
-    <p>Already have an account? <a href="{% url 'accounts:login' %}">Login here</a></p>
-</div>
+</section>
 {% endblock %}

@@ -1,86 +1,136 @@
 {% extends 'accounts/base.html' %}
 
-{% block title %}Register as Main Doctor - Clinic Website{% endblock %}
+{% block title %}تسجيل طبيب (صاحب عيادة){% endblock %}
 
 {% block content %}
-<h2>Register Your Clinic</h2>
+<section class="auth-wrapper">
+    <div class="container" style="display: flex; justify-content: center;">
+        <div class="auth-card reveal-on-scroll" style="max-width: 800px; padding: 0; overflow: hidden;">
 
-<form method="post">
-    {% csrf_token %}
-    
-    <h3 style="color: #667eea; margin-top: 0; margin-bottom: 20px;">Personal Information</h3>
-    
-    <div class="form-group">
-        <label for="name">Full Name</label>
-        <input type="text" id="name" name="name" value="{{ form.name.value|default:'' }}" required>
-        {{ form.name.errors }}
-    </div>
-    
-    <div class="form-group">
-        <label for="email">Email Address</label>
-        <input type="email" id="email" name="email" value="{{ form.email.value|default:'' }}" required>
-        {{ form.email.errors }}
-    </div>
-    
-    <div class="form-group">
-        <label for="phone">Phone Number</label>
-        <input type="text" id="phone" name="phone" value="{{ form.phone.value|default:'' }}" required>
-        {{ form.phone.errors }}
-    </div>
-    
-    <div class="form-group">
-        <label for="activation_code">Activation Code</label>
-        <input type="text" id="activation_code" name="activation_code" value="{{ form.activation_code.value|default:'' }}" placeholder="Enter your clinic activation code" required>
-        <p class="help-text">Contact admin to get an activation code</p>
-        {{ form.activation_code.errors }}
-    </div>
-    
-    <h3 style="color: #667eea; margin-top: 30px; margin-bottom: 20px;">Clinic Information</h3>
-    
-    <div class="form-group">
-        <label for="clinic_address">Clinic Address</label>
-        <textarea id="clinic_address" name="clinic_address" rows="3" required>{{ form.clinic_address.value|default:'' }}</textarea>
-        {{ form.clinic_address.errors }}
-    </div>
-    
-    <div class="form-group">
-        <label for="clinic_phone">Clinic Phone</label>
-        <input type="text" id="clinic_phone" name="clinic_phone" value="{{ form.clinic_phone.value|default:'' }}" required>
-        {{ form.clinic_phone.errors }}
-    </div>
-    
-    <div class="form-group">
-        <label for="clinic_email">Clinic Email</label>
-        <input type="email" id="clinic_email" name="clinic_email" value="{{ form.clinic_email.value|default:'' }}" required>
-        {{ form.clinic_email.errors }}
-    </div>
-    
-    <div class="form-group">
-        <label for="clinic_description">Clinic Description (Optional)</label>
-        <textarea id="clinic_description" name="clinic_description" rows="4">{{ form.clinic_description.value|default:'' }}</textarea>
-        <p class="help-text">Tell patients about your clinic, services, specialties, etc.</p>
-        {{ form.clinic_description.errors }}
-    </div>
-    
-    <h3 style="color: #667eea; margin-top: 30px; margin-bottom: 20px;">Account Security</h3>
-    
-    <div class="form-group">
-        <label for="password1">Password</label>
-        <input type="password" id="password1" name="password1" required>
-        {{ form.password1.errors }}
-    </div>
-    
-    <div class="form-group">
-        <label for="password2">Confirm Password</label>
-        <input type="password" id="password2" name="password2" required>
-        {{ form.password2.errors }}
-    </div>
-    
-    <button type="submit" class="btn">Register Clinic</button>
-</form>
+            <!-- Hero Header for the Card -->
+            <div
+                style="background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500)); padding: 40px 20px; text-align: center; color: white;">
+                <div
+                    style="width: 70px; height: 70px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; backdrop-filter: blur(5px);">
+                    <i class="fa-solid fa-user-doctor" style="font-size: 32px; color: white;"></i>
+                </div>
+                <h2 class="text-h2" style="color: white; margin-bottom: 8px;">انضم إلينا كشريك</h2>
+                <p style="opacity: 0.9;">سجل عيادتك وابدأ في استقبال المرضى اليوم</p>
+            </div>
 
-<div class="text-center">
-    <p><a href="{% url 'accounts:register' %}">← Back to registration options</a></p>
-    <p>Already have an account? <a href="{% url 'accounts:login' %}">Login here</a></p>
-</div>
+            <div style="padding: 40px;">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <!-- Section: Activation -->
+                    <div
+                        style="background: var(--color-secondary-100); padding: 20px; border-radius: var(--radius-md); border: 1px dashed var(--color-secondary-500); margin-bottom: 32px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="{{ form.activation_code.id_for_label }}"
+                                style="color: var(--color-secondary-500); display: flex; align-items: center; gap: 8px;">
+                                <i class="fa-solid fa-key"></i> كود التفعيل
+                            </label>
+                            <input type="text" name="{{ form.activation_code.name }}"
+                                id="{{ form.activation_code.id_for_label }}"
+                                style="text-align: center; letter-spacing: 2px; font-weight: bold; border-color: var(--color-secondary-500);"
+                                placeholder="أدخل الكود هنا">
+                            {% if form.activation_code.errors %}
+                            <ul class="errorlist" style="text-align: center;">
+                                {% for error in form.activation_code.errors %}<li>{{ error }}</li>{% endfor %}
+                            </ul>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Section: Personal Info -->
+                    <h3 class="text-h3" style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                        <span
+                            style="width: 8px; height: 30px; background: var(--color-primary-500); border-radius: 4px; display: block;"></span>
+                        المعلومات الشخصية
+                    </h3>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                        <div class="form-group">
+                            <label>الاسم الأول</label>
+                            {{ form.first_name }}
+                            {{ form.first_name.errors }}
+                        </div>
+                        <div class="form-group">
+                            <label>الاسم الأخير</label>
+                            {{ form.last_name }}
+                            {{ form.last_name.errors }}
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>رقم الهاتف</label>
+                        {{ form.phone }}
+                        {{ form.phone.errors }}
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px;">
+                        <div class="form-group">
+                            <label>كلمة المرور</label>
+                            {{ form.password }}
+                            {{ form.password.errors }}
+                        </div>
+                        <div class="form-group">
+                            <label>تأكيد كلمة المرور</label>
+                            {{ form.confirm_password }}
+                            {{ form.confirm_password.errors }}
+                        </div>
+                    </div>
+
+                    <!-- Section: Clinic Info -->
+                    <h3 class="text-h3" style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                        <span
+                            style="width: 8px; height: 30px; background: var(--color-secondary-500); border-radius: 4px; display: block;"></span>
+                        تفاصيل العيادة
+                    </h3>
+
+                    <div class="form-group">
+                        <label>اسم العيادة</label>
+                        {{ form.clinic_name }}
+                        {{ form.clinic_name.errors }}
+                    </div>
+
+                    <div class="form-group">
+                        <label>التخصص الطبية</label>
+                        {{ form.specialization }}
+                        {{ form.specialization.errors }}
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div class="form-group">
+                            <label>المدينة</label>
+                            {{ form.clinic_city }}
+                            {{ form.clinic_city.errors }}
+                        </div>
+                        <div class="form-group">
+                            <label>العنوان التفصيلي</label>
+                            {{ form.clinic_address }}
+                            {{ form.clinic_address.errors }}
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div style="margin-top: 40px; display: flex; flex-direction: column; gap: 16px;">
+                        <button type="submit" class="btn btn-primary"
+                            style="width: 100%; padding: 16px; font-size: 18px;">
+                            إنشاء الحساب ومساحة العمل <i class="fa-solid fa-arrow-left" style="margin-right: 8px;"></i>
+                        </button>
+
+                        <div class="text-center">
+                            <a href="{% url 'accounts:register' %}" class="text-muted"
+                                style="display: inline-flex; align-items: center; gap: 8px;">
+                                <i class="fa-solid fa-arrow-right"></i> تراجع واختيار حساب آخر
+                            </a>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
 {% endblock %}

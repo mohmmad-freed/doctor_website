@@ -1,0 +1,45 @@
+{% load static %}
+<nav class="navbar">
+    <div class="container navbar-container">
+        <a href="{% url 'accounts:landing' %}" class="navbar-brand">
+            <i class="fa-solid fa-heart-pulse"></i>
+            منصتي الطبية
+        </a>
+
+        <button class="mobile-menu-btn">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+
+        <ul class="navbar-menu">
+            <li><a href="{% url 'accounts:landing' %}" class="navbar-link">الرئيسية</a></li>
+            <li><a href="{% url 'accounts:landing' %}#features" class="navbar-link">الميزات</a></li>
+            <li><a href="{% url 'accounts:landing' %}#how-it-works" class="navbar-link">كيف يعمل</a></li>
+            <li><a href="{% url 'accounts:landing' %}#contact" class="navbar-link">اتصل بنا</a></li>
+        </ul>
+
+        <div class="navbar-actions">
+            <button class="theme-toggle" id="theme-toggle" aria-label="Toggle Dark Mode">
+                <span class="toggle-background">
+                    <span class="star star-1"></span>
+                    <span class="star star-2"></span>
+                    <span class="star star-3"></span>
+                </span>
+                <span class="toggle-circle"></span>
+                <span class="toggle-clouds">
+                    <span class="cloud cloud-1"></span>
+                    <span class="cloud cloud-2"></span>
+                </span>
+            </button>
+
+            {% if user.is_authenticated %}
+            <a href="{% url 'accounts:home' %}" class="btn btn-primary">
+                لوحة التحكم
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            {% else %}
+            <a href="{% url 'accounts:login' %}" class="btn btn-secondary">تسجيل الدخول</a>
+            <a href="{% url 'accounts:register' %}" class="btn btn-primary">حساب جديد</a>
+            {% endif %}
+        </div>
+    </div>
+</nav>

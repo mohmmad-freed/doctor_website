@@ -270,16 +270,21 @@ def register_main_doctor(request):
                 activation_code_obj = form.cleaned_data["activation_code_obj"]
 
                 clinic = Clinic.objects.create(
-                    name=activation_code_obj.clinic_name,
+                    name=form.cleaned_data["clinic_name"],
                     address=form.cleaned_data["clinic_address"],
+                    city=form.cleaned_data["clinic_city"],
                     phone=form.cleaned_data["clinic_phone"],
                     email=form.cleaned_data["clinic_email"],
+                    specialization=form.cleaned_data["specialization"],
                     description=form.cleaned_data.get("clinic_description", ""),
                     main_doctor=user,
                 )
 
                 activation_code_obj.is_used = True
                 activation_code_obj.used_by = user
+                activation_code_obj.clinic_name = (
+                    clinic.name
+                )  # Update activation code with actual name used
                 activation_code_obj.used_at = timezone.now()
                 activation_code_obj.save()
 
