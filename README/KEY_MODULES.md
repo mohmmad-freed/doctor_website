@@ -34,6 +34,10 @@
     -   Linking global users to specific clinics.
     -   Managing local file numbers.
     -   Storing clinic-specific notes, balance, and history.
+-   **API Endpoints**:
+    -   `GET /api/patient/profile/`: Retrieve authenticated patient's profile.
+        -   **Auth**: Bearer Token (Patient Role).
+        -   **Response**: `name`, `phone`, `email`, `city`, `national_id`, `medical_history`, etc.
 
 ## 5. `appointments` App
 **Core Responsibility**: Booking Engine

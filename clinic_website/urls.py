@@ -17,6 +17,7 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import include, path
+from patients.views import PatientProfileAPIView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -26,4 +27,10 @@ urlpatterns = [
     path("secretary/", include("secretary.urls")),
     path("clinics/", include("clinics.urls")),
     path("appointments/", include("appointments.urls")),
+    # API key modules
+    path(
+        "api/patient/profile/",
+        PatientProfileAPIView.as_view(),
+        name="patient_profile_api",
+    ),
 ]
