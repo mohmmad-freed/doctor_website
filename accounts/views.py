@@ -49,6 +49,7 @@ def login_view(request):
             password = form.cleaned_data["password"]
 
             from accounts.backends import PhoneNumberAuthBackend
+
             normalized_phone = PhoneNumberAuthBackend.normalize_phone_number(phone)
 
             try:
@@ -106,11 +107,15 @@ def register_patient_phone(request):
         phone = request.POST.get("phone", "").strip()
 
         from accounts.backends import PhoneNumberAuthBackend
+
         phone = PhoneNumberAuthBackend.normalize_phone_number(phone)
 
         # Validate format
         if not PhoneNumberAuthBackend.is_valid_phone_number(phone):
-            messages.error(request, "Invalid phone number. Must start with 059 or 056 and be 10 digits.")
+            messages.error(
+                request,
+                "Invalid phone number. Must start with 059 or 056 and be 10 digits.",
+            )
             return render(request, "accounts/register_patient_phone.html")
 
         # Check if already registered
@@ -150,7 +155,9 @@ def register_patient_verify(request):
         if action == "resend":
             remaining = get_remaining_resends(phone)
             if remaining <= 0:
-                messages.error(request, "You have reached the maximum OTP requests for today.")
+                messages.error(
+                    request, "You have reached the maximum OTP requests for today."
+                )
             else:
                 success, message = request_otp(phone)
                 if success:
@@ -164,11 +171,15 @@ def register_patient_verify(request):
 
         if not entered_otp:
             messages.error(request, "Please enter the OTP code.")
-            return render(request, "accounts/register_patient_verify.html", {
-                "phone": phone,
-                "remaining_resends": get_remaining_resends(phone),
-                "cooldown": is_in_cooldown(phone),
-            })
+            return render(
+                request,
+                "accounts/register_patient_verify.html",
+                {
+                    "phone": phone,
+                    "remaining_resends": get_remaining_resends(phone),
+                    "cooldown": is_in_cooldown(phone),
+                },
+            )
 
         success, message = verify_otp(phone, entered_otp)
 
@@ -182,11 +193,15 @@ def register_patient_verify(request):
     remaining_resends = get_remaining_resends(phone)
     cooldown = is_in_cooldown(phone)
 
-    return render(request, "accounts/register_patient_verify.html", {
-        "phone": phone,
-        "remaining_resends": remaining_resends,
-        "cooldown": cooldown,
-    })
+    return render(
+        request,
+        "accounts/register_patient_verify.html",
+        {
+            "phone": phone,
+            "remaining_resends": remaining_resends,
+            "cooldown": cooldown,
+        },
+    )
 
 
 # ============================================
@@ -230,7 +245,9 @@ def register_patient_details(request):
                 return redirect("accounts:home")
 
             except Exception as e:
-                messages.error(request, f"An error occurred during registration: {str(e)}")
+                messages.error(
+                    request, f"An error occurred during registration: {str(e)}"
+                )
         else:
             messages.error(request, "Please correct the errors below.")
     else:
@@ -302,3 +319,8 @@ def logout_view(request):
         messages.info(request, "You have been logged out successfully.")
 
     return redirect("accounts:login")
+
+
+def landing_page(request):
+    """Render the public landing page"""
+    return render(request, "accounts/landing_page.html")
