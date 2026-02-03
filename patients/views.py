@@ -2,6 +2,15 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+
+from .serializers import PatientProfileSerializer
+from .permissions import IsPatient
+from .models import PatientProfile
+
 
 @login_required
 def dashboard(request):
@@ -26,15 +35,6 @@ def book_appointment(request, clinic_id):
 @login_required
 def profile(request):
     return HttpResponse("My Profile - Coming Soon!")
-
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from rest_framework import status
-from .serializers import PatientProfileSerializer
-from .permissions import IsPatient
-from .models import PatientProfile
 
 
 class PatientProfileAPIView(APIView):

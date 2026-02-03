@@ -1,16 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Patient Dashboard</title>
+    <style>
+        .dashboard-container {
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background-color: #2196F3;
+            margin-right: 10px;
+        }
+
+        .btn-danger {
+            background-color: #f44336;
+        }
+    </style>
 </head>
+
 <body>
     <h1>Patient Dashboard</h1>
     <p>Welcome, {{ user.name }}!</p>
-    
-    <div style="margin-top: 20px;">
-        <a href="{% url 'accounts:logout' %}" style="padding: 10px 20px; background-color: #f44336; color: white; text-decoration: none; border-radius: 5px;">Logout</a>
+
+    <div class="dashboard-container">
+        <a href="{% url 'patients:profile' %}" class="btn btn-primary">My Profile</a>
+        <a href="{% url 'accounts:logout' %}" class="btn btn-danger">Logout</a>
     </div>
 </body>
+
 </html>
