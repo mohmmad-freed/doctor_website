@@ -8,7 +8,8 @@ from .forms import LoginForm, PatientRegistrationForm, MainDoctorRegistrationFor
 from .otp_utils import request_otp, verify_otp, is_in_cooldown, get_remaining_resends
 from clinics.models import Clinic
 from patients.models import PatientProfile
-
+from .email_utils import send_verification_email, verify_email_token
+from django.http import JsonResponse
 
 User = get_user_model()
 
@@ -203,6 +204,48 @@ def register_patient_verify(request):
         },
     )
 
+# ============================================
+# EMAIL VERIFICATION (AJAX)
+# ============================================
+def send_email_verification(request):
+    """Send email verification link via AJAX"""
+    if request.method != "POST":
+        return JsonResponse({"success": False, "message": "Invalid request method."})
+    
+    email = request.POST.get("email", "").strip()
+    
+    if not email:
+        return JsonResponse({"success": False, "message": "Email is required."})
+    
+    # Basic email validation
+    import re
+    if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+        return JsonResponse({"success": False, "message": "Invalid email format."})
+    
+    # Send verification email
+    success, message = send_verification_email(email, request)
+    
+    if success:
+        # Store email in session to track which email was sent verification
+        request.session['verification_email_sent'] = email
+    
+    return JsonResponse({"success": success, "message": message})
+
+
+def verify_email(request, token):
+    """Handle email verification link clicks"""
+    success, email, message = verify_email_token(token)
+    
+    if success:
+        # Store verified email in session
+        request.session['verified_email'] = email
+        messages.success(request, f"Email {email} has been verified successfully!")
+    else:
+        messages.error(request, message)
+    
+    # Redirect back to registration form
+    return redirect('accounts:register_patient_details')
+
 
 # ============================================
 # STEP 3: Fill in registration details
@@ -219,6 +262,9 @@ def register_patient_details(request):
         messages.error(request, "Please verify your phone number first.")
         return redirect("accounts:register_patient_phone")
 
+    # Get verified email from session if exists
+    verified_email = request.session.get('verified_email')
+
     if request.method == "POST":
         form = PatientRegistrationForm(request.POST)
         form.data = form.data.copy()
@@ -227,8 +273,26 @@ def register_patient_details(request):
 
         if form.is_valid():
             try:
-                user = form.save()
-                user.is_verified = True
+                user = form.save(commit=False)
+                
+                # Handle email verification status
+                submitted_email = form.cleaned_data.get('email')
+                
+                if submitted_email:
+                    # Check if submitted email matches verified email
+                    if verified_email and submitted_email.lower() == verified_email.lower():
+                        user.email_verified = True
+                        # Clear verified email from session after use
+                        if 'verified_email' in request.session:
+                            del request.session['verified_email']
+                        if 'verification_email_sent' in request.session:
+                            del request.session['verification_email_sent']
+                    else:
+                        user.email_verified = False
+                else:
+                    user.email_verified = False
+                
+                user.is_verified = True  # Phone is verified
                 user.save()
 
                 PatientProfile.objects.create(user=user)
@@ -245,15 +309,24 @@ def register_patient_details(request):
                 return redirect("accounts:home")
 
             except Exception as e:
-                messages.error(
-                    request, f"An error occurred during registration: {str(e)}"
-                )
+                messages.error(request, f"An error occurred during registration: {str(e)}")
         else:
             messages.error(request, "Please correct the errors below.")
     else:
-        form = PatientRegistrationForm(initial={"phone": phone})
+        # Pre-fill email if it was verified
+        initial_data = {"phone": phone}
+        if verified_email:
+            initial_data["email"] = verified_email
+        form = PatientRegistrationForm(initial=initial_data)
 
-    return render(request, "accounts/register_patient_details.html", {"form": form})
+    # Check if there's a verified email for display
+    email_is_verified = verified_email is not None
+
+    return render(request, "accounts/register_patient_details.html", {
+        "form": form,
+        "verified_email": verified_email,
+        "email_is_verified": email_is_verified,
+    })
 
 
 def register_main_doctor(request):

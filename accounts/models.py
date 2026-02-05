@@ -64,6 +64,10 @@ class CustomUser(AbstractUser):
         default=False,
         help_text="Designates whether the user has verified their phone number.",
     )
+    email_verified = models.BooleanField(
+        default=False,
+        help_text="Designates whether the user has verified their email address.",
+    )
 
     # Patient-specific fields (will be NULL for non-patients)
     national_id = models.CharField(max_length=20, unique=True, null=True, blank=True)

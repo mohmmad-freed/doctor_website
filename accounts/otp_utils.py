@@ -2,6 +2,8 @@ import random
 from django.core.cache import cache
 from django.conf import settings
 import logging
+from accounts.services.twilio_verify import send_otp as twilio_send_otp
+from accounts.services.twilio_verify import verify_otp as twilio_verify_otp
 
 logger = logging.getLogger(__name__)
 
@@ -27,66 +29,15 @@ def _otp_cooldown_key(phone):
 # ============================================
 # TWILIO VERIFY
 # ============================================
-def _get_twilio_client():
-    from twilio.rest import Client
-    return Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
 
 
-def _format_phone_for_twilio(phone):
-    """
-    Twilio requires E.164 format: +970XXXXXXXXX
-    Converts 059XXXXXXX → +970 59XXXXXXX
-    Converts 056XXXXXXX → +970 56XXXXXXX
-    """
-    if phone.startswith("0"):
-        return "+970" + phone[1:]
-    return phone
 
 
-def send_otp_twilio(phone):
-    """Send OTP via Twilio Verify API"""
-    try:
-        client = _get_twilio_client()
-        twilio_phone = _format_phone_for_twilio(phone)
-
-        client.verify.v2.services(settings.TWILIO_VERIFY_SID).rate_limits
-        verification = client.verify.v2.services(
-            settings.TWILIO_VERIFY_SID
-        ).verifications.create(
-            to=twilio_phone,
-            channel="sms"
-        )
-
-        logger.info(f"[TWILIO] OTP sent to {phone}, SID: {verification.sid}")
-        return True, "OTP sent successfully."
-
-    except Exception as e:
-        logger.error(f"[TWILIO] Failed to send OTP to {phone}: {str(e)}")
-        return False, f"Failed to send OTP. Please try again."
 
 
-def verify_otp_twilio(phone, entered_otp):
-    """Verify OTP via Twilio Verify API"""
-    try:
-        client = _get_twilio_client()
-        twilio_phone = _format_phone_for_twilio(phone)
 
-        verification_check = client.verify.v2.services(
-            settings.TWILIO_VERIFY_SID
-        ).verification_checks.create(
-            to=twilio_phone,
-            code=str(entered_otp)
-        )
 
-        if verification_check.status == "approved":
-            logger.info(f"[TWILIO] OTP verified for {phone}")
-            return True, "Phone number verified successfully."
-        else:
-            return False, "Incorrect OTP."
 
-    except Exception as e:
-        logger.error(f"[TWILIO] OTP verification failed for {phone}: {str(e)}")
-        return False, "Verification failed. Please try again."
 
 
 # ============================================
@@ -137,10 +88,12 @@ def request_otp(phone):
 
     # 3. Send OTP
     if _is_using_twilio():
-        # Twilio handles OTP generation and storage internally
-        success, message = send_otp_twilio(phone)
-        if not success:
-            return False, message
+        try:
+            twilio_send_otp(phone)  # ALWAYS creates a new Verify session
+        except Exception as e:
+            logger.error(f"[TWILIO] Failed to send OTP to {phone}: {str(e)}")
+            return False, "Failed to send OTP. Please try again."
+
     else:
         # Mock: we generate and store OTP ourselves
         otp = generate_otp()
@@ -168,7 +121,14 @@ def verify_otp(phone, entered_otp):
     Automatically uses Twilio if configured, otherwise falls back to mock verification.
     """
     if _is_using_twilio():
-        return verify_otp_twilio(phone, entered_otp)
+        try:
+            if twilio_verify_otp(phone, entered_otp):
+                return True, "Phone number verified successfully."
+            return False, "Invalid or expired OTP."
+        except Exception as e:
+            logger.error(f"[TWILIO] OTP verification failed for {phone}: {str(e)}")
+            return False, "Verification failed. Please try again."
+
     else:
         return verify_otp_mock(phone, entered_otp)
 

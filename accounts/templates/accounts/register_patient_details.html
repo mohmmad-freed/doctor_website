@@ -1,60 +1,287 @@
 {% extends 'accounts/base.html' %}
 
-{% block title %}استكمال بيانات المريض{% endblock %}
+{% block title %}Register - Account Details{% endblock %}
+
+{% block extra_css %}
+<style>
+    .email-verify-container {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+    }
+    
+    .email-verify-container input {
+        flex: 1;
+    }
+    
+    .verify-btn {
+        padding: 12px 20px;
+        background: #667eea;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: 600;
+        white-space: nowrap;
+        transition: all 0.3s;
+    }
+    
+    .verify-btn:hover {
+        background: #5568d3;
+    }
+    
+    .verify-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+    
+    .verified-badge {
+        display: inline-block;
+        background: #e8f5e9;
+        color: #388e3c;
+        padding: 8px 12px;
+        border-radius: 5px;
+        font-size: 14px;
+        font-weight: 600;
+        margin-top: 5px;
+    }
+    
+    .verification-pending {
+        display: inline-block;
+        background: #fff3e0;
+        color: #f57c00;
+        padding: 8px 12px;
+        border-radius: 5px;
+        font-size: 14px;
+        margin-top: 5px;
+    }
+    
+    #email-verification-message {
+        margin-top: 10px;
+        padding: 10px;
+        border-radius: 5px;
+        display: none;
+    }
+    
+    #email-verification-message.success {
+        background: #e8f5e9;
+        color: #388e3c;
+        border: 1px solid #a5d6a7;
+        display: block;
+    }
+    
+    #email-verification-message.error {
+        background: #ffebee;
+        color: #c62828;
+        border: 1px solid #ef9a9a;
+        display: block;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<section class="auth-wrapper">
-    <div class="container" style="display: flex; justify-content: center;">
-        <div class="auth-card reveal-on-scroll" style="max-width: 600px;">
-            <div class="auth-header">
-                <h2 class="text-h2">بياناتك الشخصية</h2>
-                <p class="text-body-m text-muted">يرجى تعبئة البيانات التالية لإتمام التسجيل</p>
-            </div>
+<h2>Complete Your Registration</h2>
 
-            <form method="post">
-                {% csrf_token %}
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                    <div class="form-group">
-                        <label for="{{ form.first_name.id_for_label }}">الاسم الأول</label>
-                        {{ form.first_name }}
-                        {{ form.first_name.errors }}
-                    </div>
-                    <div class="form-group">
-                        <label for="{{ form.last_name.id_for_label }}">الاسم الأخير</label>
-                        {{ form.last_name }}
-                        {{ form.last_name.errors }}
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="{{ form.password.id_for_label }}">كلمة المرور</label>
-                    {{ form.password }}
-                    <small class="text-muted">يجب أن تكون كلمة المرور قوية (8 أحرف على الأقل)</small>
-                    {{ form.password.errors }}
-                </div>
-
-                <div class="form-group">
-                    <label for="{{ form.confirm_password.id_for_label }}">تأكيد كلمة المرور</label>
-                    {{ form.confirm_password }}
-                    {{ form.confirm_password.errors }}
-                </div>
-
-                <div class="form-group">
-                    <label for="{{ form.gender.id_for_label }}">الجنس</label>
-                    {{ form.gender }}
-                    {{ form.gender.errors }}
-                </div>
-
-                <div class="form-group">
-                    <label for="{{ form.date_of_birth.id_for_label }}">تاريخ الميلاد</label>
-                    {{ form.date_of_birth }}
-                    {{ form.date_of_birth.errors }}
-                </div>
-
-                <button type="submit" class="btn btn-primary" style="width: 100%;">استكمال التسجيل</button>
-            </form>
-        </div>
+<div style="text-align: center; margin-bottom: 25px;">
+    <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 10px;">
+        <div style="width: 40px; height: 4px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 2px;"></div>
+        <div style="width: 40px; height: 4px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 2px;"></div>
+        <div style="width: 40px; height: 4px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 2px;"></div>
     </div>
-</section>
+    <p style="color: #666; margin: 0;">Step 3 of 3: Fill in your details</p>
+</div>
+
+<form method="post" id="registration-form">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="alert alert-error">
+        {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+
+    <div class="form-group">
+        <label for="name">Full Name *</label>
+        <input type="text" id="name" name="name" value="{{ form.name.value|default:'' }}" required>
+        {% if form.name.errors %}
+            <ul class="errorlist">
+                {% for error in form.name.errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    <div class="form-group">
+        <label for="phone">Phone Number</label>
+        <input type="text" id="phone" name="phone" value="{{ form.phone.value|default:'' }}" disabled>
+        <p class="help-text" style="color: green;">✓ Phone number verified</p>
+    </div>
+
+    <div class="form-group">
+        <label for="national_id">National ID *</label>
+        <input type="text" id="national_id" name="national_id" value="{{ form.national_id.value|default:'' }}" placeholder="9 digits" required>
+        {% if form.national_id.errors %}
+            <ul class="errorlist">
+                {% for error in form.national_id.errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    <div class="form-group">
+        <label for="city">City *</label>
+        <select id="city" name="city" required>
+            <option value="">Select your city</option>
+            {% for city in form.fields.city.queryset %}
+                <option value="{{ city.id }}" {% if form.city.value|stringformat:"s" == city.id|stringformat:"s" %}selected{% endif %}>
+                    {{ city.name }}
+                </option>
+            {% endfor %}
+        </select>
+        {% if form.city.errors %}
+            <ul class="errorlist">
+                {% for error in form.city.errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    <div class="form-group">
+        <label for="email">Email Address (Optional)</label>
+        <div class="email-verify-container">
+            <input 
+                type="email" 
+                id="email" 
+                name="email" 
+                value="{{ form.email.value|default:verified_email|default:'' }}" 
+                placeholder="your@email.com"
+                {% if email_is_verified %}readonly{% endif %}
+            >
+            <button 
+                type="button" 
+                id="verify-email-btn" 
+                class="verify-btn"
+                {% if email_is_verified %}style="display: none;"{% endif %}
+            >
+                Verify Email
+            </button>
+        </div>
+        
+        {% if email_is_verified %}
+        <span class="verified-badge">✓ Email Verified</span>
+        {% endif %}
+        
+        <div id="email-verification-message"></div>
+        
+        {% if form.email.errors %}
+            <ul class="errorlist">
+                {% for error in form.email.errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+        <p class="help-text">Optional: Add email to receive appointment notifications</p>
+    </div>
+
+    <div class="form-group">
+        <label for="password1">Password *</label>
+        <input type="password" id="password1" name="password1" required>
+        <p class="help-text">At least 8 characters</p>
+        {% if form.password1.errors %}
+            <ul class="errorlist">
+                {% for error in form.password1.errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    <div class="form-group">
+        <label for="password2">Confirm Password *</label>
+        <input type="password" id="password2" name="password2" required>
+        {% if form.password2.errors %}
+            <ul class="errorlist">
+                {% for error in form.password2.errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    <button type="submit" class="btn">Register</button>
+</form>
+
+<div class="text-center">
+    <p>Already have an account? <a href="{% url 'accounts:login' %}">Login here</a></p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const emailInput = document.getElementById('email');
+    const verifyBtn = document.getElementById('verify-email-btn');
+    const messageDiv = document.getElementById('email-verification-message');
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    let originalEmail = "{{ verified_email|default:'' }}";
+    let emailVerified = {{ email_is_verified|yesno:"true,false" }};
+    
+    // Show/hide verify button based on email input
+    emailInput.addEventListener('input', function() {
+        const currentEmail = this.value.trim();
+        
+        if (currentEmail === '') {
+            verifyBtn.style.display = 'none';
+            messageDiv.style.display = 'none';
+        } else if (emailVerified && currentEmail.toLowerCase() === originalEmail.toLowerCase()) {
+            verifyBtn.style.display = 'none';
+        } else {
+            verifyBtn.style.display = 'block';
+            if (emailVerified) {
+                // Email was changed, show warning
+                messageDiv.className = 'error';
+                messageDiv.textContent = 'Email changed. Please verify the new email.';
+                messageDiv.style.display = 'block';
+                emailVerified = false;
+            }
+        }
+    });
+    
+    // Handle verify button click
+    verifyBtn.addEventListener('click', function() {
+        const email = emailInput.value.trim();
+        
+        if (!email) {
+            showMessage('Please enter an email address.', 'error');
+            return;
+        }
+        
+        // Disable button and show loading
+        verifyBtn.disabled = true;
+        verifyBtn.textContent = 'Sending...';
+        
+        // Send AJAX request
+        fetch("{% url 'accounts:send_email_verification' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': csrfToken
+            },
+            body: `email=${encodeURIComponent(email)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage(data.message + ' Check your email and click the verification link.', 'success');
+                verifyBtn.textContent = 'Resend';
+            } else {
+                showMessage(data.message, 'error');
+                verifyBtn.textContent = 'Verify Email';
+            }
+            verifyBtn.disabled = false;
+        })
+        .catch(error => {
+            showMessage('An error occurred. Please try again.', 'error');
+            verifyBtn.disabled = false;
+            verifyBtn.textContent = 'Verify Email';
+        });
+    });
+    
+    function showMessage(text, type) {
+        messageDiv.className = type;
+        messageDiv.textContent = text;
+        messageDiv.style.display = 'block';
+    }
+</script>
 {% endblock %}
