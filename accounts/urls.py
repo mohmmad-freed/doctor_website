@@ -30,6 +30,15 @@ urlpatterns = [
     path(
         "register/main-doctor/", views.register_main_doctor, name="register_main_doctor"
     ),
+    # Change Phone Number
+    path(
+        "profile/change-phone/", views.change_phone_request, name="change_phone_request"
+    ),
+    path(
+        "profile/change-phone/verify/",
+        views.change_phone_verify,
+        name="change_phone_verify",
+    ),
     # API Endpoints
     path("api/login/", api_views.MyTokenObtainPairView.as_view(), name="api_login"),
     path("api/logout/", api_views.LogoutAPIView.as_view(), name="api_logout"),

@@ -1,0 +1,48 @@
+{% extends 'patients/base_dashboard.html' %}
+
+{% block title %}التحقق من رقم الهاتف{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto mt-10">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 md:p-8">
+        <div class="text-center mb-6">
+            <div
+                class="w-16 h-16 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-4 text-primary-600 dark:text-primary-400 text-2xl">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">التحقق من الرمز</h2>
+            <p class="text-gray-500 dark:text-gray-400 mt-2">تم إرسال رمز التحقق إلى <strong>{{ phone }}</strong></p>
+        </div>
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            <div>
+                <label for="otp" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">أدخل الرمز
+                    (OTP)</label>
+                <input type="text" id="otp" name="otp" placeholder="XXXXXX" required dir="ltr" maxlength="6"
+                    class="w-full px-4 py-3 text-center text-2xl tracking-[0.5em] font-mono rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors">
+            </div>
+
+            <button type="submit"
+                class="w-full bg-primary-600 hover:bg-primary-700 text-white px-4 py-3 rounded-lg font-medium shadow-md transition-all hover:shadow-lg focus:ring-4 focus:ring-primary-100">
+                تأكيد وتغيير الرقم
+            </button>
+        </form>
+
+        <form method="post" class="mt-4 text-center">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="resend">
+            <button type="submit"
+                class="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium">
+                لم يصلك الرمز؟ إعادة الإرسال
+            </button>
+        </form>
+
+        <div class="text-center mt-4">
+            <a href="{% url 'accounts:change_phone_request' %}"
+                class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400">تغيير الرقم</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

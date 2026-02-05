@@ -329,3 +329,84 @@ def logout_view(request):
 def landing_page(request):
     """Render the public landing page"""
     return render(request, "accounts/landing_page.html")
+
+
+@login_required
+def change_phone_request(request):
+    """Initiate phone number change: Enter new phone and send OTP"""
+    if request.method == "POST":
+        new_phone = request.POST.get("phone", "").strip()
+
+        from accounts.backends import PhoneNumberAuthBackend
+
+        new_phone = PhoneNumberAuthBackend.normalize_phone_number(new_phone)
+
+        # 1. Validate format
+        if not PhoneNumberAuthBackend.is_valid_phone_number(new_phone):
+            messages.error(
+                request,
+                "رقم الهاتف غير صحيح. يجب أن يبدأ بـ 059 أو 056 ويتكون من 10 أرقام.",
+            )
+            return render(request, "accounts/change_phone_request.html")
+
+        # 2. Check uniqueness
+        if request.user.phone == new_phone:
+            messages.error(request, "لقد أدخلت رقم هاتفك الحالي.")
+            return render(request, "accounts/change_phone_request.html")
+
+        if User.objects.filter(phone=new_phone).exists():
+            messages.error(request, "رقم الهاتف هذا مسجل بالفعل.")
+            return render(request, "accounts/change_phone_request.html")
+
+        # 3. Request OTP
+        success, message = request_otp(new_phone)
+        if success:
+            request.session["change_phone_new"] = new_phone
+            messages.success(request, message)
+            return redirect("accounts:change_phone_verify")
+        else:
+            messages.error(request, message)
+
+    return render(request, "accounts/change_phone_request.html")
+
+
+@login_required
+def change_phone_verify(request):
+    """Verify OTP and update phone number"""
+    new_phone = request.session.get("change_phone_new")
+    if not new_phone:
+        messages.error(request, "انتهت الجلسة. يرجى المحاولة مرة أخرى.")
+        return redirect("accounts:change_phone_request")
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+
+        if action == "resend":
+            success, message = request_otp(new_phone)
+            if success:
+                messages.success(request, message)
+            else:
+                messages.error(request, message)
+            return redirect("accounts:change_phone_verify")
+
+        otp = request.POST.get("otp", "").strip()
+
+        # Verify
+        success, message = verify_otp(new_phone, otp)
+
+        if success:
+            # Update user
+            request.user.phone = new_phone
+            request.user.is_verified = True
+            request.user.save()
+
+            # Clear session
+            if "change_phone_new" in request.session:
+                del request.session["change_phone_new"]
+
+            messages.success(request, "تم تحديث رقم الهاتف بنجاح.")
+            return redirect("patients:profile")
+        else:
+            messages.error(request, message)
+
+    return render(request, "accounts/change_phone_verify.html", {"phone": new_phone})
