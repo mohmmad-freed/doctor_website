@@ -29,12 +29,12 @@ The project follows the standard Django MVT (Model-View-Template) pattern, but s
 
 ### Tenant Identification
 How do we know which clinic is active?
-1.  **Staff Context**: Logged-in staff (Receptionist/Admin) are linked to a single `Clinic`. Their session automatically scopes all operations to their clinic.
+1.  **Staff Context**: Logged-in staff (Receptionist/Admin) are linked to a single `Clinic` via `ClinicIsolationMiddleware`. Their session automatically scopes all operations to their clinic.
 2.  **Patient Context**: When a patient logs in, they see a dashboard. If booking, they select a clinic context or browse a global directory (depending on config).
 
 ### Query Enforcement
+-   **Middleware**: `ClinicIsolationMiddleware` runs on every request. It ensures staff members are linked to a valid clinic and sets `request.clinic` and `request.clinic_id`. It also blocks patients from accessing staff-only areas.
 -   **Custom Managers**: Use Django's `Manager` class to override `get_queryset()` and automatically filter by `request.user.clinic_id` where applicable.
--   **Middleware**: A custom middleware verifies that the user has permission to access the requested clinic's data.
 
 ## 4. Authentication & Authorization
 

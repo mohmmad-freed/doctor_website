@@ -1,0 +1,323 @@
+{% extends 'patients/base_dashboard.html' %}
+
+{% block title %}تعديل الملف الشخصي | {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto animate-fade-in-up">
+    <div class="glass-card p-6 md:p-8">
+        <div class="flex items-center justify-between mb-8 pb-4 border-b border-gray-100 dark:border-slate-700">
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                <i class="fa-solid fa-user-pen text-primary-500"></i>
+                تعديل الملف الشخصي
+            </h1>
+            <a href="{% url 'patients:profile' %}"
+                class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </a>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" class="space-y-8">
+            {% csrf_token %}
+
+            <!-- Avatar Section -->
+            <div class="flex flex-col items-center justify-center mb-8">
+                <div class="relative group cursor-pointer" onclick="document.getElementById('id_avatar').click()">
+                    <div
+                        class="w-32 h-32 rounded-full overflow-hidden border-4 border-white dark:border-slate-700 shadow-lg bg-gray-100 dark:bg-slate-700">
+                        {% if p_form.instance.avatar %}
+                        <img src="{{ p_form.instance.avatar.url }}" alt="Profile" class="w-full h-full object-cover">
+                        {% else %}
+                        <div
+                            class="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500 text-4xl font-bold bg-slate-100 dark:bg-slate-800">
+                            {{ user.name|slice:":1" }}
+                        </div>
+                        {% endif %}
+                        <div
+                            class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            <i class="fa-solid fa-camera text-white text-2xl"></i>
+                        </div>
+                    </div>
+                    <div
+                        class="absolute bottom-1 right-1 w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center text-white border-2 border-white dark:border-slate-800 shadow-sm">
+                        <i class="fa-solid fa-plus text-xs"></i>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex items-center gap-3 mt-4">
+                    <p class="text-sm text-gray-500 dark:text-gray-400 font-medium">صورة الملف الشخصي</p>
+                    {% if p_form.instance.avatar %}
+                    <button type="button" id="delete-btn" class="text-red-500 hover:text-red-700 transition-colors"
+                        title="حذف الصورة">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                    {% endif %}
+                </div>
+
+                <!-- Hidden Inputs -->
+                <div class="hidden">
+                    {{ p_form.avatar }}
+                    <input type="hidden" name="delete_avatar" id="delete_avatar" value="false">
+                </div>
+            </div>
+
+            <!-- Personal Info Section -->
+            <section>
+                <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+                    <i class="fa-regular fa-id-card text-blue-500"></i>
+                    المعلومات الشخصية
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {% for field in u_form %}
+                    <div class="form-group">
+                        <label for="{{ field.id_for_label }}"
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            {{ field.label }}
+                        </label>
+                        {{ field }}
+                        {% if field.help_text %}
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ field.help_text }}</p>
+                        {% endif %}
+                        {% for error in field.errors %}
+                        <p class="mt-1 text-sm text-red-500">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <!-- Divider -->
+            <hr class="border-gray-100 dark:border-slate-700">
+
+            <!-- Medical Info Section -->
+            <section>
+                <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-notes-medical text-red-500"></i>
+                    المعلومات الطبية والطارئة
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {% for field in p_form %}
+                    {% if field.name != 'avatar' %}
+                    <div
+                        class="form-group {% if field.name == 'allergies' or field.name == 'medical_history' %}md:col-span-2{% endif %}">
+                        <label for="{{ field.id_for_label }}"
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            {{ field.label }}
+                        </label>
+                        {{ field }}
+                        {% if field.help_text %}
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ field.help_text }}</p>
+                        {% endif %}
+                        {% for error in field.errors %}
+                        <p class="mt-1 text-sm text-red-500">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </section>
+
+            <!-- Actions -->
+            <div class="flex items-center gap-4 pt-6 border-t border-gray-100 dark:border-slate-700">
+                <button type="submit"
+                    class="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2.5 rounded-xl font-medium shadow-md transition-all hover:shadow-lg focus:ring-4 focus:ring-primary-100">
+                    <i class="fa-solid fa-save ml-2"></i> حفظ التغييرات
+                </button>
+                <a href="{% url 'patients:profile' %}"
+                    class="bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 px-6 py-2.5 rounded-xl font-medium transition-colors">
+                    إلغاء
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Crop Modal -->
+<div id="crop-modal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog"
+    aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <!-- Background overlay -->
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+
+        <!-- Modal panel -->
+        <div
+            class="inline-block align-bottom bg-white dark:bg-slate-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="bg-white dark:bg-slate-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="sm:flex sm:items-start">
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-right w-full">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
+                            قص الصورة
+                        </h3>
+                        <div class="mt-4 w-full h-64 bg-gray-100 dark:bg-slate-700 rounded-lg overflow-hidden relative">
+                            <img id="crop-image" src="" alt="Crop Preview" class="max-w-full">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 dark:bg-slate-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button type="button" id="save-crop"
+                    class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary-600 text-base font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:ml-3 sm:w-auto sm:text-sm">
+                    حفظ القص
+                </button>
+                <button type="button" id="cancel-crop"
+                    class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-slate-500 shadow-sm px-4 py-2 bg-white dark:bg-slate-800 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                    إلغاء
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<!-- Cropper.js CSS & JS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+<style>
+    /* Ensure image displays correctly for Cropper */
+    #crop-image {
+        display: block;
+        max-width: 100%;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const avatarInput = document.getElementById('id_avatar');
+        const deleteInput = document.getElementById('delete_avatar');
+        const deleteBtn = document.getElementById('delete-btn');
+        const cropModal = document.getElementById('crop-modal');
+        const cropImage = document.getElementById('crop-image');
+        const cancelCropBtn = document.getElementById('cancel-crop');
+        const saveCropBtn = document.getElementById('save-crop');
+        let cropper;
+
+        // --- Image Deletion ---
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation(); // Prevent triggering the upload click
+                if (confirm('هل أنت متأكد من حذف الصورة الشخصية؟')) {
+                    deleteInput.value = 'true';
+                    // Visual feedback: find the image container
+                    const container = document.querySelector('.group .w-32');
+                    container.innerHTML = `
+                        <div class="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500 text-4xl font-bold bg-slate-100 dark:bg-slate-800">
+                            {{ user.name|slice:":1" }}
+                        </div>
+                        <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            <i class="fa-solid fa-camera text-white text-2xl"></i>
+                        </div>
+                    `;
+                    // Reset file input
+                    avatarInput.value = '';
+                }
+            });
+        }
+
+        // --- Image Cropping ---
+        avatarInput.addEventListener('change', function (e) {
+            const files = e.target.files;
+            if (files && files.length > 0) {
+                const file = files[0];
+
+                // Validate Image
+                if (!file.type.startsWith('image/')) {
+                    alert('Please select an image file.');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    cropImage.src = e.target.result;
+                    cropModal.classList.remove('hidden');
+
+                    // Initialize Cropper
+                    if (cropper) {
+                        cropper.destroy();
+                    }
+
+                    // Wait for image to be visible
+                    setTimeout(() => {
+                        cropper = new Cropper(cropImage, {
+                            aspectRatio: 1, // Square
+                            viewMode: 1,
+                            dragMode: 'move',
+                            autoCropArea: 0.8,
+                            responsive: true,
+                            restore: false,
+                            checkCrossOrigin: false,
+                            guides: true,
+                            center: true,
+                            highlight: false,
+                            cropBoxMovable: true,
+                            cropBoxResizable: true,
+                            toggleDragModeOnDblclick: false,
+                            minContainerWidth: 300,
+                            minContainerHeight: 300,
+                        });
+                    }, 100);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        cancelCropBtn.addEventListener('click', function () {
+            cropModal.classList.add('hidden');
+            avatarInput.value = ''; // Reset input so same file can be selected again
+            if (cropper) {
+                cropper.destroy();
+                cropper = null;
+            }
+        });
+
+        saveCropBtn.addEventListener('click', function () {
+            if (cropper) {
+                cropper.getCroppedCanvas({
+                    width: 400, // Reasonable size for avatar
+                    height: 400,
+                    fillColor: '#fff',
+                    imageSmoothingEnabled: true,
+                    imageSmoothingQuality: 'high',
+                }).toBlob(function (blob) {
+                    // 1. Create a new File object
+                    const croppedFile = new File([blob], 'avatar_cropped.jpg', { type: 'image/jpeg' });
+
+                    // 2. Update File Input using DataTransfer
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(croppedFile);
+                    avatarInput.files = dataTransfer.files;
+
+                    // 3. Update Preview UI
+                    const url = URL.createObjectURL(blob);
+                    const container = document.querySelector('.group .w-32');
+                    // Keep the overlay div
+                    const overlay = container.querySelector('.absolute.inset-0.bg-black\\/40') ||
+                        `<div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                       <i class="fa-solid fa-camera text-white text-2xl"></i>
+                                   </div>`;
+
+                    container.innerHTML = `<img src="${url}" alt="Profile" class="w-full h-full object-cover">`;
+                    // Re-append overlay if it was wiped (it was inside container) - actually just easier to recreate structure
+                    container.innerHTML += `
+                        <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            <i class="fa-solid fa-camera text-white text-2xl"></i>
+                        </div>
+                    `;
+
+                    // 4. Close Modal
+                    cropModal.classList.add('hidden');
+                    cropper.destroy();
+                    cropper = null;
+
+                    // 5. Ensure delete flag is false
+                    deleteInput.value = 'false';
+
+                }, 'image/jpeg', 0.9);
+            }
+        });
+    });
+</script>
+{% endblock %}

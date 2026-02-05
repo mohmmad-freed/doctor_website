@@ -1,0 +1,176 @@
+{% extends 'patients/base_dashboard.html' %}
+
+{% block title %}ملفي الشخصي | {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-8 animate-fade-in-up">
+
+    <!-- Header Card -->
+    <div class="glass-card p-6 md:p-8 relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-24 bg-gradient-to-r from-primary-500 to-primary-600 opacity-90">
+        </div>
+        <div class="relative flex flex-col md:flex-row items-center md:items-end gap-6 pt-10">
+            <!-- Avatar -->
+            <div
+                class="w-32 h-32 rounded-full border-4 border-white dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg overflow-hidden flex-shrink-0 relative z-10">
+                {% if profile.avatar %}
+                <img src="{{ profile.avatar.url }}" alt="{{ user.name }}" class="w-full h-full object-cover">
+                {% else %}
+                <div
+                    class="w-full h-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-4xl font-bold text-slate-400 dark:text-slate-500">
+                    {{ user.name|slice:":1" }}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Info -->
+            <div class="text-center md:text-right flex-grow pb-2">
+                <h1
+                    class="text-3xl font-bold text-gray-900 dark:text-white mb-1 flex items-center justify-center md:justify-start gap-2">
+                    {{ user.name }}
+                    {% if user.is_verified %}
+                    <i class="fa-solid fa-circle-check text-blue-500 text-xl" title="تم التحقق"></i>
+                    {% endif %}
+                </h1>
+                <p class="text-gray-500 font-medium mb-3">{{ user.phone }}</p>
+                <div class="flex flex-wrap gap-2 justify-center md:justify-start">
+                    <span
+                        class="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-sm font-medium border border-blue-100">
+                        <i class="fa-solid fa-user-tag ml-1"></i> مريض
+                    </span>
+                    {% if profile.gender %}
+                    <span
+                        class="px-3 py-1 rounded-full bg-purple-50 text-purple-700 text-sm font-medium border border-purple-100">
+                        {% if profile.gender == 'M' %}ذكر{% elif profile.gender == 'F' %}أنثى{% else %}غير محدد
+                        {%endif%}
+                    </span>
+                    {% endif %}
+                    {% if profile.blood_type %}
+                    <span
+                        class="px-3 py-1 rounded-full bg-red-50 text-red-700 text-sm font-medium border border-red-100">
+                        <i class="fa-solid fa-droplet ml-1"></i> {{ profile.blood_type }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex-shrink-0 mt-4 md:mt-0">
+                <a href="{% url 'patients:edit_profile' %}"
+                    class="inline-flex items-center bg-white dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 px-4 py-2 rounded-xl font-medium shadow-sm transition-all focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
+                    <i class="fa-solid fa-pen ml-2"></i> تعديل الملف
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Details Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- Personal Info -->
+        <div class="glass-card p-6">
+            <h2
+                class="text-xl font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2 border-b border-gray-100 dark:border-slate-700 pb-4">
+                <i class="fa-regular fa-id-card text-primary-500"></i>
+                المعلومات الشخصية
+            </h2>
+            <div class="space-y-4">
+                <div
+                    class="flex justify-between items-center py-2 border-b border-gray-50 dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800 px-2 rounded-lg transition-colors">
+                    <span class="text-gray-500 dark:text-gray-400">رقم الهوية</span>
+                    <span class="font-medium text-gray-900 dark:text-gray-200 dir-ltr">{{ user.national_id|default:"-"}}
+
+                    </span>
+                </div>
+                <div
+                    class="flex justify-between items-center py-2 border-b border-gray-50 dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800 px-2 rounded-lg transition-colors">
+                    <span class="text-gray-500 dark:text-gray-400">تاريخ الميلاد</span>
+                    <span class="font-medium text-gray-900 dark:text-gray-200">
+                        {{profile.date_of_birth|date:"Y/m/d"|default:"-"}}
+                    </span>
+                </div>
+                <div
+                    class="flex justify-between items-center py-2 border-b border-gray-50 dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800 px-2 rounded-lg transition-colors">
+                    <span class="text-gray-500 dark:text-gray-400">المدينة</span>
+                    <span class="font-medium text-gray-900 dark:text-gray-200">{{ user.city.name|default:"-" }}</span>
+                </div>
+                <div
+                    class="flex justify-between items-center py-2 border-b border-gray-50 dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800 px-2 rounded-lg transition-colors">
+                    <span class="text-gray-500 dark:text-gray-400">البريد الإلكتروني</span>
+                    <span class="font-medium text-gray-900 dark:text-gray-200">{{ user.email|default:"-" }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Medical Info & Emergency -->
+        <div class="space-y-6">
+
+            <!-- Medical Summary -->
+            <div class="glass-card p-6">
+                <h2
+                    class="text-xl font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2 border-b border-gray-100 dark:border-slate-700 pb-4">
+                    <i class="fa-solid fa-notes-medical text-red-500"></i>
+                    المعلومات الطبية
+                </h2>
+
+                <div class="space-y-4">
+                    <div>
+                        <span class="text-sm font-medium text-gray-500 dark:text-gray-400 block mb-1">الحساسية</span>
+                        {% if profile.allergies %}
+                        <p
+                            class="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 p-3 rounded-xl text-sm leading-relaxed border border-red-100 dark:border-red-800">
+                            {{ profile.allergies }}
+                        </p>
+                        {% else %}
+                        <p class="text-gray-400 italic text-sm">لا يوجد سجل حساسية معروف.</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <span class="text-sm font-medium text-gray-500 dark:text-gray-400 block mb-1">تاريخ مرضي</span>
+                        {% if profile.medical_history %}
+                        <p
+                            class="bg-slate-50 dark:bg-slate-700/50 text-gray-700 dark:text-gray-300 p-3 rounded-xl text-sm leading-relaxed border border-gray-200 dark:border-slate-600">
+                            {{ profile.medical_history }}
+                        </p>
+                        {% else %}
+                        <p class="text-gray-400 italic text-sm">سجلك الطبي نظيف، ممتاز!</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Emergency Contact -->
+            <div
+                class="glass-card p-6 bg-gradient-to-br from-white to-orange-50/50 dark:from-slate-800 dark:to-orange-900/20">
+                <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-phone-volume text-orange-500"></i>
+                    جهة اتصال الطوارئ
+                </h2>
+                {% if profile.emergency_contact_name %}
+                <div
+                    class="flex items-center justify-between p-3 bg-white dark:bg-slate-700/50 rounded-xl shadow-sm border border-orange-100 dark:border-orange-900/50">
+                    <div>
+                        <p class="font-bold text-gray-900 dark:text-gray-100">{{ profile.emergency_contact_name }}</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 dir-ltr">{{ profile.emergency_contact_phone
+                            }}</p>
+                    </div>
+                    <a href="tel:{{ profile.emergency_contact_phone }}"
+                        class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-green-200 hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-phone"></i>
+                    </a>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <p class="text-gray-400 text-sm mb-3">لم يتم إضافة جهة اتصال للطوارئ.</p>
+                    <button class="text-orange-500 hover:text-orange-600 text-sm font-medium underline">
+                        إضافة الآن
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}بوابة المرضى | منصتي الطبية{% endblock %}</title>
+
+    <!-- Google Fonts: Cairo & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Cairo', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        },
+                        secondary: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .glass {
+                @apply bg-white/80 backdrop-blur-lg border border-white/20 shadow-xl;
+            }
+            .dark .glass {
+                @apply bg-slate-900/80 border-slate-700/50;
+            }
+            .glass-card {
+                @apply bg-white border border-gray-100 shadow-sm rounded-2xl;
+            }
+            .dark .glass-card {
+                @apply bg-slate-800 border-slate-700;
+            }
+            .animate-fade-in-up {
+                animation: fadeInUp 0.5s ease-out forwards;
+            }
+        }
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        body {
+            font-family: 'Cairo', sans-serif;
+        }
+
+        /* Toggle CSS from landing.css */
+        .theme-toggle {
+            position: relative;
+            width: 52px;
+            height: 26px;
+            background: linear-gradient(to bottom, #4FABD9 0%, #76D1F6 100%);
+            border-radius: 999px;
+            border: 3px solid #F0F0F0;
+            cursor: pointer;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            flex-shrink: 0;
+        }
+        .theme-toggle.is-dark {
+            background: linear-gradient(to bottom, #1B2944 0%, #2D4367 100%);
+            border-color: #33425E;
+        }
+        .toggle-circle {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            background: #FFD54F;
+            border-radius: 50%;
+            transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), background 0.5s ease;
+            z-index: 10;
+        }
+        .theme-toggle.is-dark .toggle-circle {
+            transform: translateX(25px);
+            background: #E0E0E0;
+        }
+        /* Stars (Simplified) */
+        .star { position: absolute; background: white; border-radius: 50%; opacity: 0; transition: opacity 0.3s; }
+        .theme-toggle.is-dark .star { opacity: 1; }
+        .star-1 { width: 2px; height: 2px; top: 5px; left: 25px; }
+        .star-2 { width: 3px; height: 3px; top: 10px; left: 20px; }
+        /* Clouds (Simplified) */
+        .toggle-clouds { position: absolute; bottom: -2px; left: 0; width: 100%; height: 100%; transition: transform 0.5s; }
+        .theme-toggle.is-dark .toggle-clouds { transform: translateY(20px); }
+        .cloud { position: absolute; background: white; border-radius: 50%; }
+        .cloud-1 { width: 15px; height: 15px; bottom: 2px; left: 5px; }
+        .cloud-2 { width: 20px; height: 20px; bottom: -4px; right: 5px; }
+
+    </style>
+    {% block extra_head %}{% endblock %}
+
+    <script>
+        // Check for saved theme preference
+        const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        if (savedTheme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+</head>
+
+<body
+    class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 antialiased min-h-screen flex flex-col transition-colors duration-300">
+
+    <!-- Navbar -->
+    <nav
+        class="sticky top-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-gray-200 dark:border-slate-700">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex-shrink-0 flex items-center gap-2">
+                    <div
+                        class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white">
+                        <i class="fa-solid fa-heart-pulse"></i>
+                    </div>
+                    <span class="font-bold text-xl text-gray-900 dark:text-white tracking-tight">منصتي الطبية</span>
+                    <span
+                        class="text-xs bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 px-2 py-0.5 rounded-full mr-2">بوابة
+                        المرضى</span>
+                </div>
+
+                <!-- Desktop Menu -->
+                <div class="hidden md:flex items-center space-x-reverse space-x-6">
+                    <a href="{% url 'patients:dashboard' %}"
+                        class="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors">الرئيسية</a>
+                    <a href="{% url 'patients:my_appointments' %}"
+                        class="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors">مواعيدي</a>
+                    <a href="{% url 'patients:clinics_list' %}"
+                        class="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors">العيادات</a>
+                </div>
+
+                <!-- User Menu -->
+                <div class="flex items-center gap-4">
+
+                    <!-- Theme Toggle -->
+                    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle Dark Mode">
+                        <span class="toggle-background">
+                            <span class="star star-1"></span>
+                            <span class="star star-2"></span>
+                        </span>
+                        <span class="toggle-circle"></span>
+                        <span class="toggle-clouds">
+                            <span class="cloud cloud-1"></span>
+                            <span class="cloud cloud-2"></span>
+                        </span>
+                    </button>
+
+                    <a href="{% url 'patients:profile' %}"
+                        class="group relative w-10 h-10 rounded-full overflow-hidden border-2 border-transparent hover:border-primary-500 transition-all cursor-pointer">
+                        {% if request.user.patient_profile.avatar %}
+                        <img src="{{ request.user.patient_profile.avatar.url }}" alt="{{ request.user.name }}"
+                            class="w-full h-full object-cover">
+                        {% else %}
+                        <div
+                            class="w-full h-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center text-primary-600 dark:text-primary-300 font-bold group-hover:bg-primary-200 dark:group-hover:bg-primary-800">
+                            {{ request.user.name|slice:":1" }}
+                        </div>
+                        {% endif %}
+                    </a>
+
+                    <div class="hidden md:flex flex-col items-start">
+                        <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ request.user.name }}</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">ملف المريض</span>
+                    </div>
+                    <form action="{% url 'accounts:logout' %}" method="post" class="mr-2">
+                        {% csrf_token %}
+                        <button type="submit" class="text-gray-400 hover:text-red-500 transition-colors"
+                            title="تسجيل الخروج">
+                            <i class="fa-solid fa-arrow-right-from-bracket text-lg"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Alerts/Messages -->
+        {% if messages %}
+        <div class="mb-6 space-y-2 max-w-3xl mx-auto">
+            {% for message in messages %}
+            <div
+                class="p-4 rounded-xl flex items-center gap-3 shadow-sm
+                        {% if message.tags == 'success' %}bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800
+                        {% elif message.tags == 'error' %}bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800
+                        {% else %}bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800{% endif %}">
+
+                {% if message.tags == 'success' %}
+                <i class="fa-solid fa-circle-check"></i>
+                {% elif message.tags == 'error' %}
+                <i class="fa-solid fa-circle-exclamation"></i>
+                {% else %}
+                <i class="fa-solid fa-circle-info"></i>
+                {% endif %}
+                <span class="font-medium">{{ message }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer
+        class="bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 py-6 mt-auto transition-colors duration-300">
+        <div class="container mx-auto px-4 text-center text-sm text-gray-500 dark:text-gray-400">
+            &copy; {% now "Y" %} منصتي الطبية. جميع الحقوق محفوظة.
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const themeToggleBtn = document.getElementById('theme-toggle');
+
+            // Sync button state
+            const currentTheme = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+            if (currentTheme === 'dark') {
+                themeToggleBtn.classList.add('is-dark');
+            }
+
+            themeToggleBtn.addEventListener('click', () => {
+                const isDark = document.documentElement.classList.contains('dark');
+                if (isDark) {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                    themeToggleBtn.classList.remove('is-dark');
+                } else {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                    themeToggleBtn.classList.add('is-dark');
+                }
+            });
+        });
+    </script>
+
+    {% block scripts %}{% endblock %}
+
+</body>
+
+</html>

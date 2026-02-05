@@ -13,4 +13,5 @@ urlpatterns = [
         name="book_appointment",
     ),
     path("profile/", views.profile, name="profile"),
+    path("profile/edit/", views.edit_profile, name="edit_profile"),
 ]
