@@ -13,6 +13,7 @@ djangorestframework_simplejwt==5.5.1
 frozenlist==1.8.0
 idna==3.11
 multidict==6.7.1
+pillow==12.1.0
 propcache==0.4.1
 psycopg2-binary==2.9.11
 PyJWT==2.11.0
@@ -24,4 +25,5 @@ twilio==9.10.0
 tzdata==2025.3
 urllib3==2.6.3
 yarl==1.22.0
-Pillow==12.1.0
+gunicorn
+whitenoise
