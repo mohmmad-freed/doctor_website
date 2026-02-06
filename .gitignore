@@ -19,8 +19,7 @@ media/
 # WARNING: Not recommended for production teams,
 # but OK for personal/academic projects
 # =====================
-*/migrations/
-!*/migrations/__init__.py
+
 
 # =====================
 # Virtual Environment
