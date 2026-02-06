@@ -9,18 +9,14 @@ User = get_user_model()
 class UserUpdateForm(forms.ModelForm):
     class Meta:
         model = User
-        fields = ["name", "email", "national_id", "city"]
+        fields = ["name",  "national_id", "city"]
         widgets = {
             "name": forms.TextInput(
                 attrs={
                     "class": "w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                 }
             ),
-            "email": forms.EmailInput(
-                attrs={
-                    "class": "w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                }
-            ),
+           
             "national_id": forms.TextInput(
                 attrs={
                     "class": "w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-slate-800 dark:border-slate-700 dark:text-white"
@@ -34,7 +30,7 @@ class UserUpdateForm(forms.ModelForm):
         }
         labels = {
             "name": "الاسم الكامل",
-            "email": "البريد الإلكتروني",
+            
             "national_id": "رقم الهوية",
             "city": "المدينة",
         }

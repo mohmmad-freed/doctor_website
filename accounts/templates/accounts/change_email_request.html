@@ -8,31 +8,54 @@
         <div class="text-center mb-6">
             <h2 class="text-2xl font-bold text-gray-900 dark:text-white">تغيير البريد الإلكتروني</h2>
             <p class="text-gray-500 dark:text-gray-400 mt-2">أدخل بريدك الإلكتروني الجديد للتحقق</p>
+            
+            {% if current_email %}
+            <div class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <p class="text-sm text-gray-600 dark:text-gray-400">البريد الإلكتروني الحالي:</p>
+                <p class="font-medium text-gray-900 dark:text-white dir-ltr">{{ current_email }}</p>
+            </div>
+            {% else %}
+            <div class="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                <p class="text-sm text-gray-600 dark:text-gray-400">لم تقم بإضافة بريد إلكتروني بعد</p>
+            </div>
+            {% endif %}
         </div>
 
         <form method="post" class="space-y-6">
             {% csrf_token %}
 
             <div>
-                <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">البريد
-                    الإلكتروني الجديد</label>
+                <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    البريد الإلكتروني الجديد
+                </label>
                 <div class="relative">
-                    <input type="email" id="email" name="email" placeholder="example@domain.com" required dir="ltr"
-                        class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent text-left transition-colors">
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        value="{{ pending_email }}"
+                        placeholder="example@domain.com" 
+                        required 
+                        dir="ltr"
+                        class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent text-left transition-colors"
+                    >
                     <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-400">
                         <i class="fa-solid fa-envelope"></i>
                     </div>
                 </div>
+                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    سيتم إرسال رابط التحقق إلى البريد الإلكتروني الجديد
+                </p>
             </div>
 
             <div class="flex items-center justify-between gap-4 mt-8">
-                <a href="{% url 'patients:profile' %}"
+                <a href="{% url 'patients:edit_profile' %}"
                     class="w-1/2 px-4 py-3 text-center border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors font-medium">
                     إلغاء
                 </a>
                 <button type="submit"
                     class="w-1/2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-3 rounded-lg font-medium shadow-md transition-all hover:shadow-lg focus:ring-4 focus:ring-primary-100">
-                    التالي <i class="fa-solid fa-arrow-left mr-2"></i>
+                    إرسال رابط التحقق <i class="fa-solid fa-paper-plane mr-2"></i>
                 </button>
             </div>
         </form>

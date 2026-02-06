@@ -81,17 +81,39 @@ def edit_profile(request):
         if request.POST.get("delete_avatar") == "true":
             if profile.avatar:
                 profile.avatar.delete()
-                # If we only delete, we shouldn't continue to validate forms with old data necessarily,
-                # but standard flow usually submits everything.
-                # Simplest approach: Delete then continue processing forms (which might have new data).
 
         u_form = UserUpdateForm(request.POST, instance=request.user)
         p_form = PatientProfileUpdateForm(request.POST, request.FILES, instance=profile)
+        
         if u_form.is_valid() and p_form.is_valid():
+            # Check if email was changed
+            old_email = request.user.email or ""
+            new_email = u_form.cleaned_data.get('email') or ""
+            
+            email_changed = False
+            if new_email and old_email:
+                # Both exist, check if different
+                email_changed = new_email.lower().strip() != old_email.lower().strip()
+            elif new_email and not old_email:
+                # Adding email for first time
+                email_changed = True
+            elif not new_email and old_email:
+                # Removing email (allow this without verification)
+                email_changed = False
+            
+            if email_changed:
+                # Store the new email in session for the change email flow
+                request.session['pending_email_change'] = new_email
+                messages.info(request, 'يرجى التحقق من البريد الإلكتروني الجديد لإتمام التغيير.')
+                return redirect('accounts:change_email_request')
+            
+            # Save forms if email didn't change (or was removed)
             u_form.save()
             p_form.save()
             messages.success(request, "تم تحديث ملفك الشخصي بنجاح!")
             return redirect("patients:profile")
+        else:
+            messages.error(request, "يرجى تصحيح الأخطاء أدناه.")
     else:
         u_form = UserUpdateForm(instance=request.user)
         p_form = PatientProfileUpdateForm(instance=profile)

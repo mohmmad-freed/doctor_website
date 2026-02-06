@@ -503,39 +503,59 @@ def change_phone_verify(request):
 @login_required
 def change_email_request(request):
     """Initiate email change: Enter new email and send verification"""
+    
+    # Get the current email to show in the form
+    current_email = request.user.email or ""
+    
+    # Pre-fill with pending email if coming from edit profile
+    pending_email = request.session.get('pending_email_change', '')
+    
     if request.method == "POST":
         new_email = request.POST.get("email", "").strip()
 
         # 1. Basic validation
         import re
-
         if not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", new_email):
             messages.error(request, "تنسيق البريد الإلكتروني غير صحيح.")
-            return render(request, "accounts/change_email_request.html")
+            return render(request, "accounts/change_email_request.html", {
+                'current_email': current_email,
+                'pending_email': pending_email
+            })
 
         # 2. Check uniqueness
         if request.user.email and request.user.email.lower() == new_email.lower():
             messages.error(request, "لقد أدخلت بريدك الإلكتروني الحالي.")
-            return render(request, "accounts/change_email_request.html")
+            return render(request, "accounts/change_email_request.html", {
+                'current_email': current_email,
+                'pending_email': pending_email
+            })
 
-        if User.objects.filter(email__iexact=new_email).exists():
+        if User.objects.filter(email__iexact=new_email).exclude(pk=request.user.pk).exists():
             messages.error(request, "البريد الإلكتروني هذا مسجل بالفعل.")
-            return render(request, "accounts/change_email_request.html")
+            return render(request, "accounts/change_email_request.html", {
+                'current_email': current_email,
+                'pending_email': pending_email
+            })
 
         # 3. Send Verification Email
         success, message = send_change_email_verification(new_email, request)
 
         if success:
-            # Store intended email in session (optional, mostly for display or resend logic,
-            # though token has it cached)
+            # Store intended email in session
             request.session["change_email_pending"] = new_email
+            # Clear the pending_email_change flag
+            if 'pending_email_change' in request.session:
+                del request.session['pending_email_change']
             return render(
                 request, "accounts/change_email_sent.html", {"email": new_email}
             )
         else:
             messages.error(request, message)
 
-    return render(request, "accounts/change_email_request.html")
+    return render(request, "accounts/change_email_request.html", {
+        'current_email': current_email,
+        'pending_email': pending_email
+    })
 
 
 @login_required
