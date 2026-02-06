@@ -1,0 +1,30 @@
+{% extends 'patients/base_dashboard.html' %}
+
+{% block title %}تم إرسال رابط التحقق{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto mt-10">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 md:p-8 text-center">
+        <div
+            class="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600 dark:text-green-400 text-4xl">
+            <i class="fa-solid fa-envelope-circle-check"></i>
+        </div>
+
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">تحقق من بريدك الإلكتروني</h2>
+
+        <div class="text-gray-600 dark:text-gray-300 mb-6 space-y-2">
+            <p>تم إرسال رابط التحقق إلى:</p>
+            <p class="font-bold text-lg text-primary-600 dir-ltr">{{ email }}</p>
+        </div>
+
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-8">
+            يرجى النقر على الرابط المرسل لتأكيد تغيير البريد الإلكتروني. الرابط صالح لمدة 15 دقيقة.
+        </p>
+
+        <a href="{% url 'patients:profile' %}"
+            class="block w-full bg-primary-600 hover:bg-primary-700 text-white px-4 py-3 rounded-lg font-medium shadow-md transition-all hover:shadow-lg">
+            العودة للملف الشخصي
+        </a>
+    </div>
+</div>
+{% endblock %}

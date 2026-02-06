@@ -1,287 +1,781 @@
 {% extends 'accounts/base.html' %}
+{% load static %}
 
-{% block title %}Register - Account Details{% endblock %}
+{% block title %}استكمال التسجيل - بيانات الحساب{% endblock %}
 
 {% block extra_css %}
 <style>
-    .email-verify-container {
+    /* variables */
+    :root {
+        --primary: #667eea;
+        --secondary: #764ba2;
+        --success: #48bb78;
+        --warning: #ed8936;
+        --danger: #e53e3e;
+        --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+        /* Light Mode */
+        --bg-grad-1: #fff5f5;
+        --bg-grad-2: #ebf4ff;
+        --card-bg: rgba(255, 255, 255, 0.95);
+        --card-border: rgba(255, 255, 255, 0.6);
+        --text-main: #2d3748;
+        --text-sub: #718096;
+        --input-bg: #ffffff;
+        --input-border: #e2e8f0;
+        --shadow-color: rgba(0, 0, 0, 0.08);
+        --meter-bg: #edf2f7;
+    }
+
+    [data-theme="dark"] {
+        /* Dark Mode */
+        --bg-grad-1: #2d3748;
+        --bg-grad-2: #171923;
+        --card-bg: rgba(30, 41, 59, 0.95);
+        --card-border: rgba(255, 255, 255, 0.1);
+        --text-main: #f7fafc;
+        --text-sub: #cbd5e0;
+        --input-bg: #2d3748;
+        --input-border: #4a5568;
+        --shadow-color: rgba(0, 0, 0, 0.3);
+        --meter-bg: #4a5568;
+    }
+
+    /* Animation Keyframes */
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes pulse-focus {
+        0% {
+            box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.4);
+        }
+
+        70% {
+            box-shadow: 0 0 0 6px rgba(102, 126, 234, 0);
+        }
+
+        100% {
+            box-shadow: 0 0 0 0 rgba(102, 126, 234, 0);
+        }
+    }
+
+    /* Container */
+    .registration-wrapper {
+        min-height: 80vh;
         display: flex;
-        gap: 10px;
-        align-items: flex-start;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: radial-gradient(circle at top right, var(--bg-grad-1), transparent),
+            radial-gradient(circle at bottom left, var(--bg-grad-2), transparent);
     }
-    
-    .email-verify-container input {
-        flex: 1;
+
+    /* Card Design */
+    .registration-card {
+        background: var(--card-bg);
+        backdrop-filter: blur(10px);
+        border-radius: 24px;
+        box-shadow: 0 20px 40px var(--shadow-color);
+        padding: 48px;
+        max-width: 800px;
+        width: 100%;
+        position: relative;
+        overflow: hidden;
+        animation: slideInUp 0.6s ease-out;
+        border: 1px solid var(--card-border);
     }
-    
-    .verify-btn {
-        padding: 12px 20px;
-        background: #667eea;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-weight: 600;
-        white-space: nowrap;
-        transition: all 0.3s;
+
+    /* Premium Header */
+    .page-header {
+        text-align: center;
+        margin-bottom: 50px;
+        position: relative;
+        z-index: 2;
     }
-    
-    .verify-btn:hover {
-        background: #5568d3;
+
+    .page-title {
+        font-size: 2rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        /* Fix compatibility lint */
+        margin-bottom: 12px;
+        font-family: 'Cairo', sans-serif;
+        letter-spacing: -0.5px;
     }
-    
-    .verify-btn:disabled {
-        background: #ccc;
-        cursor: not-allowed;
+
+    .page-subtitle {
+        color: var(--text-sub);
+        font-size: 1.05rem;
     }
-    
-    .verified-badge {
-        display: inline-block;
-        background: #e8f5e9;
-        color: #388e3c;
-        padding: 8px 12px;
-        border-radius: 5px;
-        font-size: 14px;
-        font-weight: 600;
-        margin-top: 5px;
+
+    /* Wizard Steps */
+    .wizard-container {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 50px;
     }
-    
-    .verification-pending {
-        display: inline-block;
-        background: #fff3e0;
-        color: #f57c00;
-        padding: 8px 12px;
-        border-radius: 5px;
-        font-size: 14px;
-        margin-top: 5px;
+
+    .step-indicator {
+        display: flex;
+        align-items: center;
+        gap: 15px;
     }
-    
-    #email-verification-message {
-        margin-top: 10px;
-        padding: 10px;
-        border-radius: 5px;
+
+    .step-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--input-border);
+        transition: var(--transition);
+        position: relative;
+    }
+
+    .step-dot.active {
+        background: var(--primary);
+        transform: scale(1.3);
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+    }
+
+    .step-dot.completed {
+        background: var(--success);
+    }
+
+    .step-line {
+        width: 50px;
+        height: 3px;
+        background: var(--input-border);
+        border-radius: 2px;
+    }
+
+    .step-line.filled {
+        background: var(--success);
+    }
+
+    /* Floating Labels Form */
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+
+    @media(min-width: 768px) {
+        .form-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .full-width {
+            grid-column: span 2;
+        }
+    }
+
+    .input-group {
+        position: relative;
+        margin-bottom: 8px;
+    }
+
+    .input-icon {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        right: 16px;
+        color: var(--text-sub);
+        font-size: 1.1rem;
+        transition: var(--transition);
+        pointer-events: none;
+        z-index: 10;
+        height: 20px;
+        width: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Override for floating label interaction */
+    .form-control {
+        width: 100%;
+        padding: 16px 50px 16px 20px;
+        border: 2px solid var(--input-border);
+        border-radius: 16px;
+        font-size: 1rem;
+        background: var(--input-bg);
+        color: var(--text-main);
+        transition: var(--transition);
+        font-family: inherit;
+        height: 56px;
+    }
+
+    .form-control:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        outline: none;
+    }
+
+    .form-control:focus+.input-icon {
+        color: var(--primary);
+    }
+
+    /* Floating Label Logic */
+    .floating-label {
+        position: absolute;
+        right: 48px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: transparent;
+        color: var(--text-sub);
+        font-size: 1rem;
+        transition: all 0.2s ease-in-out;
+        pointer-events: none;
+        padding: 0 4px;
+    }
+
+    .form-control:focus~.floating-label,
+    .form-control:not(:placeholder-shown)~.floating-label {
+        top: 0;
+        transform: translateY(-50%) scale(0.85);
+        color: var(--primary);
+        background: var(--input-bg);
+        /* Match input bg */
+        right: 14px;
+    }
+
+    /* Validation States */
+    .form-control.valid {
+        border-color: var(--success);
+    }
+
+    .form-control.invalid {
+        border-color: var(--danger);
+    }
+
+    .validation-feedback {
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 0.9rem;
         display: none;
     }
-    
-    #email-verification-message.success {
-        background: #e8f5e9;
-        color: #388e3c;
-        border: 1px solid #a5d6a7;
+
+    .form-control.valid~.validation-feedback.valid-icon {
         display: block;
+        color: var(--success);
     }
-    
-    #email-verification-message.error {
-        background: #ffebee;
-        color: #c62828;
-        border: 1px solid #ef9a9a;
+
+    .form-control.invalid~.validation-feedback.invalid-icon {
         display: block;
+        color: var(--danger);
+    }
+
+    /* Custom Select */
+    select.form-control {
+        appearance: none;
+        cursor: pointer;
+    }
+
+    .select-chevron {
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        pointer-events: none;
+        color: var(--text-sub);
+    }
+
+    /* Password Strength Meter */
+    .password-strength {
+        height: 4px;
+        background: var(--meter-bg);
+        margin-top: 8px;
+        border-radius: 2px;
+        overflow: hidden;
+        transition: width 0.3s;
+        display: flex;
+    }
+
+    .strength-bar {
+        height: 100%;
+        width: 0;
+        transition: var(--transition);
+    }
+
+    .strength-text {
+        font-size: 0.75rem;
+        text-align: left;
+        margin-top: 4px;
+        color: var(--text-sub);
+        min-height: 1.2em;
+    }
+
+    /* Submit Button */
+    .btn-submit {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white;
+        border: none;
+        height: 60px;
+        border-radius: 16px;
+        width: 100%;
+        font-size: 1.1rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: var(--transition);
+        margin-top: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .btn-submit::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(rgba(255, 255, 255, 0.2), transparent);
+        opacity: 0;
+        transition: var(--transition);
+    }
+
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-submit:hover::after {
+        opacity: 1;
+    }
+
+    /* Email Widget Redesign */
+    .email-wrapper {
+        display: flex;
+        align-items: center;
+        position: relative;
+    }
+
+    .verify-btn-inline {
+        position: absolute;
+        left: 8px;
+        top: 8px;
+        bottom: 8px;
+        background: #ebf4ff;
+        color: var(--primary);
+        border-radius: 10px;
+        border: none;
+        padding: 0 16px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    [data-theme="dark"] .verify-btn-inline {
+        background: #2d3748;
+        color: #9f7aea;
+    }
+
+    .verify-btn-inline:hover {
+        background: #c3dafe;
+    }
+
+    [data-theme="dark"] .verify-btn-inline:hover {
+        background: #4a5568;
+    }
+
+    /* Error Text */
+    .error-msg {
+        color: var(--danger);
+        font-size: 0.8rem;
+        margin-top: 4px;
+        margin-right: 12px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    /* Login Link */
+    .login-link {
+        text-align: center;
+        margin-top: 24px;
+        color: var(--text-sub);
+    }
+
+    .login-link a {
+        color: var(--primary);
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    /* RTL specific adjustments */
+    html[dir="rtl"] .floating-label {
+        transform-origin: right top;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<h2>Complete Your Registration</h2>
-
-<div style="text-align: center; margin-bottom: 25px;">
-    <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 10px;">
-        <div style="width: 40px; height: 4px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 2px;"></div>
-        <div style="width: 40px; height: 4px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 2px;"></div>
-        <div style="width: 40px; height: 4px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 2px;"></div>
-    </div>
-    <p style="color: #666; margin: 0;">Step 3 of 3: Fill in your details</p>
-</div>
-
-<form method="post" id="registration-form">
-    {% csrf_token %}
-
-    {% if form.non_field_errors %}
-    <div class="alert alert-error">
-        {{ form.non_field_errors }}
-    </div>
-    {% endif %}
-
-    <div class="form-group">
-        <label for="name">Full Name *</label>
-        <input type="text" id="name" name="name" value="{{ form.name.value|default:'' }}" required>
-        {% if form.name.errors %}
-            <ul class="errorlist">
-                {% for error in form.name.errors %}<li>{{ error }}</li>{% endfor %}
-            </ul>
-        {% endif %}
-    </div>
-
-    <div class="form-group">
-        <label for="phone">Phone Number</label>
-        <input type="text" id="phone" name="phone" value="{{ form.phone.value|default:'' }}" disabled>
-        <p class="help-text" style="color: green;">✓ Phone number verified</p>
-    </div>
-
-    <div class="form-group">
-        <label for="national_id">National ID *</label>
-        <input type="text" id="national_id" name="national_id" value="{{ form.national_id.value|default:'' }}" placeholder="9 digits" required>
-        {% if form.national_id.errors %}
-            <ul class="errorlist">
-                {% for error in form.national_id.errors %}<li>{{ error }}</li>{% endfor %}
-            </ul>
-        {% endif %}
-    </div>
-
-    <div class="form-group">
-        <label for="city">City *</label>
-        <select id="city" name="city" required>
-            <option value="">Select your city</option>
-            {% for city in form.fields.city.queryset %}
-                <option value="{{ city.id }}" {% if form.city.value|stringformat:"s" == city.id|stringformat:"s" %}selected{% endif %}>
-                    {{ city.name }}
-                </option>
-            {% endfor %}
-        </select>
-        {% if form.city.errors %}
-            <ul class="errorlist">
-                {% for error in form.city.errors %}<li>{{ error }}</li>{% endfor %}
-            </ul>
-        {% endif %}
-    </div>
-
-    <div class="form-group">
-        <label for="email">Email Address (Optional)</label>
-        <div class="email-verify-container">
-            <input 
-                type="email" 
-                id="email" 
-                name="email" 
-                value="{{ form.email.value|default:verified_email|default:'' }}" 
-                placeholder="your@email.com"
-                {% if email_is_verified %}readonly{% endif %}
-            >
-            <button 
-                type="button" 
-                id="verify-email-btn" 
-                class="verify-btn"
-                {% if email_is_verified %}style="display: none;"{% endif %}
-            >
-                Verify Email
-            </button>
+<div class="registration-wrapper">
+    <div class="registration-card">
+        <div class="page-header">
+            <h1 class="page-title">بياناتك الشخصية</h1>
+            <p class="page-subtitle">خطوة واحدة تفصلك عن تجربة صحية متكاملة</p>
         </div>
-        
-        {% if email_is_verified %}
-        <span class="verified-badge">✓ Email Verified</span>
-        {% endif %}
-        
-        <div id="email-verification-message"></div>
-        
-        {% if form.email.errors %}
-            <ul class="errorlist">
-                {% for error in form.email.errors %}<li>{{ error }}</li>{% endfor %}
-            </ul>
-        {% endif %}
-        <p class="help-text">Optional: Add email to receive appointment notifications</p>
+
+        <!-- Minimal Step Indicator -->
+        <div class="wizard-container">
+            <div class="step-indicator">
+                <div class="step-dot completed" title="رقم الهاتف"></div>
+                <div class="step-line filled"></div>
+                <div class="step-dot completed" title="رمز التحقق"></div>
+                <div class="step-line filled"></div>
+                <div class="step-dot active" title="البيانات"></div>
+            </div>
+        </div>
+
+        <form method="post" id="registration-form" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="alert alert-error" style="margin-bottom: 20px;">
+                {% for error in form.non_field_errors %}
+                <span>{{ error }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="form-grid">
+                <!-- Phone Field (Locked) -->
+                <div class="input-group">
+                    <input type="text" id="phone" name="phone" class="form-control"
+                        value="{{ form.phone.value|default:'' }}" disabled placeholder=" ">
+                    <label class="floating-label" for="phone">رقم الهاتف</label>
+                    <i class="fa-solid fa-mobile-screen input-icon"></i>
+                    <i class="fa-solid fa-check-circle validation-feedback valid-icon" style="display: block;"></i>
+                </div>
+
+                <!-- Full Name -->
+                <div class="input-group">
+                    <input type="text" id="name" name="name" class="form-control"
+                        value="{{ form.name.value|default:'' }}" required placeholder=" ">
+                    <label class="floating-label" for="name">الاسم الكامل</label>
+                    <i class="fa-regular fa-user input-icon"></i>
+                    {% if form.name.errors %}
+                    <div class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> {{ form.name.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- National ID (Real-time Validation) -->
+                <div class="input-group">
+                    <input type="text" id="national_id" name="national_id" class="form-control"
+                        value="{{ form.national_id.value|default:'' }}" required placeholder=" " maxlength="9">
+                    <label class="floating-label" for="national_id">رقم الهوية</label>
+                    <i class="fa-regular fa-id-card input-icon"></i>
+
+                    <i class="fa-solid fa-check validation-feedback valid-icon"></i>
+                    <i class="fa-solid fa-xmark validation-feedback invalid-icon"></i>
+
+                    {% if form.national_id.errors %}
+                    <div class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> {{ form.national_id.errors.0
+                        }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- City -->
+                <div class="input-group">
+                    <select id="city" name="city" class="form-control" required style="padding-top: 16px;">
+                        <option value="" disabled selected></option>
+                        {% for city in form.fields.city.queryset %}
+                        <option value="{{ city.id }}"
+                            {% if form.city.value|stringformat:"s" == city.id|stringformat:"s" %}selected{% endif %}>
+                            {{ city.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <label class="floating-label" for="city" style="background: transparent;">المدينة</label>
+                    <i class="fa-solid fa-location-dot input-icon"></i>
+                    <i class="fa-solid fa-chevron-down select-chevron"></i>
+                    {% if form.city.errors %}
+                    <div class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> {{ form.city.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Email (Full Width) -->
+                <div class="input-group full-width">
+                    <div class="email-wrapper">
+                        <input type="email" id="email" name="email" class="form-control"
+                            value="{{ form.email.value|default:verified_email|default:'' }}" placeholder=" " {% if
+                            email_is_verified %}readonly{% endif %}>
+                        <label class="floating-label" for="email">البريد الإلكتروني (اختياري)</label>
+                        <i class="fa-regular fa-envelope input-icon"></i>
+
+                        <button type="button" id="verify-email-btn" class="verify-btn-inline" {% if email_is_verified %}style="display: none;"{% endif %}>
+                            تحقق
+                        </button>
+                    </div>
+
+                    <div id="email-verification-message" style="margin-top: 5px; font-size: 0.9rem;">
+                        {% if email_is_verified %}
+                        <span style="color: var(--success); display: flex; align-items: center; gap: 5px;">
+                            <i class="fa-solid fa-badge-check"></i> البريد مؤكد
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    {% if form.email.errors %}
+                    <div class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> {{ form.email.errors.0 }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Password -->
+                <div class="input-group">
+                    <input type="password" id="password1" name="password1" class="form-control" required
+                        placeholder=" ">
+                    <label class="floating-label" for="password1">كلمة المرور</label>
+                    <i class="fa-solid fa-lock input-icon"></i>
+
+                    <div class="password-strength">
+                        <div class="strength-bar" id="strength-bar"></div>
+                    </div>
+                    <div class="strength-text" id="strength-text"></div>
+
+                    {% if form.password1.errors %}
+                    <div class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> {{ form.password1.errors.0 }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Confirm Password -->
+                <div class="input-group">
+                    <input type="password" id="password2" name="password2" class="form-control" required
+                        placeholder=" ">
+                    <label class="floating-label" for="password2">تأكيد كلمة المرور</label>
+                    <i class="fa-solid fa-lock input-icon"></i>
+                    <i class="fa-solid fa-check validation-feedback valid-icon"></i>
+                    {% if form.password2.errors %}
+                    <div class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> {{ form.password2.errors.0 }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <button type="submit" class="btn-submit">
+                <span>إنشاء الحساب</span>
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+
+            <div class="login-link">
+                <p>لديك حساب بالفعل؟ <a href="{% url 'accounts:login' %}">تسجيل الدخول</a></p>
+            </div>
+        </form>
     </div>
-
-    <div class="form-group">
-        <label for="password1">Password *</label>
-        <input type="password" id="password1" name="password1" required>
-        <p class="help-text">At least 8 characters</p>
-        {% if form.password1.errors %}
-            <ul class="errorlist">
-                {% for error in form.password1.errors %}<li>{{ error }}</li>{% endfor %}
-            </ul>
-        {% endif %}
-    </div>
-
-    <div class="form-group">
-        <label for="password2">Confirm Password *</label>
-        <input type="password" id="password2" name="password2" required>
-        {% if form.password2.errors %}
-            <ul class="errorlist">
-                {% for error in form.password2.errors %}<li>{{ error }}</li>{% endfor %}
-            </ul>
-        {% endif %}
-    </div>
-
-    <button type="submit" class="btn">Register</button>
-</form>
-
-<div class="text-center">
-    <p>Already have an account? <a href="{% url 'accounts:login' %}">Login here</a></p>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    const emailInput = document.getElementById('email');
-    const verifyBtn = document.getElementById('verify-email-btn');
-    const messageDiv = document.getElementById('email-verification-message');
-    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-    
-    let originalEmail = "{{ verified_email|default:'' }}";
-    let emailVerified = {{ email_is_verified|yesno:"true,false" }};
-    
-    // Show/hide verify button based on email input
-    emailInput.addEventListener('input', function() {
-        const currentEmail = this.value.trim();
-        
-        if (currentEmail === '') {
-            verifyBtn.style.display = 'none';
-            messageDiv.style.display = 'none';
-        } else if (emailVerified && currentEmail.toLowerCase() === originalEmail.toLowerCase()) {
-            verifyBtn.style.display = 'none';
+document.addEventListener('DOMContentLoaded', function () {
+
+  const nationalIdInput = document.getElementById('national_id');
+  const pass1 = document.getElementById('password1');
+  const pass2 = document.getElementById('password2');
+  const strengthBar = document.getElementById('strength-bar');
+  const strengthText = document.getElementById('strength-text');
+
+  // --- Email Verification Logic ---
+  const emailInput = document.getElementById('email');
+  const verifyBtn = document.getElementById('verify-email-btn');
+  const messageDiv = document.getElementById('email-verification-message');
+  const csrfEl = document.querySelector('[name=csrfmiddlewaretoken]');
+
+  const csrfToken = csrfEl ? csrfEl.value : null;
+
+  // IMPORTANT: define originalEmail (was missing)
+  const originalEmail = "{{ original_email|default:''|escapejs }}";
+
+  // safer default if not provided
+  let emailVerified = {{ email_is_verified|default:False|yesno:"true,false" }};
+
+  // =========================
+  // National ID Validation
+  // =========================
+  if (nationalIdInput) {
+    nationalIdInput.addEventListener('input', function () {
+      const val = this.value.replace(/\D/g, '');
+      this.value = val;
+
+      if (val.length === 9) {
+        this.classList.add('valid');
+        this.classList.remove('invalid');
+      } else if (val.length > 0) {
+        this.classList.add('invalid');
+        this.classList.remove('valid');
+      } else {
+        this.classList.remove('valid', 'invalid');
+      }
+    });
+  }
+
+  // =========================
+  // Password Strength Meter
+  // =========================
+  if (pass1 && strengthBar && strengthText) {
+    pass1.addEventListener('input', function () {
+      const val = this.value;
+      let strength = 0;
+
+      if (val.length === 0) {
+        strengthBar.style.width = '0%';
+        strengthBar.style.backgroundColor = '';
+        strengthText.textContent = '';
+        strengthText.style.color = '';
+        return;
+      }
+
+      if (val.length > 5) strength += 20;
+      if (val.length > 8) strength += 20;
+      if (/[A-Z]/.test(val)) strength += 20;
+      if (/[0-9]/.test(val)) strength += 20;
+      if (/[^A-Za-z0-9]/.test(val)) strength += 20;
+
+      strengthBar.style.width = strength + '%';
+
+      if (strength <= 40) {
+        strengthBar.style.backgroundColor = 'var(--danger)';
+        strengthText.textContent = 'ضعيفة';
+        strengthText.style.color = 'var(--danger)';
+      } else if (strength <= 80) {
+        strengthBar.style.backgroundColor = 'var(--warning)';
+        strengthText.textContent = 'متوسطة';
+        strengthText.style.color = 'var(--warning)';
+      } else {
+        strengthBar.style.backgroundColor = 'var(--success)';
+        strengthText.textContent = 'قوية';
+        strengthText.style.color = 'var(--success)';
+      }
+    });
+  }
+
+  // =========================
+  // Password Match
+  // =========================
+  if (pass2 && pass1) {
+    pass2.addEventListener('input', function () {
+      if (this.value === pass1.value && this.value.length > 0) {
+        this.classList.add('valid');
+        this.classList.remove('invalid');
+      } else {
+        this.classList.remove('valid');
+        if (this.value.length > 0) this.classList.add('invalid');
+        else this.classList.remove('invalid');
+      }
+    });
+  }
+
+  // =========================
+  // Email Verification UI
+  // =========================
+  if (emailInput && verifyBtn && messageDiv) {
+
+    // Initial floating label state
+    if (emailInput.value) emailInput.classList.add('has-value');
+
+    emailInput.addEventListener('input', function () {
+      const currentEmail = this.value.trim();
+
+      if (currentEmail === '') {
+        verifyBtn.style.display = 'none';
+        messageDiv.innerHTML = '';
+        return;
+      }
+
+      // if originalEmail is empty, don't compare (avoid misleading "confirmed")
+      const isSameAsOriginal = originalEmail
+        ? currentEmail.toLowerCase() === originalEmail.toLowerCase()
+        : false;
+
+      if (emailVerified && isSameAsOriginal) {
+        verifyBtn.style.display = 'none';
+        messageDiv.innerHTML =
+          '<span style="color: var(--success); display:flex; align-items:center; gap:5px;">' +
+          '<i class="fa-solid fa-badge-check"></i> البريد مؤكد</span>';
+      } else {
+        verifyBtn.style.display = 'flex';
+        if (emailVerified) {
+          messageDiv.innerHTML =
+            '<span style="color: var(--warning);">' +
+            '<i class="fa-solid fa-triangle-exclamation"></i> يرجى التحقق من البريد الجديد</span>';
         } else {
-            verifyBtn.style.display = 'block';
-            if (emailVerified) {
-                // Email was changed, show warning
-                messageDiv.className = 'error';
-                messageDiv.textContent = 'Email changed. Please verify the new email.';
-                messageDiv.style.display = 'block';
-                emailVerified = false;
-            }
+          messageDiv.innerHTML = '';
         }
+      }
     });
-    
-    // Handle verify button click
-    verifyBtn.addEventListener('click', function() {
-        const email = emailInput.value.trim();
-        
-        if (!email) {
-            showMessage('Please enter an email address.', 'error');
-            return;
+
+    verifyBtn.addEventListener('click', function () {
+      const email = emailInput.value.trim();
+      if (!email) return;
+
+      if (!csrfToken) {
+        messageDiv.innerHTML =
+          '<span style="color: var(--danger);">CSRF token غير موجود</span>';
+        return;
+      }
+
+      const originalText = verifyBtn.innerHTML;
+      verifyBtn.disabled = true;
+      verifyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+      fetch("{% url 'accounts:send_email_verification' %}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRFToken': csrfToken
+        },
+        body: `email=${encodeURIComponent(email)}`
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          messageDiv.innerHTML =
+            `<span style="color: var(--success);"><i class="fa-solid fa-check"></i> ${data.message}</span>`;
+          verifyBtn.innerHTML = 'إعادة';
+          // optional: you might set emailVerified=false here because it's a NEW email pending verification
+          // emailVerified = false;
+        } else {
+          messageDiv.innerHTML =
+            `<span style="color: var(--danger);"><i class="fa-solid fa-circle-xmark"></i> ${data.message}</span>`;
+          verifyBtn.innerHTML = originalText;
         }
-        
-        // Disable button and show loading
-        verifyBtn.disabled = true;
-        verifyBtn.textContent = 'Sending...';
-        
-        // Send AJAX request
-        fetch("{% url 'accounts:send_email_verification' %}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-CSRFToken': csrfToken
-            },
-            body: `email=${encodeURIComponent(email)}`
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showMessage(data.message + ' Check your email and click the verification link.', 'success');
-                verifyBtn.textContent = 'Resend';
-            } else {
-                showMessage(data.message, 'error');
-                verifyBtn.textContent = 'Verify Email';
-            }
-            verifyBtn.disabled = false;
-        })
-        .catch(error => {
-            showMessage('An error occurred. Please try again.', 'error');
-            verifyBtn.disabled = false;
-            verifyBtn.textContent = 'Verify Email';
-        });
+        verifyBtn.disabled = false;
+      })
+      .catch(() => {
+        messageDiv.innerHTML =
+          '<span style="color: var(--danger);">حدث خطأ</span>';
+        verifyBtn.disabled = false;
+        verifyBtn.innerHTML = originalText;
+      });
     });
-    
-    function showMessage(text, type) {
-        messageDiv.className = type;
-        messageDiv.textContent = text;
-        messageDiv.style.display = 'block';
-    }
+  }
+
+});
 </script>
+
 {% endblock %}

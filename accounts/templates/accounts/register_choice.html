@@ -1,49 +1,277 @@
 {% extends 'accounts/base.html' %}
+{% load static %}
 
 {% block title %}إنشاء حساب جديد - منصتي الطبية{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Shared Premium Styles */
+    :root {
+        --primary: #667eea;
+        --secondary: #764ba2;
+        --surface: #ffffff;
+        --text-main: #2d3748;
+        --text-sub: #718096;
+        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+        /* Light Mode Specifics */
+        --bg-grad-1: #fff5f5;
+        --bg-grad-2: #ebf4ff;
+        --card-bg: rgba(255, 255, 255, 0.95);
+        --card-border: rgba(255, 255, 255, 0.6);
+        --choice-bg: #ffffff;
+        --choice-border: #e2e8f0;
+        --icon-bg: #f7fafc;
+        --shadow-color: rgba(0, 0, 0, 0.08);
+    }
+
+    [data-theme="dark"] {
+        --surface: #1a202c;
+        --text-main: #f7fafc;
+        --text-sub: #cbd5e0;
+
+        /* Dark Mode Specifics */
+        --bg-grad-1: #2d3748;
+        --bg-grad-2: #171923;
+        --card-bg: rgba(30, 41, 59, 0.95);
+        --card-border: rgba(255, 255, 255, 0.1);
+        --choice-bg: #2d3748;
+        --choice-border: #4a5568;
+        --icon-bg: #4a5568;
+        --shadow-color: rgba(0, 0, 0, 0.3);
+    }
+
+    .registration-wrapper {
+        min-height: 80vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 20px;
+        background: radial-gradient(circle at top right, var(--bg-grad-1), transparent),
+            radial-gradient(circle at bottom left, var(--bg-grad-2), transparent);
+    }
+
+    .auth-card {
+        background: var(--card-bg);
+        backdrop-filter: blur(10px);
+        border-radius: 24px;
+        box-shadow: 0 20px 40px var(--shadow-color);
+        padding: 48px;
+        max-width: 900px;
+        width: 100%;
+        animation: slideInUp 0.6s ease-out;
+        border: 1px solid var(--card-border);
+        text-align: center;
+    }
+
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .page-header {
+        margin-bottom: 50px;
+    }
+
+    .page-title {
+        font-size: 2.2rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        /* Compatibility */
+        margin-bottom: 16px;
+        font-family: 'Cairo', sans-serif;
+    }
+
+    .page-subtitle {
+        color: var(--text-sub);
+        font-size: 1.1rem;
+        max-width: 500px;
+        margin: 0 auto;
+        line-height: 1.6;
+    }
+
+    /* Choice Grid */
+    .choice-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 24px;
+        margin-bottom: 40px;
+    }
+
+    @media(min-width: 768px) {
+        .choice-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    .choice-card {
+        background: var(--choice-bg);
+        border: 2px solid var(--choice-border);
+        border-radius: 20px;
+        padding: 40px 30px;
+        cursor: pointer;
+        transition: var(--transition);
+        position: relative;
+        overflow: hidden;
+        text-decoration: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        height: 100%;
+    }
+
+    .choice-card:hover {
+        transform: translateY(-8px);
+        border-color: var(--primary);
+        box-shadow: 0 12px 24px rgba(102, 126, 234, 0.15);
+    }
+
+    .choice-card:hover .icon-box {
+        transform: scale(1.1) rotate(5deg);
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white;
+    }
+
+    .icon-box {
+        width: 80px;
+        height: 80px;
+        background: var(--icon-bg);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        color: var(--primary);
+        margin-bottom: 24px;
+        transition: var(--transition);
+    }
+
+    .choice-title {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--text-main);
+        margin-bottom: 12px;
+    }
+
+    .choice-desc {
+        color: var(--text-sub);
+        font-size: 0.95rem;
+        line-height: 1.5;
+    }
+
+    .choice-arrow {
+        margin-top: auto;
+        padding-top: 24px;
+        color: var(--primary);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        opacity: 0;
+        transform: translateY(10px);
+        transition: var(--transition);
+    }
+
+    .choice-card:hover .choice-arrow {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    /* Doctor Card Specifics */
+    .choice-card.doctor {
+        border-color: var(--choice-border);
+    }
+
+    .choice-card.doctor:hover {
+        border-color: var(--secondary);
+    }
+
+    .choice-card.doctor:hover .icon-box {
+        background: linear-gradient(135deg, var(--secondary), #9f7aea);
+    }
+
+    .choice-card.doctor .choice-arrow {
+        color: var(--secondary);
+    }
+
+    /* Login Link */
+    .login-section {
+        margin-top: 30px;
+        color: var(--text-sub);
+    }
+
+    .login-section a {
+        color: var(--primary);
+        font-weight: 700;
+        text-decoration: none;
+        transition: var(--transition);
+        position: relative;
+    }
+
+    .login-section a::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        width: 0;
+        height: 2px;
+        background: var(--primary);
+        transition: var(--transition);
+    }
+
+    .login-section a:hover::after {
+        width: 100%;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<section class="auth-wrapper">
-    <div class="container" style="display: flex; justify-content: center;">
-        <div class="auth-card reveal-on-scroll">
-            <div class="auth-header">
-                <h2 class="text-h2">إنشاء حساب جديد</h2>
-                <p class="text-body-m text-muted">اختر نوع الحساب الذي تود إنشاءه للمتابعة</p>
-            </div>
+<div class="registration-wrapper">
+    <div class="auth-card">
+        <div class="page-header">
+            <h1 class="page-title">مرحباً بك في منصتي</h1>
+            <p class="page-subtitle">انضم إلينا اليوم لتجربة رعاية صحية متطورة. اختر نوع الحساب المناسب لك للبدء.</p>
+        </div>
 
-            <div class="auth-selection-grid">
-                <!-- Patient Choice -->
-                <a href="{% url 'accounts:register_patient_phone' %}">
-                    <div class="selection-card">
-                        <div class="selection-icon">
-                            <i class="fa-solid fa-user-injured"></i>
-                        </div>
-                        <div class="selection-info">
-                            <h3>مريض</h3>
-                            <p>سجل كمريض لحجز المواعيد وإدارة ملفك الطبي</p>
-                        </div>
-                    </div>
-                </a>
+        <div class="choice-grid">
+            <!-- Patient Option -->
+            <a href="{% url 'accounts:register_patient_phone' %}" class="choice-card">
+                <div class="icon-box">
+                    <i class="fa-solid fa-user-injured"></i>
+                </div>
+                <h3 class="choice-title">حساب مريض</h3>
+                <p class="choice-desc">احجز المواعيد بسهولة، تابع ملفك الطبي، وتواصل مع أطبائك المفضلين في أي وقت.</p>
+                <div class="choice-arrow">
+                    ابدأ التسجيل <i class="fa-solid fa-arrow-left"></i>
+                </div>
+            </a>
 
-                <!-- Doctor Choice -->
-                <a href="{% url 'accounts:register_main_doctor' %}">
-                    <div class="selection-card">
-                        <div class="selection-icon" style="background-color: #E0E7FF; color: #4338CA;">
-                            <i class="fa-solid fa-user-doctor"></i>
-                        </div>
-                        <div class="selection-info">
-                            <h3>طبيب (صاحب عيادة)</h3>
-                            <p>سجل عيادتك وأدر مواعيد المرضى بكفاءة</p>
-                        </div>
-                    </div>
-                </a>
-            </div>
+            <!-- Doctor Option -->
+            <a href="{% url 'accounts:register_main_doctor' %}" class="choice-card doctor">
+                <div class="icon-box">
+                    <i class="fa-solid fa-user-doctor"></i>
+                </div>
+                <h3 class="choice-title">طبيب / عيادة</h3>
+                <p class="choice-desc">أدر عيادتك بكفاءة، نظم جدول مواعيدك، ووسع قاعدة مرضاك مع أدواتنا المتكاملة.</p>
+                <div class="choice-arrow">
+                    سجل عيادتك <i class="fa-solid fa-arrow-left"></i>
+                </div>
+            </a>
+        </div>
 
-            <div class="text-center" style="margin-top: 1.5rem;">
-                <p class="text-body-m">لديك حساب بالفعل؟ <a href="{% url 'accounts:login' %}" class="text-primary"
-                        style="font-weight: 600;">سجل دخولك هنا</a></p>
-            </div>
+        <div class="login-section">
+            <p>لديك حساب بالفعل؟ <a href="{% url 'accounts:login' %}">تسجيل الدخول</a></p>
         </div>
     </div>
-</section>
+</div>
 {% endblock %}

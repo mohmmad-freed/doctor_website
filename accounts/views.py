@@ -8,7 +8,11 @@ from .forms import LoginForm, PatientRegistrationForm, MainDoctorRegistrationFor
 from .otp_utils import request_otp, verify_otp, is_in_cooldown, get_remaining_resends
 from clinics.models import Clinic
 from patients.models import PatientProfile
-from .email_utils import send_verification_email, verify_email_token
+from .email_utils import (
+    send_verification_email,
+    verify_email_token,
+    send_change_email_verification,
+)
 from django.http import JsonResponse
 
 User = get_user_model()
@@ -204,6 +208,7 @@ def register_patient_verify(request):
         },
     )
 
+
 # ============================================
 # EMAIL VERIFICATION (AJAX)
 # ============================================
@@ -211,40 +216,41 @@ def send_email_verification(request):
     """Send email verification link via AJAX"""
     if request.method != "POST":
         return JsonResponse({"success": False, "message": "Invalid request method."})
-    
+
     email = request.POST.get("email", "").strip()
-    
+
     if not email:
         return JsonResponse({"success": False, "message": "Email is required."})
-    
+
     # Basic email validation
     import re
-    if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
+
+    if not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", email):
         return JsonResponse({"success": False, "message": "Invalid email format."})
-    
+
     # Send verification email
     success, message = send_verification_email(email, request)
-    
+
     if success:
         # Store email in session to track which email was sent verification
-        request.session['verification_email_sent'] = email
-    
+        request.session["verification_email_sent"] = email
+
     return JsonResponse({"success": success, "message": message})
 
 
 def verify_email(request, token):
     """Handle email verification link clicks"""
     success, email, message = verify_email_token(token)
-    
+
     if success:
         # Store verified email in session
-        request.session['verified_email'] = email
+        request.session["verified_email"] = email
         messages.success(request, f"Email {email} has been verified successfully!")
     else:
         messages.error(request, message)
-    
+
     # Redirect back to registration form
-    return redirect('accounts:register_patient_details')
+    return redirect("accounts:register_patient_details")
 
 
 # ============================================
@@ -263,7 +269,7 @@ def register_patient_details(request):
         return redirect("accounts:register_patient_phone")
 
     # Get verified email from session if exists
-    verified_email = request.session.get('verified_email')
+    verified_email = request.session.get("verified_email")
 
     if request.method == "POST":
         form = PatientRegistrationForm(request.POST)
@@ -274,24 +280,27 @@ def register_patient_details(request):
         if form.is_valid():
             try:
                 user = form.save(commit=False)
-                
+
                 # Handle email verification status
-                submitted_email = form.cleaned_data.get('email')
-                
+                submitted_email = form.cleaned_data.get("email")
+
                 if submitted_email:
                     # Check if submitted email matches verified email
-                    if verified_email and submitted_email.lower() == verified_email.lower():
+                    if (
+                        verified_email
+                        and submitted_email.lower() == verified_email.lower()
+                    ):
                         user.email_verified = True
                         # Clear verified email from session after use
-                        if 'verified_email' in request.session:
-                            del request.session['verified_email']
-                        if 'verification_email_sent' in request.session:
-                            del request.session['verification_email_sent']
+                        if "verified_email" in request.session:
+                            del request.session["verified_email"]
+                        if "verification_email_sent" in request.session:
+                            del request.session["verification_email_sent"]
                     else:
                         user.email_verified = False
                 else:
                     user.email_verified = False
-                
+
                 user.is_verified = True  # Phone is verified
                 user.save()
 
@@ -309,7 +318,9 @@ def register_patient_details(request):
                 return redirect("accounts:home")
 
             except Exception as e:
-                messages.error(request, f"An error occurred during registration: {str(e)}")
+                messages.error(
+                    request, f"An error occurred during registration: {str(e)}"
+                )
         else:
             messages.error(request, "Please correct the errors below.")
     else:
@@ -322,11 +333,15 @@ def register_patient_details(request):
     # Check if there's a verified email for display
     email_is_verified = verified_email is not None
 
-    return render(request, "accounts/register_patient_details.html", {
-        "form": form,
-        "verified_email": verified_email,
-        "email_is_verified": email_is_verified,
-    })
+    return render(
+        request,
+        "accounts/register_patient_details.html",
+        {
+            "form": form,
+            "verified_email": verified_email,
+            "email_is_verified": email_is_verified,
+        },
+    )
 
 
 def register_main_doctor(request):
@@ -483,3 +498,63 @@ def change_phone_verify(request):
             messages.error(request, message)
 
     return render(request, "accounts/change_phone_verify.html", {"phone": new_phone})
+
+
+@login_required
+def change_email_request(request):
+    """Initiate email change: Enter new email and send verification"""
+    if request.method == "POST":
+        new_email = request.POST.get("email", "").strip()
+
+        # 1. Basic validation
+        import re
+
+        if not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", new_email):
+            messages.error(request, "تنسيق البريد الإلكتروني غير صحيح.")
+            return render(request, "accounts/change_email_request.html")
+
+        # 2. Check uniqueness
+        if request.user.email and request.user.email.lower() == new_email.lower():
+            messages.error(request, "لقد أدخلت بريدك الإلكتروني الحالي.")
+            return render(request, "accounts/change_email_request.html")
+
+        if User.objects.filter(email__iexact=new_email).exists():
+            messages.error(request, "البريد الإلكتروني هذا مسجل بالفعل.")
+            return render(request, "accounts/change_email_request.html")
+
+        # 3. Send Verification Email
+        success, message = send_change_email_verification(new_email, request)
+
+        if success:
+            # Store intended email in session (optional, mostly for display or resend logic,
+            # though token has it cached)
+            request.session["change_email_pending"] = new_email
+            return render(
+                request, "accounts/change_email_sent.html", {"email": new_email}
+            )
+        else:
+            messages.error(request, message)
+
+    return render(request, "accounts/change_email_request.html")
+
+
+@login_required
+def verify_change_email(request, token):
+    """Verify email change token and update user email"""
+    success, email, message = verify_email_token(token)
+
+    if success:
+        # Update user's email
+        request.user.email = email
+        request.user.email_verified = True
+        request.user.save()
+
+        # Cleanup session
+        if "change_email_pending" in request.session:
+            del request.session["change_email_pending"]
+
+        messages.success(request, f"تم تحديث البريد الإلكتروني بنجاح إلى {email}!")
+        return redirect("patients:profile")
+    else:
+        messages.error(request, message)
+        return redirect("accounts:change_email_request")

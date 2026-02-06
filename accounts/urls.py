@@ -10,16 +10,29 @@ urlpatterns = [
     path("login/", views.login_view, name="login"),
     path("logout/", views.logout_view, name="logout"),
     path("register/", views.register_view, name="register"),
-    
     # Patient registration (3 steps)
-    path("register/patient/phone/", views.register_patient_phone, name="register_patient_phone"),
-    path("register/patient/verify/", views.register_patient_verify, name="register_patient_verify"),
-    path("register/patient/details/", views.register_patient_details, name="register_patient_details"),
-    
+    path(
+        "register/patient/phone/",
+        views.register_patient_phone,
+        name="register_patient_phone",
+    ),
+    path(
+        "register/patient/verify/",
+        views.register_patient_verify,
+        name="register_patient_verify",
+    ),
+    path(
+        "register/patient/details/",
+        views.register_patient_details,
+        name="register_patient_details",
+    ),
     # Email verification
-    path("send-email-verification/", views.send_email_verification, name="send_email_verification"),
+    path(
+        "send-email-verification/",
+        views.send_email_verification,
+        name="send_email_verification",
+    ),
     path("verify-email/<str:token>/", views.verify_email, name="verify_email"),
-    
     # Main doctor registration
     path(
         "register/main-doctor/", views.register_main_doctor, name="register_main_doctor"
@@ -32,6 +45,15 @@ urlpatterns = [
         "profile/change-phone/verify/",
         views.change_phone_verify,
         name="change_phone_verify",
+    ),
+    # Change Email
+    path(
+        "profile/change-email/", views.change_email_request, name="change_email_request"
+    ),
+    path(
+        "profile/change-email/verify/<str:token>/",
+        views.verify_change_email,
+        name="verify_change_email",
     ),
     # API Endpoints
     path("api/login/", api_views.MyTokenObtainPairView.as_view(), name="api_login"),

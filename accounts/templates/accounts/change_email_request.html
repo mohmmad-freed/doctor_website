@@ -1,0 +1,41 @@
+{% extends 'patients/base_dashboard.html' %}
+
+{% block title %}تغيير البريد الإلكتروني{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto mt-10">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 md:p-8">
+        <div class="text-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">تغيير البريد الإلكتروني</h2>
+            <p class="text-gray-500 dark:text-gray-400 mt-2">أدخل بريدك الإلكتروني الجديد للتحقق</p>
+        </div>
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">البريد
+                    الإلكتروني الجديد</label>
+                <div class="relative">
+                    <input type="email" id="email" name="email" placeholder="example@domain.com" required dir="ltr"
+                        class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent text-left transition-colors">
+                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-400">
+                        <i class="fa-solid fa-envelope"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between gap-4 mt-8">
+                <a href="{% url 'patients:profile' %}"
+                    class="w-1/2 px-4 py-3 text-center border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors font-medium">
+                    إلغاء
+                </a>
+                <button type="submit"
+                    class="w-1/2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-3 rounded-lg font-medium shadow-md transition-all hover:shadow-lg focus:ring-4 focus:ring-primary-100">
+                    التالي <i class="fa-solid fa-arrow-left mr-2"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -48,7 +48,8 @@
                     {% if profile.gender %}
                     <span
                         class="px-3 py-1 rounded-full bg-purple-50 text-purple-700 text-sm font-medium border border-purple-100">
-                        {% if profile.gender == 'M' %}ذكر{% elif profile.gender == 'F' %}أنثى{% else %}غير محدد
+                        {% if profile.gender == 'M' %}ذكر{% elif profile.gender == 'F' %}أنثى
+                        {% else %}غير محدد
                         {%endif%}
                     </span>
                     {% endif %}
@@ -104,7 +105,14 @@
                 <div
                     class="flex justify-between items-center py-2 border-b border-gray-50 dark:border-slate-700 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800 px-2 rounded-lg transition-colors">
                     <span class="text-gray-500 dark:text-gray-400">البريد الإلكتروني</span>
-                    <span class="font-medium text-gray-900 dark:text-gray-200">{{ user.email|default:"-" }}</span>
+                    <span class="font-medium text-gray-900 dark:text-gray-200 flex items-center gap-2">
+                        {{ user.email|default:"-" }}
+                        <a href="{% url 'accounts:change_email_request' %}"
+                            class="text-xs bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400 px-2 py-1 rounded hover:bg-primary-50 dark:hover:bg-primary-900/30 hover:text-primary-600 transition-colors"
+                            title="تغيير البريد الإلكتروني">
+                            <i class="fa-solid fa-pen"></i>
+                        </a>
+                    </span>
                 </div>
             </div>
         </div>
@@ -159,8 +167,8 @@
                     class="flex items-center justify-between p-3 bg-white dark:bg-slate-700/50 rounded-xl shadow-sm border border-orange-100 dark:border-orange-900/50">
                     <div>
                         <p class="font-bold text-gray-900 dark:text-gray-100">{{ profile.emergency_contact_name }}</p>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 dir-ltr">{{ profile.emergency_contact_phone
-                            }}</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 dir-ltr">{{ profile.emergency_contact_phone}}
+                        </p>
                     </div>
                     <a href="tel:{{ profile.emergency_contact_phone }}"
                         class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-green-200 hover:scale-110 transition-transform">

@@ -35,6 +35,11 @@ DEBUG = os.environ.get("DEBUG", "0") == "1"
 # Set ENFORCE_PHONE_VERIFICATION=0 in .env to disable.
 ENFORCE_PHONE_VERIFICATION = os.environ.get("ENFORCE_PHONE_VERIFICATION", "1") == "1"
 
+# Feature Flag: Enforce OTP Limits
+# Default to True (secure-by-default) if not set.
+# Set ENFORCE_OTP_LIMITS=0 in .env to disable daily limits (for dev/testing).
+ENFORCE_OTP_LIMITS = os.environ.get("ENFORCE_OTP_LIMITS", "1") == "1"
+
 # ============================================
 # TWILIO
 # ============================================

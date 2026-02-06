@@ -24,7 +24,7 @@ def generate_email_verification_token(email):
     cache.set(
         _email_verification_key(token),
         email.lower().strip(),
-        timeout=EMAIL_VERIFICATION_TOKEN_EXPIRY
+        timeout=EMAIL_VERIFICATION_TOKEN_EXPIRY,
     )
     return token
 
@@ -35,10 +35,10 @@ def verify_email_token(token):
     Returns (success: bool, email: str or None, message: str)
     """
     email = cache.get(_email_verification_key(token))
-    
+
     if email is None:
         return False, None, "Invalid or expired verification link."
-    
+
     # Don't delete yet - we'll delete when form is submitted
     # This allows the user to click the link multiple times
     return True, email, "Email verified successfully!"
@@ -57,12 +57,12 @@ def send_verification_email(email, request):
     try:
         # Generate token
         token = generate_email_verification_token(email)
-        
+
         # Build verification URL
         verification_url = request.build_absolute_uri(
-            reverse('accounts:verify_email', kwargs={'token': token})
+            reverse("accounts:verify_email", kwargs={"token": token})
         )
-        
+
         # Email subject and body
         subject = "Verify Your Email - Clinic Website"
         message = f"""
@@ -81,7 +81,7 @@ If you didn't request this, please ignore this email.
 Best regards,
 Clinic Website Team
         """
-        
+
         # Send email
         send_mail(
             subject=subject,
@@ -90,10 +90,62 @@ Clinic Website Team
             recipient_list=[email],
             fail_silently=False,
         )
-        
+
         logger.info(f"[EMAIL] Verification email sent to {email}")
         return True, "Verification email sent! Please check your inbox."
-        
+
     except Exception as e:
         logger.error(f"[EMAIL] Failed to send verification email to {email}: {str(e)}")
+        return False, "Failed to send verification email. Please try again."
+
+
+def send_change_email_verification(email, request):
+    """
+    Send verification email for email change request.
+    Returns (success: bool, message: str)
+    """
+    try:
+        # Generate token
+        token = generate_email_verification_token(email)
+
+        # Build verification URL
+        verification_url = request.build_absolute_uri(
+            reverse("accounts:verify_change_email", kwargs={"token": token})
+        )
+
+        # Email subject and body
+        subject = "Confirm Your New Email Address - Clinic Website"
+        message = f"""
+Hello,
+
+You have requested to change your email address on Clinic Website.
+
+Please confirm your new email address by clicking the link below:
+
+{verification_url}
+
+This link will expire in 15 minutes.
+
+If you didn't request this change, please ignore this email.
+
+Best regards,
+Clinic Website Team
+        """
+
+        # Send email
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            fail_silently=False,
+        )
+
+        logger.info(f"[EMAIL] Change email verification sent to {email}")
+        return True, "Verification email sent. Please check your inbox."
+
+    except Exception as e:
+        logger.error(
+            f"[EMAIL] Failed to send change email verification to {email}: {str(e)}"
+        )
         return False, "Failed to send verification email. Please try again."

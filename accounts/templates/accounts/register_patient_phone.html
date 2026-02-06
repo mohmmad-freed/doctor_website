@@ -1,43 +1,420 @@
 {% extends 'accounts/base.html' %}
+{% load static %}
 
 {% block title %}تسجيل مريض - رقم الهاتف{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Shared Variables & Keyframes from Register Details */
+    :root {
+        --primary: #667eea;
+        --secondary: #764ba2;
+        --success: #48bb78;
+        --danger: #e53e3e;
+        --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+        /* Light Mode */
+        --bg-grad-1: #fff5f5;
+        --bg-grad-2: #ebf4ff;
+        --card-bg: rgba(255, 255, 255, 0.95);
+        --card-border: rgba(255, 255, 255, 0.6);
+        --text-main: #2d3748;
+        --text-sub: #718096;
+        --input-bg: #ffffff;
+        --input-border: #e2e8f0;
+        --shadow-color: rgba(0, 0, 0, 0.08);
+    }
+
+    [data-theme="dark"] {
+        /* Dark Mode */
+        --bg-grad-1: #2d3748;
+        --bg-grad-2: #171923;
+        --card-bg: rgba(30, 41, 59, 0.95);
+        --card-border: rgba(255, 255, 255, 0.1);
+        --text-main: #f7fafc;
+        --text-sub: #cbd5e0;
+        --input-bg: #2d3748;
+        --input-border: #4a5568;
+        --shadow-color: rgba(0, 0, 0, 0.3);
+    }
+
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Container */
+    .registration-wrapper {
+        min-height: 80vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: radial-gradient(circle at top right, var(--bg-grad-1), transparent),
+            radial-gradient(circle at bottom left, var(--bg-grad-2), transparent);
+    }
+
+    .registration-card {
+        background: var(--card-bg);
+        backdrop-filter: blur(10px);
+        border-radius: 24px;
+        box-shadow: 0 20px 40px var(--shadow-color);
+        padding: 48px;
+        max-width: 600px;
+        width: 100%;
+        position: relative;
+        overflow: hidden;
+        animation: slideInUp 0.6s ease-out;
+        border: 1px solid var(--card-border);
+    }
+
+    /* Header */
+    .page-header {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+
+    .page-title {
+        font-size: 1.8rem;
+        font-weight: 800;
+        margin-bottom: 10px;
+        font-family: 'Cairo', sans-serif;
+        color: var(--text-main);
+    }
+
+    .page-subtitle {
+        color: var(--text-sub);
+        font-size: 1rem;
+    }
+
+    /* Wizard Steps */
+    .wizard-container {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 50px;
+    }
+
+    .step-indicator {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .step-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--input-border);
+        transition: var(--transition);
+    }
+
+    .step-dot.active {
+        background: var(--primary);
+        transform: scale(1.3);
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+    }
+
+    .step-line {
+        width: 50px;
+        height: 3px;
+        background: var(--input-border);
+        border-radius: 2px;
+    }
+
+    /* Form Styles */
+    .input-group {
+        position: relative;
+        margin-bottom: 24px;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 16px 50px 16px 20px;
+        border: 2px solid var(--input-border);
+        border-radius: 16px;
+        font-size: 1.2rem;
+        background: var(--input-bg);
+        color: var(--text-main);
+        transition: var(--transition);
+        font-family: inherit;
+        height: 60px;
+        text-align: left;
+        direction: ltr;
+        /* LTR for phone */
+    }
+
+    .form-control:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        outline: none;
+    }
+
+    .floating-label {
+        position: absolute;
+        right: 48px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: transparent;
+        color: var(--text-sub);
+        font-size: 1rem;
+        transition: all 0.2s ease-in-out;
+        pointer-events: none;
+        padding: 0 4px;
+    }
+
+    .form-control:focus~.floating-label,
+    .form-control:not(:placeholder-shown)~.floating-label {
+        top: 0;
+        transform: translateY(-50%) scale(0.85);
+        color: var(--primary);
+        background: var(--input-bg);
+        right: 14px;
+    }
+
+    .input-icon {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        right: 18px;
+        color: var(--text-sub);
+        font-size: 1.2rem;
+        pointer-events: none;
+        transition: var(--transition);
+    }
+
+    .form-control:focus~.input-icon {
+        color: var(--primary);
+    }
+
+    /* Validation Feedback */
+    .validation-feedback {
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 1rem;
+        display: none;
+    }
+
+    .valid-icon {
+        color: var(--success);
+    }
+
+    .invalid-icon {
+        color: var(--danger);
+    }
+
+    .error-msg {
+        color: var(--danger);
+        font-size: 0.9rem;
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    /* Submit Button */
+    .btn-submit {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white;
+        border: none;
+        height: 60px;
+        border-radius: 16px;
+        width: 100%;
+        font-size: 1.1rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    }
+
+    .back-link {
+        display: block;
+        text-align: center;
+        margin-top: 24px;
+        color: var(--text-sub);
+        text-decoration: none;
+        font-weight: 600;
+        transition: var(--transition);
+    }
+
+    .back-link:hover {
+        color: var(--primary);
+    }
+
+    /* RTL Override */
+    html[dir="rtl"] .floating-label {
+        transform-origin: right top;
+    }
+
+    /* New Alert Styles */
+    .messages-container {
+        margin-bottom: 24px;
+        width: 100%;
+    }
+
+    .alert-message {
+        padding: 12px 16px;
+        border-radius: 12px;
+        font-size: 0.95rem;
+        display: flex;
+        align-items: flex-start;
+        /* Align top for long text */
+        gap: 10px;
+        line-height: 1.5;
+        margin-bottom: 10px;
+        text-align: right;
+    }
+
+    .alert-message.error {
+        background: #fff5f5;
+        border: 1px solid #fc8181;
+        color: #c53030;
+    }
+
+    .alert-message.success {
+        background: #f0fff4;
+        border: 1px solid #68d391;
+        color: #2f855a;
+    }
+
+    [data-theme="dark"] .alert-message.error {
+        background: rgba(229, 62, 62, 0.15);
+        border-color: #c53030;
+        color: #fc8181;
+    }
+
+    [data-theme="dark"] .alert-message.success {
+        background: rgba(72, 187, 120, 0.15);
+        border-color: #2f855a;
+        color: #68d391;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<section class="auth-wrapper">
-    <div class="container" style="display: flex; justify-content: center;">
-        <div class="auth-card reveal-on-scroll">
-            <div class="auth-header">
-                <h2 class="text-h2">رقم الهاتف</h2>
-                <p class="text-body-m text-muted">أدخل رقم هاتفك للتحقق وإنشاء الحساب</p>
-            </div>
+<div class="registration-wrapper">
+    <div class="registration-card">
+        <div class="page-header">
+            <h1 class="page-title">رقم الهاتف</h1>
+            <p class="page-subtitle">أدخل رقم هاتفك لنرسل لك رمز التحقق</p>
+        </div>
 
-            <form method="post">
-                {% csrf_token %}
-
-                <div class="form-group">
-                    <label for="phone">رقم الهاتف</label>
-                    <input type="text" id="phone" name="phone" placeholder="05XXXXXXXX" required dir="ltr"
-                        style="text-align: right;">
-                    {% if form.phone.errors %}
-                    <ul class="errorlist">
-                        {% for error in form.phone.errors %}
-                        <li>{{ error }}</li>
-                        {% endfor %}
-                    </ul>
-                    {% endif %}
-                </div>
-
-                <button type="submit" class="btn btn-primary" style="width: 100%;">
-                    إرسال رمز التحقق
-                    <i class="fa-solid fa-paper-plane"></i>
-                </button>
-            </form>
-
-            <div class="text-center" style="margin-top: 1.5rem;">
-                <a href="{% url 'accounts:register' %}" class="text-muted"><i class="fa-solid fa-arrow-right"></i>
-                    العودة للخلف</a>
+        <!-- Wizard Step 1 -->
+        <div class="wizard-container">
+            <div class="step-indicator">
+                <div class="step-dot active" title="رقم الهاتف"></div>
+                <div class="step-line"></div>
+                <div class="step-dot" title="رمز التحقق"></div>
+                <div class="step-line"></div>
+                <div class="step-dot" title="البيانات"></div>
             </div>
         </div>
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            <div class="input-group">
+                <input type="tel" id="phone" name="phone" class="form-control" placeholder=" " maxlength="10" required>
+                <label class="floating-label" for="phone">رقم الهاتف (05xxxxxxxx)</label>
+                <i class="fa-solid fa-mobile-screen input-icon"></i>
+
+                <!-- Feedback Icons -->
+                <i class="fa-solid fa-check validation-feedback valid-icon" id="valid-icon"></i>
+                <i class="fa-solid fa-xmark validation-feedback invalid-icon" id="invalid-icon"></i>
+
+                {% if form.phone.errors %}
+                <div class="error-msg">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    {{ form.phone.errors.0 }}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Global/Backend Messages -->
+            {% if messages %}
+            <div class="messages-container">
+                {% for message in messages %}
+                <div class="alert-message {{ message.tags }}">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span>{{ message }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <button type="submit" class="btn-submit">
+                <span>إرسال الرمز</span>
+                <i class="fa-solid fa-paper-plane"></i>
+            </button>
+        </form>
+
+        <a href="{% url 'accounts:register' %}" class="back-link">
+            <i class="fa-solid fa-arrow-right"></i> العودة للخلف
+        </a>
     </div>
-</section>
+</div>
+{% endblock %}
+
+{% block messages %}{% endblock %}
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const phoneInput = document.getElementById('phone');
+        const validIcon = document.getElementById('valid-icon');
+        const invalidIcon = document.getElementById('invalid-icon');
+
+        phoneInput.addEventListener('input', function () {
+            // Allow only numbers
+            this.value = this.value.replace(/\D/g, '');
+            const val = this.value;
+
+            // Simple validation logic (Starts with 059/056 and length 10 is typical)
+            const isValidFormat = (val.startsWith('059') || val.startsWith('056')) && val.length === 10;
+
+            if (isValidFormat) {
+                this.style.borderColor = 'var(--success)';
+                validIcon.style.display = 'block';
+                invalidIcon.style.display = 'none';
+            } else if (val.length > 0) {
+                // Show invalid if they typed something but it's not complete/correct yet
+                if (val.length >= 3 && !val.startsWith('059') && !val.startsWith('056')) {
+                    this.style.borderColor = 'var(--danger)';
+                    validIcon.style.display = 'none';
+                    invalidIcon.style.display = 'block';
+                } else if (val.length === 10) {
+                    // Length is 10 but wrong prefix
+                    this.style.borderColor = 'var(--danger)';
+                    validIcon.style.display = 'none';
+                    invalidIcon.style.display = 'block';
+                } else {
+                    // Typing...
+                    this.style.borderColor = 'var(--border-default)';
+                    validIcon.style.display = 'none';
+                    invalidIcon.style.display = 'none';
+                }
+            } else {
+                this.style.borderColor = 'var(--border-default)';
+                validIcon.style.display = 'none';
+                invalidIcon.style.display = 'none';
+            }
+        });
+    });
+</script>
 {% endblock %}

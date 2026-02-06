@@ -30,6 +30,7 @@
     <!-- Main Content -->
     <main style="min-height: 80vh;">
         <!-- Messages -->
+        {% block messages %}
         <div class="container" style="margin-top: 2rem;">
             {% if messages %}
             {% for message in messages %}
@@ -46,6 +47,7 @@
             {% endfor %}
             {% endif %}
         </div>
+        {% endblock %}
 
         {% block content %}{% endblock %}
     </main>
