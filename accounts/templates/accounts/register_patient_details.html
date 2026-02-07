@@ -361,45 +361,6 @@
         opacity: 1;
     }
 
-    /* Email Widget Redesign */
-    .email-wrapper {
-        display: flex;
-        align-items: center;
-        position: relative;
-    }
-
-    .verify-btn-inline {
-        position: absolute;
-        left: 8px;
-        top: 8px;
-        bottom: 8px;
-        background: #ebf4ff;
-        color: var(--primary);
-        border-radius: 10px;
-        border: none;
-        padding: 0 16px;
-        font-weight: 600;
-        font-size: 0.9rem;
-        cursor: pointer;
-        transition: var(--transition);
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-
-    [data-theme="dark"] .verify-btn-inline {
-        background: #2d3748;
-        color: #9f7aea;
-    }
-
-    .verify-btn-inline:hover {
-        background: #c3dafe;
-    }
-
-    [data-theme="dark"] .verify-btn-inline:hover {
-        background: #4a5568;
-    }
-
     /* Error Text */
     .error-msg {
         color: var(--danger);
@@ -516,34 +477,7 @@
                     {% endif %}
                 </div>
 
-                <!-- Email (Full Width) -->
-                <div class="input-group full-width">
-                    <div class="email-wrapper">
-                        <input type="email" id="email" name="email" class="form-control"
-                            value="{{ form.email.value|default:verified_email|default:'' }}" placeholder=" " {% if email_is_verified %}readonly{% endif %}>
 
-                        <label class="floating-label" for="email">البريد الإلكتروني (اختياري)</label>
-                        <i class="fa-regular fa-envelope input-icon"></i>
-
-                        <button type="button" id="verify-email-btn" class="verify-btn-inline" {% if email_is_verified %}style="display: none;" {% endif %}>
-
-                            تحقق
-                        </button>
-                    </div>
-
-                    <div id="email-verification-message" style="margin-top: 5px; font-size: 0.9rem;">
-                        {% if email_is_verified %}
-                        <span style="color: var(--success); display: flex; align-items: center; gap: 5px;">
-                            <i class="fa-solid fa-badge-check"></i> البريد مؤكد
-                        </span>
-                        {% endif %}
-                    </div>
-
-                    {% if form.email.errors %}
-                    <div class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> {{ form.email.errors.0 }}
-                    </div>
-                    {% endif %}
-                </div>
 
                 <!-- Password -->
                 <div class="input-group">
@@ -599,22 +533,6 @@
         const pass2 = document.getElementById('password2');
         const strengthBar = document.getElementById('strength-bar');
         const strengthText = document.getElementById('strength-text');
-
-        // --- Email Verification Logic ---
-        const emailInput = document.getElementById('email');
-        const verifyBtn = document.getElementById('verify-email-btn');
-        const messageDiv = document.getElementById('email-verification-message');
-        const csrfEl = document.querySelector('[name=csrfmiddlewaretoken]');
-
-        const csrfToken = csrfEl ? csrfEl.value : null;
-
-        // IMPORTANT: define originalEmail (was missing)
-        const originalEmail = "{{ original_email|default:''|escapejs }}";
-
-        // safer default if not provided
-        const emailVerifiedStr = "{{ email_is_verified|yesno:'true,false' }}";
-        let emailVerified = emailVerifiedStr === "true";
-
 
         // =========================
         // National ID Validation
@@ -692,90 +610,7 @@
             });
         }
 
-        // =========================
-        // Email Verification UI
-        // =========================
-        if (emailInput && verifyBtn && messageDiv) {
 
-            // Initial floating label state
-            if (emailInput.value) emailInput.classList.add('has-value');
-
-            emailInput.addEventListener('input', function () {
-                const currentEmail = this.value.trim();
-
-                if (currentEmail === '') {
-                    verifyBtn.style.display = 'none';
-                    messageDiv.innerHTML = '';
-                    return;
-                }
-
-                // if originalEmail is empty, don't compare (avoid misleading "confirmed")
-                const isSameAsOriginal = originalEmail
-                    ? currentEmail.toLowerCase() === originalEmail.toLowerCase()
-                    : false;
-
-                if (emailVerified && isSameAsOriginal) {
-                    verifyBtn.style.display = 'none';
-                    messageDiv.innerHTML =
-                        '<span style="color: var(--success); display:flex; align-items:center; gap:5px;">' +
-                        '<i class="fa-solid fa-badge-check"></i> البريد مؤكد</span>';
-                } else {
-                    verifyBtn.style.display = 'flex';
-                    if (emailVerified) {
-                        messageDiv.innerHTML =
-                            '<span style="color: var(--warning);">' +
-                            '<i class="fa-solid fa-triangle-exclamation"></i> يرجى التحقق من البريد الجديد</span>';
-                    } else {
-                        messageDiv.innerHTML = '';
-                    }
-                }
-            });
-
-            verifyBtn.addEventListener('click', function () {
-                const email = emailInput.value.trim();
-                if (!email) return;
-
-                if (!csrfToken) {
-                    messageDiv.innerHTML =
-                        '<span style="color: var(--danger);">CSRF token غير موجود</span>';
-                    return;
-                }
-
-                const originalText = verifyBtn.innerHTML;
-                verifyBtn.disabled = true;
-                verifyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-
-                fetch("{% url 'accounts:send_email_verification' %}", {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-CSRFToken': csrfToken
-                    },
-                    body: `email=${encodeURIComponent(email)}`
-                })
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.success) {
-                            messageDiv.innerHTML =
-                                `<span style="color: var(--success);"><i class="fa-solid fa-check"></i> ${data.message}</span>`;
-                            verifyBtn.innerHTML = 'إعادة';
-                            // optional: you might set emailVerified=false here because it's a NEW email pending verification
-                            // emailVerified = false;
-                        } else {
-                            messageDiv.innerHTML =
-                                `<span style="color: var(--danger);"><i class="fa-solid fa-circle-xmark"></i> ${data.message}</span>`;
-                            verifyBtn.innerHTML = originalText;
-                        }
-                        verifyBtn.disabled = false;
-                    })
-                    .catch(() => {
-                        messageDiv.innerHTML =
-                            '<span style="color: var(--danger);">حدث خطأ</span>';
-                        verifyBtn.disabled = false;
-                        verifyBtn.innerHTML = originalText;
-                    });
-            });
-        }
 
     });
 </script>

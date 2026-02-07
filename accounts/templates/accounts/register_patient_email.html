@@ -1,0 +1,398 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}إضافة البريد الإلكتروني{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Shared Variables */
+    :root {
+        --primary: #667eea;
+        --secondary: #764ba2;
+        --success: #48bb78;
+        --danger: #e53e3e;
+        --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+        /* Light Mode */
+        --bg-grad-1: #fff5f5;
+        --bg-grad-2: #ebf4ff;
+        --card-bg: rgba(255, 255, 255, 0.95);
+        --card-border: rgba(255, 255, 255, 0.6);
+        --text-main: #2d3748;
+        --text-sub: #718096;
+        --input-bg: #ffffff;
+        --input-border: #e2e8f0;
+        --shadow-color: rgba(0, 0, 0, 0.08);
+    }
+
+    [data-theme="dark"] {
+        /* Dark Mode */
+        --bg-grad-1: #2d3748;
+        --bg-grad-2: #171923;
+        --card-bg: rgba(30, 41, 59, 0.95);
+        --card-border: rgba(255, 255, 255, 0.1);
+        --text-main: #f7fafc;
+        --text-sub: #cbd5e0;
+        --input-bg: #2d3748;
+        --input-border: #4a5568;
+        --shadow-color: rgba(0, 0, 0, 0.3);
+    }
+
+    .registration-wrapper {
+        min-height: 80vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: radial-gradient(circle at top right, var(--bg-grad-1), transparent),
+            radial-gradient(circle at bottom left, var(--bg-grad-2), transparent);
+    }
+
+    .registration-card {
+        background: var(--card-bg);
+        backdrop-filter: blur(10px);
+        border-radius: 24px;
+        box-shadow: 0 20px 40px var(--shadow-color);
+        padding: 48px;
+        max-width: 600px;
+        width: 100%;
+        position: relative;
+        overflow: hidden;
+        animation: slideInUp 0.6s ease-out;
+        border: 1px solid var(--card-border);
+        text-align: center;
+    }
+
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Header */
+    .page-header {
+        margin-bottom: 30px;
+    }
+
+    .icon-circle {
+        width: 90px;
+        height: 90px;
+        background: linear-gradient(135deg, #d6f5d6, #e8fce8);
+        color: var(--success);
+        font-size: 2.5rem;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        box-shadow: 0 10px 20px rgba(72, 187, 120, 0.15);
+    }
+
+    [data-theme="dark"] .icon-circle {
+        background: linear-gradient(135deg, #276749, #234e38);
+    }
+
+    .page-title {
+        font-size: 1.8rem;
+        font-weight: 800;
+        margin-bottom: 10px;
+        color: var(--text-main);
+    }
+
+    .success-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: linear-gradient(135deg, #c6f6d5, #9ae6b4);
+        color: #22543d;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 15px;
+    }
+
+    [data-theme="dark"] .success-badge {
+        background: linear-gradient(135deg, #276749, #234e38);
+        color: #9ae6b4;
+    }
+
+    .page-subtitle {
+        color: var(--text-sub);
+        font-size: 1rem;
+        line-height: 1.6;
+        max-width: 400px;
+        margin: 0 auto;
+    }
+
+    /* Wizard Steps */
+    .wizard-container {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 40px;
+    }
+
+    .step-indicator {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .step-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--input-border);
+        transition: var(--transition);
+    }
+
+    .step-dot.active {
+        background: var(--primary);
+        transform: scale(1.3);
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+    }
+
+    .step-dot.completed {
+        background: var(--success);
+    }
+
+    .step-line {
+        width: 40px;
+        height: 3px;
+        background: var(--input-border);
+        border-radius: 2px;
+    }
+
+    .step-line.filled {
+        background: var(--success);
+    }
+
+    /* Email Input */
+    .input-group {
+        position: relative;
+        margin: 30px 0;
+        text-align: right;
+    }
+
+    .input-icon {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        right: 16px;
+        color: var(--text-sub);
+        font-size: 1.1rem;
+        transition: var(--transition);
+        pointer-events: none;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 16px 50px 16px 20px;
+        border: 2px solid var(--input-border);
+        border-radius: 16px;
+        font-size: 1rem;
+        background: var(--input-bg);
+        color: var(--text-main);
+        transition: var(--transition);
+        font-family: inherit;
+        height: 56px;
+    }
+
+    .form-control:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        outline: none;
+    }
+
+    .form-control:focus+.input-icon {
+        color: var(--primary);
+    }
+
+    .floating-label {
+        position: absolute;
+        right: 48px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: transparent;
+        color: var(--text-sub);
+        font-size: 1rem;
+        transition: all 0.2s ease-in-out;
+        pointer-events: none;
+        padding: 0 4px;
+    }
+
+    .form-control:focus~.floating-label,
+    .form-control:not(:placeholder-shown)~.floating-label {
+        top: 0;
+        transform: translateY(-50%) scale(0.85);
+        color: var(--primary);
+        background: var(--input-bg);
+        right: 14px;
+    }
+
+    .input-hint {
+        font-size: 0.85rem;
+        color: var(--text-sub);
+        margin-top: 8px;
+        text-align: right;
+    }
+
+    /* Buttons */
+    .btn-submit {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white;
+        border: none;
+        height: 56px;
+        border-radius: 16px;
+        width: 100%;
+        font-size: 1.05rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        margin-bottom: 12px;
+    }
+
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-skip {
+        background: transparent;
+        border: 2px solid var(--input-border);
+        color: var(--text-sub);
+        height: 52px;
+        border-radius: 16px;
+        width: 100%;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .btn-skip:hover {
+        border-color: var(--text-sub);
+        color: var(--text-main);
+    }
+
+    /* Alert */
+    .alert-error {
+        background: #fff5f5;
+        border: 1px solid #fc8181;
+        color: #c53030;
+        padding: 12px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    [data-theme="dark"] .alert-error {
+        background: rgba(229, 62, 62, 0.1);
+        border-color: #c53030;
+        color: #fc8181;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="registration-wrapper">
+    <div class="registration-card">
+        <div class="page-header">
+            <div class="icon-circle">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <div class="success-badge">
+                <i class="fa-solid fa-check"></i>
+                <span>تم إنشاء حسابك بنجاح!</span>
+            </div>
+            <h1 class="page-title">مرحباً بك 🎉</h1>
+            <p class="page-subtitle">
+                أضف بريدك الإلكتروني لتتمكن من استعادة حسابك واستلام التنبيهات المهمة
+            </p>
+        </div>
+
+        <!-- Wizard Step 4 (Optional) -->
+        <div class="wizard-container">
+            <div class="step-indicator">
+                <div class="step-dot completed" title="رقم الهاتف"></div>
+                <div class="step-line filled"></div>
+                <div class="step-dot completed" title="رمز التحقق"></div>
+                <div class="step-line filled"></div>
+                <div class="step-dot completed" title="البيانات"></div>
+                <div class="step-line filled"></div>
+                <div class="step-dot active" title="البريد (اختياري)"></div>
+            </div>
+        </div>
+
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert-error">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <form method="post" id="emailForm">
+            {% csrf_token %}
+
+            <div class="input-group">
+                <input type="email" id="email" name="email" class="form-control" placeholder=" " dir="ltr">
+                <i class="fa-regular fa-envelope input-icon"></i>
+                <label class="floating-label" for="email">البريد الإلكتروني</label>
+                <p class="input-hint">
+                    <i class="fa-solid fa-info-circle"></i>
+                    سنرسل لك رابط تأكيد للتحقق من بريدك
+                </p>
+            </div>
+
+            <button type="submit" class="btn-submit" name="action" value="add">
+                <span>إضافة البريد والتحقق</span>
+                <i class="fa-solid fa-paper-plane"></i>
+            </button>
+
+            <button type="submit" class="btn-skip" name="action" value="skip">
+                <i class="fa-solid fa-arrow-left"></i>
+                <span>تخطي والذهاب للحساب</span>
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const emailInput = document.getElementById('email');
+        const submitBtn = document.querySelector('.btn-submit');
+
+        // Enable/disable submit based on email input
+        emailInput.addEventListener('input', function () {
+            if (this.value.trim().length > 0) {
+                submitBtn.style.opacity = '1';
+            } else {
+                submitBtn.style.opacity = '0.7';
+            }
+        });
+    });
+</script>
+{% endblock %}

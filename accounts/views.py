@@ -189,8 +189,11 @@ def register_patient_verify(request):
         success, message = verify_otp(phone, entered_otp)
 
         if success:
+
             request.session["phone_verified"] = True
             messages.success(request, message)
+
+            # Redirect to registration details
             return redirect("accounts:register_patient_details")
         else:
             messages.error(request, message)
@@ -242,15 +245,27 @@ def verify_email(request, token):
     """Handle email verification link clicks"""
     success, email, message = verify_email_token(token)
 
-    if success:
-        # Store verified email in session
-        request.session["verified_email"] = email
-        messages.success(request, f"Email {email} has been verified successfully!")
-    else:
+    if not success:
         messages.error(request, message)
+        if request.user.is_authenticated:
+            return redirect("patients:profile")
+        return redirect("accounts:login")
 
-    # Redirect back to registration form
-    return redirect("accounts:register_patient_details")
+    # Verification successful - save the email to the user
+    if request.user.is_authenticated:
+        # Update user's email and mark as verified
+        request.user.email = email
+        request.user.email_verified = True
+        request.user.save()
+        messages.success(request, f"تم تأكيد البريد الإلكتروني {email} بنجاح!")
+        return redirect("patients:profile")
+
+    # User not logged in - store email in session for later
+    request.session["verified_email"] = email
+    messages.success(
+        request, f"تم تأكيد البريد الإلكتروني {email} بنجاح! يرجى تسجيل الدخول."
+    )
+    return redirect("accounts:login")
 
 
 # ============================================
@@ -268,9 +283,6 @@ def register_patient_details(request):
         messages.error(request, "Please verify your phone number first.")
         return redirect("accounts:register_patient_phone")
 
-    # Get verified email from session if exists
-    verified_email = request.session.get("verified_email")
-
     if request.method == "POST":
         form = PatientRegistrationForm(request.POST)
         form.data = form.data.copy()
@@ -281,26 +293,8 @@ def register_patient_details(request):
             try:
                 user = form.save(commit=False)
 
-                # Handle email verification status
-                submitted_email = form.cleaned_data.get("email")
-
-                if submitted_email:
-                    # Check if submitted email matches verified email
-                    if (
-                        verified_email
-                        and submitted_email.lower() == verified_email.lower()
-                    ):
-                        user.email_verified = True
-                        # Clear verified email from session after use
-                        if "verified_email" in request.session:
-                            del request.session["verified_email"]
-                        if "verification_email_sent" in request.session:
-                            del request.session["verification_email_sent"]
-                    else:
-                        user.email_verified = False
-                else:
-                    user.email_verified = False
-
+                # Email is optional and will be verified later from profile settings
+                user.email_verified = False
                 user.is_verified = True  # Phone is verified
                 user.save()
 
@@ -315,7 +309,8 @@ def register_patient_details(request):
                 login(request, user, backend="accounts.backends.PhoneNumberAuthBackend")
                 request.session["just_registered"] = True
 
-                return redirect("accounts:home")
+                # Redirect to optional email step
+                return redirect("accounts:register_patient_email")
 
             except Exception as e:
                 messages.error(
@@ -324,24 +319,68 @@ def register_patient_details(request):
         else:
             messages.error(request, "Please correct the errors below.")
     else:
-        # Pre-fill email if it was verified
-        initial_data = {"phone": phone}
-        if verified_email:
-            initial_data["email"] = verified_email
-        form = PatientRegistrationForm(initial=initial_data)
-
-    # Check if there's a verified email for display
-    email_is_verified = verified_email is not None
+        form = PatientRegistrationForm(initial={"phone": phone})
 
     return render(
         request,
         "accounts/register_patient_details.html",
-        {
-            "form": form,
-            "verified_email": verified_email,
-            "email_is_verified": email_is_verified,
-        },
+        {"form": form},
     )
+
+
+# ============================================
+# STEP 4: Optional email (after account creation)
+# ============================================
+@login_required
+def register_patient_email(request):
+    """Optional step: Add email after registration"""
+    user = request.user
+
+    # Only allow newly registered patients
+    if user.role != "PATIENT":
+        return redirect("accounts:home")
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+
+        if action == "skip":
+            # Clear just_registered flag and go to dashboard
+            if "just_registered" in request.session:
+                del request.session["just_registered"]
+            return redirect("accounts:home")
+
+        # Handle email submission
+        email = request.POST.get("email", "").strip()
+
+        if email:
+            import re
+
+            if not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", email):
+                messages.error(request, "تنسيق البريد الإلكتروني غير صحيح.")
+                return render(request, "accounts/register_patient_email.html")
+
+            # Check if email is already used by another user
+            if User.objects.filter(email__iexact=email).exclude(pk=user.pk).exists():
+                messages.error(request, "هذا البريد الإلكتروني مسجل بالفعل.")
+                return render(request, "accounts/register_patient_email.html")
+
+            # DON'T save email yet - only save after verification link is clicked
+            # Just send the verification email
+            success, message = send_verification_email(email, request)
+
+            if success:
+                messages.success(
+                    request,
+                    "تم إرسال رابط التأكيد إلى بريدك الإلكتروني. افتح الرابط لتأكيد بريدك.",
+                )
+                # Clear just_registered flag
+                if "just_registered" in request.session:
+                    del request.session["just_registered"]
+                return redirect("accounts:home")
+            else:
+                messages.error(request, message)
+
+    return render(request, "accounts/register_patient_email.html")
 
 
 def register_main_doctor(request):
@@ -503,39 +542,47 @@ def change_phone_verify(request):
 @login_required
 def change_email_request(request):
     """Initiate email change: Enter new email and send verification"""
-    
+
     # Get the current email to show in the form
     current_email = request.user.email or ""
-    
+
     # Pre-fill with pending email if coming from edit profile
-    pending_email = request.session.get('pending_email_change', '')
-    
+    pending_email = request.session.get("pending_email_change", "")
+
     if request.method == "POST":
         new_email = request.POST.get("email", "").strip()
 
         # 1. Basic validation
         import re
+
         if not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", new_email):
             messages.error(request, "تنسيق البريد الإلكتروني غير صحيح.")
-            return render(request, "accounts/change_email_request.html", {
-                'current_email': current_email,
-                'pending_email': pending_email
-            })
+            return render(
+                request,
+                "accounts/change_email_request.html",
+                {"current_email": current_email, "pending_email": pending_email},
+            )
 
         # 2. Check uniqueness
         if request.user.email and request.user.email.lower() == new_email.lower():
             messages.error(request, "لقد أدخلت بريدك الإلكتروني الحالي.")
-            return render(request, "accounts/change_email_request.html", {
-                'current_email': current_email,
-                'pending_email': pending_email
-            })
+            return render(
+                request,
+                "accounts/change_email_request.html",
+                {"current_email": current_email, "pending_email": pending_email},
+            )
 
-        if User.objects.filter(email__iexact=new_email).exclude(pk=request.user.pk).exists():
+        if (
+            User.objects.filter(email__iexact=new_email)
+            .exclude(pk=request.user.pk)
+            .exists()
+        ):
             messages.error(request, "البريد الإلكتروني هذا مسجل بالفعل.")
-            return render(request, "accounts/change_email_request.html", {
-                'current_email': current_email,
-                'pending_email': pending_email
-            })
+            return render(
+                request,
+                "accounts/change_email_request.html",
+                {"current_email": current_email, "pending_email": pending_email},
+            )
 
         # 3. Send Verification Email
         success, message = send_change_email_verification(new_email, request)
@@ -544,18 +591,19 @@ def change_email_request(request):
             # Store intended email in session
             request.session["change_email_pending"] = new_email
             # Clear the pending_email_change flag
-            if 'pending_email_change' in request.session:
-                del request.session['pending_email_change']
+            if "pending_email_change" in request.session:
+                del request.session["pending_email_change"]
             return render(
                 request, "accounts/change_email_sent.html", {"email": new_email}
             )
         else:
             messages.error(request, message)
 
-    return render(request, "accounts/change_email_request.html", {
-        'current_email': current_email,
-        'pending_email': pending_email
-    })
+    return render(
+        request,
+        "accounts/change_email_request.html",
+        {"current_email": current_email, "pending_email": pending_email},
+    )
 
 
 @login_required

@@ -26,6 +26,11 @@ urlpatterns = [
         views.register_patient_details,
         name="register_patient_details",
     ),
+    path(
+        "register/patient/email/",
+        views.register_patient_email,
+        name="register_patient_email",
+    ),
     # Email verification
     path(
         "send-email-verification/",

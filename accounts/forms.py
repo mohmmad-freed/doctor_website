@@ -41,7 +41,7 @@ class PatientRegistrationForm(forms.ModelForm):
 
     class Meta:
         model = CustomUser
-        fields = ["name", "phone", "national_id", "city", "email"]
+        fields = ["name", "phone", "national_id", "city"]
 
     def clean_name(self):
         name = (self.cleaned_data.get("name") or "").strip()
