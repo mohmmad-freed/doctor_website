@@ -48,11 +48,11 @@ TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
 TWILIO_VERIFY_SID = os.environ.get("TWILIO_VERIFY_SID")
 
 
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split()
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
 
 # احتياط (اختياري): لو المتغير فاضي
 if not ALLOWED_HOSTS or ALLOWED_HOSTS == [""]:
-    ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".onrender.com"]
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 CSRF_TRUSTED_ORIGINS = os.environ.get(
     "CSRF_TRUSTED_ORIGINS", "http://localhost:8000"
