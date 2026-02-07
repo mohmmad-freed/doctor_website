@@ -503,8 +503,9 @@
                     <select id="city" name="city" class="form-control" required style="padding-top: 16px;">
                         <option value="" disabled selected></option>
                         {% for city in form.fields.city.queryset %}
-                        <option value="{{ city.id }}"
-                            {% if form.city.value|stringformat:"s" == city.id|stringformat:"s" %}selected{% endif %}>
+                        <option value="{{ city.id }}" {% if form.city.value|stringformat:"s"==city.id|stringformat:"s"
+                            %}selected{% endif %}>
+
                             {{ city.name }}
                         </option>
                         {% endfor %}
@@ -523,10 +524,13 @@
                         <input type="email" id="email" name="email" class="form-control"
                             value="{{ form.email.value|default:verified_email|default:'' }}" placeholder=" " {% if
                             email_is_verified %}readonly{% endif %}>
+
                         <label class="floating-label" for="email">البريد الإلكتروني (اختياري)</label>
                         <i class="fa-regular fa-envelope input-icon"></i>
 
-                        <button type="button" id="verify-email-btn" class="verify-btn-inline" {% if email_is_verified %}style="display: none;"{% endif %}>
+                        <button type="button" id="verify-email-btn" class="verify-btn-inline" {% if email_is_verified
+                            %}style="display: none;" {% endif %}>
+
                             تحقق
                         </button>
                     </div>
@@ -592,188 +596,189 @@
 
 {% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function () {
 
-  const nationalIdInput = document.getElementById('national_id');
-  const pass1 = document.getElementById('password1');
-  const pass2 = document.getElementById('password2');
-  const strengthBar = document.getElementById('strength-bar');
-  const strengthText = document.getElementById('strength-text');
+        const nationalIdInput = document.getElementById('national_id');
+        const pass1 = document.getElementById('password1');
+        const pass2 = document.getElementById('password2');
+        const strengthBar = document.getElementById('strength-bar');
+        const strengthText = document.getElementById('strength-text');
 
-  // --- Email Verification Logic ---
-  const emailInput = document.getElementById('email');
-  const verifyBtn = document.getElementById('verify-email-btn');
-  const messageDiv = document.getElementById('email-verification-message');
-  const csrfEl = document.querySelector('[name=csrfmiddlewaretoken]');
+        // --- Email Verification Logic ---
+        const emailInput = document.getElementById('email');
+        const verifyBtn = document.getElementById('verify-email-btn');
+        const messageDiv = document.getElementById('email-verification-message');
+        const csrfEl = document.querySelector('[name=csrfmiddlewaretoken]');
 
-  const csrfToken = csrfEl ? csrfEl.value : null;
+        const csrfToken = csrfEl ? csrfEl.value : null;
 
-  // IMPORTANT: define originalEmail (was missing)
-  const originalEmail = "{{ original_email|default:''|escapejs }}";
+        // IMPORTANT: define originalEmail (was missing)
+        const originalEmail = "{{ original_email|default:''|escapejs }}";
 
-  // safer default if not provided
-  let emailVerified = {{ email_is_verified|default:False|yesno:"true,false" }};
+        // safer default if not provided
+        let emailVerified = {{ email_is_verified|default: False | yesno: "true,false"
+    }};
 
-  // =========================
-  // National ID Validation
-  // =========================
-  if (nationalIdInput) {
-    nationalIdInput.addEventListener('input', function () {
-      const val = this.value.replace(/\D/g, '');
-      this.value = val;
+    // =========================
+    // National ID Validation
+    // =========================
+    if (nationalIdInput) {
+        nationalIdInput.addEventListener('input', function () {
+            const val = this.value.replace(/\D/g, '');
+            this.value = val;
 
-      if (val.length === 9) {
-        this.classList.add('valid');
-        this.classList.remove('invalid');
-      } else if (val.length > 0) {
-        this.classList.add('invalid');
-        this.classList.remove('valid');
-      } else {
-        this.classList.remove('valid', 'invalid');
-      }
-    });
-  }
+            if (val.length === 9) {
+                this.classList.add('valid');
+                this.classList.remove('invalid');
+            } else if (val.length > 0) {
+                this.classList.add('invalid');
+                this.classList.remove('valid');
+            } else {
+                this.classList.remove('valid', 'invalid');
+            }
+        });
+    }
 
-  // =========================
-  // Password Strength Meter
-  // =========================
-  if (pass1 && strengthBar && strengthText) {
-    pass1.addEventListener('input', function () {
-      const val = this.value;
-      let strength = 0;
+    // =========================
+    // Password Strength Meter
+    // =========================
+    if (pass1 && strengthBar && strengthText) {
+        pass1.addEventListener('input', function () {
+            const val = this.value;
+            let strength = 0;
 
-      if (val.length === 0) {
-        strengthBar.style.width = '0%';
-        strengthBar.style.backgroundColor = '';
-        strengthText.textContent = '';
-        strengthText.style.color = '';
-        return;
-      }
+            if (val.length === 0) {
+                strengthBar.style.width = '0%';
+                strengthBar.style.backgroundColor = '';
+                strengthText.textContent = '';
+                strengthText.style.color = '';
+                return;
+            }
 
-      if (val.length > 5) strength += 20;
-      if (val.length > 8) strength += 20;
-      if (/[A-Z]/.test(val)) strength += 20;
-      if (/[0-9]/.test(val)) strength += 20;
-      if (/[^A-Za-z0-9]/.test(val)) strength += 20;
+            if (val.length > 5) strength += 20;
+            if (val.length > 8) strength += 20;
+            if (/[A-Z]/.test(val)) strength += 20;
+            if (/[0-9]/.test(val)) strength += 20;
+            if (/[^A-Za-z0-9]/.test(val)) strength += 20;
 
-      strengthBar.style.width = strength + '%';
+            strengthBar.style.width = strength + '%';
 
-      if (strength <= 40) {
-        strengthBar.style.backgroundColor = 'var(--danger)';
-        strengthText.textContent = 'ضعيفة';
-        strengthText.style.color = 'var(--danger)';
-      } else if (strength <= 80) {
-        strengthBar.style.backgroundColor = 'var(--warning)';
-        strengthText.textContent = 'متوسطة';
-        strengthText.style.color = 'var(--warning)';
-      } else {
-        strengthBar.style.backgroundColor = 'var(--success)';
-        strengthText.textContent = 'قوية';
-        strengthText.style.color = 'var(--success)';
-      }
-    });
-  }
+            if (strength <= 40) {
+                strengthBar.style.backgroundColor = 'var(--danger)';
+                strengthText.textContent = 'ضعيفة';
+                strengthText.style.color = 'var(--danger)';
+            } else if (strength <= 80) {
+                strengthBar.style.backgroundColor = 'var(--warning)';
+                strengthText.textContent = 'متوسطة';
+                strengthText.style.color = 'var(--warning)';
+            } else {
+                strengthBar.style.backgroundColor = 'var(--success)';
+                strengthText.textContent = 'قوية';
+                strengthText.style.color = 'var(--success)';
+            }
+        });
+    }
 
-  // =========================
-  // Password Match
-  // =========================
-  if (pass2 && pass1) {
-    pass2.addEventListener('input', function () {
-      if (this.value === pass1.value && this.value.length > 0) {
-        this.classList.add('valid');
-        this.classList.remove('invalid');
-      } else {
-        this.classList.remove('valid');
-        if (this.value.length > 0) this.classList.add('invalid');
-        else this.classList.remove('invalid');
-      }
-    });
-  }
+    // =========================
+    // Password Match
+    // =========================
+    if (pass2 && pass1) {
+        pass2.addEventListener('input', function () {
+            if (this.value === pass1.value && this.value.length > 0) {
+                this.classList.add('valid');
+                this.classList.remove('invalid');
+            } else {
+                this.classList.remove('valid');
+                if (this.value.length > 0) this.classList.add('invalid');
+                else this.classList.remove('invalid');
+            }
+        });
+    }
 
-  // =========================
-  // Email Verification UI
-  // =========================
-  if (emailInput && verifyBtn && messageDiv) {
+    // =========================
+    // Email Verification UI
+    // =========================
+    if (emailInput && verifyBtn && messageDiv) {
 
-    // Initial floating label state
-    if (emailInput.value) emailInput.classList.add('has-value');
+        // Initial floating label state
+        if (emailInput.value) emailInput.classList.add('has-value');
 
-    emailInput.addEventListener('input', function () {
-      const currentEmail = this.value.trim();
+        emailInput.addEventListener('input', function () {
+            const currentEmail = this.value.trim();
 
-      if (currentEmail === '') {
-        verifyBtn.style.display = 'none';
-        messageDiv.innerHTML = '';
-        return;
-      }
+            if (currentEmail === '') {
+                verifyBtn.style.display = 'none';
+                messageDiv.innerHTML = '';
+                return;
+            }
 
-      // if originalEmail is empty, don't compare (avoid misleading "confirmed")
-      const isSameAsOriginal = originalEmail
-        ? currentEmail.toLowerCase() === originalEmail.toLowerCase()
-        : false;
+            // if originalEmail is empty, don't compare (avoid misleading "confirmed")
+            const isSameAsOriginal = originalEmail
+                ? currentEmail.toLowerCase() === originalEmail.toLowerCase()
+                : false;
 
-      if (emailVerified && isSameAsOriginal) {
-        verifyBtn.style.display = 'none';
-        messageDiv.innerHTML =
-          '<span style="color: var(--success); display:flex; align-items:center; gap:5px;">' +
-          '<i class="fa-solid fa-badge-check"></i> البريد مؤكد</span>';
-      } else {
-        verifyBtn.style.display = 'flex';
-        if (emailVerified) {
-          messageDiv.innerHTML =
-            '<span style="color: var(--warning);">' +
-            '<i class="fa-solid fa-triangle-exclamation"></i> يرجى التحقق من البريد الجديد</span>';
-        } else {
-          messageDiv.innerHTML = '';
-        }
-      }
-    });
+            if (emailVerified && isSameAsOriginal) {
+                verifyBtn.style.display = 'none';
+                messageDiv.innerHTML =
+                    '<span style="color: var(--success); display:flex; align-items:center; gap:5px;">' +
+                    '<i class="fa-solid fa-badge-check"></i> البريد مؤكد</span>';
+            } else {
+                verifyBtn.style.display = 'flex';
+                if (emailVerified) {
+                    messageDiv.innerHTML =
+                        '<span style="color: var(--warning);">' +
+                        '<i class="fa-solid fa-triangle-exclamation"></i> يرجى التحقق من البريد الجديد</span>';
+                } else {
+                    messageDiv.innerHTML = '';
+                }
+            }
+        });
 
-    verifyBtn.addEventListener('click', function () {
-      const email = emailInput.value.trim();
-      if (!email) return;
+        verifyBtn.addEventListener('click', function () {
+            const email = emailInput.value.trim();
+            if (!email) return;
 
-      if (!csrfToken) {
-        messageDiv.innerHTML =
-          '<span style="color: var(--danger);">CSRF token غير موجود</span>';
-        return;
-      }
+            if (!csrfToken) {
+                messageDiv.innerHTML =
+                    '<span style="color: var(--danger);">CSRF token غير موجود</span>';
+                return;
+            }
 
-      const originalText = verifyBtn.innerHTML;
-      verifyBtn.disabled = true;
-      verifyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            const originalText = verifyBtn.innerHTML;
+            verifyBtn.disabled = true;
+            verifyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
 
-      fetch("{% url 'accounts:send_email_verification' %}", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'X-CSRFToken': csrfToken
-        },
-        body: `email=${encodeURIComponent(email)}`
-      })
-      .then(r => r.json())
-      .then(data => {
-        if (data.success) {
-          messageDiv.innerHTML =
-            `<span style="color: var(--success);"><i class="fa-solid fa-check"></i> ${data.message}</span>`;
-          verifyBtn.innerHTML = 'إعادة';
-          // optional: you might set emailVerified=false here because it's a NEW email pending verification
-          // emailVerified = false;
-        } else {
-          messageDiv.innerHTML =
-            `<span style="color: var(--danger);"><i class="fa-solid fa-circle-xmark"></i> ${data.message}</span>`;
-          verifyBtn.innerHTML = originalText;
-        }
-        verifyBtn.disabled = false;
-      })
-      .catch(() => {
-        messageDiv.innerHTML =
-          '<span style="color: var(--danger);">حدث خطأ</span>';
-        verifyBtn.disabled = false;
-        verifyBtn.innerHTML = originalText;
-      });
-    });
-  }
+            fetch("{% url 'accounts:send_email_verification' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                },
+                body: `email=${encodeURIComponent(email)}`
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        messageDiv.innerHTML =
+                            `<span style="color: var(--success);"><i class="fa-solid fa-check"></i> ${data.message}</span>`;
+                        verifyBtn.innerHTML = 'إعادة';
+                        // optional: you might set emailVerified=false here because it's a NEW email pending verification
+                        // emailVerified = false;
+                    } else {
+                        messageDiv.innerHTML =
+                            `<span style="color: var(--danger);"><i class="fa-solid fa-circle-xmark"></i> ${data.message}</span>`;
+                        verifyBtn.innerHTML = originalText;
+                    }
+                    verifyBtn.disabled = false;
+                })
+                .catch(() => {
+                    messageDiv.innerHTML =
+                        '<span style="color: var(--danger);">حدث خطأ</span>';
+                    verifyBtn.disabled = false;
+                    verifyBtn.innerHTML = originalText;
+                });
+        });
+    }
 
 });
 </script>
