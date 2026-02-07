@@ -21,3 +21,10 @@ Ensure these are set in the Render Dashboard:
 *   `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_VERIFY_SID`
 *   `BREVO_SMTP_USER`, `BREVO_SMTP_PASS`
 *   `CSRF_TRUSTED_ORIGINS` (e.g., `https://your-app.onrender.com`)
+
+## Post-Deployment Setup
+After the first successful deployment, run the following command in the **Shell** tab of your Render service to populate initial cities (Ramallah, Nablus, Hebron, etc.):
+
+```bash
+python manage.py add_initial_cities
+```
