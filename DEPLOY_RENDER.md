@@ -23,8 +23,4 @@ Ensure these are set in the Render Dashboard:
 *   `CSRF_TRUSTED_ORIGINS` (e.g., `https://your-app.onrender.com`)
 
 ## Post-Deployment Setup
-After the first successful deployment, run the following command in the **Shell** tab of your Render service to populate initial cities (Ramallah, Nablus, Hebron, etc.):
-
-```bash
-python manage.py add_initial_cities
-```
+The database will be automatically populated with initial cities (Ramallah, Nablus, Hebron, etc.) during the deployment process, thanks to the new data migration file `accounts/migrations/0002_populate_cities.py`. You do **not** need to run any manual commands.
