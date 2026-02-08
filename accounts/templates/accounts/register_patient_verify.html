@@ -329,7 +329,7 @@
             </div>
         </div>
 
-        <form method="post" id="otpForm">
+        <form method="post" id="otpForm" data-has-error="{% if error %}true{% else %}false{% endif %}">
             {% csrf_token %}
             <!-- Hidden input for full code -->
             <input type="hidden" id="full_otp_code" name="otp">
@@ -446,9 +446,9 @@
             hiddenInput.value = code;
         }
 
-        {% if error %}
-        inputs.forEach(input => input.classList.add('error'));
-        {% endif %}
+        if (form.dataset.hasError === 'true') {
+            inputs.forEach(input => input.classList.add('error'));
+        }
 
         // --- Timer Logic ---
         var btn = document.getElementById('resendBtn');
