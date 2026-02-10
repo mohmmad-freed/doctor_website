@@ -89,10 +89,6 @@ def store_otp(phone, otp):
 
 def send_otp_mock(phone, otp):
     logger.info(f"[MOCK SMS] Sending OTP {otp} to {phone}")
-    print(f"\n{'='*40}")
-    print(f"[MOCK SMS] OTP for {phone}: {otp}")
-    print(f"[MOCK SMS] Valid for {OTP_EXPIRY_SECONDS // 60} minutes")
-    print(f"{'='*40}\n")
     return True
 
 
@@ -116,23 +112,16 @@ def request_otp(phone):
     Automatically uses Twilio if configured, otherwise falls back to mock.
     """
 
-    print("\n[OTP] request_otp called")
-    print(f"[OTP] raw phone input: {phone!r}")
-
     # 1. Check cooldown
     if cache.get(_otp_cooldown_key(phone)):
-        print("[OTP] BLOCKED: cooldown active")
         logger.warning("[OTP] Cooldown active for phone=%s", phone)
         return False, "Please wait before requesting a new OTP."
 
     # 2. Check daily resend limit
     resend_count = cache.get(_otp_resend_count_key(phone)) or 0
-    print(f"[OTP] resend_count (before): {resend_count}")
-    print(f"[OTP] ENFORCE_OTP_LIMITS: {getattr(settings, 'ENFORCE_OTP_LIMITS', None)}")
 
     if getattr(settings, "ENFORCE_OTP_LIMITS", False):
         if resend_count >= OTP_MAX_RESEND_PER_DAY:
-            print("[OTP] BLOCKED: daily resend limit reached")
             logger.warning(
                 "[OTP] Daily resend limit reached for phone=%s resend_count=%s",
                 phone,
@@ -147,19 +136,15 @@ def request_otp(phone):
     otp_sent_via_twilio = False
 
     using_twilio = _is_using_twilio()
-    print(f"[OTP] using_twilio: {using_twilio}")
     logger.info("[OTP] using_twilio=%s phone=%s", using_twilio, phone)
 
     if using_twilio:
         twilio_phone = _normalize_phone_for_twilio(phone)
-        print(f"[OTP] Twilio E.164 phone: {twilio_phone!r}")
 
         try:
-            print("[OTP] Sending OTP via Twilio Verify...")
             twilio_send_otp(twilio_phone)  # ALWAYS creates a new Verify session
             otp_sent_via_twilio = True
 
-            print("[OTP] Twilio send OK")
             logger.info("[TWILIO] send_otp OK for phone=%s as=%s", phone, twilio_phone)
 
             # Clean up any lingering mock OTPs so verification doesn't get confused
@@ -167,9 +152,6 @@ def request_otp(phone):
 
         except Exception as e:
             # Print + log stacktrace for debugging
-            print("[OTP] Twilio send FAILED")
-            print("TWILIO ERROR:", repr(e))
-
             logger.exception(
                 "[TWILIO] Failed to send OTP to %s (as %s). Error=%r",
                 phone,
@@ -185,12 +167,10 @@ def request_otp(phone):
     if not otp_sent_via_twilio:
         # Check if we are in DEBUG mode to allow Mock fallback
         if not getattr(settings, "DEBUG", False):
-            print("[OTP] Production mode and Twilio not configured -> FAILING")
             logger.error("[OTP] Twilio not configured in production. Cannot send OTP.")
             return False, "SMS service is not configured."
 
         # Mock: we generate and store OTP ourselves
-        print("[OTP] Falling back to MOCK mode...")
         logger.warning("[OTP] Falling back to MOCK mode for phone=%s", phone)
 
         otp = generate_otp()
@@ -200,20 +180,14 @@ def request_otp(phone):
     # 4. Update resend count
     if resend_count == 0:
         cache.set(_otp_resend_count_key(phone), 1, timeout=24 * 60 * 60)
-        print("[OTP] resend_count set to 1 (new day window)")
     else:
         cache.incr(_otp_resend_count_key(phone))
-        print("[OTP] resend_count incremented")
 
     # 5. Set cooldown
     cache.set(_otp_cooldown_key(phone), True, timeout=OTP_RESEND_COOLDOWN_SECONDS)
-    print(f"[OTP] cooldown set for {OTP_RESEND_COOLDOWN_SECONDS} seconds")
 
     # 6. Reset failed attempts
     cache.delete(_otp_attempts_key(phone))
-    print("[OTP] attempts reset")
-
-    print("[OTP] request_otp DONE\n")
 
     # Return different message if we used Mock
     if not otp_sent_via_twilio:
@@ -228,42 +202,31 @@ def verify_otp(phone, entered_otp):
     Prioritizes Mock verification if a Mock OTP exists in cache (from fallback or dev mode).
     Otherwise uses Twilio if configured.
     """
-    print("\n[OTP] verify_otp called")
-    print(f"[OTP] phone: {phone!r}, entered_otp: {entered_otp!r}")
 
     # 1. Check if we have a Mock OTP stored (implies we used Mock/Fallback to send)
     if cache.get(_otp_key(phone)):
-        print("[OTP] Detected MOCK OTP in cache -> verifying via MOCK")
         logger.info("[OTP] Verifying via MOCK for phone=%s", phone)
         return verify_otp_mock(phone, entered_otp)
 
     # 2. If not, and Twilio is configured, try Twilio
     using_twilio = _is_using_twilio()
-    print(f"[OTP] using_twilio: {using_twilio}")
 
     if using_twilio:
         twilio_phone = _normalize_phone_for_twilio(phone)
-        print(f"[OTP] Twilio E.164 phone: {twilio_phone!r}")
 
         try:
-            print("[OTP] Verifying OTP via Twilio Verify...")
             if twilio_verify_otp(twilio_phone, entered_otp):
-                print("[OTP] Twilio verify OK")
                 logger.info(
                     "[TWILIO] verify_otp OK phone=%s as=%s", phone, twilio_phone
                 )
                 return True, "Phone number verified successfully."
 
-            print("[OTP] Twilio verify FAILED (invalid/expired)")
             logger.warning(
                 "[TWILIO] Invalid/expired OTP phone=%s as=%s", phone, twilio_phone
             )
             return False, "Invalid or expired OTP."
 
         except Exception as e:
-            print("[OTP] Twilio verify ERROR")
-            print("TWILIO VERIFY ERROR:", repr(e))
-
             logger.exception(
                 "[TWILIO] OTP verification failed for %s (as %s). Error=%r",
                 phone,
@@ -273,37 +236,30 @@ def verify_otp(phone, entered_otp):
             return False, "Verification failed. Please try again."
 
     # 3. Fallback/Default to Mock (though likely caught by step 1 if it existed)
-    print("[OTP] No Twilio configured and no mock OTP found -> fallback MOCK verify")
     logger.warning("[OTP] Fallback MOCK verify for phone=%s", phone)
     return verify_otp_mock(phone, entered_otp)
 
 
 def verify_otp_mock(phone, entered_otp):
     """Mock OTP verification using Redis cache"""
-    print("[OTP][MOCK] verify_otp_mock called")
     stored_otp = cache.get(_otp_key(phone))
-    print(f"[OTP][MOCK] stored_otp: {stored_otp!r}")
 
     if stored_otp is None:
-        print("[OTP][MOCK] No stored OTP (expired/not requested)")
         return (
             False,
             "OTP has expired or was never requested. Please request a new one.",
         )
 
     if str(entered_otp).strip() == str(stored_otp).strip():
-        print("[OTP][MOCK] OTP match")
         cache.delete(_otp_key(phone))
         cache.delete(_otp_attempts_key(phone))
         return True, "Phone number verified successfully."
 
-    print("[OTP][MOCK] OTP mismatch")
     attempts = cache.get(_otp_attempts_key(phone)) or 0
     attempts += 1
     cache.set(_otp_attempts_key(phone), attempts, timeout=OTP_EXPIRY_SECONDS)
 
     remaining = 3 - attempts
-    print(f"[OTP][MOCK] attempts={attempts}, remaining={remaining}")
 
     if remaining <= 0:
         cache.delete(_otp_key(phone))

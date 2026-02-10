@@ -4,6 +4,9 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.conf import settings
 from django.utils import timezone
+from django.http import JsonResponse
+import re
+
 from .forms import LoginForm, PatientRegistrationForm, MainDoctorRegistrationForm
 from .otp_utils import request_otp, verify_otp, is_in_cooldown, get_remaining_resends
 from clinics.models import Clinic
@@ -13,7 +16,7 @@ from .email_utils import (
     verify_email_token,
     send_change_email_verification,
 )
-from django.http import JsonResponse
+from accounts.backends import PhoneNumberAuthBackend
 
 User = get_user_model()
 
@@ -52,8 +55,6 @@ def login_view(request):
         if form.is_valid():
             phone = form.cleaned_data["phone"]
             password = form.cleaned_data["password"]
-
-            from accounts.backends import PhoneNumberAuthBackend
 
             normalized_phone = PhoneNumberAuthBackend.normalize_phone_number(phone)
 
@@ -110,8 +111,6 @@ def register_patient_phone(request):
 
     if request.method == "POST":
         phone = request.POST.get("phone", "").strip()
-
-        from accounts.backends import PhoneNumberAuthBackend
 
         phone = PhoneNumberAuthBackend.normalize_phone_number(phone)
 
@@ -189,7 +188,6 @@ def register_patient_verify(request):
         success, message = verify_otp(phone, entered_otp)
 
         if success:
-
             request.session["phone_verified"] = True
             messages.success(request, message)
 
@@ -226,8 +224,6 @@ def send_email_verification(request):
         return JsonResponse({"success": False, "message": "Email is required."})
 
     # Basic email validation
-    import re
-
     if not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", email):
         return JsonResponse({"success": False, "message": "Invalid email format."})
 
@@ -353,8 +349,6 @@ def register_patient_email(request):
         email = request.POST.get("email", "").strip()
 
         if email:
-            import re
-
             if not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", email):
                 messages.error(request, "تنسيق البريد الإلكتروني غير صحيح.")
                 return render(request, "accounts/register_patient_email.html")
@@ -464,8 +458,6 @@ def change_phone_request(request):
     if request.method == "POST":
         new_phone = request.POST.get("phone", "").strip()
 
-        from accounts.backends import PhoneNumberAuthBackend
-
         new_phone = PhoneNumberAuthBackend.normalize_phone_number(new_phone)
 
         # 1. Validate format
@@ -553,8 +545,6 @@ def change_email_request(request):
         new_email = request.POST.get("email", "").strip()
 
         # 1. Basic validation
-        import re
-
         if not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", new_email):
             messages.error(request, "تنسيق البريد الإلكتروني غير صحيح.")
             return render(
