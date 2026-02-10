@@ -5,8 +5,7 @@ import logging
 from django.core.cache import cache
 from django.conf import settings
 
-from accounts.services.twilio_verify import send_otp as twilio_send_otp
-from accounts.services.twilio_verify import verify_otp as twilio_verify_otp
+from accounts.services.tweetsms import send_sms as tweetsms_send_sms
 
 logger = logging.getLogger(__name__)
 
@@ -35,15 +34,15 @@ def _otp_cooldown_key(phone):
 # ============================================
 # FORMAT HELPERS
 # ============================================
-def _normalize_phone_for_twilio(phone: str) -> str:
+def _normalize_phone(phone: str) -> str:
     """
-    Normalize Palestinian phone numbers for Twilio Verify (E.164).
+    Normalize Palestinian phone numbers for TweetsMS.
+    TweetsMS expects numbers WITHOUT the '+' prefix.
     Handles:
-      - 059xxxxxxxx / 056xxxxxxxx  -> +97059xxxxxxxx / +97056xxxxxxxx
-      - +97059xxxxxxxx             -> +97059xxxxxxxx
-      - 97059xxxxxxxx              -> +97059xxxxxxxx
+      - 059xxxxxxxx / 056xxxxxxxx  -> 97059xxxxxxxx / 97056xxxxxxxx
+      - +97059xxxxxxxx             -> 97059xxxxxxxx
+      - 97059xxxxxxxx              -> 97059xxxxxxxx
       - strips spaces, dashes, parentheses
-    NOTE: This is a pragmatic normalizer for your project.
     """
     if not phone:
         return phone
@@ -53,13 +52,13 @@ def _normalize_phone_for_twilio(phone: str) -> str:
     # Remove spaces, dashes, parentheses
     raw = re.sub(r"[\s\-\(\)]", "", raw)
 
-    # If already E.164 with +
+    # Strip leading '+' if present
     if raw.startswith("+"):
-        return raw
+        raw = raw[1:]
 
-    # If starts with 970... (without +)
+    # If already starts with 970, return as-is
     if raw.startswith("970"):
-        return f"+{raw}"
+        return raw
 
     # If local Palestinian mobile starting with 0 (059/056)
     if raw.startswith("0"):
@@ -69,15 +68,15 @@ def _normalize_phone_for_twilio(phone: str) -> str:
     # After removing one leading 0, it should look like 59xxxxxxxx or 56xxxxxxxx
     # If user entered already 59/56 prefix, this will work too.
     if raw.startswith("59") or raw.startswith("56"):
-        return f"+970{raw}"
+        return f"970{raw}"
 
-    # Fallback: if user gave something else, still try +970 + raw
+    # Fallback: if user gave something else, still try 970 + raw
     # (but log it clearly so you notice)
-    return f"+970{raw}"
+    return f"970{raw}"
 
 
 # ============================================
-# MOCK FUNCTIONS (for development/testing)
+# OTP GENERATION & STORAGE
 # ============================================
 def generate_otp():
     return str(random.randint(100000, 999999))
@@ -93,23 +92,29 @@ def send_otp_mock(phone, otp):
 
 
 # ============================================
-# MAIN FUNCTIONS
+# SMS PROVIDER CHECK
 # ============================================
-def _is_using_twilio():
-    """Check if Twilio credentials are configured"""
+def _is_using_tweetsms():
+    """Check if TweetsMS is configured as the SMS provider"""
+    provider = getattr(settings, "SMS_PROVIDER", "").upper()
+    if provider != "TWEETSMS":
+        return False
     return all(
         [
-            getattr(settings, "TWILIO_ACCOUNT_SID", None),
-            getattr(settings, "TWILIO_AUTH_TOKEN", None),
-            getattr(settings, "TWILIO_VERIFY_SID", None),
+            getattr(settings, "TWEETSMS_API_KEY", ""),
+            getattr(settings, "TWEETSMS_SENDER", ""),
         ]
     )
 
 
+# ============================================
+# MAIN FUNCTIONS
+# ============================================
 def request_otp(phone):
     """
     Main function to request an OTP.
-    Automatically uses Twilio if configured, otherwise falls back to mock.
+    Generates OTP locally and delivers via TweetsMS if configured,
+    otherwise falls back to mock (dev mode).
     """
 
     # 1. Check cooldown
@@ -132,65 +137,68 @@ def request_otp(phone):
                 "You have reached the maximum OTP requests for today. Try again tomorrow.",
             )
 
-    # 3. Send OTP
-    otp_sent_via_twilio = False
+    # 3. Generate and store OTP locally (always)
+    otp = generate_otp()
+    store_otp(phone, otp)
 
-    using_twilio = _is_using_twilio()
-    logger.info("[OTP] using_twilio=%s phone=%s", using_twilio, phone)
+    # 4. Deliver OTP via SMS or mock
+    otp_sent_via_sms = False
+    using_tweetsms = _is_using_tweetsms()
+    logger.info("[OTP] using_tweetsms=%s phone=%s", using_tweetsms, phone)
 
-    if using_twilio:
-        twilio_phone = _normalize_phone_for_twilio(phone)
+    if using_tweetsms:
+        sms_phone = _normalize_phone(phone)
+        message = f"Your verification code is: {otp}"
 
         try:
-            twilio_send_otp(twilio_phone)  # ALWAYS creates a new Verify session
-            otp_sent_via_twilio = True
+            tweetsms_send_sms(sms_phone, message)
+            otp_sent_via_sms = True
 
-            logger.info("[TWILIO] send_otp OK for phone=%s as=%s", phone, twilio_phone)
-
-            # Clean up any lingering mock OTPs so verification doesn't get confused
-            cache.delete(_otp_key(phone))
+            logger.info("[OTP] TweetsMS send OK for phone=%s as=%s", phone, sms_phone)
 
         except Exception as e:
-            # Print + log stacktrace for debugging
             logger.exception(
-                "[TWILIO] Failed to send OTP to %s (as %s). Error=%r",
+                "[TWEETSMS] Failed to send OTP to %s (as %s). Error=%r",
                 phone,
-                twilio_phone,
+                sms_phone,
                 e,
             )
+
+            # Clean up stored OTP on send failure
+            cache.delete(_otp_key(phone))
 
             return (
                 False,
                 "Failed to send OTP via SMS. Please check your phone number or contact support.",
             )
 
-    if not otp_sent_via_twilio:
+    if not otp_sent_via_sms:
         # Check if we are in DEBUG mode to allow Mock fallback
         if not getattr(settings, "DEBUG", False):
-            logger.error("[OTP] Twilio not configured in production. Cannot send OTP.")
+            logger.error(
+                "[OTP] SMS provider not configured in production. Cannot send OTP."
+            )
+            cache.delete(_otp_key(phone))
             return False, "SMS service is not configured."
 
-        # Mock: we generate and store OTP ourselves
+        # Mock: OTP already generated and stored, just log it
         logger.warning("[OTP] Falling back to MOCK mode for phone=%s", phone)
-
-        otp = generate_otp()
-        store_otp(phone, otp)
         send_otp_mock(phone, otp)
 
-    # 4. Update resend count
+    # 5. Update resend count
     if resend_count == 0:
         cache.set(_otp_resend_count_key(phone), 1, timeout=24 * 60 * 60)
     else:
         cache.incr(_otp_resend_count_key(phone))
 
-    # 5. Set cooldown
+    # 6. Set cooldown
     cache.set(_otp_cooldown_key(phone), True, timeout=OTP_RESEND_COOLDOWN_SECONDS)
 
-    # 6. Reset failed attempts
+    # 7. Reset failed attempts
     cache.delete(_otp_attempts_key(phone))
 
     # Return different message if we used Mock
-    if not otp_sent_via_twilio:
+    if not otp_sent_via_sms:
         return True, "OTP generated (Dev Mode). Check console."
 
     return True, "OTP sent successfully."
@@ -199,49 +207,13 @@ def request_otp(phone):
 def verify_otp(phone, entered_otp):
     """
     Main function to verify OTP.
-    Prioritizes Mock verification if a Mock OTP exists in cache (from fallback or dev mode).
-    Otherwise uses Twilio if configured.
+    Always uses cache-based verification (OTP is generated and stored locally).
     """
-
-    # 1. Check if we have a Mock OTP stored (implies we used Mock/Fallback to send)
-    if cache.get(_otp_key(phone)):
-        logger.info("[OTP] Verifying via MOCK for phone=%s", phone)
-        return verify_otp_mock(phone, entered_otp)
-
-    # 2. If not, and Twilio is configured, try Twilio
-    using_twilio = _is_using_twilio()
-
-    if using_twilio:
-        twilio_phone = _normalize_phone_for_twilio(phone)
-
-        try:
-            if twilio_verify_otp(twilio_phone, entered_otp):
-                logger.info(
-                    "[TWILIO] verify_otp OK phone=%s as=%s", phone, twilio_phone
-                )
-                return True, "Phone number verified successfully."
-
-            logger.warning(
-                "[TWILIO] Invalid/expired OTP phone=%s as=%s", phone, twilio_phone
-            )
-            return False, "Invalid or expired OTP."
-
-        except Exception as e:
-            logger.exception(
-                "[TWILIO] OTP verification failed for %s (as %s). Error=%r",
-                phone,
-                twilio_phone,
-                e,
-            )
-            return False, "Verification failed. Please try again."
-
-    # 3. Fallback/Default to Mock (though likely caught by step 1 if it existed)
-    logger.warning("[OTP] Fallback MOCK verify for phone=%s", phone)
-    return verify_otp_mock(phone, entered_otp)
+    return _verify_otp_from_cache(phone, entered_otp)
 
 
-def verify_otp_mock(phone, entered_otp):
-    """Mock OTP verification using Redis cache"""
+def _verify_otp_from_cache(phone, entered_otp):
+    """Verify OTP against the value stored in Redis cache"""
     stored_otp = cache.get(_otp_key(phone))
 
     if stored_otp is None:

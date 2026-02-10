@@ -41,11 +41,12 @@ ENFORCE_PHONE_VERIFICATION = os.environ.get("ENFORCE_PHONE_VERIFICATION", "1") =
 ENFORCE_OTP_LIMITS = os.environ.get("ENFORCE_OTP_LIMITS", "1") == "1"
 
 # ============================================
-# TWILIO
+# SMS PROVIDER (TweetsMS)
 # ============================================
-TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
-TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
-TWILIO_VERIFY_SID = os.environ.get("TWILIO_VERIFY_SID")
+SMS_PROVIDER = os.environ.get("SMS_PROVIDER", "")
+TWEETSMS_API_KEY = os.environ.get("TWEETSMS_API_KEY", "")
+TWEETSMS_SENDER = os.environ.get("TWEETSMS_SENDER", "")
+TWEETSMS_BASE_URL = os.environ.get("TWEETSMS_BASE_URL", "https://tweetsms.ps/api.php")
 
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
