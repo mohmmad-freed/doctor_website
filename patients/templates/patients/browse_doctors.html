@@ -1,0 +1,96 @@
+{% extends 'patients/base_dashboard.html' %}
+
+{% block title %}تصفح الأطباء | {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6 animate-fade-in-up">
+
+    <!-- Header -->
+    <div class="glass-card p-6 relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary-500 to-primary-700"></div>
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center">
+                    <i class="fa-solid fa-user-doctor text-primary-500 text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">تصفح الأطباء</h1>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">اختر طبيباً لعرض مواعيده المتاحة وأنواع خدماته</p>
+                </div>
+            </div>
+            <a href="{% url 'patients:dashboard' %}"
+               class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                <i class="fa-solid fa-arrow-right text-lg"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Doctors List -->
+    {% if doctors_by_clinic %}
+        {% for clinic_data in doctors_by_clinic %}
+        <div class="glass-card p-6">
+            <!-- Clinic Header -->
+            <div class="flex items-center gap-3 mb-5 pb-4 border-b border-gray-100 dark:border-slate-700">
+                <div class="w-10 h-10 rounded-lg bg-secondary-50 dark:bg-secondary-900/30 flex items-center justify-center">
+                    <i class="fa-solid fa-hospital text-secondary-500"></i>
+                </div>
+                <div>
+                    <h2 class="text-lg font-bold text-gray-800 dark:text-white">{{ clinic_data.clinic.name }}</h2>
+                    {% if clinic_data.clinic.specialization %}
+                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ clinic_data.clinic.specialization }}</p>
+                    {% endif %}
+                </div>
+                {% if clinic_data.clinic.city %}
+                <span class="mr-auto text-xs bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400 px-3 py-1 rounded-full">
+                    <i class="fa-solid fa-location-dot ml-1"></i>
+                    {{ clinic_data.clinic.city.name }}
+                </span>
+                {% endif %}
+            </div>
+
+            <!-- Doctors Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% for doctor in clinic_data.doctors %}
+                <div class="bg-slate-50 dark:bg-slate-700/30 rounded-xl p-5 border border-gray-100 dark:border-slate-600 hover:border-primary-200 dark:hover:border-primary-700 transition-all group">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-12 h-12 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center flex-shrink-0">
+                            <span class="text-lg font-bold text-primary-600 dark:text-primary-400">{{ doctor.name|slice:":1" }}</span>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-900 dark:text-white">د. {{ doctor.name }}</h3>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ doctor.phone }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex items-center gap-2">
+                        <a href="{% url 'doctors:doctor_availability' doctor.id %}?clinic_id={{ clinic_data.clinic.id }}"
+                           class="flex-1 text-center bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/40 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
+                            <i class="fa-regular fa-calendar ml-1"></i>
+                            المواعيد المتاحة
+                        </a>
+                        <a href="{% url 'doctors:doctor_appointment_types' doctor.id %}?clinic_id={{ clinic_data.clinic.id }}"
+                           class="flex-1 text-center bg-secondary-50 dark:bg-secondary-900/20 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-900/40 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
+                            <i class="fa-solid fa-list-check ml-1"></i>
+                            أنواع الخدمات
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="glass-card p-12 text-center">
+        <div class="w-20 h-20 bg-gray-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-5">
+            <i class="fa-solid fa-user-doctor text-gray-400 dark:text-gray-500 text-3xl"></i>
+        </div>
+        <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">لا يوجد أطباء حالياً</h3>
+        <p class="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">لم يتم تسجيل أي أطباء في المنصة بعد. تحقق لاحقاً.</p>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

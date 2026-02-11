@@ -1,0 +1,199 @@
+{% extends 'patients/base_dashboard.html' %}
+
+{% block title %}مواعيد د. {{ doctor.name }} | {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6 animate-fade-in-up">
+
+    <!-- Error State -->
+    {% if error %}
+    <div class="glass-card p-8 text-center">
+        <div class="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="fa-solid fa-circle-exclamation text-red-500 text-2xl"></i>
+        </div>
+        <p class="text-red-600 dark:text-red-400 font-medium">{{ error }}</p>
+    </div>
+    {% else %}
+
+    <!-- Doctor Header -->
+    <div class="glass-card p-6 relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary-500 to-primary-700"></div>
+        <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center flex-shrink-0">
+                <i class="fa-solid fa-user-doctor text-primary-600 dark:text-primary-400 text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">د. {{ doctor.name }}</h1>
+                <p class="text-gray-500 dark:text-gray-400 text-sm">جدول المواعيد المتاحة</p>
+            </div>
+            <div class="mr-auto">
+                <a href="{% url 'doctors:doctor_appointment_types' doctor.id %}?clinic_id={{ clinic_id }}"
+                   class="inline-flex items-center gap-2 text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors bg-primary-50 dark:bg-primary-900/20 px-4 py-2 rounded-xl">
+                    <i class="fa-solid fa-list-check"></i>
+                    أنواع المواعيد
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Weekly Schedule -->
+    <div class="glass-card p-6">
+        <h2 class="text-lg font-bold text-gray-800 dark:text-white mb-5 flex items-center gap-2 border-b border-gray-100 dark:border-slate-700 pb-4">
+            <i class="fa-regular fa-calendar text-primary-500"></i>
+            الجدول الأسبوعي
+        </h2>
+
+        {% if weekly_schedule %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {% regroup weekly_schedule by get_day_of_week_display as days %}
+            {% for day in days %}
+            <div class="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 border border-gray-100 dark:border-slate-600 hover:border-primary-200 dark:hover:border-primary-800 transition-colors">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center text-primary-600 dark:text-primary-400 text-xs font-bold">
+                        {{ day.grouper|slice:":2" }}
+                    </span>
+                    <span class="font-semibold text-gray-800 dark:text-gray-200">{{ day.grouper }}</span>
+                </div>
+                <div class="space-y-1.5">
+                    {% for slot in day.list %}
+                    <div class="flex items-center gap-2 text-sm" dir="ltr">
+                        <i class="fa-regular fa-clock text-gray-400 text-xs"></i>
+                        <span class="text-gray-700 dark:text-gray-300 font-medium">
+                            {{ slot.start_time|time:"H:i" }} – {{ slot.end_time|time:"H:i" }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-10">
+            <div class="w-16 h-16 bg-gray-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fa-regular fa-calendar-xmark text-gray-400 text-2xl"></i>
+            </div>
+            <p class="text-gray-500 dark:text-gray-400 font-medium">لا يوجد جدول متاح لهذا الطبيب في هذه العيادة.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Slot Picker Section -->
+    {% if weekly_schedule %}
+    <div class="glass-card p-6">
+        <h2 class="text-lg font-bold text-gray-800 dark:text-white mb-5 flex items-center gap-2 border-b border-gray-100 dark:border-slate-700 pb-4">
+            <i class="fa-solid fa-clock text-secondary-500"></i>
+            البحث عن موعد متاح
+        </h2>
+
+        <!-- Picker Form -->
+        <form method="get" class="mb-6" id="slot-picker-form">
+            <input type="hidden" name="clinic_id" value="{{ clinic_id }}">
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <!-- Appointment Type Select -->
+                <div>
+                    <label for="appointment_type_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        نوع الموعد
+                    </label>
+                    {% if appointment_types %}
+                    <select name="appointment_type_id" id="appointment_type_id"
+                            class="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                            required>
+                        <option value="">اختر نوع الموعد</option>
+                        {% for type in appointment_types %}
+                        <option value="{{ type.id }}"
+                                data-duration="{{ type.duration_minutes }}"
+                                data-price="{{ type.price }}"
+                                {% if selected_type and selected_type.id == type.id %}selected{% endif %}>
+                            {{ type.name }} ({{ type.duration_minutes }} دقيقة – ₪{{ type.price }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% else %}
+                    <p class="text-sm text-gray-400 dark:text-gray-500 italic py-2">لم يحدد الطبيب أنواع مواعيد بعد.</p>
+                    {% endif %}
+                </div>
+
+                <!-- Date Picker -->
+                <div>
+                    <label for="date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        التاريخ
+                    </label>
+                    <input type="date" name="date" id="date"
+                           min="{{ today }}"
+                           value="{% if target_date %}{{ target_date|date:'Y-m-d' }}{% endif %}"
+                           class="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                           required>
+                </div>
+
+                <!-- Submit -->
+                <div>
+                    <button type="submit"
+                            class="w-full bg-primary-600 hover:bg-primary-700 text-white px-6 py-2.5 rounded-xl font-medium shadow-md transition-all hover:shadow-lg focus:ring-4 focus:ring-primary-100 flex items-center justify-center gap-2"
+                            {% if not appointment_types %}disabled{% endif %}>
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        عرض المواعيد
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <!-- Results -->
+        {% if target_date %}
+        <div class="border-t border-gray-100 dark:border-slate-700 pt-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+                    <i class="fa-regular fa-calendar-check text-secondary-500"></i>
+                    المواعيد المتاحة ليوم {{ target_date|date:"l، d M Y" }}
+                </h3>
+                {% if selected_type %}
+                <span class="text-xs bg-secondary-50 dark:bg-secondary-900/20 text-secondary-700 dark:text-secondary-300 px-3 py-1 rounded-full font-medium">
+                    {{ selected_type.name }} – {{ selected_type.duration_minutes }} دقيقة
+                </span>
+                {% endif %}
+            </div>
+
+            {% if slots %}
+            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
+                {% for slot in slots %}
+                <div class="text-center rounded-xl py-2.5 px-2 text-sm font-medium transition-all cursor-default
+                    {% if slot.is_available %}
+                        bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/40 hover:shadow-sm
+                    {% else %}
+                        bg-gray-100 dark:bg-slate-700/50 text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-slate-600 line-through opacity-60
+                    {% endif %}"
+                    {% if not slot.is_available %}title="محجوز"{% endif %}>
+                    {{ slot.time|time:"H:i" }}
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Legend -->
+            <div class="flex items-center gap-6 mt-5 pt-4 border-t border-gray-50 dark:border-slate-700/50">
+                <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                    <span class="w-3 h-3 rounded bg-green-200 dark:bg-green-800 border border-green-300 dark:border-green-700"></span>
+                    متاح
+                </div>
+                <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                    <span class="w-3 h-3 rounded bg-gray-200 dark:bg-slate-600 border border-gray-300 dark:border-slate-500"></span>
+                    محجوز
+                </div>
+            </div>
+
+            {% else %}
+            <div class="text-center py-10 bg-slate-50 dark:bg-slate-700/30 rounded-xl">
+                <div class="w-14 h-14 bg-gray-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i class="fa-regular fa-face-frown text-gray-400 text-xl"></i>
+                </div>
+                <p class="text-gray-500 dark:text-gray-400 font-medium">لا توجد مواعيد متاحة في هذا اليوم.</p>
+                <p class="text-gray-400 dark:text-gray-500 text-sm mt-1">حاول اختيار يوم آخر ضمن الجدول الأسبوعي.</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% endif %}{# end error check #}
+</div>
+{% endblock %}

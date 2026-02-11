@@ -5,11 +5,19 @@ from django.urls import reverse
 from django.http import HttpResponseForbidden
 
 
+# Patient-facing paths under /doctors/ that patients ARE allowed to access
+PATIENT_ALLOWED_DOCTOR_PATHS = re.compile(
+    r"^/doctors/\d+/(availability|appointment-types)/"
+    r"|^/doctors/api/\d+/(availability|available-slots|appointment-types)/"
+)
+
+
 class ClinicIsolationMiddleware:
     """
     Middleware to enforce strict tenant isolation rules.
     1. Superusers: Bypass all checks.
-    2. Patients: Blocked from staff paths (/doctors, /secretary, /clinics).
+    2. Patients: Blocked from staff paths (/doctors, /secretary, /clinics),
+       EXCEPT patient-facing pages like doctor availability and appointment types.
     3. Staff: Must be associated with a Clinic. sets request.clinic and request.clinic_id.
     """
 
@@ -26,7 +34,6 @@ class ClinicIsolationMiddleware:
 
         # 1. Superuser Bypass
         if request.user.is_superuser:
-            # Superusers see everything, no specific clinic scope forced unless we add a switcher later
             return self.get_response(request)
 
         user = request.user
@@ -35,6 +42,10 @@ class ClinicIsolationMiddleware:
         # 2. Patient Logic
         role = getattr(user, "role", None)
         if role == "PATIENT":
+            # Allow patient-facing doctor pages
+            if PATIENT_ALLOWED_DOCTOR_PATHS.match(path):
+                return self.get_response(request)
+
             # Block access to staff areas
             if any(
                 path.startswith(prefix)
@@ -63,15 +74,9 @@ class ClinicIsolationMiddleware:
 
             try:
                 if role == "MAIN_DOCTOR":
-                    # Accessed via reverse relation from Clinic model
                     clinic = user.owned_clinic.first()
 
                 elif role in ["DOCTOR", "SECRETARY"]:
-                    # Accessed via ClinicStaff model
-                    # We use .first() assuming a user is currently active in one clinic
-                    # (Architecture says M2M is possible for doctors but simplicity first per instructions)
-                    # Ideally we might need a session switcher if they belong to multiple,
-                    # but for now we pick the first one to enforce isolation.
                     from clinics.models import ClinicStaff
 
                     staff_entry = (
@@ -83,11 +88,9 @@ class ClinicIsolationMiddleware:
                         clinic = staff_entry.clinic
 
             except Exception:
-                # Fallthrough to 403 if DB error
                 pass
 
             if not clinic:
-                # Staff member without a clinic cannot function in this system
                 return HttpResponseForbidden(
                     "Access Denied: You are not assigned to any active clinic."
                 )

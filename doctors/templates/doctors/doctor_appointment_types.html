@@ -1,0 +1,97 @@
+{% extends 'patients/base_dashboard.html' %}
+
+{% block title %}أنواع مواعيد د. {{ doctor.name }} | {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6 animate-fade-in-up">
+
+    <!-- Error State -->
+    {% if error %}
+    <div class="glass-card p-8 text-center">
+        <div class="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="fa-solid fa-circle-exclamation text-red-500 text-2xl"></i>
+        </div>
+        <p class="text-red-600 dark:text-red-400 font-medium">{{ error }}</p>
+    </div>
+    {% else %}
+
+    <!-- Header -->
+    <div class="glass-card p-6 relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-secondary-500 to-secondary-600"></div>
+        <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-full bg-secondary-100 dark:bg-secondary-900/40 flex items-center justify-center flex-shrink-0">
+                <i class="fa-solid fa-user-doctor text-secondary-600 dark:text-secondary-400 text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">د. {{ doctor.name }}</h1>
+                <p class="text-gray-500 dark:text-gray-400 text-sm">أنواع المواعيد المتاحة</p>
+            </div>
+            <div class="mr-auto">
+                <a href="{% url 'doctors:doctor_availability' doctor.id %}?clinic_id={{ clinic_id }}"
+                   class="inline-flex items-center gap-2 text-sm font-medium text-secondary-600 dark:text-secondary-400 hover:text-secondary-700 dark:hover:text-secondary-300 transition-colors bg-secondary-50 dark:bg-secondary-900/20 px-4 py-2 rounded-xl">
+                    <i class="fa-regular fa-calendar"></i>
+                    الجدول والمواعيد
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Appointment Types -->
+    {% if appointment_types %}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {% for type in appointment_types %}
+        <div class="glass-card p-6 hover:shadow-md transition-all group border-r-4 border-transparent hover:border-primary-500">
+            <!-- Type Header -->
+            <div class="flex items-start justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center group-hover:bg-primary-100 dark:group-hover:bg-primary-900/50 transition-colors">
+                        <i class="fa-solid fa-stethoscope text-primary-500"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ type.name }}</h3>
+                </div>
+            </div>
+
+            <!-- Description -->
+            {% if type.description %}
+            <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-4">{{ type.description }}</p>
+            {% endif %}
+
+            <!-- Details Row -->
+            <div class="flex items-center gap-4 pt-3 border-t border-gray-100 dark:border-slate-700">
+                <!-- Duration -->
+                <div class="flex items-center gap-1.5 text-sm">
+                    <i class="fa-regular fa-clock text-gray-400"></i>
+                    <span class="text-gray-700 dark:text-gray-300 font-medium">{{ type.duration_minutes }} دقيقة</span>
+                </div>
+
+                <!-- Price -->
+                <div class="flex items-center gap-1.5 text-sm">
+                    <i class="fa-solid fa-shekel-sign text-gray-400 text-xs"></i>
+                    <span class="text-gray-700 dark:text-gray-300 font-medium">{{ type.price }} ₪</span>
+                </div>
+
+                <!-- Book Link -->
+                <a href="{% url 'doctors:doctor_availability' doctor.id %}?clinic_id={{ clinic_id }}&appointment_type_id={{ type.id }}"
+                   class="mr-auto inline-flex items-center gap-1.5 text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 opacity-0 group-hover:opacity-100 transition-all">
+                    <span>احجز الآن</span>
+                    <i class="fa-solid fa-arrow-left text-xs"></i>
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="glass-card p-12 text-center">
+        <div class="w-20 h-20 bg-gray-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-5">
+            <i class="fa-solid fa-clipboard-list text-gray-400 dark:text-gray-500 text-3xl"></i>
+        </div>
+        <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">لا توجد أنواع مواعيد</h3>
+        <p class="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">لم يقم هذا الطبيب بتحديد أنواع المواعيد بعد في هذه العيادة.</p>
+    </div>
+    {% endif %}
+
+    {% endif %}{# end error check #}
+</div>
+{% endblock %}
