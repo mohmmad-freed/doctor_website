@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-danger">
+                <div class="card-body text-center">
+                    <div class="text-danger mb-3">
+                        <i class="fas fa-exclamation-circle fa-4x"></i>
+                    </div>
+                    <h2 class="card-title text-danger mb-3">Verification Failed</h2>
+                    <p class="lead mb-4">{{ message }}</p>
+
+                    {% if resend_allowed %}
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'patients:dashboard' %}" class="btn btn-primary">
+                            Go to Dashboard to Resend Email
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

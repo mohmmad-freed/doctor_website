@@ -9,13 +9,15 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
+
 EMAIL_VERIFICATION_TOKEN_EXPIRY = 15 * 60  # 15 minutes
 
 
 def _get_brevo_api():
     """Initialize and return Brevo API instance"""
     configuration = sib_api_v3_sdk.Configuration()
-    configuration.api_key['api-key'] = os.environ.get('BREVO_API_KEY')
+    configuration.api_key["api-key"] = os.environ.get("BREVO_API_KEY")
     api_client = sib_api_v3_sdk.ApiClient(configuration)
     return sib_api_v3_sdk.TransactionalEmailsApi(api_client)
 
@@ -35,41 +37,39 @@ def _send_email(to_email, subject, html_content, text_content):
     api_instance.send_transac_email(send_smtp_email)
 
 
-def _email_verification_key(token):
-    return f"email_verification:{token}"
-
-
-def generate_email_verification_token(email):
-    token = get_random_string(32)
-    cache.set(
-        _email_verification_key(token),
-        email.lower().strip(),
-        timeout=EMAIL_VERIFICATION_TOKEN_EXPIRY,
-    )
-    return token
+def generate_email_verification_token(user, email):
+    """Generate a stateless signed token containing user ID and email"""
+    signer = TimestampSigner()
+    # Sign a complex value to ensure we verify the right user and email
+    data = {"user_id": user.id, "email": email.lower().strip()}
+    return signer.sign_object(data)
 
 
 def verify_email_token(token):
-    email = cache.get(_email_verification_key(token))
-    if email is None:
-        return False, None, "Invalid or expired verification link."
-    return True, email, "Email verified successfully!"
-
-
-def invalidate_email_token(token):
-    cache.delete(_email_verification_key(token))
+    """Verify the token and return the embedded email if valid and within 15 mins"""
+    signer = TimestampSigner()
+    try:
+        data = signer.unsign_object(token, max_age=EMAIL_VERIFICATION_TOKEN_EXPIRY)
+        return True, data, "Email verified successfully!"
+    except SignatureExpired:
+        return False, None, "The verification link has expired (valid for 15 minutes)."
+    except BadSignature:
+        return False, None, "Invalid verification link."
+    except Exception as e:
+        return False, None, "Invalid verification link."
 
 
 def send_verification_email(email, request):
     try:
-        token = generate_email_verification_token(email)
+        user = request.user
+        token = generate_email_verification_token(user, email)
         verification_url = request.build_absolute_uri(
             reverse("accounts:verify_email", kwargs={"token": token})
         )
 
         subject = "Verify Your Email - Clinic Website"
         text_content = (
-            f"Hello,\n\n"
+            f"Hello {user.name},\n\n"
             f"Thank you for registering with Clinic Website!\n\n"
             f"Please verify your email address by clicking the link below:\n\n"
             f"{verification_url}\n\n"
@@ -78,7 +78,7 @@ def send_verification_email(email, request):
             f"Best regards,\nClinic Website Team"
         )
         html_content = (
-            f"<h2>Welcome!</h2>"
+            f"<h2>Welcome {user.name}!</h2>"
             f"<p>Thank you for registering with Clinic Website!</p>"
             f"<p>Please verify your email address by clicking the link below:</p>"
             f"<p><a href='{verification_url}'>Verify My Email</a></p>"
@@ -102,14 +102,15 @@ def send_verification_email(email, request):
 
 def send_change_email_verification(email, request):
     try:
-        token = generate_email_verification_token(email)
+        user = request.user
+        token = generate_email_verification_token(user, email)
         verification_url = request.build_absolute_uri(
             reverse("accounts:verify_change_email", kwargs={"token": token})
         )
 
         subject = "Confirm Your New Email Address - Clinic Website"
         text_content = (
-            f"Hello,\n\n"
+            f"Hello {user.name},\n\n"
             f"You have requested to change your email address on Clinic Website.\n\n"
             f"Please confirm your new email address by clicking the link below:\n\n"
             f"{verification_url}\n\n"
@@ -136,5 +137,7 @@ def send_change_email_verification(email, request):
         logger.error(f"[EMAIL] Brevo API error sending to {email}: {e}")
         return False, "Failed to send verification email. Please try again."
     except Exception as e:
-        logger.error(f"[EMAIL] Failed to send change email verification to {email}: {e}")
+        logger.error(
+            f"[EMAIL] Failed to send change email verification to {email}: {e}"
+        )
         return False, "Failed to send verification email. Please try again."

@@ -68,6 +68,11 @@ class CustomUser(AbstractUser):
         default=False,
         help_text="Designates whether the user has verified their email address.",
     )
+    pending_email = models.EmailField(
+        blank=True,
+        null=True,
+        help_text="Temporary storage for email until verification is complete.",
+    )
 
     # Patient-specific fields (will be NULL for non-patients)
     national_id = models.CharField(max_length=20, unique=True, null=True, blank=True)

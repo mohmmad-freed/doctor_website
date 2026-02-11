@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <h2 class="card-title mb-4">Confirm Email Verification</h2>
+                    <p class="mb-4">You are about to verify the following email address:</p>
+                    <h4 class="text-primary mb-4">{{ email }}</h4>
+
+                    <p class="text-muted mb-4">
+                        Please confirm that this is your email address to complete the verification process.
+                    </p>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                Confirm & Verify
+                            </button>
+                            <a href="{% url 'patients:profile' %}" class="btn btn-outline-secondary">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

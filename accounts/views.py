@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect
+from django.urls import reverse
 from django.contrib.auth import login, logout, authenticate, get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -238,30 +239,44 @@ def send_email_verification(request):
 
 
 def verify_email(request, token):
-    """Handle email verification link clicks"""
-    success, email, message = verify_email_token(token)
+    """Handle email verification link clicks with secure token validation"""
+    success, data, message = verify_email_token(token)
 
     if not success:
-        messages.error(request, message)
-        if request.user.is_authenticated:
-            return redirect("patients:profile")
-        return redirect("accounts:login")
+        # Token expired or invalid
+        return render(
+            request,
+            "accounts/verification_failed.html",
+            {"message": message, "resend_allowed": True},
+        )
 
-    # Verification successful - save the email to the user
-    if request.user.is_authenticated:
-        # Update user's email and mark as verified
-        request.user.email = email
+    # Token is valid, extract data
+    user_id = data.get("user_id")
+    new_email = data.get("email")
+
+    # CASE 3: User NOT authenticated
+    if not request.user.is_authenticated:
+        messages.info(request, "Please log in to verify your email.")
+        # Redirect to login with next=current_url to return after login
+        return redirect(f"{reverse('accounts:login')}?next={request.path}")
+
+    # CASE 2: User logged in BUT with DIFFERENT account
+    if request.user.id != user_id:
+        return render(request, "accounts/verification_wrong_account.html")
+
+    # CASE 1: request.user.id == token.user_id (Correct User)
+    if request.method == "POST":
+        # Finalize confirmation
+        request.user.email = new_email
         request.user.email_verified = True
+        request.user.pending_email = None  # Clear pending email
         request.user.save()
-        messages.success(request, f"تم تأكيد البريد الإلكتروني {email} بنجاح!")
+
+        messages.success(request, f"Email successfully verified: {new_email}")
         return redirect("patients:profile")
 
-    # User not logged in - store email in session for later
-    request.session["verified_email"] = email
-    messages.success(
-        request, f"تم تأكيد البريد الإلكتروني {email} بنجاح! يرجى تسجيل الدخول."
-    )
-    return redirect("accounts:login")
+    # Show confirmation page (GET)
+    return render(request, "accounts/verification_confirm.html", {"email": new_email})
 
 
 # ============================================
