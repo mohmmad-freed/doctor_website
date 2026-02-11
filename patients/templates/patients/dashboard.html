@@ -1,42 +1,85 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'patients/base_dashboard.html' %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Patient Dashboard</title>
-    <style>
-        .dashboard-container {
-            margin-top: 20px;
-        }
+{% block title %}لوحة التحكم | {{ block.super }}{% endblock %}
 
-        .btn {
-            padding: 10px 20px;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            display: inline-block;
-        }
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-8 animate-fade-in-up">
 
-        .btn-primary {
-            background-color: #2196F3;
-            margin-right: 10px;
-        }
-
-        .btn-danger {
-            background-color: #f44336;
-        }
-    </style>
-</head>
-
-<body>
-    <h1>Patient Dashboard</h1>
-    <p>Welcome, {{ user.name }}!</p>
-
-    <div class="dashboard-container">
-        <a href="{% url 'patients:profile' %}" class="btn btn-primary">My Profile</a>
-        <a href="{% url 'accounts:logout' %}" class="btn btn-danger">Logout</a>
+    <!-- Welcome Header -->
+    <div class="glass-card p-6 md:p-8 relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary-500 to-secondary-500"></div>
+        <div class="flex flex-col md:flex-row items-center md:items-start gap-4">
+            <div class="w-16 h-16 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center flex-shrink-0">
+                {% if request.user.patient_profile.avatar %}
+                <img src="{{ request.user.patient_profile.avatar.url }}" alt="{{ request.user.name }}" class="w-full h-full rounded-full object-cover">
+                {% else %}
+                <span class="text-2xl font-bold text-primary-600 dark:text-primary-400">{{ request.user.name|slice:":1" }}</span>
+                {% endif %}
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+                    مرحباً، {{ request.user.name }} 👋
+                </h1>
+                <p class="text-gray-500 dark:text-gray-400 mt-1">مرحباً بك في لوحة التحكم الخاصة بك. ماذا تريد أن تفعل اليوم؟</p>
+            </div>
+        </div>
     </div>
-</body>
 
-</html>
+    <!-- Quick Actions Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+
+        <!-- Browse Doctors -->
+        <a href="{% url 'patients:browse_doctors' %}" class="glass-card p-6 group hover:shadow-lg transition-all hover:-translate-y-1 border-b-4 border-transparent hover:border-primary-500">
+            <div class="flex items-start gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0 group-hover:bg-primary-100 dark:group-hover:bg-primary-900/50 transition-colors">
+                    <i class="fa-solid fa-user-doctor text-primary-500 text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-1">تصفح الأطباء</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">ابحث عن طبيب واطلع على مواعيده المتاحة وأنواع الخدمات.</p>
+                </div>
+            </div>
+            <div class="mt-4 flex items-center gap-1 text-primary-600 dark:text-primary-400 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                <span>استعراض</span>
+                <i class="fa-solid fa-arrow-left text-xs"></i>
+            </div>
+        </a>
+
+        <!-- My Appointments -->
+        <a href="{% url 'patients:my_appointments' %}" class="glass-card p-6 group hover:shadow-lg transition-all hover:-translate-y-1 border-b-4 border-transparent hover:border-secondary-500">
+            <div class="flex items-start gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-secondary-50 dark:bg-secondary-900/30 flex items-center justify-center flex-shrink-0 group-hover:bg-secondary-100 dark:group-hover:bg-secondary-900/50 transition-colors">
+                    <i class="fa-regular fa-calendar-check text-secondary-500 text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-1">مواعيدي</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">تابع مواعيدك القادمة والسابقة وحالتها.</p>
+                </div>
+            </div>
+            <div class="mt-4 flex items-center gap-1 text-secondary-600 dark:text-secondary-400 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                <span>عرض المواعيد</span>
+                <i class="fa-solid fa-arrow-left text-xs"></i>
+            </div>
+        </a>
+
+        <!-- My Profile -->
+        <a href="{% url 'patients:profile' %}" class="glass-card p-6 group hover:shadow-lg transition-all hover:-translate-y-1 border-b-4 border-transparent hover:border-blue-500">
+            <div class="flex items-start gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 transition-colors">
+                    <i class="fa-regular fa-id-card text-blue-500 text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-1">ملفي الشخصي</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">عدّل بياناتك الشخصية ومعلوماتك الطبية.</p>
+                </div>
+            </div>
+            <div class="mt-4 flex items-center gap-1 text-blue-600 dark:text-blue-400 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                <span>الملف الشخصي</span>
+                <i class="fa-solid fa-arrow-left text-xs"></i>
+            </div>
+        </a>
+
+    </div>
+
+</div>
+{% endblock %}
