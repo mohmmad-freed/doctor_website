@@ -9,6 +9,9 @@ from django.http import HttpResponseForbidden
 PATIENT_ALLOWED_DOCTOR_PATHS = re.compile(
     r"^/doctors/\d+/(availability|appointment-types)/"
     r"|^/doctors/api/\d+/(availability|available-slots|appointment-types)/"
+    r"|^/doctors/api/specialties/"
+    r"|^/doctors/api/list/"
+    r"|^/doctors/api/by-specialty/\d+/"
 )
 
 
@@ -17,7 +20,8 @@ class ClinicIsolationMiddleware:
     Middleware to enforce strict tenant isolation rules.
     1. Superusers: Bypass all checks.
     2. Patients: Blocked from staff paths (/doctors, /secretary, /clinics),
-       EXCEPT patient-facing pages like doctor availability and appointment types.
+       EXCEPT patient-facing pages like doctor availability, appointment types,
+       and specialty/doctor browsing.
     3. Staff: Must be associated with a Clinic. sets request.clinic and request.clinic_id.
     """
 

@@ -1,6 +1,6 @@
 {% extends 'patients/base_dashboard.html' %}
 
-{% block title %}تصفح الأطباء | {{ block.super }}{% endblock %}
+{% block title %}تصفح الأطباء {% if selected_specialty %} - {{ selected_specialty.name_ar }}{% endif %} | {{ block.super }}{% endblock %}
 
 {% block content %}
 <div class="max-w-5xl mx-auto space-y-6 animate-fade-in-up">
@@ -15,7 +15,7 @@
                 </div>
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">تصفح الأطباء</h1>
-                    <p class="text-gray-500 dark:text-gray-400 text-sm">اختر طبيباً لعرض مواعيده المتاحة وأنواع خدماته</p>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">ابحث عن طبيب أو تصفح حسب التخصص</p>
                 </div>
             </div>
             <a href="{% url 'patients:dashboard' %}"
@@ -24,6 +24,94 @@
             </a>
         </div>
     </div>
+
+    <!-- Search & Filter Card -->
+    <div class="glass-card p-5">
+        <form method="get" action="{% url 'patients:browse_doctors' %}" id="searchForm">
+            <div class="flex flex-col sm:flex-row gap-3">
+
+                <!-- Search Input -->
+                <div class="relative flex-1">
+                    <div class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
+                        <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
+                    </div>
+                    <input
+                        type="text"
+                        name="q"
+                        value="{{ search_query }}"
+                        placeholder="ابحث باسم الطبيب أو العيادة..."
+                        class="w-full pr-11 pl-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-sm"
+                        autocomplete="off"
+                    >
+                </div>
+
+                <!-- Specialty Dropdown -->
+                <div class="relative sm:w-56">
+                    <div class="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none">
+                        <i class="fa-solid fa-stethoscope text-gray-400 text-sm"></i>
+                    </div>
+                    <select
+                        name="specialty_id"
+                        onchange="document.getElementById('searchForm').submit();"
+                        class="w-full pr-10 pl-8 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-sm appearance-none cursor-pointer"
+                    >
+                        <option value="">كل التخصصات</option>
+                        {% for specialty in all_specialties %}
+                        <option value="{{ specialty.id }}"
+                            {% if selected_specialty and selected_specialty.id == specialty.id %}selected{% endif %}>
+                            {{ specialty.name_ar }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <i class="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                    </div>
+                </div>
+
+                <!-- Search Button -->
+                <button type="submit"
+                        class="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 sm:w-auto">
+                    <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                    بحث
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Active Filters & Results Count -->
+    {% if search_query or selected_specialty %}
+    <div class="flex items-center justify-between px-1">
+        <div class="flex items-center gap-2 flex-wrap">
+            {% if search_query %}
+            <span class="inline-flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full text-xs font-medium">
+                <i class="fa-solid fa-magnifying-glass text-[10px]"></i>
+                "{{ search_query }}"
+                <a href="{% url 'patients:browse_doctors' %}{% if selected_specialty %}?specialty_id={{ selected_specialty.id }}{% endif %}"
+                   class="mr-1 hover:text-blue-900 dark:hover:text-blue-100">
+                    <i class="fa-solid fa-xmark"></i>
+                </a>
+            </span>
+            {% endif %}
+            {% if selected_specialty %}
+            <span class="inline-flex items-center gap-1.5 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 px-3 py-1 rounded-full text-xs font-medium">
+                <i class="fa-solid fa-stethoscope text-[10px]"></i>
+                {{ selected_specialty.name_ar }}
+                <a href="{% url 'patients:browse_doctors' %}{% if search_query %}?q={{ search_query }}{% endif %}"
+                   class="mr-1 hover:text-primary-900 dark:hover:text-primary-100">
+                    <i class="fa-solid fa-xmark"></i>
+                </a>
+            </span>
+            {% endif %}
+            <a href="{% url 'patients:browse_doctors' %}"
+               class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                مسح الكل
+            </a>
+        </div>
+        <span class="text-xs text-gray-500 dark:text-gray-400">
+            {{ total_doctors }} طبيب
+        </span>
+    </div>
+    {% endif %}
 
     <!-- Doctors List -->
     {% if doctors_by_clinic %}
@@ -50,26 +138,54 @@
 
             <!-- Doctors Grid -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {% for doctor in clinic_data.doctors %}
+                {% for doc in clinic_data.doctors %}
                 <div class="bg-slate-50 dark:bg-slate-700/30 rounded-xl p-5 border border-gray-100 dark:border-slate-600 hover:border-primary-200 dark:hover:border-primary-700 transition-all group">
-                    <div class="flex items-center gap-4 mb-4">
+                    <!-- Doctor Info -->
+                    <div class="flex items-center gap-4 mb-3">
                         <div class="w-12 h-12 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center flex-shrink-0">
-                            <span class="text-lg font-bold text-primary-600 dark:text-primary-400">{{ doctor.name|slice:":1" }}</span>
+                            <span class="text-lg font-bold text-primary-600 dark:text-primary-400">{{ doc.user.name|slice:":1" }}</span>
                         </div>
-                        <div>
-                            <h3 class="font-bold text-gray-900 dark:text-white">د. {{ doctor.name }}</h3>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ doctor.phone }}</p>
+                        <div class="min-w-0">
+                            <h3 class="font-bold text-gray-900 dark:text-white">د. {{ doc.user.name }}</h3>
+                            {% if doc.profile and doc.profile.years_of_experience %}
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                <i class="fa-solid fa-briefcase-medical ml-1"></i>
+                                {{ doc.profile.years_of_experience }} سنوات خبرة
+                            </p>
+                            {% endif %}
                         </div>
                     </div>
 
+                    <!-- Specialties Tags -->
+                    {% if doc.primary_specialty or doc.secondary_specialties %}
+                    <div class="flex flex-wrap gap-1.5 mb-3">
+                        {% if doc.primary_specialty %}
+                        <span class="inline-flex items-center gap-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 px-2.5 py-1 rounded-full text-xs font-semibold">
+                            <i class="fa-solid fa-star text-[10px]"></i>
+                            {{ doc.primary_specialty.name_ar }}
+                        </span>
+                        {% endif %}
+                        {% for spec in doc.secondary_specialties %}
+                        <span class="bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-gray-300 px-2.5 py-1 rounded-full text-xs font-medium">
+                            {{ spec.name_ar }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Bio excerpt -->
+                    {% if doc.profile and doc.profile.bio %}
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">{{ doc.profile.bio }}</p>
+                    {% endif %}
+
                     <!-- Action Buttons -->
                     <div class="flex items-center gap-2">
-                        <a href="{% url 'doctors:doctor_availability' doctor.id %}?clinic_id={{ clinic_data.clinic.id }}"
+                        <a href="{% url 'doctors:doctor_availability' doc.user.id %}?clinic_id={{ clinic_data.clinic.id }}"
                            class="flex-1 text-center bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/40 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
                             <i class="fa-regular fa-calendar ml-1"></i>
                             المواعيد المتاحة
                         </a>
-                        <a href="{% url 'doctors:doctor_appointment_types' doctor.id %}?clinic_id={{ clinic_data.clinic.id }}"
+                        <a href="{% url 'doctors:doctor_appointment_types' doc.user.id %}?clinic_id={{ clinic_data.clinic.id }}"
                            class="flex-1 text-center bg-secondary-50 dark:bg-secondary-900/20 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-900/40 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
                             <i class="fa-solid fa-list-check ml-1"></i>
                             أنواع الخدمات
@@ -85,10 +201,58 @@
     <!-- Empty State -->
     <div class="glass-card p-12 text-center">
         <div class="w-20 h-20 bg-gray-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-5">
+            {% if search_query or selected_specialty %}
+            <i class="fa-solid fa-magnifying-glass text-gray-400 dark:text-gray-500 text-3xl"></i>
+            {% else %}
             <i class="fa-solid fa-user-doctor text-gray-400 dark:text-gray-500 text-3xl"></i>
+            {% endif %}
         </div>
-        <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">لا يوجد أطباء حالياً</h3>
-        <p class="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">لم يتم تسجيل أي أطباء في المنصة بعد. تحقق لاحقاً.</p>
+
+        {% if search_query and selected_specialty %}
+            <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">لا توجد نتائج</h3>
+            <p class="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-5">
+                لم يتم العثور على أطباء تطابق بحثك "<span class="font-semibold text-gray-700 dark:text-gray-200">{{ search_query }}</span>"
+                في تخصص "<span class="font-semibold text-gray-700 dark:text-gray-200">{{ selected_specialty.name_ar }}</span>".
+            </p>
+            <div class="flex items-center justify-center gap-3 flex-wrap">
+                <a href="{% url 'patients:browse_doctors' %}?q={{ search_query }}"
+                   class="inline-flex items-center gap-2 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-xl text-sm font-medium transition-colors">
+                    <i class="fa-solid fa-filter-circle-xmark"></i>
+                    إزالة فلتر التخصص
+                </a>
+                <a href="{% url 'patients:browse_doctors' %}"
+                   class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors">
+                    <i class="fa-solid fa-arrow-right"></i>
+                    عرض جميع الأطباء
+                </a>
+            </div>
+
+        {% elif search_query %}
+            <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">لا توجد نتائج لـ "{{ search_query }}"</h3>
+            <p class="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-5">
+                جرّب البحث باسم مختلف أو اختر تخصصاً من القائمة.
+            </p>
+            <a href="{% url 'patients:browse_doctors' %}"
+               class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors">
+                <i class="fa-solid fa-arrow-right"></i>
+                عرض جميع الأطباء
+            </a>
+
+        {% elif selected_specialty %}
+            <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">لا يوجد أطباء في هذا التخصص</h3>
+            <p class="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-5">
+                لم يتم العثور على أطباء في تخصص "<span class="font-semibold text-gray-700 dark:text-gray-200">{{ selected_specialty.name_ar }}</span>".
+            </p>
+            <a href="{% url 'patients:browse_doctors' %}"
+               class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors">
+                <i class="fa-solid fa-arrow-right"></i>
+                عرض جميع الأطباء
+            </a>
+
+        {% else %}
+            <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">لا يوجد أطباء حالياً</h3>
+            <p class="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">لم يتم تسجيل أي أطباء في المنصة بعد. تحقق لاحقاً.</p>
+        {% endif %}
     </div>
     {% endif %}
 

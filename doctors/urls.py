@@ -4,7 +4,7 @@ from . import views, api_views
 app_name = "doctors"
 
 urlpatterns = [
-    # --- Template Views (existing) ---
+    # --- Template Views (staff) ---
     path("", views.dashboard, name="dashboard"),
     path("appointments/", views.appointments_list, name="appointments"),
     path(
@@ -13,7 +13,7 @@ urlpatterns = [
         name="appointment_detail",
     ),
     path("patients/", views.patients_list, name="patients"),
-    # --- Patient-facing template views (new) ---
+    # --- Patient-facing template views ---
     path(
         "<int:doctor_id>/availability/",
         views.doctor_availability_view,
@@ -24,7 +24,22 @@ urlpatterns = [
         views.doctor_appointment_types_view,
         name="doctor_appointment_types",
     ),
-    # --- API Endpoints (new) ---
+    # --- API Endpoints ---
+    path(
+        "api/specialties/",
+        api_views.SpecialtyListAPIView.as_view(),
+        name="api_specialties",
+    ),
+    path(
+        "api/list/",
+        api_views.DoctorListAPIView.as_view(),
+        name="api_doctor_list",
+    ),
+    path(
+        "api/by-specialty/<int:specialty_id>/",
+        api_views.DoctorsBySpecialtyAPIView.as_view(),
+        name="api_doctors_by_specialty",
+    ),
     path(
         "api/<int:doctor_id>/availability/",
         api_views.DoctorAvailabilityListAPIView.as_view(),
