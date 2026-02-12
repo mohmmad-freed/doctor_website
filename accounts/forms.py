@@ -219,3 +219,52 @@ class MainDoctorRegistrationForm(UserCreationForm):
         if commit:
             user.save()
         return user
+
+
+class ForgotPasswordPhoneForm(forms.Form):
+    """Form for entering phone number during password reset"""
+
+    phone = forms.CharField(
+        max_length=20,
+        widget=forms.TextInput(attrs={"placeholder": "059XXXXXXX"}),
+    )
+
+    def clean_phone(self):
+        phone = self.cleaned_data.get("phone", "").strip()
+        phone = PhoneNumberAuthBackend.normalize_phone_number(phone)
+
+        if not PhoneNumberAuthBackend.is_valid_phone_number(phone):
+            raise ValidationError(
+                "رقم الهاتف غير صحيح. يجب أن يبدأ بـ 059 أو 056 ويتكون من 10 أرقام."
+            )
+
+        if not CustomUser.objects.filter(phone=phone).exists():
+            raise ValidationError("لا يوجد حساب مرتبط بهذا الرقم.")
+
+        return phone
+
+
+class ResetPasswordForm(forms.Form):
+    """Form for setting a new password during password reset"""
+
+    password1 = forms.CharField(
+        widget=forms.PasswordInput(attrs={"placeholder": "كلمة المرور الجديدة"}),
+    )
+    password2 = forms.CharField(
+        widget=forms.PasswordInput(attrs={"placeholder": "تأكيد كلمة المرور"}),
+    )
+
+    def clean_password1(self):
+        password1 = self.cleaned_data.get("password1")
+        if password1 and len(password1) < 8:
+            raise ValidationError("يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.")
+        return password1
+
+    def clean_password2(self):
+        password1 = self.cleaned_data.get("password1")
+        password2 = self.cleaned_data.get("password2")
+
+        if password1 and password2 and password1 != password2:
+            raise ValidationError("كلمتا المرور غير متطابقتين.")
+
+        return password2

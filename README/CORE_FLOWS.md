@@ -81,7 +81,14 @@
     -   **Enforcement**: If `ENFORCE_PHONE_VERIFICATION` is on, usage is blocked until phone is verified.
     -   **Redirect**: User is redirected to their role-specific dashboard (Patient/Doctor/Secretary).
 
-3.  **Logout**:
+3.  **Forgot Password Flow**:
+    -   **Step 1: Phone Entry**: User clicks "Forgot Password?" on Login page. Enters registered mobile number.
+    -   **Step 2: OTP Verification**: System sends SMS OTP to the phone. User enters code. (Reuses existing OTP infrastructure with rate limiting).
+    -   **Step 3: New Password**: User sets a new password (min 8 chars, confirmation required).
+    -   **Result**: Password is updated. User is redirected to Login with success message.
+    -   **State Management**: Phone number and verification status stored in session. Cleaned up after reset completes.
+
+4.  **Logout**:
     -   User clicks Logout. System clears session and redirects to Login.
 
 ## 6. Account Management
