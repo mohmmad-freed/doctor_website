@@ -73,3 +73,11 @@ The standard lifecycle is:
 ### R-13: Login Credentials
 -   **Primary Login**: Users authenticate using **Mobile Number** + **Password**.
 -   **National ID Usage**: strictly restricted to **Identity Verification** and ensuring account uniqueness during registration. It is NOT used for daily login.
+
+### R-14: Identity Updates
+-   **No Direct Updates**: Critical identity fields (Phone, Email) cannot be changed directly in the database via a simple update form.
+-   **Verification Required**: Any change to these fields requires verification of the **NEW** identifier (OTP for phone, Link for email) BEFORE the update is committed to the User record.
+
+### R-15: Registration State
+-   **Minimum Viable Profile**: A user is not considered "Registered" until they have established at least a verified presence (Phone + Password + Name).
+-   **Atomic Creation**: The registration flow should ideally result in a complete user or no user (using atomic transactions), preventing "ghost" accounts with missing credentials.

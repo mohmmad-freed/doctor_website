@@ -3,6 +3,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
 from .models import CustomUser, City
 from clinics.models import ClinicActivationCode
+from .backends import PhoneNumberAuthBackend
 import re
 
 
@@ -17,16 +18,7 @@ class LoginForm(forms.Form):
 
     def clean_phone(self):
         phone = self.cleaned_data.get("phone", "").strip()
-        return self.normalize_phone_number(phone)
-
-    @staticmethod
-    def normalize_phone_number(phone):
-        phone = phone.strip().replace(" ", "").replace("-", "")
-        if phone.startswith("+97059"):
-            phone = "059" + phone[6:]
-        elif phone.startswith("+97056"):
-            phone = "056" + phone[6:]
-        return phone
+        return PhoneNumberAuthBackend.normalize_phone_number(phone)
 
 
 class PatientRegistrationForm(forms.ModelForm):
@@ -53,9 +45,9 @@ class PatientRegistrationForm(forms.ModelForm):
 
     def clean_phone(self):
         phone = (self.cleaned_data.get("phone") or "").strip()
-        phone = self.normalize_phone_number(phone)
+        phone = PhoneNumberAuthBackend.normalize_phone_number(phone)
 
-        if not self.is_valid_phone_number(phone):
+        if not PhoneNumberAuthBackend.is_valid_phone_number(phone):
             raise ValidationError(
                 "Invalid phone number format. Phone must start with 059 or 056 and be 10 digits."
             )
@@ -103,19 +95,6 @@ class PatientRegistrationForm(forms.ModelForm):
             raise ValidationError("Passwords do not match.")
 
         return password2
-
-    @staticmethod
-    def normalize_phone_number(phone):
-        phone = phone.replace(" ", "").replace("-", "")
-        if phone.startswith("+97059"):
-            phone = "059" + phone[6:]
-        elif phone.startswith("+97056"):
-            phone = "056" + phone[6:]
-        return phone
-
-    @staticmethod
-    def is_valid_phone_number(phone):
-        return bool(re.match(r"^(059|056)\d{7}$", phone))
 
     def save(self, commit=True):
         user = super().save(commit=False)
@@ -176,9 +155,9 @@ class MainDoctorRegistrationForm(UserCreationForm):
 
     def clean_phone(self):
         phone = self.cleaned_data.get("phone", "").strip()
-        phone = self.normalize_phone_number(phone)
+        phone = PhoneNumberAuthBackend.normalize_phone_number(phone)
 
-        if not self.is_valid_phone_number(phone):
+        if not PhoneNumberAuthBackend.is_valid_phone_number(phone):
             raise ValidationError(
                 "Invalid phone number format. Phone must start with 059 or 056 and be 10 digits."
             )
@@ -199,9 +178,9 @@ class MainDoctorRegistrationForm(UserCreationForm):
 
     def clean_clinic_phone(self):
         phone = self.cleaned_data.get("clinic_phone", "").strip()
-        phone = self.normalize_phone_number(phone)
+        phone = PhoneNumberAuthBackend.normalize_phone_number(phone)
 
-        if not self.is_valid_phone_number(phone):
+        if not PhoneNumberAuthBackend.is_valid_phone_number(phone):
             raise ValidationError(
                 "Invalid clinic phone number format. Phone must start with 059 or 056 and be 10 digits."
             )
@@ -241,15 +220,51 @@ class MainDoctorRegistrationForm(UserCreationForm):
             user.save()
         return user
 
-    @staticmethod
-    def normalize_phone_number(phone):
-        phone = phone.replace(" ", "").replace("-", "")
-        if phone.startswith("+97059"):
-            phone = "059" + phone[6:]
-        elif phone.startswith("+97056"):
-            phone = "056" + phone[6:]
+
+class ForgotPasswordPhoneForm(forms.Form):
+    """Form for entering phone number during password reset"""
+
+    phone = forms.CharField(
+        max_length=20,
+        widget=forms.TextInput(attrs={"placeholder": "059XXXXXXX"}),
+    )
+
+    def clean_phone(self):
+        phone = self.cleaned_data.get("phone", "").strip()
+        phone = PhoneNumberAuthBackend.normalize_phone_number(phone)
+
+        if not PhoneNumberAuthBackend.is_valid_phone_number(phone):
+            raise ValidationError(
+                "رقم الهاتف غير صحيح. يجب أن يبدأ بـ 059 أو 056 ويتكون من 10 أرقام."
+            )
+
+        if not CustomUser.objects.filter(phone=phone).exists():
+            raise ValidationError("لا يوجد حساب مرتبط بهذا الرقم.")
+
         return phone
 
-    @staticmethod
-    def is_valid_phone_number(phone):
-        return bool(re.match(r"^(059|056)\d{7}$", phone))
+
+class ResetPasswordForm(forms.Form):
+    """Form for setting a new password during password reset"""
+
+    password1 = forms.CharField(
+        widget=forms.PasswordInput(attrs={"placeholder": "كلمة المرور الجديدة"}),
+    )
+    password2 = forms.CharField(
+        widget=forms.PasswordInput(attrs={"placeholder": "تأكيد كلمة المرور"}),
+    )
+
+    def clean_password1(self):
+        password1 = self.cleaned_data.get("password1")
+        if password1 and len(password1) < 8:
+            raise ValidationError("يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.")
+        return password1
+
+    def clean_password2(self):
+        password1 = self.cleaned_data.get("password1")
+        password2 = self.cleaned_data.get("password2")
+
+        if password1 and password2 and password1 != password2:
+            raise ValidationError("كلمتا المرور غير متطابقتين.")
+
+        return password2

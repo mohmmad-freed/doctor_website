@@ -46,6 +46,17 @@
                 <p class="text-body-m">ليس لديك حساب؟ <a href="{% url 'accounts:register' %}" class="text-primary"
                         style="font-weight: 600;">أنشئ حساباً جديداً</a></p>
             </div>
+
+            <div
+                style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-default, #e2e8f0); text-align: center;">
+                <a href="{% url 'accounts:forgot_password_phone' %}"
+                    style="color: var(--text-muted, #718096); font-size: 0.9rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: color 0.2s;"
+                    onmouseover="this.style.color='var(--primary, #667eea)'"
+                    onmouseout="this.style.color='var(--text-muted, #718096)'">
+                    <i class="fa-solid fa-key" style="font-size: 0.85rem;"></i>
+                    نسيت كلمة المرور؟
+                </a>
+            </div>
         </div>
     </div>
 </section>

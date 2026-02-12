@@ -60,6 +60,22 @@ urlpatterns = [
         views.verify_change_email,
         name="verify_change_email",
     ),
+    # Forgot Password
+    path(
+        "forgot-password/",
+        views.forgot_password_phone,
+        name="forgot_password_phone",
+    ),
+    path(
+        "forgot-password/verify/",
+        views.forgot_password_verify,
+        name="forgot_password_verify",
+    ),
+    path(
+        "forgot-password/reset/",
+        views.forgot_password_reset,
+        name="forgot_password_reset",
+    ),
     # API Endpoints
     path("api/login/", api_views.MyTokenObtainPairView.as_view(), name="api_login"),
     path("api/logout/", api_views.LogoutAPIView.as_view(), name="api_logout"),

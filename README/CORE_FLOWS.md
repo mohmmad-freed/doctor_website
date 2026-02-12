@@ -64,3 +64,56 @@
     -   Enable/Disable Patient Portal booking.
     -   Set operating hours.
 4.  **Handover**: Credentials sent to Clinic Admin.
+
+## 5. Consumer Authentication & Registration
+**Actor:** Patient (Self-Service)
+
+1.  **Patient Self-Registration**:
+    -   **Step 1: Phone Entry**: User enters mobile number. System validates format and checks if number is already in use.
+    -   **Step 2: OTP Verification**: System sends SMS OTP. User enters code. (Stateless/Session-based verification).
+    -   **Step 3: Profile Creation**: User enters Name, Password, Gender, Date of Birth.
+    -   **Step 4: Optional Email**: User can add email now or later. If added, a verification link is sent (Async).
+    -   **Result**: Global `User` and `PatientProfile` are created. User is logged in.
+
+2.  **Login Flow**:
+    -   User enters **Mobile Number** and **Password**.
+    -   System checks credentials.
+    -   **Enforcement**: If `ENFORCE_PHONE_VERIFICATION` is on, usage is blocked until phone is verified.
+    -   **Redirect**: User is redirected to their role-specific dashboard (Patient/Doctor/Secretary).
+
+3.  **Forgot Password Flow**:
+    -   **Step 1: Phone Entry**: User clicks "Forgot Password?" on Login page. Enters registered mobile number.
+    -   **Step 2: OTP Verification**: System sends SMS OTP to the phone. User enters code. (Reuses existing OTP infrastructure with rate limiting).
+    -   **Step 3: New Password**: User sets a new password (min 8 chars, confirmation required).
+    -   **Result**: Password is updated. User is redirected to Login with success message.
+    -   **State Management**: Phone number and verification status stored in session. Cleaned up after reset completes.
+
+4.  **Logout**:
+    -   User clicks Logout. System clears session and redirects to Login.
+
+## 6. Account Management
+**Actor:** Authenticated User
+
+1.  **Change Phone Number**:
+    -   User requests change -> Enters NEW phone number.
+    -   System checks uniqueness of NEW number.
+    -   System sends OTP to NEW number.
+    -   User verifies OTP -> System updates `User.phone`.
+
+2.  **Change Email Address**:
+    -   User requests change -> Enters NEW email.
+    -   System checks uniqueness.
+    -   System sends Verification Link to NEW email.
+    -   **State**: Email is stored in `pending_email` until verified.
+    -   User clicks link -> System updates `User.email` and clears pending state.
+
+## 7. Provider Onboarding (Self-Service)
+**Actor:** Main Doctor (Clinic Owner)
+
+1.  **Main Doctor Registration**:
+    -   User enters Personal Info (Name, Phone, Password) + Clinic Info (Name, Specialization, Contact).
+    -   **Activation Code**: User must provide a valid `ClinicActivationCode`.
+    -   **Result**:
+        -   New `User` (Role: MAIN_DOCTOR) created.
+        -   New `Clinic` created and linked to this doctor.
+        -   User is logged in and redirected to Clinic Dashboard.

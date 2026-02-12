@@ -8,7 +8,13 @@ from django.utils import timezone
 from django.http import JsonResponse
 import re
 
-from .forms import LoginForm, PatientRegistrationForm, MainDoctorRegistrationForm
+from .forms import (
+    LoginForm,
+    PatientRegistrationForm,
+    MainDoctorRegistrationForm,
+    ForgotPasswordPhoneForm,
+    ResetPasswordForm,
+)
 from .otp_utils import request_otp, verify_otp, is_in_cooldown, get_remaining_resends
 from clinics.models import Clinic
 from patients.models import PatientProfile
@@ -631,3 +637,147 @@ def verify_change_email(request, token):
     else:
         messages.error(request, message)
         return redirect("accounts:change_email_request")
+
+
+# ============================================
+# FORGOT PASSWORD FLOW
+# ============================================
+def forgot_password_phone(request):
+    """Step 1: Enter phone number to receive OTP for password reset"""
+    if request.user.is_authenticated:
+        return redirect("accounts:home")
+
+    if request.method == "POST":
+        form = ForgotPasswordPhoneForm(request.POST)
+        if form.is_valid():
+            phone = form.cleaned_data["phone"]
+
+            # Request OTP
+            success, message = request_otp(phone)
+            if success:
+                request.session["reset_phone"] = phone
+                messages.success(request, message)
+                return redirect("accounts:forgot_password_verify")
+            else:
+                messages.error(request, message)
+        else:
+            # Show form-level errors via messages for consistency
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, error)
+    else:
+        form = ForgotPasswordPhoneForm()
+
+    return render(request, "accounts/forgot_password_phone.html", {"form": form})
+
+
+def forgot_password_verify(request):
+    """Step 2: Verify OTP for password reset"""
+    if request.user.is_authenticated:
+        return redirect("accounts:home")
+
+    phone = request.session.get("reset_phone")
+    if not phone:
+        messages.error(request, "انتهت الجلسة. يرجى إعادة المحاولة.")
+        return redirect("accounts:forgot_password_phone")
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+
+        # Handle resend OTP
+        if action == "resend":
+            remaining = get_remaining_resends(phone)
+            if remaining <= 0:
+                messages.error(
+                    request, "لقد وصلت إلى الحد الأقصى لطلبات رمز التحقق لهذا اليوم."
+                )
+            else:
+                success, message = request_otp(phone)
+                if success:
+                    messages.success(request, message)
+                else:
+                    messages.error(request, message)
+            return redirect("accounts:forgot_password_verify")
+
+        # Handle OTP verification
+        entered_otp = request.POST.get("otp", "").strip()
+
+        if not entered_otp:
+            messages.error(request, "يرجى إدخال رمز التحقق.")
+            return render(
+                request,
+                "accounts/forgot_password_verify.html",
+                {
+                    "phone": phone,
+                    "remaining_resends": get_remaining_resends(phone),
+                    "cooldown": is_in_cooldown(phone),
+                },
+            )
+
+        success, message = verify_otp(phone, entered_otp)
+
+        if success:
+            request.session["reset_verified"] = True
+            messages.success(
+                request, "تم التحقق بنجاح. يمكنك الآن تعيين كلمة مرور جديدة."
+            )
+            return redirect("accounts:forgot_password_reset")
+        else:
+            messages.error(request, message)
+
+    remaining_resends = get_remaining_resends(phone)
+    cooldown = is_in_cooldown(phone)
+
+    return render(
+        request,
+        "accounts/forgot_password_verify.html",
+        {
+            "phone": phone,
+            "remaining_resends": remaining_resends,
+            "cooldown": cooldown,
+        },
+    )
+
+
+def forgot_password_reset(request):
+    """Step 3: Set new password after OTP verification"""
+    if request.user.is_authenticated:
+        return redirect("accounts:home")
+
+    phone = request.session.get("reset_phone")
+    reset_verified = request.session.get("reset_verified", False)
+
+    if not phone or not reset_verified:
+        messages.error(request, "يرجى التحقق من هويتك أولاً.")
+        return redirect("accounts:forgot_password_phone")
+
+    if request.method == "POST":
+        form = ResetPasswordForm(request.POST)
+        if form.is_valid():
+            try:
+                user = User.objects.get(phone=phone)
+                user.set_password(form.cleaned_data["password1"])
+                user.save()
+
+                # Clear all reset session data
+                for key in ["reset_phone", "reset_verified"]:
+                    if key in request.session:
+                        del request.session[key]
+
+                messages.success(
+                    request,
+                    "تم تغيير كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول.",
+                )
+                return redirect("accounts:login")
+
+            except User.DoesNotExist:
+                messages.error(request, "حدث خطأ. يرجى المحاولة مرة أخرى.")
+                return redirect("accounts:forgot_password_phone")
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, error)
+    else:
+        form = ResetPasswordForm()
+
+    return render(request, "accounts/forgot_password_reset.html", {"form": form})
