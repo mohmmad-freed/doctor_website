@@ -76,37 +76,46 @@ def browse_doctors(request):
         ).values_list("user_id", flat=True)
         specialty_match = Q(id__in=specialty_user_ids)
 
-        # 3. Clinic name match → get user IDs of doctors in matching clinics
-        #    (main_doctor of clinic OR staff at clinic)
+        # 3. Clinic name match → get user IDs of doctors at matching clinics
         matching_clinics = Clinic.objects.filter(
             name__icontains=search_query, is_active=True
         )
-        clinic_main_ids = matching_clinics.values_list("main_doctor_id", flat=True)
-        clinic_staff_ids = ClinicStaff.objects.filter(
-            clinic__in=matching_clinics,
-            role="DOCTOR",
-            is_active=True,
+        matching_clinic_ids = set(matching_clinics.values_list("id", flat=True))
+
+        # Doctors who are main_doctor of matching clinics
+        main_doc_ids = matching_clinics.values_list("main_doctor_id", flat=True)
+        # Doctors who are staff at matching clinics
+        staff_doc_ids = ClinicStaff.objects.filter(
+            clinic__in=matching_clinics, role="DOCTOR", is_active=True
         ).values_list("user_id", flat=True)
-        clinic_match = Q(id__in=clinic_main_ids) | Q(id__in=clinic_staff_ids)
+
+        clinic_match = Q(id__in=list(main_doc_ids) + list(staff_doc_ids))
 
         doctor_users = doctor_users.filter(name_match | specialty_match | clinic_match)
+    else:
+        matching_clinic_ids = set()
 
     filtered_doctor_ids = set(doctor_users.values_list("id", flat=True))
 
-    # --- Build clinic → doctors grouping ---
-    clinics = Clinic.objects.filter(is_active=True).select_related("city", "main_doctor")
+    # --- Build clinic → doctors mapping ---
+    clinics = Clinic.objects.filter(is_active=True).select_related(
+        "main_doctor", "city"
+    )
 
-    # If searching by clinic name, only show matching clinics
-    # Otherwise show all clinics that have matching doctors
-    if search_query:
-        # Show clinics that either match the name OR contain matching doctors
-        matching_clinic_ids = set(
-            Clinic.objects.filter(
-                name__icontains=search_query, is_active=True
-            ).values_list("id", flat=True)
-        )
-    else:
-        matching_clinic_ids = None  # show all
+    # If searching, only show clinics that have matching doctors
+    if search_query or selected_specialty:
+        relevant_clinic_ids = set()
+        for clinic in clinics:
+            if clinic.main_doctor and clinic.main_doctor.id in filtered_doctor_ids:
+                relevant_clinic_ids.add(clinic.id)
+            staff = ClinicStaff.objects.filter(
+                clinic=clinic, role="DOCTOR", is_active=True
+            ).values_list("user_id", flat=True)
+            if set(staff) & filtered_doctor_ids:
+                relevant_clinic_ids.add(clinic.id)
+        # Also include clinics matched by name
+        relevant_clinic_ids |= matching_clinic_ids
+        clinics = clinics.filter(id__in=relevant_clinic_ids)
 
     doctors_by_clinic = []
     for clinic in clinics:
@@ -191,7 +200,15 @@ def my_appointments(request):
 
 @login_required
 def book_appointment(request, clinic_id):
-    return HttpResponse(f"Book Appointment at Clinic {clinic_id} - Coming Soon!")
+    """
+    Redirect to the appointments app booking view.
+    Preserves query parameters (e.g., doctor_id).
+    """
+    query_string = request.META.get("QUERY_STRING", "")
+    url = f"/appointments/book/{clinic_id}/"
+    if query_string:
+        url += f"?{query_string}"
+    return redirect(url)
 
 
 @login_required

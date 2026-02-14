@@ -1,0 +1,172 @@
+{% extends 'patients/base_dashboard.html' %}
+
+{% block title %}حجز موعد - {{ clinic.name }} | {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6 animate-fade-in-up">
+
+    <!-- Header -->
+    <div class="glass-card p-6 relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-secondary-500 to-primary-500"></div>
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-secondary-50 dark:bg-secondary-900/30 flex items-center justify-center">
+                    <i class="fa-regular fa-calendar-plus text-secondary-500 text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">حجز موعد جديد</h1>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">{{ clinic.name }}</p>
+                </div>
+            </div>
+            <a href="{% url 'patients:browse_doctors' %}"
+               class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                <i class="fa-solid fa-arrow-right text-lg"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Booking Form -->
+    <form method="post" id="bookingForm" class="space-y-5">
+        {% csrf_token %}
+
+        <!-- Step 1: Select Doctor -->
+        <div class="glass-card p-6">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <span class="w-7 h-7 rounded-full bg-primary-500 text-white text-sm flex items-center justify-center font-bold">1</span>
+                اختر الطبيب
+            </h2>
+            <select name="doctor_id" id="doctorSelect"
+                    class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                    hx-get="{% url 'appointments:htmx_appointment_types' clinic_id=clinic.id %}"
+                    hx-target="#appointmentTypesContainer"
+                    hx-trigger="change"
+                    hx-include="[name='doctor_id']"
+                    required>
+                <option value="">-- اختر طبيباً --</option>
+                {% for doctor in doctors %}
+                <option value="{{ doctor.id }}" {% if selected_doctor and selected_doctor.id == doctor.id %}selected{% endif %}>
+                    د. {{ doctor.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Step 2: Select Appointment Type (loaded via HTMX) -->
+        <div class="glass-card p-6">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <span class="w-7 h-7 rounded-full bg-primary-500 text-white text-sm flex items-center justify-center font-bold">2</span>
+                نوع الموعد
+            </h2>
+            <div id="appointmentTypesContainer">
+                {% if appointment_types %}
+                    {% include 'appointments/partials/appointment_types.html' %}
+                {% else %}
+                    <p class="text-gray-400 dark:text-gray-500 text-sm">اختر طبيباً أولاً لعرض أنواع المواعيد.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Step 3: Select Date -->
+        <div class="glass-card p-6">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <span class="w-7 h-7 rounded-full bg-primary-500 text-white text-sm flex items-center justify-center font-bold">3</span>
+                اختر التاريخ
+            </h2>
+            <input type="date" name="appointment_date" id="dateInput"
+                   min="{{ today }}"
+                   class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                   hx-get="{% url 'appointments:htmx_slots' clinic_id=clinic.id %}"
+                   hx-target="#slotsContainer"
+                   hx-trigger="change"
+                   hx-include="[name='doctor_id'], [name='appointment_type_id'], [name='appointment_date']"
+                   required>
+        </div>
+
+        <!-- Step 4: Select Time Slot (loaded via HTMX) -->
+        <div class="glass-card p-6">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <span class="w-7 h-7 rounded-full bg-primary-500 text-white text-sm flex items-center justify-center font-bold">4</span>
+                اختر الوقت
+            </h2>
+            <div id="slotsContainer">
+                <p class="text-gray-400 dark:text-gray-500 text-sm">اختر التاريخ لعرض المواعيد المتاحة.</p>
+            </div>
+            <!-- Hidden input for selected time, set by JS -->
+            <input type="hidden" name="appointment_time" id="selectedTime" required>
+        </div>
+
+        <!-- Step 5: Reason (optional) -->
+        <div class="glass-card p-6">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <span class="w-7 h-7 rounded-full bg-gray-400 text-white text-sm flex items-center justify-center font-bold">5</span>
+                سبب الزيارة <span class="text-gray-400 text-sm font-normal">(اختياري)</span>
+            </h2>
+            <textarea name="reason" rows="3" placeholder="صف سبب زيارتك باختصار..."
+                      class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors resize-none"></textarea>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="glass-card p-6">
+            <button type="submit" id="submitBtn"
+                    class="w-full bg-secondary-500 hover:bg-secondary-600 text-white px-6 py-4 rounded-lg font-bold text-lg shadow-md transition-all hover:shadow-lg focus:ring-4 focus:ring-secondary-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled>
+                <i class="fa-solid fa-check ml-2"></i>
+                تأكيد الحجز
+            </button>
+        </div>
+    </form>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/htmx.org@1.9.12"></script>
+<script>
+    // Enable submit button only when all required fields are filled
+    function checkFormReady() {
+        const doctor = document.getElementById('doctorSelect').value;
+        const type = document.querySelector('input[name="appointment_type_id"]:checked');
+        const date = document.getElementById('dateInput').value;
+        const time = document.getElementById('selectedTime').value;
+        const btn = document.getElementById('submitBtn');
+
+        btn.disabled = !(doctor && type && date && time);
+    }
+
+    // Handle slot selection
+    document.addEventListener('click', function (e) {
+        const slotBtn = e.target.closest('.slot-btn');
+        if (!slotBtn || slotBtn.disabled) return;
+
+        // Remove previous selection
+        document.querySelectorAll('.slot-btn').forEach(function (btn) {
+            btn.classList.remove('ring-2', 'ring-secondary-500', 'bg-secondary-50', 'dark:bg-secondary-900/30');
+        });
+
+        // Mark selected
+        slotBtn.classList.add('ring-2', 'ring-secondary-500', 'bg-secondary-50', 'dark:bg-secondary-900/30');
+        document.getElementById('selectedTime').value = slotBtn.dataset.time;
+        checkFormReady();
+    });
+
+    // Listen for changes on form elements
+    document.addEventListener('change', function (e) {
+        if (e.target.matches('#doctorSelect, #dateInput, input[name="appointment_type_id"]')) {
+            // Reset downstream selections
+            if (e.target.id === 'doctorSelect') {
+                document.getElementById('selectedTime').value = '';
+                document.getElementById('dateInput').value = '';
+            }
+            if (e.target.id === 'dateInput' || e.target.matches('input[name="appointment_type_id"]')) {
+                document.getElementById('selectedTime').value = '';
+            }
+            checkFormReady();
+        }
+    });
+
+    // Re-check after HTMX swaps
+    document.body.addEventListener('htmx:afterSwap', function () {
+        checkFormReady();
+    });
+</script>
+{% endblock %}

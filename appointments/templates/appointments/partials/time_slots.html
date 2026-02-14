@@ -1,0 +1,46 @@
+{% if error %}
+<div class="p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+    <p class="text-red-600 dark:text-red-400 text-sm">
+        <i class="fa-solid fa-circle-exclamation ml-1"></i>
+        {{ error }}
+    </p>
+</div>
+
+{% elif slots %}
+<div class="space-y-3">
+    {% if available_slots %}
+    <p class="text-sm text-gray-500 dark:text-gray-400">
+        <i class="fa-solid fa-circle-check text-secondary-500 ml-1"></i>
+        {{ available_slots|length }} موعد متاح يوم {{ target_date|date:"l d F Y" }}
+    </p>
+    {% endif %}
+
+    <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+        {% for slot in slots %}
+        <button type="button"
+                class="slot-btn px-3 py-2.5 rounded-lg text-sm font-medium transition-all
+                {% if slot.is_available %}
+                    bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-gray-900 dark:text-white hover:border-secondary-400 hover:bg-secondary-50 dark:hover:bg-secondary-900/20
+                {% else %}
+                    bg-gray-100 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 text-gray-400 dark:text-gray-600 cursor-not-allowed line-through
+                {% endif %}"
+                data-time="{{ slot.time|time:'H:i' }}"
+                {% if not slot.is_available %}disabled{% endif %}>
+            {{ slot.time|time:"H:i" }}
+        </button>
+        {% endfor %}
+    </div>
+
+    {% if not available_slots %}
+    <div class="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+        <p class="text-amber-600 dark:text-amber-400 text-sm">
+            <i class="fa-solid fa-triangle-exclamation ml-1"></i>
+            جميع المواعيد محجوزة في هذا اليوم. يرجى اختيار تاريخ آخر.
+        </p>
+    </div>
+    {% endif %}
+</div>
+
+{% else %}
+<p class="text-gray-400 dark:text-gray-500 text-sm">لا توجد مواعيد متاحة في هذا اليوم.</p>
+{% endif %}

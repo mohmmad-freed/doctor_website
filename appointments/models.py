@@ -62,13 +62,23 @@ class AppointmentType(models.Model):
 
 
 class Appointment(models.Model):
-    """Appointment bookings between patients and clinics"""
+    """
+    Appointment bookings between patients and clinics.
 
-    STATUS_CHOICES = [
-        ("CONFIRMED", "Confirmed"),
-        ("COMPLETED", "Completed"),
-        ("CANCELLED", "Cancelled"),
-    ]
+    Status lifecycle:
+        CONFIRMED → CHECKED_IN → IN_PROGRESS → COMPLETED
+        CONFIRMED → CANCELLED
+        CONFIRMED → NO_SHOW
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        CONFIRMED = "CONFIRMED", "Confirmed"
+        CHECKED_IN = "CHECKED_IN", "Checked In"
+        IN_PROGRESS = "IN_PROGRESS", "In Progress"
+        COMPLETED = "COMPLETED", "Completed"
+        CANCELLED = "CANCELLED", "Cancelled"
+        NO_SHOW = "NO_SHOW", "No Show"
 
     patient = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -97,7 +107,9 @@ class Appointment(models.Model):
     appointment_date = models.DateField()
     appointment_time = models.TimeField()
     status = models.CharField(
-        max_length=20, choices=STATUS_CHOICES, default="CONFIRMED"
+        max_length=20,
+        choices=Status.choices,
+        default=Status.CONFIRMED,
     )
     reason = models.TextField(blank=True, help_text="Reason for visit")
     notes = models.TextField(blank=True, help_text="Doctor's notes after appointment")

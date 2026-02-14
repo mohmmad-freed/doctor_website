@@ -40,37 +40,27 @@
                         name="q"
                         value="{{ search_query }}"
                         placeholder="ابحث باسم الطبيب أو العيادة..."
-                        class="w-full pr-11 pl-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-sm"
-                        autocomplete="off"
+                        class="w-full pr-12 pl-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-sm"
                     >
                 </div>
 
-                <!-- Specialty Dropdown -->
-                <div class="relative sm:w-56">
-                    <div class="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none">
-                        <i class="fa-solid fa-stethoscope text-gray-400 text-sm"></i>
-                    </div>
-                    <select
-                        name="specialty_id"
-                        onchange="document.getElementById('searchForm').submit();"
-                        class="w-full pr-10 pl-8 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-sm appearance-none cursor-pointer"
-                    >
+                <!-- Specialty Filter -->
+                <div class="sm:w-56">
+                    <select name="specialty_id"
+                            class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-sm appearance-none"
+                            onchange="document.getElementById('searchForm').submit();">
                         <option value="">كل التخصصات</option>
-                        {% for specialty in all_specialties %}
-                        <option value="{{ specialty.id }}"
-                            {% if selected_specialty and selected_specialty.id == specialty.id %}selected{% endif %}>
-                            {{ specialty.name_ar }}
+                        {% for spec in all_specialties %}
+                        <option value="{{ spec.id }}" {% if selected_specialty and selected_specialty.id == spec.id %}selected{% endif %}>
+                            {{ spec.name_ar }}
                         </option>
                         {% endfor %}
                     </select>
-                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                        <i class="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
-                    </div>
                 </div>
 
                 <!-- Search Button -->
                 <button type="submit"
-                        class="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 sm:w-auto">
+                        class="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 text-sm shadow-sm">
                     <i class="fa-solid fa-magnifying-glass text-xs"></i>
                     بحث
                 </button>
@@ -179,17 +169,27 @@
                     {% endif %}
 
                     <!-- Action Buttons -->
-                    <div class="flex items-center gap-2">
-                        <a href="{% url 'doctors:doctor_availability' doc.user.id %}?clinic_id={{ clinic_data.clinic.id }}"
-                           class="flex-1 text-center bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/40 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
-                            <i class="fa-regular fa-calendar ml-1"></i>
-                            المواعيد المتاحة
+                    <div class="space-y-2">
+                        <!-- Book Appointment (Primary CTA) -->
+                        <a href="{% url 'appointments:book_appointment' clinic_id=clinic_data.clinic.id %}?doctor_id={{ doc.user.id }}"
+                           class="block w-full text-center bg-secondary-500 hover:bg-secondary-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition-all shadow-sm hover:shadow-md">
+                            <i class="fa-solid fa-calendar-check ml-1"></i>
+                            احجز موعد
                         </a>
-                        <a href="{% url 'doctors:doctor_appointment_types' doc.user.id %}?clinic_id={{ clinic_data.clinic.id }}"
-                           class="flex-1 text-center bg-secondary-50 dark:bg-secondary-900/20 text-secondary-700 dark:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-900/40 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
-                            <i class="fa-solid fa-list-check ml-1"></i>
-                            أنواع الخدمات
-                        </a>
+
+                        <!-- Secondary Actions -->
+                        <div class="flex items-center gap-2">
+                            <a href="{% url 'doctors:doctor_availability' doc.user.id %}?clinic_id={{ clinic_data.clinic.id }}"
+                               class="flex-1 text-center bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/40 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
+                                <i class="fa-regular fa-calendar ml-1"></i>
+                                المواعيد المتاحة
+                            </a>
+                            <a href="{% url 'doctors:doctor_appointment_types' doc.user.id %}?clinic_id={{ clinic_data.clinic.id }}"
+                               class="flex-1 text-center bg-gray-100 dark:bg-slate-600/50 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
+                                <i class="fa-solid fa-list-check ml-1"></i>
+                                أنواع الخدمات
+                            </a>
+                        </div>
                     </div>
                 </div>
                 {% endfor %}
