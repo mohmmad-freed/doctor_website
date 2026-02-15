@@ -28,6 +28,12 @@ class AppointmentType(models.Model):
         max_length=100,
         help_text="e.g. 'General Checkup', 'Follow-up', 'Consultation'",
     )
+    name_ar = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        help_text="Arabic name displayed to patients, e.g. 'فحص عام', 'متابعة', 'استشارة'",
+    )
     duration_minutes = models.PositiveIntegerField(
         help_text="Duration of this appointment type in minutes.",
     )
@@ -59,6 +65,11 @@ class AppointmentType(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.duration_minutes}min, ₪{self.price}) - Dr. {self.doctor.name}"
+
+    @property
+    def display_name(self):
+        """Returns Arabic name if available, otherwise English name."""
+        return self.name_ar if self.name_ar else self.name
 
 
 class Appointment(models.Model):

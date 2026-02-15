@@ -6,6 +6,7 @@ from .models import Appointment, AppointmentType
 class AppointmentTypeAdmin(admin.ModelAdmin):
     list_display = [
         "name",
+        "name_ar",
         "doctor",
         "clinic",
         "duration_minutes",
@@ -14,9 +15,18 @@ class AppointmentTypeAdmin(admin.ModelAdmin):
         "created_at",
     ]
     list_filter = ["clinic", "is_active", "doctor"]
-    search_fields = ["name", "doctor__name", "clinic__name"]
-    list_editable = ["is_active", "price", "duration_minutes"]
+    search_fields = ["name", "name_ar", "doctor__name", "clinic__name"]
+    list_editable = ["name_ar", "is_active", "price", "duration_minutes"]
     ordering = ["clinic", "doctor", "name"]
+
+    fieldsets = (
+        (None, {
+            "fields": ("doctor", "clinic", "name", "name_ar"),
+        }),
+        ("Details", {
+            "fields": ("duration_minutes", "price", "description", "is_active"),
+        }),
+    )
 
 
 @admin.register(Appointment)

@@ -107,7 +107,7 @@
                         <option value="">-- اختر نوع الموعد --</option>
                         {% for type in appointment_types %}
                         <option value="{{ type.id }}" {% if selected_type and selected_type.id == type.id %}selected{% endif %}>
-                            {{ type.name }} ({{ type.duration_minutes }} دقيقة – ₪{{ type.price }})
+                            {{ type.display_name }} ({{ type.duration_minutes }} دقيقة – ₪{{ type.price }})
                         </option>
                         {% endfor %}
                     </select>
@@ -150,7 +150,7 @@
                 </h3>
                 {% if selected_type %}
                 <span class="text-xs bg-secondary-50 dark:bg-secondary-900/20 text-secondary-700 dark:text-secondary-300 px-3 py-1 rounded-full font-medium">
-                    {{ selected_type.name }} – {{ selected_type.duration_minutes }} دقيقة
+                    {{ selected_type.display_name }} – {{ selected_type.duration_minutes }} دقيقة
                 </span>
                 {% endif %}
             </div>

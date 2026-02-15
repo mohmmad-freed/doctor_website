@@ -51,7 +51,7 @@
                 </div>
                 <div>
                     <p class="text-xs text-gray-500 dark:text-gray-400">التاريخ</p>
-                    <p class="font-semibold text-gray-900 dark:text-white">{{ appointment.appointment_date|date:"l d F Y" }}</p>
+                    <p class="font-semibold text-gray-900 dark:text-white">{{ appointment_date_ar }}</p>
                 </div>
             </div>
 
@@ -74,7 +74,7 @@
                 </div>
                 <div>
                     <p class="text-xs text-gray-500 dark:text-gray-400">نوع الموعد</p>
-                    <p class="font-semibold text-gray-900 dark:text-white">{{ appointment.appointment_type.name }}</p>
+                    <p class="font-semibold text-gray-900 dark:text-white">{{ appointment.appointment_type.display_name }}</p>
                     <p class="text-sm text-gray-500">{{ appointment.appointment_type.duration_minutes }} دقيقة · ₪{{ appointment.appointment_type.price }}</p>
                 </div>
             </div>

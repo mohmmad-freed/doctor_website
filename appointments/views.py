@@ -20,6 +20,25 @@ from doctors.services import generate_slots_for_date
 
 User = get_user_model()
 
+ARABIC_DAYS = {
+    0: "الاثنين", 1: "الثلاثاء", 2: "الأربعاء", 3: "الخميس",
+    4: "الجمعة", 5: "السبت", 6: "الأحد",
+}
+ARABIC_MONTHS = {
+    1: "يناير", 2: "فبراير", 3: "مارس", 4: "أبريل",
+    5: "مايو", 6: "يونيو", 7: "يوليو", 8: "أغسطس",
+    9: "سبتمبر", 10: "أكتوبر", 11: "نوفمبر", 12: "ديسمبر",
+}
+
+
+def format_date_ar(d):
+    """Format a date object as 'الاثنين 16 فبراير 2026'."""
+    if d is None:
+        return ""
+    day_name = ARABIC_DAYS.get(d.weekday(), "")
+    month_name = ARABIC_MONTHS.get(d.month, "")
+    return f"{day_name} {d.day} {month_name} {d.year}"
+
 
 @login_required
 def book_appointment_view(request, clinic_id):
@@ -154,7 +173,7 @@ def load_available_slots(request, clinic_id):
     GET /appointments/<clinic_id>/htmx/slots/?doctor_id=X&date=YYYY-MM-DD&appointment_type_id=Y
     """
     doctor_id = request.GET.get("doctor_id")
-    date_str = request.GET.get("date")
+    date_str = request.GET.get("appointment_date") or request.GET.get("date")
     appointment_type_id = request.GET.get("appointment_type_id")
 
     if not all([doctor_id, date_str, appointment_type_id]):
@@ -195,6 +214,7 @@ def load_available_slots(request, clinic_id):
             "slots": slots,
             "available_slots": available_slots,
             "target_date": target_date,
+            "target_date_ar": format_date_ar(target_date),
             "appointment_type": appointment_type,
         },
     )
@@ -217,5 +237,6 @@ def booking_confirmation(request, appointment_id):
 
     context = {
         "appointment": appointment,
+        "appointment_date_ar": format_date_ar(appointment.appointment_date),
     }
     return render(request, "appointments/booking_confirmation.html", context)
