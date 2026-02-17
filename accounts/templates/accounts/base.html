@@ -4,6 +4,10 @@
 
 <head>
     <meta charset="UTF-8">
+    <script>
+        document.documentElement.classList.add('js');
+    </script>
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}منصتي الطبية{% endblock %}</title>
 
@@ -30,24 +34,15 @@
     </div>
 
     <!-- Page Transition: Skeleton Overlay -->
-    <div class="page-transition-skeleton" id="ptSkeleton">
-        <div class="skel-shape skel-h"></div>
-        <div class="skel-shape skel-p1"></div>
-        <div class="skel-shape skel-p2"></div>
-        <div class="skel-shape skel-card-lg"></div>
-        <div class="skel-row">
-            <div class="skel-shape skel-avatar"></div>
-            <div class="skel-lines">
-                <div class="skel-shape skel-line-l"></div>
-                <div class="skel-shape skel-line-s"></div>
-            </div>
-        </div>
-        <div class="skel-row">
-            <div class="skel-shape skel-avatar"></div>
-            <div class="skel-lines">
-                <div class="skel-shape skel-line-l"></div>
-                <div class="skel-shape skel-line-s"></div>
-            </div>
+    <div class="page-transition-skeleton skel-layout-auth" id="ptSkeleton">
+        <div class="skel-nav"></div>
+        <div class="skel-auth-card">
+            <div class="skel-icon-circle skel-shape"></div>
+            <div class="skel-h-center skel-shape"></div>
+            <div class="skel-p-center skel-shape"></div>
+            <div class="skel-input skel-shape"></div>
+            <div class="skel-input skel-shape"></div>
+            <div class="skel-btn-block skel-shape"></div>
         </div>
     </div>
 
@@ -93,9 +88,31 @@
             document.addEventListener('click', function (e) {
                 var link = e.target.closest('a');
                 if (!link) return;
+                
+                // Don't trigger if navigation is prevented by other scripts
+                if (e.defaultPrevented) return;
+
+                // Don't trigger on modifier keys (new tab/window)
+                if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+
                 var href = link.getAttribute('href');
-                if (!href || href.startsWith('#') || href.startsWith('javascript') || link.target === '_blank') return;
+                if (!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:') || link.target === '_blank') return;
+                
                 if (link.hasAttribute('download')) return;
+
+                // Check for same-page hash links (anchors) even if absolute path
+                try {
+                    var targetUrl = new URL(link.href, window.location.origin);
+                    var currentUrl = new URL(window.location.href);
+                    if (targetUrl.pathname === currentUrl.pathname && 
+                        targetUrl.search === currentUrl.search && 
+                        targetUrl.hash) {
+                        return;
+                    }
+                } catch (err) {
+                    // unexpected url format
+                }
+
                 bar.classList.add('active');
                 skel.classList.add('active');
             });
@@ -104,8 +121,17 @@
                 bar.classList.remove('active');
                 skel.classList.remove('active');
             });
+
+            // Safety: Force hide on load to prevent stuck loader
+            window.addEventListener('load', function() {
+                setTimeout(function() {
+                    bar.classList.remove('active');
+                    skel.classList.remove('active');
+                }, 100);
+            });
         })();
     </script>
+    <script src="{% static 'accounts/js/reveal.js' %}" defer></script>
     {% block extra_js %}{% endblock %}
 </body>
 

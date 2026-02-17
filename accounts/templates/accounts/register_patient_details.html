@@ -539,6 +539,11 @@
             submitted = true;
             overlay.style.display = 'flex';
         });
+
+        window.addEventListener('pageshow', function (e) {
+            submitted = false;
+            overlay.style.display = 'none';
+        });
     })();
 </script>
 <script>

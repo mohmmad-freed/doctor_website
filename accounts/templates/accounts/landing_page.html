@@ -23,6 +23,30 @@
 
 <body>
 
+    <!-- Page Transition: Top Bar -->
+    <div class="page-transition-bar" id="ptBar">
+        <div class="page-transition-bar-fill"></div>
+    </div>
+
+    <!-- Page Transition: Skeleton Overlay -->
+    <div class="page-transition-skeleton skel-layout-landing" id="ptSkeleton">
+        <div class="skel-nav"></div>
+        <div class="skel-hero">
+            <div class="skel-hero-text">
+                <div class="skel-hero-title skel-shape"></div>
+                <div class="skel-hero-title skel-shape" style="width: 60%"></div>
+                <div class="skel-hero-p skel-shape"></div>
+                <div class="skel-hero-p skel-shape"></div>
+                <div class="skel-hero-p skel-shape" style="width: 70%"></div>
+                <div class="skel-btn-row-hero">
+                    <div class="skel-btn-hero skel-shape"></div>
+                    <div class="skel-btn-hero skel-shape"></div>
+                </div>
+            </div>
+            <div class="skel-hero-img skel-shape"></div>
+        </div>
+    </div>
+
     <!-- Navbar -->
     <!-- Navbar -->
     {% include 'accounts/navbar.html' %}
@@ -161,6 +185,50 @@
     {% include 'accounts/footer.html' %}
 
     <!-- Scripts -->
+    <script>
+        (function() {
+            var bar = document.getElementById('ptBar');
+            var skel = document.getElementById('ptSkeleton');
+            if (!bar || !skel) return;
+
+            document.addEventListener('click', function(e) {
+                var link = e.target.closest('a');
+                if (!link) return;
+
+                // Don't trigger if navigation is prevented by other scripts
+                if (e.defaultPrevented) return;
+
+                // Don't trigger on modifier keys (new tab/window)
+                if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+
+                var href = link.getAttribute('href');
+                if (!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:') || link.target === '_blank') return;
+                
+                if (link.hasAttribute('download')) return;
+
+                // Check for same-page hash links (anchors) even if absolute path
+                try {
+                    var targetUrl = new URL(link.href, window.location.origin);
+                    var currentUrl = new URL(window.location.href);
+                    if (targetUrl.pathname === currentUrl.pathname && 
+                        targetUrl.search === currentUrl.search && 
+                        targetUrl.hash) {
+                        return;
+                    }
+                } catch (err) {
+                    // unexpected url format, proceed or ignore?
+                }
+
+                bar.classList.add('active');
+                skel.classList.add('active');
+            });
+
+            window.addEventListener('pageshow', function(e) {
+                bar.classList.remove('active');
+                skel.classList.remove('active');
+            });
+        })();
+    </script>
     <script src="{% static 'accounts/js/landing.js' %}"></script>
 </body>
 

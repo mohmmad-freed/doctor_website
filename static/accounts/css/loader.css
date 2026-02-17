@@ -19,6 +19,10 @@
     animation: hbOverlayFadeIn 0.4s ease forwards;
 }
 
+#loginOverlay {
+    display: none;
+}
+
 @keyframes hbOverlayFadeIn {
     from {
         opacity: 0;
@@ -416,4 +420,223 @@ html:not(.dark):not([data-theme="dark"]) .hb-text {
 
 .dark .skel-shape::after {
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+}
+
+/* ── Skeleton Layout Utilities ── */
+.skel-layout-auth {
+    flex-direction: column;
+    align-items: center;
+    background-color: #f8fafc;
+}
+
+.skel-layout-auth::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at top right, #fff5f5, transparent),
+        radial-gradient(circle at bottom left, #ebf4ff, transparent);
+    z-index: 0;
+}
+
+.dark .skel-layout-auth {
+    background-color: #0f172a;
+}
+
+.dark .skel-layout-auth::before {
+    background: radial-gradient(circle at top right, #2d3748, transparent),
+        radial-gradient(circle at bottom left, #171923, transparent);
+}
+
+.skel-auth-card {
+    width: 100%;
+    max-width: 500px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 24px;
+    padding: 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    position: relative;
+    z-index: 10;
+    margin: auto; /* Vertically center in remaining space */
+}
+
+.dark .skel-auth-card {
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.skel-layout-dashboard {
+    padding: 0;
+    gap: 0;
+    align-items: flex-start;
+}
+
+.skel-nav {
+    height: 70px;
+    width: 100%;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    margin-bottom: 32px;
+    background: white;
+}
+
+.dark .skel-nav {
+    background: #1e293b;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.skel-container {
+    padding: 0 1.5rem;
+    max-width: 1280px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* ── New Component Shapes ── */
+.skel-icon-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    margin: 0 auto;
+}
+
+.skel-h-center {
+    height: 32px;
+    width: 60%;
+    margin: 0 auto 8px;
+}
+
+.skel-p-center {
+    height: 16px;
+    width: 80%;
+    margin: 0 auto;
+}
+
+.skel-input {
+    height: 56px;
+    width: 100%;
+    border-radius: 16px;
+}
+
+.skel-btn-block {
+    height: 56px;
+    width: 100%;
+    border-radius: 16px;
+    margin-top: 12px;
+}
+
+.skel-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    width: 100%;
+}
+
+.skel-card {
+    height: 140px;
+    border-radius: 16px;
+    background: white;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 24px;
+}
+
+.dark .skel-card {
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.skel-table {
+    height: 400px;
+    width: 100%;
+    border-radius: 16px;
+    background: white;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* ── Landing Page Skeleton ── */
+.skel-layout-landing {
+    padding: 0;
+    gap: 0;
+    align-items: flex-start;
+    overflow: hidden;
+}
+
+.skel-hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 60px 1.5rem;
+    max-width: 1280px;
+    margin: 0 auto;
+    width: 100%;
+    gap: 48px;
+    min-height: 600px;
+}
+
+.skel-hero-text {
+    flex: 1;
+    max-width: 600px;
+}
+
+.skel-hero-img {
+    flex: 1;
+    height: 400px;
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 24px;
+    position: relative;
+    overflow: hidden;
+}
+
+.dark .skel-hero-img {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.skel-hero-title {
+    height: 60px;
+    width: 80%;
+    margin-bottom: 24px;
+}
+
+.skel-hero-p {
+    height: 20px;
+    width: 90%;
+    margin-bottom: 12px;
+}
+
+.skel-btn-row-hero {
+    display: flex;
+    gap: 16px;
+    margin-top: 32px;
+}
+
+.skel-btn-hero {
+    height: 48px;
+    width: 160px;
+    border-radius: 12px;
+}
+
+/* Mobile responsiveness for skeleton */
+@media (max-width: 768px) {
+    .skel-hero {
+        flex-direction: column-reverse;
+        padding: 32px 1rem;
+        text-align: center;
+    }
+    
+    .skel-hero-text {
+        width: 100%;
+        align-items: center;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .skel-btn-row-hero {
+        justify-content: center;
+    }
+
+    .skel-hero-img {
+        width: 100%;
+        height: 300px;
+    }
 }

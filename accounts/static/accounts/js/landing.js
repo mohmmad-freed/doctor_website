@@ -82,6 +82,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }, observerOptions);
 
-    const revealElements = document.querySelectorAll('.reveal-on-scroll');
-    revealElements.forEach(el => observer.observe(el));
+    // const revealElements = document.querySelectorAll('.reveal-on-scroll');
+    // revealElements.forEach(el => observer.observe(el));
 });

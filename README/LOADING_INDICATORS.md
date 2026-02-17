@@ -106,7 +106,22 @@ All form pages use a shared partial and stylesheet:
 
 ## 2. Page Transition — Skeleton Reveal 🦴
 
-A full-page skeleton overlay with a top progress bar, triggered on link navigation.
+A full-page skeleton overlay with a top progress bar, triggered on link navigation. now features **context-aware layouts**:
+
+### 1. Auth Skeleton
+Used for login, registration, and password pages.
+- **Layout:** Centered card on a gradient background.
+- **Components:** Circular icon, molecular headers, input fields, full-width button.
+
+### 2. Dashboard Skeleton
+Used for the patient portal.
+- **Layout:** Top navigation bar + container.
+- **Components:** Page title, 3-column stats grid, large data table block.
+
+### 3. Landing Skeleton
+Used for the home/marketing page.
+- **Layout:** Full-width Hero section with text and image placeholders.
+- **Components:** Navbar, Title, Paragraphs, Buttons, Hero Image.
 
 ### Visual Specification
 
@@ -115,7 +130,7 @@ A full-page skeleton overlay with a top progress bar, triggered on link navigati
 | **Top Bar** | Fixed 3px bar, gradient `#0078D4 → #00BFA5`, animated width 0→95% |
 | **Skeleton Overlay** | Full-screen with shimmer shapes simulating content layout |
 | **Dark mode** | Dark background (`#0f172a`), white-tint shapes |
-| **Light mode** | Light background (`#F8FAFC`), dark-tint shapes |
+| **Light mode** | Light background (`#f8fafc`), dark-tint shapes |
 
 ### Logic
 - **Triggered on** any `<a>` click (except `#`, `javascript:`, `target=_blank`, `download`).
@@ -123,12 +138,11 @@ A full-page skeleton overlay with a top progress bar, triggered on link navigati
 
 ### Implementation
 
-Both base templates include the skeleton HTML + JS:
-
-| Base Template | Pages Covered |
-| :--- | :--- |
-| `accounts/base.html` | Login, registration, forgot-password |
-| `patients/base_dashboard.html` | Dashboard, profile, settings |
+| Base Template | Layout Class | Structure |
+| :--- | :--- | :--- |
+| `accounts/base.html` | `.skel-layout-auth` | Centered Card |
+| `patients/base_dashboard.html` | `.skel-layout-dashboard` | Nav + Grid + Table |
+| `landing_page.html` | `.skel-layout-landing` | Navbar + Hero Section |
 
 ---
 
