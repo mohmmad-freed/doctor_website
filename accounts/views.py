@@ -620,9 +620,12 @@ def change_email_request(request):
 @login_required
 def verify_change_email(request, token):
     """Verify email change token and update user email"""
-    success, email, message = verify_email_token(token)
+    success, data, message = verify_email_token(token)
 
     if success:
+        # Extract the actual email string from the token data
+        email = data.get("email")
+
         # Update user's email
         request.user.email = email
         request.user.email_verified = True
