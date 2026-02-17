@@ -19,10 +19,37 @@
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'accounts/css/landing.css' %}">
+    <link rel="stylesheet" href="{% static 'accounts/css/loader.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
 
 <body>
+    <!-- Page Transition: Top Bar -->
+    <div class="page-transition-bar" id="ptBar">
+        <div class="page-transition-bar-fill"></div>
+    </div>
+
+    <!-- Page Transition: Skeleton Overlay -->
+    <div class="page-transition-skeleton" id="ptSkeleton">
+        <div class="skel-shape skel-h"></div>
+        <div class="skel-shape skel-p1"></div>
+        <div class="skel-shape skel-p2"></div>
+        <div class="skel-shape skel-card-lg"></div>
+        <div class="skel-row">
+            <div class="skel-shape skel-avatar"></div>
+            <div class="skel-lines">
+                <div class="skel-shape skel-line-l"></div>
+                <div class="skel-shape skel-line-s"></div>
+            </div>
+        </div>
+        <div class="skel-row">
+            <div class="skel-shape skel-avatar"></div>
+            <div class="skel-lines">
+                <div class="skel-shape skel-line-l"></div>
+                <div class="skel-shape skel-line-s"></div>
+            </div>
+        </div>
+    </div>
 
     <!-- Navbar -->
     {% include 'accounts/navbar.html' %}
@@ -57,6 +84,28 @@
 
     <!-- Scripts -->
     <script src="{% static 'accounts/js/landing.js' %}"></script>
+    <script>
+        (function () {
+            var bar = document.getElementById('ptBar');
+            var skel = document.getElementById('ptSkeleton');
+            if (!bar || !skel) return;
+
+            document.addEventListener('click', function (e) {
+                var link = e.target.closest('a');
+                if (!link) return;
+                var href = link.getAttribute('href');
+                if (!href || href.startsWith('#') || href.startsWith('javascript') || link.target === '_blank') return;
+                if (link.hasAttribute('download')) return;
+                bar.classList.add('active');
+                skel.classList.add('active');
+            });
+
+            window.addEventListener('pageshow', function (e) {
+                bar.classList.remove('active');
+                skel.classList.remove('active');
+            });
+        })();
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 

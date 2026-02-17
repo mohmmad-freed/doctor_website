@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl" class="scroll-smooth">
+{% load static %}
 
 <head>
     <meta charset="UTF-8">
@@ -135,10 +136,38 @@
             document.documentElement.classList.remove('dark');
         }
     </script>
+    <link rel="stylesheet" href="{% static 'accounts/css/loader.css' %}">
 </head>
 
 <body
     class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 antialiased min-h-screen flex flex-col transition-colors duration-300">
+
+    <!-- Page Transition: Top Bar -->
+    <div class="page-transition-bar" id="ptBar">
+        <div class="page-transition-bar-fill"></div>
+    </div>
+
+    <!-- Page Transition: Skeleton Overlay -->
+    <div class="page-transition-skeleton" id="ptSkeleton">
+        <div class="skel-shape skel-h"></div>
+        <div class="skel-shape skel-p1"></div>
+        <div class="skel-shape skel-p2"></div>
+        <div class="skel-shape skel-card-lg"></div>
+        <div class="skel-row">
+            <div class="skel-shape skel-avatar"></div>
+            <div class="skel-lines">
+                <div class="skel-shape skel-line-l"></div>
+                <div class="skel-shape skel-line-s"></div>
+            </div>
+        </div>
+        <div class="skel-row">
+            <div class="skel-shape skel-avatar"></div>
+            <div class="skel-lines">
+                <div class="skel-shape skel-line-l"></div>
+                <div class="skel-shape skel-line-s"></div>
+            </div>
+        </div>
+    </div>
 
     <!-- Navbar -->
     <nav
@@ -162,7 +191,7 @@
                     <a href="{% url 'patients:dashboard' %}"
                         class="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors">الرئيسية</a>
                     <a href="{% url 'patients:browse_doctors' %}"
-                        class="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors">الأطباء</a>    
+                        class="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors">الأطباء</a>
                     <a href="{% url 'patients:my_appointments' %}"
                         class="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors">مواعيدي</a>
                     <a href="{% url 'patients:clinics_list' %}"
@@ -273,6 +302,29 @@
                 }
             });
         });
+    </script>
+
+    <script>
+        (function () {
+            var bar = document.getElementById('ptBar');
+            var skel = document.getElementById('ptSkeleton');
+            if (!bar || !skel) return;
+
+            document.addEventListener('click', function (e) {
+                var link = e.target.closest('a');
+                if (!link) return;
+                var href = link.getAttribute('href');
+                if (!href || href.startsWith('#') || href.startsWith('javascript') || link.target === '_blank') return;
+                if (link.hasAttribute('download')) return;
+                bar.classList.add('active');
+                skel.classList.add('active');
+            });
+
+            window.addEventListener('pageshow', function (e) {
+                bar.classList.remove('active');
+                skel.classList.remove('active');
+            });
+        })();
     </script>
 
     {% block scripts %}{% endblock %}

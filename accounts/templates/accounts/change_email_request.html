@@ -1,14 +1,16 @@
 {% extends 'patients/base_dashboard.html' %}
+{% load static %}
 
 {% block title %}تغيير البريد الإلكتروني{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="{% static 'accounts/css/loader.css' %}">
 <div class="max-w-md mx-auto mt-10">
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 md:p-8">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 md:p-8 relative overflow-hidden">
         <div class="text-center mb-6">
             <h2 class="text-2xl font-bold text-gray-900 dark:text-white">تغيير البريد الإلكتروني</h2>
             <p class="text-gray-500 dark:text-gray-400 mt-2">أدخل بريدك الإلكتروني الجديد للتحقق</p>
-            
+
             {% if current_email %}
             <div class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                 <p class="text-sm text-gray-600 dark:text-gray-400">البريد الإلكتروني الحالي:</p>
@@ -21,7 +23,7 @@
             {% endif %}
         </div>
 
-        <form method="post" class="space-y-6">
+        <form method="post" id="changeEmailForm" class="space-y-6">
             {% csrf_token %}
 
             <div>
@@ -29,16 +31,9 @@
                     البريد الإلكتروني الجديد
                 </label>
                 <div class="relative">
-                    <input 
-                        type="email" 
-                        id="email" 
-                        name="email" 
-                        value="{{ pending_email }}"
-                        placeholder="example@domain.com" 
-                        required 
-                        dir="ltr"
-                        class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent text-left transition-colors"
-                    >
+                    <input type="email" id="email" name="email" value="{{ pending_email }}"
+                        placeholder="example@domain.com" required dir="ltr"
+                        class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent text-left transition-colors">
                     <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-400">
                         <i class="fa-solid fa-envelope"></i>
                     </div>
@@ -59,6 +54,24 @@
                 </button>
             </div>
         </form>
+
+        {% include 'accounts/_heartbeat_loader.html' with overlay_id='changeEmailOverlay' loader_text='جارٍ الإرسال' loader_icon='fa-envelope' %}
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        var form = document.getElementById('changeEmailForm');
+        var overlay = document.getElementById('changeEmailOverlay');
+        if (!form || !overlay) return;
+        var submitted = false;
+        form.addEventListener('submit', function (e) {
+            if (submitted) { e.preventDefault(); return; }
+            submitted = true;
+            overlay.style.display = 'flex';
+        });
+    })();
+</script>
 {% endblock %}

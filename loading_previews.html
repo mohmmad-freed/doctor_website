@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loading Indicator Previews</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* ── Design Tokens (matches your app) ── */
+        :root {
+            --color-primary-500: #0078D4;
+            --color-primary-600: #005A9E;
+            --color-secondary-500: #00BFA5;
+            --color-surface-ground: #F0F4F8;
+            --color-surface-card: #FFFFFF;
+            --color-surface-border: #E2E8F0;
+            --color-text-main: #1E293B;
+            --color-text-body: #475569;
+            --color-text-muted: #94A3B8;
+            --input-bg: #FFFFFF;
+            --input-border: #CBD5E1;
+            --input-focus: #0078D4;
+            --font-family-primary: 'Cairo', 'Inter', sans-serif;
+            --radius-full: 9999px;
+            --radius-lg: 16px;
+            --radius-md: 8px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family-primary);
+            background: var(--color-surface-ground);
+            color: var(--color-text-main);
+            direction: rtl;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        /* ── Page Header ── */
+        .page-header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .page-header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--color-primary-500), var(--color-secondary-500));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 8px;
+        }
+
+        .page-header p {
+            color: var(--color-text-muted);
+            font-size: 16px;
+        }
+
+        /* ── Preview Cards Grid ── */
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 32px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .preview-card {
+            background: var(--color-surface-card);
+            border-radius: var(--radius-lg);
+            border: 2px solid var(--color-surface-border);
+            overflow: hidden;
+            transition: all 0.35s ease;
+            position: relative;
+        }
+
+        .preview-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 40px rgba(0, 120, 212, 0.12);
+            border-color: var(--color-primary-500);
+        }
+
+        /* Option badge */
+        .option-badge {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-600));
+            color: #fff;
+            font-weight: 700;
+            font-size: 13px;
+            padding: 4px 14px;
+            border-radius: var(--radius-full);
+            letter-spacing: 0.5px;
+        }
+
+        .preview-card-header {
+            padding: 28px 28px 0;
+            text-align: center;
+        }
+
+        .preview-card-header h2 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .preview-card-header p {
+            color: var(--color-text-muted);
+            font-size: 14px;
+        }
+
+        /* Login form mockup inside each card */
+        .demo-form {
+            padding: 28px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 6px;
+            color: var(--color-text-body);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1.5px solid var(--input-border);
+            border-radius: var(--radius-md);
+            background: var(--input-bg);
+            font-family: inherit;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.2s;
+            text-align: right;
+            direction: ltr;
+        }
+
+        .form-group input:focus {
+            border-color: var(--input-focus);
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.08);
+        }
+
+        /* ── Base Button (matches your app) ── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 28px;
+            border-radius: var(--radius-full);
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
+            font-family: inherit;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-600) 100%);
+            color: #FFFFFF;
+            box-shadow: 0 4px 15px rgba(0, 120, 212, 0.3);
+        }
+
+        .btn-primary:hover:not(.is-loading) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 120, 212, 0.4);
+        }
+
+        /* ── Disabled / loading state ── */
+        .btn.is-loading {
+            pointer-events: none;
+            opacity: 0.85;
+        }
+
+        /* =============================================
+           OPTION 1 — Inline Spinner + Text Swap
+        ============================================= */
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .spinner-ring {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2.5px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        .btn.is-loading .spinner-ring {
+            display: inline-block;
+        }
+
+        .btn.is-loading .btn-label-1 {
+            display: none;
+        }
+
+        .btn.is-loading .btn-loading-text {
+            display: inline;
+        }
+
+        .btn-loading-text {
+            display: none;
+        }
+
+        /* =============================================
+           OPTION 2 — Gradient Progress Bar Sweep
+        ============================================= */
+        @keyframes progress-sweep {
+            0% {
+                transform: translateX(100%);
+            }
+
+            100% {
+                transform: translateX(-100%);
+            }
+        }
+
+        .btn-progress-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            overflow: hidden;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .btn-progress-bar::after {
+            content: '';
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), var(--color-secondary-500), rgba(255, 255, 255, 0.7), transparent);
+            transform: translateX(100%);
+        }
+
+        .btn.is-loading .btn-progress-bar {
+            opacity: 1;
+        }
+
+        .btn.is-loading .btn-progress-bar::after {
+            animation: progress-sweep 1.4s ease-in-out infinite;
+        }
+
+        /* Option 2 dots */
+        @keyframes blink-dot {
+
+            0%,
+            20% {
+                opacity: 0.2;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            80%,
+            100% {
+                opacity: 0.2;
+            }
+        }
+
+        .loading-dots {
+            display: none;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .loading-dots span {
+            width: 5px;
+            height: 5px;
+            background: #fff;
+            border-radius: 50%;
+            animation: blink-dot 1.2s infinite;
+        }
+
+        .loading-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .loading-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        .btn.is-loading .loading-dots {
+            display: inline-flex;
+        }
+
+        .btn.is-loading .btn-label-2 {
+            display: none;
+        }
+
+        /* =============================================
+           OPTION 3 — Full-Card Overlay + Pulse Spinner
+        ============================================= */
+        @keyframes pulse-scale {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.15);
+                opacity: 0.6;
+            }
+        }
+
+        @keyframes orbit {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .overlay-loader {
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(6px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.35s ease;
+            z-index: 10;
+            border-radius: var(--radius-lg);
+        }
+
+        .preview-card.is-loading .overlay-loader {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .orbit-spinner {
+            width: 48px;
+            height: 48px;
+            position: relative;
+        }
+
+        .orbit-spinner .orbit-ring {
+            position: absolute;
+            inset: 0;
+            border: 3px solid rgba(0, 120, 212, 0.12);
+            border-radius: 50%;
+        }
+
+        .orbit-spinner .orbit-dot {
+            position: absolute;
+            inset: 0;
+            animation: orbit 1.1s linear infinite;
+        }
+
+        .orbit-spinner .orbit-dot::after {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 10px;
+            height: 10px;
+            background: linear-gradient(135deg, var(--color-primary-500), var(--color-secondary-500));
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0, 120, 212, 0.5);
+        }
+
+        .orbit-center-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--color-primary-500);
+            font-size: 16px;
+            animation: pulse-scale 1.6s ease-in-out infinite;
+        }
+
+        .overlay-text {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--color-text-body);
+        }
+
+        /* Card footer with "try it" button */
+        .card-footer {
+            padding: 0 28px 24px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .try-btn {
+            background: none;
+            border: 1.5px dashed var(--color-primary-500);
+            color: var(--color-primary-500);
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 14px;
+            padding: 8px 24px;
+            border-radius: var(--radius-full);
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+
+        .try-btn:hover {
+            background: rgba(0, 120, 212, 0.06);
+            transform: scale(1.04);
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+            .preview-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .page-header h1 {
+                font-size: 26px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Header -->
+    <div class="page-header">
+        <h1><i class="fa-solid fa-spinner" style="margin-left: 8px;"></i> اختر تصميم التحميل</h1>
+        <p>اضغط "جرّب" لمشاهدة كل تأثير — اختر المفضل لديك</p>
+    </div>
+
+    <!-- Previews Grid -->
+    <div class="preview-grid">
+
+        <!-- ═══════════════════════════════════════
+             OPTION 1 — Inline Spinner
+        ═══════════════════════════════════════ -->
+        <div class="preview-card" id="card1">
+            <span class="option-badge">الخيار ١</span>
+            <div class="preview-card-header">
+                <h2>🔄 دوران داخلي</h2>
+                <p>حلقة دوّارة مع تبديل النص</p>
+            </div>
+            <div class="demo-form">
+                <div class="form-group">
+                    <label>رقم الهاتف</label>
+                    <input type="text" placeholder="05XXXXXXXX" value="0512345678" readonly>
+                </div>
+                <div class="form-group">
+                    <label>كلمة المرور</label>
+                    <input type="password" value="••••••••" readonly>
+                </div>
+                <button class="btn btn-primary" id="btn1" onclick="demo1()">
+                    <span class="spinner-ring"></span>
+                    <span class="btn-label-1">تسجيل الدخول</span>
+                    <span class="btn-loading-text">جارٍ التحقق...</span>
+                </button>
+            </div>
+            <div class="card-footer">
+                <button class="try-btn" onclick="demo1()">جرّب <i class="fa-solid fa-play"
+                        style="font-size:11px; margin-right:4px;"></i></button>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════
+             OPTION 2 — Progress Bar + Dots
+        ═══════════════════════════════════════ -->
+        <div class="preview-card" id="card2">
+            <span class="option-badge">الخيار ٢</span>
+            <div class="preview-card-header">
+                <h2>✨ شريط تقدّم متوهّج</h2>
+                <p>شريط متدرج + نقاط متحركة</p>
+            </div>
+            <div class="demo-form">
+                <div class="form-group">
+                    <label>رقم الهاتف</label>
+                    <input type="text" placeholder="05XXXXXXXX" value="0512345678" readonly>
+                </div>
+                <div class="form-group">
+                    <label>كلمة المرور</label>
+                    <input type="password" value="••••••••" readonly>
+                </div>
+                <button class="btn btn-primary" id="btn2" onclick="demo2()">
+                    <span class="btn-label-2">تسجيل الدخول</span>
+                    <span class="loading-dots"><span></span><span></span><span></span></span>
+                    <div class="btn-progress-bar"></div>
+                </button>
+            </div>
+            <div class="card-footer">
+                <button class="try-btn" onclick="demo2()">جرّب <i class="fa-solid fa-play"
+                        style="font-size:11px; margin-right:4px;"></i></button>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════
+             OPTION 3 — Full Overlay + Orbit Spinner
+        ═══════════════════════════════════════ -->
+        <div class="preview-card" id="card3">
+            <span class="option-badge">الخيار ٣</span>
+            <div class="preview-card-header">
+                <h2>🌀 طبقة شفافة كاملة</h2>
+                <p>تغطية ضبابية + دوران مداري</p>
+            </div>
+            <div class="demo-form">
+                <div class="form-group">
+                    <label>رقم الهاتف</label>
+                    <input type="text" placeholder="05XXXXXXXX" value="0512345678" readonly>
+                </div>
+                <div class="form-group">
+                    <label>كلمة المرور</label>
+                    <input type="password" value="••••••••" readonly>
+                </div>
+                <button class="btn btn-primary" id="btn3" onclick="demo3()">
+                    تسجيل الدخول
+                </button>
+            </div>
+            <div class="card-footer">
+                <button class="try-btn" onclick="demo3()">جرّب <i class="fa-solid fa-play"
+                        style="font-size:11px; margin-right:4px;"></i></button>
+            </div>
+
+            <!-- overlay lives inside the card -->
+            <div class="overlay-loader">
+                <div class="orbit-spinner">
+                    <div class="orbit-ring"></div>
+                    <div class="orbit-dot"></div>
+                    <i class="fa-solid fa-stethoscope orbit-center-icon"></i>
+                </div>
+                <span class="overlay-text">جارٍ تسجيل الدخول...</span>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        /* ── Demo helpers — each runs for 3 seconds ── */
+
+        function demo1() {
+            const btn = document.getElementById('btn1');
+            if (btn.classList.contains('is-loading')) return;
+            btn.classList.add('is-loading');
+            setTimeout(() => btn.classList.remove('is-loading'), 3000);
+        }
+
+        function demo2() {
+            const btn = document.getElementById('btn2');
+            if (btn.classList.contains('is-loading')) return;
+            btn.classList.add('is-loading');
+            setTimeout(() => btn.classList.remove('is-loading'), 3000);
+        }
+
+        function demo3() {
+            const card = document.getElementById('card3');
+            if (card.classList.contains('is-loading')) return;
+            card.classList.add('is-loading');
+            setTimeout(() => card.classList.remove('is-loading'), 3000);
+        }
+    </script>
+</body>
+
+</html>

@@ -1,10 +1,12 @@
 {% extends 'patients/base_dashboard.html' %}
+{% load static %}
 
 {% block title %}التحقق من رقم الهاتف{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="{% static 'accounts/css/loader.css' %}">
 <div class="max-w-md mx-auto mt-10">
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 md:p-8">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 md:p-8 relative overflow-hidden">
         <div class="text-center mb-6">
             <div
                 class="w-16 h-16 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mx-auto mb-4 text-primary-600 dark:text-primary-400 text-2xl">
@@ -14,7 +16,7 @@
             <p class="text-gray-500 dark:text-gray-400 mt-2">تم إرسال رمز التحقق إلى <strong>{{ phone }}</strong></p>
         </div>
 
-        <form method="post" class="space-y-6">
+        <form method="post" id="changePhoneOtpForm" class="space-y-6">
             {% csrf_token %}
 
             <div>
@@ -43,6 +45,24 @@
             <a href="{% url 'accounts:change_phone_request' %}"
                 class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400">تغيير الرقم</a>
         </div>
+
+        {% include 'accounts/_heartbeat_loader.html' with overlay_id='changePhoneVerifyOverlay' loader_text='جارٍ التحقق' loader_icon='fa-shield-halved' %}
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        var form = document.getElementById('changePhoneOtpForm');
+        var overlay = document.getElementById('changePhoneVerifyOverlay');
+        if (!form || !overlay) return;
+        var submitted = false;
+        form.addEventListener('submit', function (e) {
+            if (submitted) { e.preventDefault(); return; }
+            submitted = true;
+            overlay.style.display = 'flex';
+        });
+    })();
+</script>
 {% endblock %}

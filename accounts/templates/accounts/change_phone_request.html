@@ -1,17 +1,19 @@
 {% extends 'patients/base_dashboard.html' %}
+{% load static %}
 <!-- Verify if this base is correct for authenticated users, usually settings profile is dashboard -->
 
 {% block title %}تغيير رقم الهاتف{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="{% static 'accounts/css/loader.css' %}">
 <div class="max-w-md mx-auto mt-10">
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 md:p-8">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 md:p-8 relative overflow-hidden">
         <div class="text-center mb-6">
             <h2 class="text-2xl font-bold text-gray-900 dark:text-white">تغيير رقم الهاتف</h2>
             <p class="text-gray-500 dark:text-gray-400 mt-2">أدخل رقم هاتفك الجديد للتحقق</p>
         </div>
 
-        <form method="post" class="space-y-6">
+        <form method="post" id="changePhoneForm" class="space-y-6">
             {% csrf_token %}
 
             <div>
@@ -37,6 +39,24 @@
                 </button>
             </div>
         </form>
+
+        {% include 'accounts/_heartbeat_loader.html' with overlay_id='changePhoneOverlay' loader_text='جارٍ الإرسال' loader_icon='fa-mobile-screen' %}
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        var form = document.getElementById('changePhoneForm');
+        var overlay = document.getElementById('changePhoneOverlay');
+        if (!form || !overlay) return;
+        var submitted = false;
+        form.addEventListener('submit', function (e) {
+            if (submitted) { e.preventDefault(); return; }
+            submitted = true;
+            overlay.style.display = 'flex';
+        });
+    })();
+</script>
 {% endblock %}

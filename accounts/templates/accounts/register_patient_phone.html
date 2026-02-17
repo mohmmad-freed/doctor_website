@@ -4,6 +4,7 @@
 {% block title %}تسجيل مريض - رقم الهاتف{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'accounts/css/loader.css' %}">
 <style>
     /* Shared Variables & Keyframes from Register Details */
     :root {
@@ -368,12 +369,27 @@
         <a href="{% url 'accounts:register' %}" class="back-link">
             <i class="fa-solid fa-arrow-right"></i> العودة للخلف
         </a>
+
+        {% include 'accounts/_heartbeat_loader.html' with overlay_id='phoneOverlay' loader_text='جارٍ الإرسال' loader_icon='fa-mobile-screen' %}
     </div>
 </div>
 {% endblock %}
 
 {% block messages %}{% endblock %}
 {% block extra_js %}
+<script>
+    (function () {
+        var form = document.querySelector('.registration-card form');
+        var overlay = document.getElementById('phoneOverlay');
+        if (!form || !overlay) return;
+        var submitted = false;
+        form.addEventListener('submit', function (e) {
+            if (submitted) { e.preventDefault(); return; }
+            submitted = true;
+            overlay.style.display = 'flex';
+        });
+    })();
+</script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const phoneInput = document.getElementById('phone');

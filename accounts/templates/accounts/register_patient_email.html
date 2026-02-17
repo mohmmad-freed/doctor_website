@@ -4,6 +4,7 @@
 {% block title %}إضافة البريد الإلكتروني{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'accounts/css/loader.css' %}">
 <style>
     /* Shared Variables */
     :root {
@@ -375,11 +376,26 @@
                 <span>تخطي والذهاب للحساب</span>
             </button>
         </form>
+
+        {% include 'accounts/_heartbeat_loader.html' with overlay_id='emailOverlay' loader_text='جارٍ الإرسال' loader_icon='fa-envelope' %}
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+<script>
+    (function () {
+        var form = document.getElementById('emailForm');
+        var overlay = document.getElementById('emailOverlay');
+        if (!form || !overlay) return;
+        var submitted = false;
+        form.addEventListener('submit', function (e) {
+            if (submitted) { e.preventDefault(); return; }
+            submitted = true;
+            overlay.style.display = 'flex';
+        });
+    })();
+</script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const emailInput = document.getElementById('email');

@@ -1,17 +1,22 @@
 {% extends 'accounts/base.html' %}
+{% load static %}
 
 {% block title %}تسجيل الدخول - منصتي الطبية{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'accounts/css/loader.css' %}">
+{% endblock %}
 
 {% block content %}
 <section class="auth-wrapper">
     <div class="container" style="display: flex; justify-content: center;">
-        <div class="auth-card reveal-on-scroll">
+        <div class="auth-card reveal-on-scroll" id="loginCard">
             <div class="auth-header">
                 <h2 class="text-h2">مرحباً بعودتك</h2>
                 <p class="text-body-m text-muted">سجل الدخول للمتابعة إلى حسابك</p>
             </div>
 
-            <form method="post">
+            <form method="post" id="loginForm">
                 {% csrf_token %}
 
                 <div class="form-group">
@@ -57,7 +62,28 @@
                     نسيت كلمة المرور؟
                 </a>
             </div>
+
+            <!-- Heartbeat Medical Loader -->
+            {% include 'accounts/_heartbeat_loader.html' with overlay_id='loginOverlay' loader_text='جارٍ تسجيل الدخول' loader_icon='fa-stethoscope' %}
         </div>
     </div>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (function () {
+        var form = document.getElementById('loginForm');
+        var overlay = document.getElementById('loginOverlay');
+        if (!form || !overlay) return;
+
+        var submitted = false;
+
+        form.addEventListener('submit', function (e) {
+            if (submitted) { e.preventDefault(); return; }
+            submitted = true;
+            overlay.style.display = 'flex';
+        });
+    })();
+</script>
 {% endblock %}

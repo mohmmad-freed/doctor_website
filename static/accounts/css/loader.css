@@ -1,0 +1,419 @@
+/* ══════════════════════════════════════════════════════════════
+   HEARTBEAT MEDICAL LOADER — Form Submission Overlay
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Overlay Container ── */
+.heartbeat-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(11, 17, 32, 0.93);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    z-index: 50;
+    border-radius: inherit;
+    animation: hbOverlayFadeIn 0.4s ease forwards;
+}
+
+@keyframes hbOverlayFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* ── Heartbeat Icon + Pulse Rings ── */
+.hb-loader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.hb-icon-wrap {
+    width: 70px;
+    height: 70px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.hb-pulse-ring {
+    position: absolute;
+    inset: 0;
+    border: 2px solid rgba(0, 120, 212, 0.3);
+    border-radius: 50%;
+    animation: hbRingPulse 1.5s ease-out infinite;
+}
+
+.hb-pulse-ring:nth-child(2) {
+    animation-delay: 0.5s;
+}
+
+.hb-center {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, rgba(0, 120, 212, 0.15), rgba(0, 191, 165, 0.15));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 2;
+}
+
+.hb-center i {
+    font-size: 22px;
+    color: #0078D4;
+    animation: hbBeat 1.2s ease-in-out infinite;
+}
+
+@keyframes hbRingPulse {
+    0% {
+        transform: scale(1);
+        opacity: 0.6;
+    }
+
+    100% {
+        transform: scale(1.6);
+        opacity: 0;
+    }
+}
+
+@keyframes hbBeat {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    15% {
+        transform: scale(1.25);
+    }
+
+    30% {
+        transform: scale(1);
+    }
+
+    45% {
+        transform: scale(1.15);
+    }
+
+    60% {
+        transform: scale(1);
+    }
+}
+
+/* ── ECG Line ── */
+.hb-ecg {
+    width: 120px;
+    height: 30px;
+    overflow: hidden;
+    position: relative;
+}
+
+.hb-ecg svg {
+    width: 240px;
+    height: 30px;
+    animation: hbEcgScroll 2s linear infinite;
+}
+
+@keyframes hbEcgScroll {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+/* ── Loading Text ── */
+.hb-text {
+    font-family: 'Cairo', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
+    letter-spacing: 0.3px;
+}
+
+.hb-text::after {
+    content: '';
+    animation: hbDots 1.5s steps(4, end) infinite;
+}
+
+@keyframes hbDots {
+    0% {
+        content: '';
+    }
+
+    25% {
+        content: '.';
+    }
+
+    50% {
+        content: '..';
+    }
+
+    75% {
+        content: '...';
+    }
+}
+
+/* ── Light Mode ── */
+[data-theme="light"] .heartbeat-overlay {
+    background: rgba(255, 255, 255, 0.93);
+}
+
+[data-theme="light"] .hb-text {
+    color: rgba(30, 41, 59, 0.85);
+}
+
+/* Tailwind dark mode support (class-based) */
+.dark .heartbeat-overlay {
+    background: rgba(11, 17, 32, 0.93);
+}
+
+/* Fallback for Tailwind Light Mode (no .dark class AND no data-theme="dark") */
+html:not(.dark):not([data-theme="dark"]) .heartbeat-overlay {
+    background: rgba(255, 255, 255, 0.93);
+}
+
+html:not(.dark):not([data-theme="dark"]) .hb-text {
+    color: rgba(30, 41, 59, 0.85);
+}
+
+
+
+/* ══════════════════════════════════════════════════════════════
+   SKELETON REVEAL — Page Transition Loader
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Top Progress Bar ── */
+.page-transition-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: transparent;
+    z-index: 9999;
+    pointer-events: none;
+    display: none;
+}
+
+.page-transition-bar.active {
+    display: block;
+}
+
+.page-transition-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #0078D4, #00BFA5);
+    border-radius: 0 2px 2px 0;
+    box-shadow: 0 0 10px rgba(0, 120, 212, 0.5), 0 0 20px rgba(0, 191, 165, 0.3);
+    animation: ptBarProgress 2.5s ease-in-out forwards;
+}
+
+@keyframes ptBarProgress {
+    0% {
+        width: 0%;
+    }
+
+    15% {
+        width: 25%;
+    }
+
+    40% {
+        width: 55%;
+    }
+
+    65% {
+        width: 75%;
+    }
+
+    85% {
+        width: 90%;
+    }
+
+    100% {
+        width: 95%;
+    }
+}
+
+/* ── Skeleton Overlay ── */
+.page-transition-skeleton {
+    position: fixed;
+    inset: 0;
+    background: var(--surface-ground, #0B1120);
+    z-index: 9998;
+    display: none;
+    flex-direction: column;
+    padding: 80px 24px 24px;
+    gap: 16px;
+    animation: skelFadeIn 0.2s ease forwards;
+}
+
+.page-transition-skeleton.active {
+    display: flex;
+}
+
+@keyframes skelFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* ── Skeleton Shapes ── */
+.skel-shape {
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+.skel-shape::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+    animation: skelShimmer 1.8s ease-in-out infinite;
+}
+
+@keyframes skelShimmer {
+    0% {
+        left: -100%;
+    }
+
+    100% {
+        left: 100%;
+    }
+}
+
+.skel-h {
+    height: 24px;
+    width: 45%;
+    max-width: 300px;
+    margin: 0 auto 8px;
+}
+
+.skel-p1 {
+    height: 14px;
+    width: 80%;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.skel-p2 {
+    height: 14px;
+    width: 65%;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.skel-card-lg {
+    height: 120px;
+    width: 100%;
+    max-width: 600px;
+    margin: 12px auto 0;
+    border-radius: 16px;
+}
+
+.skel-row {
+    display: flex;
+    gap: 12px;
+    max-width: 600px;
+    margin: 12px auto 0;
+    width: 100%;
+}
+
+.skel-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.skel-lines {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.skel-line-s {
+    height: 12px;
+    width: 40%;
+}
+
+.skel-line-l {
+    height: 12px;
+    width: 75%;
+}
+
+.skel-btn-row {
+    display: flex;
+    gap: 12px;
+    max-width: 600px;
+    margin: auto auto 0;
+    width: 100%;
+}
+
+.skel-btn {
+    height: 40px;
+    width: 120px;
+    border-radius: 10px;
+}
+
+/* ── Light Mode Skeleton ── */
+[data-theme="light"] .page-transition-skeleton {
+    background: #F8FAFC;
+}
+
+[data-theme="light"] .skel-shape {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .skel-shape::after {
+    background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.04), transparent);
+}
+
+/* ── Tailwind dark mode for Skeleton ── */
+.dark .page-transition-skeleton {
+    background: #0f172a;
+}
+
+:not(.dark) .page-transition-skeleton {
+    background: #F8FAFC;
+}
+
+:not(.dark) .skel-shape {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+:not(.dark) .skel-shape::after {
+    background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.04), transparent);
+}
+
+.dark .skel-shape {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.dark .skel-shape::after {
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+}

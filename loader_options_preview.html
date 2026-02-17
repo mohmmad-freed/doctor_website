@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>معاينة خيارات التحميل | Loader Options Preview</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary-500: #0078D4;
+            --primary-600: #005A9E;
+            --secondary-500: #00BFA5;
+            --surface-ground: #0B1120;
+            --surface-card: #151E32;
+            --surface-border: #2D3A54;
+            --text-main: #F1F5F9;
+            --text-body: #94A3B8;
+            --text-muted: #64748B;
+            --radius-lg: 16px;
+            --radius-md: 8px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: var(--surface-ground);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .page-header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary-500), var(--secondary-500));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-header p {
+            color: var(--text-body);
+            font-size: 1rem;
+        }
+
+        /* ── Section Headers ── */
+        .section-header {
+            text-align: center;
+            margin: 3rem 0 2rem;
+            position: relative;
+        }
+
+        .section-header h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--text-main);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-header h2 i {
+            color: var(--primary-500);
+        }
+
+        .section-header p {
+            color: var(--text-body);
+            margin-top: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary-500), var(--secondary-500));
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 2px 10px;
+            border-radius: 9999px;
+            margin-top: 0.5rem;
+        }
+
+        /* ── Option Cards Grid ── */
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .option-card {
+            background: var(--surface-card);
+            border: 1px solid var(--surface-border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .option-card:hover {
+            border-color: var(--primary-500);
+            box-shadow: 0 0 30px rgba(0, 120, 212, 0.15);
+            transform: translateY(-4px);
+        }
+
+        .option-header {
+            padding: 1.2rem 1.5rem;
+            border-bottom: 1px solid var(--surface-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .option-label {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .option-number {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-500), var(--secondary-500));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        .option-preview {
+            position: relative;
+            height: 280px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .option-desc {
+            padding: 1.2rem 1.5rem;
+            border-top: 1px solid var(--surface-border);
+        }
+
+        .option-desc h4 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 0.4rem;
+        }
+
+        .option-desc p {
+            font-size: 0.85rem;
+            color: var(--text-body);
+            line-height: 1.6;
+        }
+
+        .demo-btn {
+            display: block;
+            width: calc(100% - 3rem);
+            margin: 0 1.5rem 1.2rem;
+            padding: 10px;
+            background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            font-family: 'Cairo', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .demo-btn:hover {
+            filter: brightness(1.15);
+            transform: scale(1.02);
+        }
+
+        /* ══════════════════════════════════════════════
+           SECTION A: FORM SUBMISSION LOADERS
+           ══════════════════════════════════════════════ */
+
+        /* ── Form Option 1: Orbit Spinner (Already selected) ── */
+        .form-opt1-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(11, 17, 32, 0.92);
+            backdrop-filter: blur(8px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            z-index: 10;
+            animation: overlayFadeIn 0.4s ease forwards;
+        }
+
+        .loader-orbit {
+            width: 64px;
+            height: 64px;
+            position: relative;
+        }
+
+        .loader-orbit .ring {
+            position: absolute;
+            inset: 0;
+            border: 2.5px solid rgba(0, 120, 212, 0.15);
+            border-radius: 50%;
+        }
+
+        .loader-orbit .ring-glow {
+            position: absolute;
+            inset: -4px;
+            border: 2px solid transparent;
+            border-top-color: rgba(0, 191, 165, 0.25);
+            border-radius: 50%;
+            animation: orbitSpin 3s linear infinite reverse;
+        }
+
+        .loader-orbit .dot-track {
+            position: absolute;
+            inset: 0;
+            animation: orbitSpin 1.2s linear infinite;
+        }
+
+        .loader-orbit .dot-track::after {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 12px;
+            height: 12px;
+            background: linear-gradient(135deg, #0078D4, #00BFA5);
+            border-radius: 50%;
+            box-shadow: 0 0 14px rgba(0, 120, 212, 0.6), 0 0 28px rgba(0, 191, 165, 0.3);
+        }
+
+        .loader-orbit .center-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 20px;
+            color: #0078D4;
+            animation: iconPulse 1.8s ease-in-out infinite;
+        }
+
+        .loader-text {
+            font-family: 'Cairo', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.85);
+            letter-spacing: 0.3px;
+        }
+
+        .loader-text::after {
+            content: '';
+            animation: textDots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes overlayFadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes orbitSpin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes iconPulse {
+
+            0%,
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: translate(-50%, -50%) scale(1.2);
+                opacity: 0.5;
+            }
+        }
+
+        @keyframes textDots {
+            0% {
+                content: '';
+            }
+
+            25% {
+                content: '.';
+            }
+
+            50% {
+                content: '..';
+            }
+
+            75% {
+                content: '...';
+            }
+        }
+
+        /* ── Form Option 2: Morphing Card Loader ── */
+        .form-opt2-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(11, 17, 32, 0.94);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            z-index: 10;
+            animation: overlayFadeIn 0.4s ease forwards;
+        }
+
+        .morphing-loader {
+            width: 80px;
+            height: 80px;
+            position: relative;
+        }
+
+        .morphing-loader .morph-ring {
+            position: absolute;
+            inset: 0;
+            border: 3px solid transparent;
+            border-top-color: var(--primary-500);
+            border-right-color: var(--secondary-500);
+            border-radius: 50%;
+            animation: morphSpin 1s ease-in-out infinite;
+        }
+
+        .morphing-loader .morph-ring-inner {
+            position: absolute;
+            inset: 8px;
+            border: 3px solid transparent;
+            border-bottom-color: var(--secondary-500);
+            border-left-color: var(--primary-500);
+            border-radius: 50%;
+            animation: morphSpin 0.7s ease-in-out infinite reverse;
+        }
+
+        .morphing-loader .morph-ring-core {
+            position: absolute;
+            inset: 18px;
+            border: 2px solid transparent;
+            border-top-color: rgba(0, 120, 212, 0.4);
+            border-radius: 50%;
+            animation: morphSpin 1.5s linear infinite;
+        }
+
+        .morphing-loader .morph-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 22px;
+            color: var(--primary-500);
+            animation: morphPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes morphSpin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes morphPulse {
+
+            0%,
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: translate(-50%, -50%) scale(1.15);
+                opacity: 0.6;
+            }
+        }
+
+        .morph-text {
+            font-family: 'Cairo', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .morph-text::after {
+            content: '';
+            animation: textDots 1.5s steps(4, end) infinite;
+        }
+
+        .morph-progress-bar {
+            width: 140px;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .morph-progress-fill {
+            height: 100%;
+            width: 40%;
+            background: linear-gradient(90deg, var(--primary-500), var(--secondary-500));
+            border-radius: 4px;
+            animation: progressSlide 1.8s ease-in-out infinite;
+        }
+
+        @keyframes progressSlide {
+            0% {
+                width: 0%;
+                margin-left: 0;
+            }
+
+            50% {
+                width: 60%;
+                margin-left: 20%;
+            }
+
+            100% {
+                width: 0%;
+                margin-left: 100%;
+            }
+        }
+
+        /* ── Form Option 3: Heartbeat Medical Loader ── */
+        .form-opt3-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(11, 17, 32, 0.93);
+            backdrop-filter: blur(8px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            z-index: 10;
+            animation: overlayFadeIn 0.4s ease forwards;
+        }
+
+        .heartbeat-loader {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .heartbeat-icon-wrap {
+            width: 70px;
+            height: 70px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .heartbeat-pulse-ring {
+            position: absolute;
+            inset: 0;
+            border: 2px solid rgba(0, 120, 212, 0.3);
+            border-radius: 50%;
+            animation: heartRingPulse 1.5s ease-out infinite;
+        }
+
+        .heartbeat-pulse-ring:nth-child(2) {
+            animation-delay: 0.5s;
+        }
+
+        .heartbeat-center {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, rgba(0, 120, 212, 0.15), rgba(0, 191, 165, 0.15));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .heartbeat-center i {
+            font-size: 22px;
+            color: var(--primary-500);
+            animation: heartBeat 1.2s ease-in-out infinite;
+        }
+
+        @keyframes heartRingPulse {
+            0% {
+                transform: scale(1);
+                opacity: 0.6;
+            }
+
+            100% {
+                transform: scale(1.6);
+                opacity: 0;
+            }
+        }
+
+        @keyframes heartBeat {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            15% {
+                transform: scale(1.25);
+            }
+
+            30% {
+                transform: scale(1);
+            }
+
+            45% {
+                transform: scale(1.15);
+            }
+
+            60% {
+                transform: scale(1);
+            }
+        }
+
+        .heartbeat-ecg {
+            width: 120px;
+            height: 30px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .heartbeat-ecg svg {
+            width: 240px;
+            height: 30px;
+            animation: ecgScroll 2s linear infinite;
+        }
+
+        @keyframes ecgScroll {
+            0% {
+                transform: translateX(0);
+            }
+
+            100% {
+                transform: translateX(-50%);
+            }
+        }
+
+        .heartbeat-text {
+            font-family: 'Cairo', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .heartbeat-text::after {
+            content: '';
+            animation: textDots 1.5s steps(4, end) infinite;
+        }
+
+
+        /* ══════════════════════════════════════════════
+           SECTION B: PAGE TRANSITION LOADERS
+           ══════════════════════════════════════════════ */
+
+        /* ── Page Option 1: Top Progress Bar ── */
+        .page-opt1-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .page-top-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.05);
+            z-index: 100;
+            overflow: hidden;
+        }
+
+        .page-top-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--primary-500), var(--secondary-500));
+            border-radius: 0 2px 2px 0;
+            box-shadow: 0 0 10px rgba(0, 120, 212, 0.5), 0 0 20px rgba(0, 191, 165, 0.3);
+            animation: topBarProgress 2s ease-in-out infinite;
+        }
+
+        @keyframes topBarProgress {
+            0% {
+                width: 0%;
+            }
+
+            20% {
+                width: 30%;
+            }
+
+            50% {
+                width: 65%;
+            }
+
+            80% {
+                width: 85%;
+            }
+
+            95% {
+                width: 95%;
+            }
+
+            100% {
+                width: 100%;
+                opacity: 0;
+            }
+        }
+
+        .page-opt1-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 12px;
+            opacity: 0.4;
+        }
+
+        .page-opt1-content i {
+            font-size: 32px;
+            color: var(--text-muted);
+        }
+
+        .page-opt1-content span {
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        /* ── Page Option 2: Full-Screen Breath Loader ── */
+        .page-opt2-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(11, 17, 32, 0.97);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            z-index: 100;
+            animation: overlayFadeIn 0.3s ease forwards;
+        }
+
+        .breath-loader {
+            position: relative;
+            width: 80px;
+            height: 80px;
+        }
+
+        .breath-circle {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 2px solid rgba(0, 120, 212, 0.2);
+            animation: breathScale 2.5s ease-in-out infinite;
+        }
+
+        .breath-circle:nth-child(2) {
+            inset: 8px;
+            border-color: rgba(0, 191, 165, 0.2);
+            animation-delay: 0.3s;
+        }
+
+        .breath-circle:nth-child(3) {
+            inset: 16px;
+            border-color: rgba(0, 120, 212, 0.15);
+            animation-delay: 0.6s;
+        }
+
+        .breath-logo {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--primary-500), var(--secondary-500));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 16px;
+            animation: breathPulse 2.5s ease-in-out infinite;
+        }
+
+        @keyframes breathScale {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
+
+            50% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+        }
+
+        @keyframes breathPulse {
+
+            0%,
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+            }
+
+            50% {
+                transform: translate(-50%, -50%) scale(1.08);
+            }
+        }
+
+        .breath-text {
+            font-family: 'Cairo', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.7);
+            animation: breathTextFade 2.5s ease-in-out infinite;
+        }
+
+        @keyframes breathTextFade {
+
+            0%,
+            100% {
+                opacity: 0.5;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+
+        .breath-bar-container {
+            width: 160px;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .breath-bar-fill {
+            height: 100%;
+            width: 30%;
+            background: linear-gradient(90deg, var(--primary-500), var(--secondary-500));
+            border-radius: 4px;
+            animation: progressSlide 2s ease-in-out infinite;
+        }
+
+        /* ── Page Option 3: Skeleton + Shine Reveal ── */
+        .page-opt3-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .skeleton-bar {
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .skeleton-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+            animation: skeletonShine 1.8s ease-in-out infinite;
+        }
+
+        .skel-header {
+            height: 20px;
+            width: 60%;
+        }
+
+        .skel-text1 {
+            height: 14px;
+            width: 90%;
+        }
+
+        .skel-text2 {
+            height: 14px;
+            width: 75%;
+        }
+
+        .skel-card {
+            height: 80px;
+            width: 100%;
+            border-radius: 12px;
+        }
+
+        .skel-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .skel-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .skel-lines {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .skel-line-short {
+            height: 12px;
+            width: 50%;
+        }
+
+        .skel-line-long {
+            height: 12px;
+            width: 80%;
+        }
+
+        .skel-btn-row {
+            display: flex;
+            gap: 12px;
+            margin-top: auto;
+        }
+
+        .skel-btn {
+            height: 36px;
+            width: 100px;
+            border-radius: 8px;
+        }
+
+        @keyframes skeletonShine {
+            0% {
+                left: -100%;
+            }
+
+            100% {
+                left: 100%;
+            }
+        }
+
+        .skeleton-top-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.05);
+            overflow: hidden;
+            z-index: 10;
+        }
+
+        .skeleton-top-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-500), var(--secondary-500));
+            animation: topBarProgress 2s ease-in-out infinite;
+        }
+
+        /* ── Divider ── */
+        .divider {
+            max-width: 1200px;
+            margin: 3rem auto;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--surface-border), transparent);
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+            .options-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .page-header h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1><i class="fa-solid fa-spinner"></i> معاينة خيارات التحميل</h1>
+        <p>اختر التصميم المناسب لكل نوع من أنواع المؤشرات</p>
+    </div>
+
+    <!-- ══════════════════════════════════════════════ -->
+    <!-- SECTION A: FORM SUBMISSION LOADERS            -->
+    <!-- ══════════════════════════════════════════════ -->
+    <div class="section-header">
+        <h2><i class="fa-solid fa-file-signature"></i> القسم الأول: مؤشرات إرسال النماذج</h2>
+        <p>يظهر هذا المؤشر عند الضغط على أي زر إرسال في النماذج (تسجيل دخول، التسجيل، التحقق...)</p>
+        <div class="badge">Form Submission Loaders</div>
+    </div>
+
+    <div class="options-grid">
+
+        <!-- Form Option 1: Orbit Spinner (Current) -->
+        <div class="option-card">
+            <div class="option-header">
+                <span class="option-label">Orbit Spinner ✦</span>
+                <div class="option-number">1</div>
+            </div>
+            <div class="option-preview" id="formOpt1Preview">
+                <div class="form-opt1-overlay">
+                    <div class="loader-orbit">
+                        <div class="ring"></div>
+                        <div class="ring-glow"></div>
+                        <div class="dot-track"></div>
+                        <i class="fa-solid fa-stethoscope center-icon"></i>
+                    </div>
+                    <span class="loader-text">جارٍ تسجيل الدخول</span>
+                </div>
+            </div>
+            <div class="option-desc">
+                <h4>🌀 المدار الطبي — التصميم الحالي</h4>
+                <p>نقطة مضيئة تدور حول أيقونة السماعة الطبية. خلفية ضبابية شفافة تغطي النموذج بالكامل. يمنع التفاعل
+                    المزدوج ويعزز الهوية الطبية.</p>
+            </div>
+        </div>
+
+        <!-- Form Option 2: Morphing Rings -->
+        <div class="option-card">
+            <div class="option-header">
+                <span class="option-label">Morphing Rings ✦</span>
+                <div class="option-number">2</div>
+            </div>
+            <div class="option-preview" id="formOpt2Preview">
+                <div class="form-opt2-overlay">
+                    <div class="morphing-loader">
+                        <div class="morph-ring"></div>
+                        <div class="morph-ring-inner"></div>
+                        <div class="morph-ring-core"></div>
+                        <i class="fa-solid fa-stethoscope morph-icon"></i>
+                    </div>
+                    <span class="morph-text">جارٍ تسجيل الدخول</span>
+                    <div class="morph-progress-bar">
+                        <div class="morph-progress-fill"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="option-desc">
+                <h4>🔁 حلقات مزدوجة دوارة</h4>
+                <p>ثلاث حلقات تدور بسرعات مختلفة حول الأيقونة المركزية مع شريط تقدم متحرك أسفل النص. إحساس بالحركة
+                    المتناسقة والأناقة التقنية.</p>
+            </div>
+        </div>
+
+        <!-- Form Option 3: Heartbeat Medical -->
+        <div class="option-card">
+            <div class="option-header">
+                <span class="option-label">Heartbeat Medical ✦</span>
+                <div class="option-number">3</div>
+            </div>
+            <div class="option-preview" id="formOpt3Preview">
+                <div class="form-opt3-overlay">
+                    <div class="heartbeat-loader">
+                        <div class="heartbeat-icon-wrap">
+                            <div class="heartbeat-pulse-ring"></div>
+                            <div class="heartbeat-pulse-ring"></div>
+                            <div class="heartbeat-center">
+                                <i class="fa-solid fa-heart-pulse"></i>
+                            </div>
+                        </div>
+                        <div class="heartbeat-ecg">
+                            <svg viewBox="0 0 240 30" fill="none">
+                                <polyline
+                                    points="0,15 15,15 20,15 25,5 30,25 35,10 40,20 45,15 60,15 75,15 80,15 85,5 90,25 95,10 100,20 105,15 120,15 135,15 140,15 145,5 150,25 155,10 160,20 165,15 180,15 195,15 200,15 205,5 210,25 215,10 220,20 225,15 240,15"
+                                    stroke="url(#ecgGrad)" stroke-width="1.5" fill="none" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                                <defs>
+                                    <linearGradient id="ecgGrad" x1="0" y1="0" x2="240" y2="0">
+                                        <stop offset="0%" stop-color="#0078D4" />
+                                        <stop offset="100%" stop-color="#00BFA5" />
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                        </div>
+                    </div>
+                    <span class="heartbeat-text">جارٍ تسجيل الدخول</span>
+                </div>
+            </div>
+            <div class="option-desc">
+                <h4>💓 نبض القلب الطبي</h4>
+                <p>أيقونة نبض القلب مع موجات دائرية متوسعة وخط ECG متحرك. يعطي إحساساً طبياً قوياً ومميزاً يربط المستخدم
+                    بالسياق الصحي للتطبيق.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Divider -->
+    <div class="divider"></div>
+
+    <!-- ══════════════════════════════════════════════ -->
+    <!-- SECTION B: PAGE TRANSITION LOADERS            -->
+    <!-- ══════════════════════════════════════════════ -->
+    <div class="section-header">
+        <h2><i class="fa-solid fa-shuffle"></i> القسم الثاني: مؤشرات الانتقال بين الصفحات</h2>
+        <p>يظهر عند الضغط على أي رابط للانتقال إلى صفحة جديدة</p>
+        <div class="badge">Page Transition Loaders</div>
+    </div>
+
+    <div class="options-grid">
+
+        <!-- Page Option 1: Top Progress Bar -->
+        <div class="option-card">
+            <div class="option-header">
+                <span class="option-label">Top Progress Bar ✦</span>
+                <div class="option-number">1</div>
+            </div>
+            <div class="option-preview">
+                <div class="page-opt1-container">
+                    <div class="page-top-bar">
+                        <div class="page-top-bar-fill"></div>
+                    </div>
+                    <div class="page-opt1-content">
+                        <i class="fa-solid fa-file-lines"></i>
+                        <span>محتوى الصفحة يبقى مرئياً</span>
+                    </div>
+                </div>
+            </div>
+            <div class="option-desc">
+                <h4>📊 شريط التقدم العلوي</h4>
+                <p>شريط رفيع متدرج (أزرق → فيروزي) يتحرك في أعلى الصفحة أثناء التحميل. غير مزعج، لا يحجب المحتوى، مألوف
+                    للمستخدم (مثل YouTube/GitHub). أبسط وأخف خيار.</p>
+            </div>
+        </div>
+
+        <!-- Page Option 2: Full Screen Breath -->
+        <div class="option-card">
+            <div class="option-header">
+                <span class="option-label">Branded Breath ✦</span>
+                <div class="option-number">2</div>
+            </div>
+            <div class="option-preview">
+                <div class="page-opt2-overlay">
+                    <div class="breath-loader">
+                        <div class="breath-circle"></div>
+                        <div class="breath-circle"></div>
+                        <div class="breath-circle"></div>
+                        <div class="breath-logo">
+                            <i class="fa-solid fa-heart-pulse"></i>
+                        </div>
+                    </div>
+                    <span class="breath-text">جارٍ التحميل</span>
+                    <div class="breath-bar-container">
+                        <div class="breath-bar-fill"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="option-desc">
+                <h4>🫁 تراكب شاشة كاملة مع شعار</h4>
+                <p>تراكب كامل الشاشة بخلفية داكنة مع شعار المنصة ودوائر تنبض. إحساس بالانتظار الأنيق. يحجب الصفحة
+                    السابقة بالكامل للانتقال السلس.</p>
+            </div>
+        </div>
+
+        <!-- Page Option 3: Skeleton + Top Bar -->
+        <div class="option-card">
+            <div class="option-header">
+                <span class="option-label">Skeleton Reveal ✦</span>
+                <div class="option-number">3</div>
+            </div>
+            <div class="option-preview">
+                <div class="page-opt3-container">
+                    <div class="skeleton-top-bar">
+                        <div class="skeleton-top-bar-fill"></div>
+                    </div>
+                    <div class="skeleton-bar skel-header"></div>
+                    <div class="skeleton-bar skel-text1"></div>
+                    <div class="skeleton-bar skel-text2"></div>
+                    <div class="skeleton-bar skel-card"></div>
+                    <div class="skel-row">
+                        <div class="skeleton-bar skel-avatar"></div>
+                        <div class="skel-lines">
+                            <div class="skeleton-bar skel-line-short"></div>
+                            <div class="skeleton-bar skel-line-long"></div>
+                        </div>
+                    </div>
+                    <div class="skel-btn-row">
+                        <div class="skeleton-bar skel-btn"></div>
+                        <div class="skeleton-bar skel-btn"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="option-desc">
+                <h4>🦴 هيكل الصفحة المضيء</h4>
+                <p>هياكل رمادية متحركة (Skeleton Screen) تحاكي شكل الصفحة القادمة مع شريط تقدم علوي. يعطي المستخدم
+                    إحساساً بأن الصفحة تُبنى أمامه. تجربة حديثة ومتقدمة (مثل Facebook/LinkedIn).</p>
+            </div>
+        </div>
+    </div>
+
+    <div style="text-align: center; margin: 3rem 0 2rem; color: var(--text-muted); font-size: 0.9rem;">
+        <p><i class="fa-solid fa-info-circle" style="color: var(--primary-500);"></i> افتح هذا الملف في المتصفح لمشاهدة
+            جميع الرسوم المتحركة</p>
+    </div>
+
+</body>
+
+</html>

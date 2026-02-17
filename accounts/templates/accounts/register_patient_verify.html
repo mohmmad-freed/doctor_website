@@ -4,6 +4,7 @@
 {% block title %}التحقق من رقم الهاتف{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'accounts/css/loader.css' %}">
 <style>
     /* Shared Variables */
     :root {
@@ -369,11 +370,26 @@
                 </button>
             </form>
         </div>
+
+        {% include 'accounts/_heartbeat_loader.html' with overlay_id='verifyOverlay' loader_text='جارٍ التحقق' loader_icon='fa-shield-halved' %}
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+<script>
+    (function () {
+        var form = document.getElementById('otpForm');
+        var overlay = document.getElementById('verifyOverlay');
+        if (!form || !overlay) return;
+        var submitted = false;
+        form.addEventListener('submit', function (e) {
+            if (submitted) { e.preventDefault(); return; }
+            submitted = true;
+            overlay.style.display = 'flex';
+        });
+    })();
+</script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         // --- OTP Input Logic ---

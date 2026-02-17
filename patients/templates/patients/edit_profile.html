@@ -1,10 +1,12 @@
 {% extends 'patients/base_dashboard.html' %}
+{% load static %}
+
 
 {% block title %}تعديل الملف الشخصي | {{ block.super }}{% endblock %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto animate-fade-in-up">
-    <div class="glass-card p-6 md:p-8">
+    <div class="glass-card p-6 md:p-8 relative overflow-hidden">
         <div class="flex items-center justify-between mb-8 pb-4 border-b border-gray-100 dark:border-slate-700">
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
                 <i class="fa-solid fa-user-pen text-primary-500"></i>
@@ -16,7 +18,7 @@
             </a>
         </div>
 
-        <form method="POST" enctype="multipart/form-data" class="space-y-8">
+        <form method="POST" id="editProfileForm" enctype="multipart/form-data" class="space-y-8">
             {% csrf_token %}
 
             <!-- Avatar Section -->
@@ -129,6 +131,8 @@
                 </a>
             </div>
         </form>
+
+        {% include 'accounts/_heartbeat_loader.html' with overlay_id='editProfileOverlay' loader_text='جارٍ حفظ التعديلات' loader_icon='fa-floppy-disk' %}
     </div>
 </div>
 
@@ -171,6 +175,20 @@
 {% endblock %}
 
 {% block scripts %}
+<link rel="stylesheet" href="{% static 'accounts/css/loader.css' %}">
+<script>
+    (function () {
+        var form = document.getElementById('editProfileForm');
+        var overlay = document.getElementById('editProfileOverlay');
+        if (!form || !overlay) return;
+        var submitted = false;
+        form.addEventListener('submit', function (e) {
+            if (submitted) { e.preventDefault(); return; }
+            submitted = true;
+            overlay.style.display = 'flex';
+        });
+    })();
+</script>
 <!-- Cropper.js CSS & JS -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
