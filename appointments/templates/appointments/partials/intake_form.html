@@ -1,0 +1,162 @@
+{% if form_template %}
+<div class="space-y-5" id="intakeFormFields">
+    <!-- Form header -->
+    <div class="flex items-center gap-2 pb-3 border-b border-gray-100 dark:border-slate-700">
+        <i class="fa-solid fa-clipboard-list text-primary-500"></i>
+        <div>
+            <h3 class="font-bold text-gray-900 dark:text-white">{{ form_template.display_title }}</h3>
+            {% if form_template.description %}
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ form_template.description }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {% for q in questions %}
+    <div class="space-y-2 intake-question" data-question-id="{{ q.id }}" id="question-{{ q.id }}">
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+            {{ q.display_text }}
+            {% if q.is_required %}
+            <span class="text-red-500 mr-1">*</span>
+            {% else %}
+            <span class="text-gray-400 text-xs font-normal">(اختياري)</span>
+            {% endif %}
+        </label>
+
+        {% if q.help_text_content %}
+        <p class="text-xs text-gray-400 dark:text-gray-500">{{ q.help_text_content }}</p>
+        {% endif %}
+
+        {% if q.field_type == "TEXT" %}
+        <input type="text" name="intake_{{ q.id }}" placeholder="{{ q.placeholder }}"
+               class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors text-sm"
+               {% if q.is_required %}required{% endif %}>
+
+        {% elif q.field_type == "TEXTAREA" %}
+        <textarea name="intake_{{ q.id }}" rows="3" placeholder="{{ q.placeholder }}"
+                  class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors text-sm resize-none"
+                  {% if q.is_required %}required{% endif %}></textarea>
+
+        {% elif q.field_type == "SELECT" %}
+        <select name="intake_{{ q.id }}" data-source-question="{{ q.id }}"
+                class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors text-sm"
+                {% if q.is_required %}required{% endif %}>
+            <option value="">-- اختر --</option>
+            {% for choice in q.choices %}
+            <option value="{{ choice }}">{{ choice }}</option>
+            {% endfor %}
+        </select>
+
+        {% elif q.field_type == "MULTISELECT" %}
+        <div class="space-y-2">
+            {% for choice in q.choices %}
+            <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-slate-600 hover:border-primary-300 dark:hover:border-primary-700 cursor-pointer transition-colors bg-white dark:bg-slate-700/50">
+                <input type="checkbox" name="intake_{{ q.id }}" value="{{ choice }}" data-source-question="{{ q.id }}"
+                       class="w-4 h-4 text-primary-500 focus:ring-primary-500 rounded border-gray-300 dark:border-slate-500">
+                <span class="text-sm text-gray-800 dark:text-gray-200">{{ choice }}</span>
+            </label>
+            {% endfor %}
+        </div>
+
+        {% elif q.field_type == "CHECKBOX" %}
+        <div class="flex items-center gap-4">
+            <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-slate-600 hover:border-primary-300 dark:hover:border-primary-700 cursor-pointer transition-colors bg-white dark:bg-slate-700/50 flex-1">
+                <input type="radio" name="intake_{{ q.id }}" value="نعم" data-source-question="{{ q.id }}"
+                       class="w-4 h-4 text-primary-500 focus:ring-primary-500 border-gray-300 dark:border-slate-500"
+                       {% if q.is_required %}required{% endif %}>
+                <span class="text-sm text-gray-800 dark:text-gray-200 font-medium">نعم</span>
+            </label>
+            <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-slate-600 hover:border-primary-300 dark:hover:border-primary-700 cursor-pointer transition-colors bg-white dark:bg-slate-700/50 flex-1">
+                <input type="radio" name="intake_{{ q.id }}" value="لا" data-source-question="{{ q.id }}"
+                       class="w-4 h-4 text-primary-500 focus:ring-primary-500 border-gray-300 dark:border-slate-500">
+                <span class="text-sm text-gray-800 dark:text-gray-200 font-medium">لا</span>
+            </label>
+        </div>
+
+        {% elif q.field_type == "DATE" %}
+        <input type="date" name="intake_{{ q.id }}"
+               class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors text-sm"
+               {% if q.is_required %}required{% endif %}>
+
+        {% elif q.field_type == "FILE" %}
+        <div>
+            <input type="file" name="intake_{{ q.id }}" id="file_{{ q.id }}"
+                   {% if q.allowed_extensions %}accept="{% for ext in q.allowed_extensions %}.{{ ext }}{% if not forloop.last %},{% endif %}{% endfor %}"{% endif %}
+                   class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 dark:file:bg-primary-900/30 dark:file:text-primary-300 cursor-pointer"
+                   {% if q.is_required %}required{% endif %}>
+            {% if q.max_file_size_mb %}
+            <p class="text-xs text-gray-400 mt-1">الحد الأقصى: {{ q.max_file_size_mb }} ميغابايت</p>
+            {% endif %}
+            {% if q.allowed_extensions %}
+            <p class="text-xs text-gray-400 mt-0.5">الصيغ المسموحة: {{ q.allowed_extensions|join:", " }}</p>
+            {% endif %}
+        </div>
+
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    <!-- Reason field removed — only shown when no intake form exists -->
+</div>
+
+<!-- Conditional Rules (client-side) -->
+{% if rules_json and rules_json != "[]" %}
+<script>
+(function() {
+    var rules = {{ rules_json|safe }};
+    if (!rules || !rules.length) return;
+
+    var showTargets = new Set();
+    rules.forEach(function(r) { if (r.action === 'SHOW') showTargets.add(r.target_question_id); });
+
+    showTargets.forEach(function(qId) {
+        var el = document.getElementById('question-' + qId);
+        if (el) el.style.display = 'none';
+    });
+
+    function getVal(qId) {
+        var r = document.querySelector('input[name="intake_' + qId + '"]:checked');
+        if (r) return r.value;
+        var s = document.querySelector('select[name="intake_' + qId + '"]');
+        if (s) return s.value;
+        var t = document.querySelector('[name="intake_' + qId + '"]');
+        if (t && t.type !== 'checkbox' && t.type !== 'radio') return t.value || '';
+        var chks = document.querySelectorAll('input[name="intake_' + qId + '"]:checked');
+        return chks.length ? Array.from(chks).map(function(c) { return c.value; }) : '';
+    }
+
+    function evaluate() {
+        showTargets.forEach(function(qId) {
+            var el = document.getElementById('question-' + qId);
+            if (el) el.style.display = 'none';
+        });
+        rules.forEach(function(r) {
+            var v = getVal(r.source_question_id), match = false;
+            if (r.operator === 'EQUALS') match = v === r.expected_value;
+            else if (r.operator === 'NOT_EQUALS') match = v !== r.expected_value;
+            else if (r.operator === 'CONTAINS') match = Array.isArray(v) ? v.indexOf(r.expected_value) >= 0 : (v||'').indexOf(r.expected_value) >= 0;
+            else if (r.operator === 'IN') match = Array.isArray(v) ? v.indexOf(r.expected_value) >= 0 : (v||'').indexOf(r.expected_value) >= 0;
+            var tgt = document.getElementById('question-' + r.target_question_id);
+            if (!tgt) return;
+            if (match) { if (r.action === 'SHOW') tgt.style.display = ''; else tgt.style.display = 'none'; }
+        });
+    }
+
+    var c = document.getElementById('intakeFormFields');
+    if (c) { c.addEventListener('change', evaluate); c.addEventListener('input', evaluate); }
+    evaluate();
+})();
+</script>
+{% endif %}
+
+{% elif no_form %}
+<div>
+    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+        سبب الزيارة <span class="text-gray-400 text-xs font-normal">(اختياري)</span>
+    </label>
+    <textarea name="reason" rows="3" placeholder="صف سبب زيارتك باختصار..."
+              class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors resize-none text-sm"></textarea>
+</div>
+
+{% else %}
+<p class="text-gray-400 dark:text-gray-500 text-sm">اختر طبيباً ونوع الموعد لعرض النموذج.</p>
+{% endif %}

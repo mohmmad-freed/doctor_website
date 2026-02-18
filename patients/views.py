@@ -15,7 +15,8 @@ from .permissions import IsPatient
 from .models import PatientProfile
 from .forms import UserUpdateForm, PatientProfileUpdateForm
 from clinics.models import Clinic, ClinicStaff
-from doctors.models import Specialty, DoctorProfile
+from doctors.models import Specialty, DoctorProfile, DoctorIntakeFormTemplate
+from appointments.models import AppointmentType
 
 User = get_user_model()
 
@@ -159,12 +160,22 @@ def browse_doctors(request):
             doctors_with_profiles = []
             for doctor in doctors:
                 profile = profiles_map.get(doctor.id)
+                # Count active appointment types for this doctor at this clinic
+                type_count = AppointmentType.objects.filter(
+                    doctor=doctor, clinic=clinic, is_active=True
+                ).count()
+                # Check if doctor has an active intake form
+                has_intake = DoctorIntakeFormTemplate.objects.filter(
+                    doctor=doctor, is_active=True
+                ).exists()
                 doctors_with_profiles.append(
                     {
                         "user": doctor,
                         "profile": profile,
                         "primary_specialty": profile.primary_specialty if profile else None,
                         "secondary_specialties": list(profile.secondary_specialties) if profile else [],
+                        "appointment_type_count": type_count,
+                        "has_intake_form": has_intake,
                     }
                 )
 

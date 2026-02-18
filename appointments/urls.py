@@ -34,4 +34,9 @@ urlpatterns = [
         api_views.BookAppointmentAPIView.as_view(),
         name="api_book_appointment",
     ),
+    path(
+    "<int:clinic_id>/htmx/intake-form/",
+    views.load_intake_form,
+    name="htmx_intake_form",
+    ),
 ]
