@@ -78,24 +78,51 @@
                {% if q.is_required %}required{% endif %}>
 
         {% elif q.field_type == "FILE" %}
-        <div>
+        <div class="file-upload-container" data-question-id="{{ q.id }}"
+             {% if q.max_file_size_mb %}data-max-size-mb="{{ q.max_file_size_mb }}"{% endif %}
+             {% if q.allowed_extensions %}data-allowed-ext="{{ q.allowed_extensions|join:"," }}"{% endif %}>
+            <label for="file_{{ q.id }}"
+                   class="flex flex-col items-center justify-center w-full p-4 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg cursor-pointer hover:border-primary-400 dark:hover:border-primary-500 transition-colors bg-white dark:bg-slate-700/30">
+                <i class="fa-solid fa-cloud-arrow-up text-gray-400 dark:text-gray-500 text-2xl mb-2"></i>
+                <span class="text-sm text-gray-500 dark:text-gray-400">اضغط لاختيار ملف</span>
+                {% if q.allowed_extensions %}
+                <span class="text-xs text-gray-400 mt-1">الصيغ المسموحة: {{ q.allowed_extensions|join:", " }}</span>
+                {% endif %}
+                {% if q.max_file_size_mb %}
+                <span class="text-xs text-gray-400">الحد الأقصى: {{ q.max_file_size_mb }} ميغابايت</span>
+                {% endif %}
+            </label>
             <input type="file" name="intake_{{ q.id }}" id="file_{{ q.id }}"
                    {% if q.allowed_extensions %}accept="{% for ext in q.allowed_extensions %}.{{ ext }}{% if not forloop.last %},{% endif %}{% endfor %}"{% endif %}
-                   class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 dark:file:bg-primary-900/30 dark:file:text-primary-300 cursor-pointer"
-                   {% if q.is_required %}required{% endif %}>
-            {% if q.max_file_size_mb %}
-            <p class="text-xs text-gray-400 mt-1">الحد الأقصى: {{ q.max_file_size_mb }} ميغابايت</p>
-            {% endif %}
-            {% if q.allowed_extensions %}
-            <p class="text-xs text-gray-400 mt-0.5">الصيغ المسموحة: {{ q.allowed_extensions|join:", " }}</p>
-            {% endif %}
+                   class="hidden"
+                   {% if q.is_required %}data-required="true"{% endif %}>
+            <!-- File info / error shown by JS -->
+            <div id="file-info-{{ q.id }}" class="mt-2 hidden">
+                <div class="flex items-center gap-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 p-2 rounded-lg text-sm file-success hidden">
+                    <i class="fa-solid fa-check-circle"></i>
+                    <span class="file-name truncate"></span>
+                    <span class="text-xs text-green-500 file-size"></span>
+                </div>
+                <div class="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-2 rounded-lg text-sm file-error hidden">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <span class="error-msg"></span>
+                </div>
+            </div>
         </div>
 
         {% endif %}
     </div>
     {% endfor %}
 
-    <!-- Reason field removed — only shown when no intake form exists -->
+    <!-- Reason / medical description (always shown) -->
+    <div class="pt-3 border-t border-gray-100 dark:border-slate-700">
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            وصف الحالة الطبية <span class="text-gray-400 text-xs font-normal">(اختياري)</span>
+        </label>
+        <textarea name="reason" rows="3" maxlength="1000" placeholder="صف حالتك الطبية أو سبب زيارتك باختصار..."
+                  class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors resize-none text-sm"></textarea>
+        <p class="text-xs text-gray-400 mt-1">الحد الأقصى 1000 حرف</p>
+    </div>
 </div>
 
 <!-- Conditional Rules (client-side) -->
@@ -151,10 +178,11 @@
 {% elif no_form %}
 <div>
     <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-        سبب الزيارة <span class="text-gray-400 text-xs font-normal">(اختياري)</span>
+        وصف الحالة الطبية <span class="text-gray-400 text-xs font-normal">(اختياري)</span>
     </label>
-    <textarea name="reason" rows="3" placeholder="صف سبب زيارتك باختصار..."
+    <textarea name="reason" rows="3" maxlength="1000" placeholder="صف حالتك الطبية أو سبب زيارتك باختصار..."
               class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors resize-none text-sm"></textarea>
+    <p class="text-xs text-gray-400 mt-1">الحد الأقصى 1000 حرف</p>
 </div>
 
 {% else %}

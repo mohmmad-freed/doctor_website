@@ -103,10 +103,11 @@
             <div id="intakeFormContainer">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                        سبب الزيارة <span class="text-gray-400 text-xs font-normal">(اختياري)</span>
+                        وصف الحالة الطبية <span class="text-gray-400 text-xs font-normal">(اختياري)</span>
                     </label>
-                    <textarea name="reason" rows="3" placeholder="صف سبب زيارتك باختصار..."
+                    <textarea name="reason" rows="3" maxlength="1000" placeholder="صف حالتك الطبية أو سبب زيارتك باختصار..."
                               class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors resize-none text-sm"></textarea>
+                    <p class="text-xs text-gray-400 mt-1">الحد الأقصى 1000 حرف</p>
                 </div>
             </div>
         </div>
@@ -190,6 +191,105 @@
 
     document.body.addEventListener('htmx:afterSwap', function () {
         checkFormReady();
+    });
+
+    // ── File upload: instant validation on change (event delegation) ──
+    document.addEventListener('change', function(e) {
+        var input = e.target;
+        if (input.type !== 'file') return;
+
+        var container = input.closest('.file-upload-container');
+        if (!container) return;
+
+        var qId = container.dataset.questionId;
+        var maxMb = container.dataset.maxSizeMb ? parseFloat(container.dataset.maxSizeMb) : null;
+        var allowedRaw = container.dataset.allowedExt || '';
+        var allowed = allowedRaw ? allowedRaw.split(',').map(function(e) { return e.trim().toLowerCase().replace(/^\./, ''); }) : [];
+
+        var infoDiv = document.getElementById('file-info-' + qId);
+        var successDiv = infoDiv.querySelector('.file-success');
+        var errorDiv = infoDiv.querySelector('.file-error');
+        var nameSpan = infoDiv.querySelector('.file-name');
+        var sizeSpan = infoDiv.querySelector('.file-size');
+        var errorMsg = infoDiv.querySelector('.error-msg');
+        var label = container.querySelector('label');
+
+        infoDiv.classList.add('hidden');
+        successDiv.classList.add('hidden');
+        errorDiv.classList.add('hidden');
+        label.classList.remove('border-red-400', 'dark:border-red-500', 'border-green-400', 'dark:border-green-500');
+
+        if (!input.files || !input.files[0]) return;
+        var file = input.files[0];
+        var errors = [];
+
+        if (allowed.length > 0) {
+            var ext = file.name.includes('.') ? file.name.split('.').pop().toLowerCase() : '';
+            if (allowed.indexOf(ext) === -1) {
+                errors.push('صيغة غير مسموحة (.' + ext + '). المسموح: ' + allowed.join(', '));
+            }
+        }
+        if (maxMb && file.size > maxMb * 1024 * 1024) {
+            var actualMb = (file.size / (1024 * 1024)).toFixed(1);
+            errors.push('حجم الملف (' + actualMb + ' MB) يتجاوز الحد (' + maxMb + ' MB)');
+        }
+
+        infoDiv.classList.remove('hidden');
+        if (errors.length > 0) {
+            errorMsg.textContent = errors.join(' · ');
+            errorDiv.classList.remove('hidden');
+            label.classList.add('border-red-400', 'dark:border-red-500');
+            input.value = '';
+        } else {
+            var sizeTxt = file.size < 1024 * 1024
+                ? (file.size / 1024).toFixed(0) + ' KB'
+                : (file.size / (1024 * 1024)).toFixed(1) + ' MB';
+            nameSpan.textContent = file.name;
+            sizeSpan.textContent = '(' + sizeTxt + ')';
+            successDiv.classList.remove('hidden');
+            label.classList.add('border-green-400', 'dark:border-green-500');
+        }
+    });
+
+    // ── File upload: validate required files on form submit ──
+    document.getElementById('bookingForm').addEventListener('submit', function(e) {
+        var missing = [];
+        document.querySelectorAll('.file-upload-container').forEach(function(container) {
+            var qId = container.dataset.questionId;
+            var questionDiv = document.getElementById('question-' + qId);
+            // Skip hidden (conditional) questions
+            if (questionDiv && questionDiv.style.display === 'none') return;
+
+            var input = container.querySelector('input[type="file"]');
+            if (!input || !input.dataset.required) return;
+
+            if (!input.files || !input.files.length) {
+                missing.push({ qId: qId, container: container });
+            }
+        });
+
+        if (missing.length > 0) {
+            e.preventDefault();
+
+            missing.forEach(function(m) {
+                var label = m.container.querySelector('label');
+                if (label) label.classList.add('border-red-400', 'dark:border-red-500');
+
+                var infoDiv = document.getElementById('file-info-' + m.qId);
+                if (infoDiv) {
+                    infoDiv.classList.remove('hidden');
+                    var errDiv = infoDiv.querySelector('.file-error');
+                    var errMsg = infoDiv.querySelector('.error-msg');
+                    if (errDiv && errMsg) {
+                        errMsg.textContent = 'هذا الحقل مطلوب. يرجى اختيار ملف.';
+                        errDiv.classList.remove('hidden');
+                    }
+                }
+            });
+
+            var first = document.getElementById('question-' + missing[0].qId);
+            if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
     });
 </script>
 {% endblock %}

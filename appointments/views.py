@@ -156,7 +156,8 @@ def evaluate_rules_server_side(questions, answers_dict, rules):
 
 def collect_and_validate_intake(post_data, files, questions, rules):
     """
-    Collect answers from POST, validate required fields (respecting conditional rules).
+    Collect answers from POST, validate required fields (respecting conditional rules),
+    and validate file uploads (type + size).
 
     Returns: (answers_dict, file_data, errors)
       - answers_dict: {str(question_id): answer_text}
@@ -171,7 +172,7 @@ def collect_and_validate_intake(post_data, files, questions, rules):
         if q.field_type == DoctorIntakeQuestion.FieldType.MULTISELECT:
             value = post_data.getlist(key)
             if value:
-                answers[str(q.id)] = "، ".join(value)  # Store as comma-separated
+                answers[str(q.id)] = "، ".join(value)
         elif q.field_type == DoctorIntakeQuestion.FieldType.FILE:
             uploaded = files.get(key)
             if uploaded:
@@ -190,16 +191,46 @@ def collect_and_validate_intake(post_data, files, questions, rules):
     ) if questions else DoctorIntakeRule.objects.none()
     visible_ids = evaluate_rules_server_side(questions, answers, db_rules)
 
-    # Validate required fields (only for visible questions)
+    # Validate required fields + file constraints (only for visible questions)
     errors = []
     for q in questions:
-        if q.is_required and q.id in visible_ids:
-            if q.field_type == DoctorIntakeQuestion.FieldType.FILE:
-                if str(q.id) not in file_data:
-                    errors.append(f'الحقل "{q.display_text}" مطلوب.')
-            else:
-                if not answers.get(str(q.id)):
-                    errors.append(f'الحقل "{q.display_text}" مطلوب.')
+        if q.id not in visible_ids:
+            continue
+
+        if q.field_type == DoctorIntakeQuestion.FieldType.FILE:
+            uploaded = file_data.get(str(q.id))
+
+            # Required check
+            if q.is_required and not uploaded:
+                errors.append(f'الحقل "{q.display_text}" مطلوب.')
+                continue
+
+            if uploaded:
+                # ── File size validation ──
+                if q.max_file_size_mb:
+                    max_bytes = q.max_file_size_mb * 1024 * 1024
+                    if uploaded.size > max_bytes:
+                        errors.append(
+                            f'الملف في "{q.display_text}" يتجاوز الحد الأقصى '
+                            f'({q.max_file_size_mb} ميغابايت). '
+                            f'حجم الملف: {uploaded.size / (1024 * 1024):.1f} ميغابايت.'
+                        )
+
+                # ── File extension validation ──
+                if q.allowed_extensions:
+                    file_ext = ""
+                    if "." in uploaded.name:
+                        file_ext = uploaded.name.rsplit(".", 1)[-1].lower()
+                    allowed = [ext.lower().lstrip(".") for ext in q.allowed_extensions]
+                    if file_ext not in allowed:
+                        errors.append(
+                            f'صيغة الملف في "{q.display_text}" غير مسموحة. '
+                            f'الصيغ المسموحة: {", ".join(allowed)}. '
+                            f'صيغة الملف المرفوع: .{file_ext}.'
+                        )
+        else:
+            if q.is_required and not answers.get(str(q.id)):
+                errors.append(f'الحقل "{q.display_text}" مطلوب.')
 
     return answers, file_data, errors
 
@@ -290,6 +321,11 @@ def book_appointment_view(request, clinic_id):
             appointment_date_str = request.POST.get("appointment_date", "").strip()
             appointment_time_str = request.POST.get("appointment_time", "").strip()
             reason = request.POST.get("reason", "").strip()
+
+            # Validate description length
+            if len(reason) > 1000:
+                messages.error(request, "وصف الحالة الطبية يجب أن لا يتجاوز 1000 حرف.")
+                return redirect(f"/appointments/book/{clinic_id}/?doctor_id={doctor_id}")
 
             if not all([doctor_id, appointment_type_id, appointment_date_str, appointment_time_str]):
                 messages.error(request, "يرجى ملء جميع الحقول المطلوبة.")
