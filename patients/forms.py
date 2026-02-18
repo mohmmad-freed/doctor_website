@@ -51,10 +51,10 @@ class PatientProfileUpdateForm(forms.ModelForm):
         ]
         widgets = {
             "avatar": forms.FileInput(attrs={"class": "hidden", "id": "id_avatar"}),
-            "date_of_birth": forms.DateInput(
+            "date_of_birth": forms.TextInput(
                 attrs={
-                    "type": "date",
-                    "class": "w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-slate-800 dark:border-slate-700 dark:text-white",
+                    "class": "w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-slate-800 dark:border-slate-700 dark:text-white datepicker",
+                    "placeholder": "يوم/شهر/سنة",
                 }
             ),
             "gender": forms.Select(
@@ -95,7 +95,7 @@ class PatientProfileUpdateForm(forms.ModelForm):
             "gender": "الجنس",
             "blood_type": "فصيلة الدم",
             "allergies": "الحساسية",
-            "medical_history": "التاريخ الطبي",
+            "medical_history": "التاريخ الطبي (قائمة التشخيصات، العمليات الجراحية، إلخ)",
             "emergency_contact_name": "اسم جهة اتصال الطوارئ",
             "emergency_contact_phone": "رقم جهة اتصال الطوارئ",
         }
