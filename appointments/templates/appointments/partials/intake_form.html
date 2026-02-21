@@ -219,6 +219,9 @@
             color: #dc2626; font-size: .8rem;
         }
         .dark .mfu-error { background: rgba(239,68,68,.1); border-color: #7f1d1d; color: #f87171; }
+        /* Ensure .hidden always wins regardless of display:flex rules above */
+        .mfu-error.hidden,
+        .mfu-count-row.hidden { display: none !important; }
         </style>
 
         {% endif %}
@@ -330,8 +333,12 @@
 
         // Click to open file picker (the hidden input covers the drop zone)
         input.addEventListener('change', function () {
-            addFiles(input.files);
-            input.value = ''; // reset so same file can be re-added after removal
+            // Capture files BEFORE any reset (FileList is live)
+            var picked = Array.from(input.files);
+            addFiles(picked);
+            // DO NOT clear input.value here — syncInput() inside addFiles/refresh
+            // keeps input.files in sync via DataTransfer. Clearing it would wipe
+            // the file list that the form reads on submit.
         });
 
         // Keyboard accessibility
