@@ -141,3 +141,68 @@ def send_change_email_verification(email, request):
             f"[EMAIL] Failed to send change email verification to {email}: {e}"
         )
         return False, "Failed to send verification email. Please try again."
+
+
+def send_appointment_cancellation_email(user, appointment):
+    """
+    Send an appointment cancellation notification email to the patient.
+
+    Email is only sent when ALL of the following are true:
+    - user.email is present (not None, not empty string)
+    - user.email_verified is True
+      (i.e. the email in the MAIN email field has been verified;
+       pending_email is NEVER used for sending)
+
+    If conditions are not met, returns silently without error.
+
+    Args:
+        user:        The patient User instance.
+        appointment: The cancelled Appointment instance.
+    """
+    # Guard: only send to verified, confirmed email addresses
+    if not user.email or not getattr(user, "email_verified", False):
+        logger.info(
+            "[EMAIL] Skipping cancellation email for user_id=%s — "
+            "no verified email on record.",
+            user.id,
+        )
+        return
+
+    try:
+        doctor_name = appointment.doctor.name if appointment.doctor else "الطبيب"
+        date_str = appointment.appointment_date.strftime("%Y-%m-%d")
+        time_str = appointment.appointment_time.strftime("%H:%M")
+
+        subject = "إلغاء موعدك — Clinic"
+
+        text_content = (
+            f"عزيزي {user.name}،\n\n"
+            f"نأسف لإعلامك بأنه تم إلغاء موعدك مع {doctor_name} "
+            f"بتاريخ {date_str} الساعة {time_str}.\n\n"
+            f"يرجى التواصل مع العيادة لإعادة الجدولة.\n\n"
+            f"مع تحيات،\nفريق كلينك"
+        )
+        html_content = (
+            f"<p>عزيزي <strong>{user.name}</strong>،</p>"
+            f"<p>نأسف لإعلامك بأنه تم إلغاء موعدك مع "
+            f"<strong>{doctor_name}</strong> "
+            f"بتاريخ <strong>{date_str}</strong> الساعة <strong>{time_str}</strong>.</p>"
+            f"<p>يرجى التواصل مع العيادة لإعادة الجدولة.</p>"
+            f"<br><p>مع تحيات،<br>فريق كلينك</p>"
+        )
+
+        _send_email(user.email, subject, html_content, text_content)
+        logger.info(
+            "[EMAIL] Cancellation email sent to user_id=%s email=%s",
+            user.id,
+            user.email,
+        )
+
+    except Exception as e:
+        # Non-fatal: log and continue. Notification was already persisted in-app.
+        logger.error(
+            "[EMAIL] Failed to send cancellation email to user_id=%s: %r",
+            user.id,
+            e,
+        )
+

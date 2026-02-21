@@ -165,3 +165,88 @@ class AppointmentAttachment(models.Model):
 
     def __str__(self):
         return f"{self.original_name} (Appt #{self.appointment_id})"
+
+
+class AppointmentNotification(models.Model):
+    """
+    In-app notification for a patient about an appointment event.
+
+    Created whenever the appointment status changes in a way that
+    the patient should be informed (e.g. cancellation by ClinicStaff).
+
+    Patient FK:
+      Appointment.patient → AUTH_USER_MODEL, so we mirror the same FK type
+      here to keep the relationship consistent.
+
+    Audit:
+      cancelled_by_staff records WHO cancelled (ClinicStaff). SET_NULL on
+      delete so notifications outlive the staff record.
+
+    Duplicate prevention:
+      UniqueConstraint on (appointment, notification_type) enforced at DB
+      level. The service also guards against cancelling a CANCELLED appointment
+      before notification fires, providing a logical second line of defence.
+
+    Channel rules:
+    - In-app: ALWAYS created with is_delivered=True.
+    - Email:   Sent separately; not tracked here.
+    - SMS:     Sent separately; not tracked here.
+    """
+
+    class Type(models.TextChoices):
+        APPOINTMENT_CANCELLED = "APPOINTMENT_CANCELLED", "Appointment Cancelled"
+
+    patient = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="appointment_notifications",
+    )
+    appointment = models.ForeignKey(
+        Appointment,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="notifications",
+    )
+    notification_type = models.CharField(
+        max_length=40,
+        choices=Type.choices,
+        default=Type.APPOINTMENT_CANCELLED,
+    )
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    # ── FIX 2: audit who performed the cancellation ───────────────────────────
+    cancelled_by_staff = models.ForeignKey(
+        "clinics.ClinicStaff",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="cancellation_notifications",
+        help_text="ClinicStaff member who triggered this cancellation notification.",
+    )
+    is_read = models.BooleanField(
+        default=False,
+        help_text="Patient has read this notification.",
+    )
+    is_delivered = models.BooleanField(
+        default=True,
+        help_text="Always True for in-app notifications.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Appointment Notification"
+        verbose_name_plural = "Appointment Notifications"
+        ordering = ["-created_at"]
+        constraints = [
+            # FIX 3: prevent duplicate notifications at DB level.
+            # One notification per (appointment, type) pair.
+            # Uses a partial-style name to be clear about intent.
+            models.UniqueConstraint(
+                fields=["appointment", "notification_type"],
+                name="unique_notification_per_appointment_type",
+            ),
+        ]
+
+    def __str__(self):
+        return f"[{self.notification_type}] \u2192 {self.patient.name} ({self.created_at:%Y-%m-%d})"

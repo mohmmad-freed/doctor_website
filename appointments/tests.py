@@ -463,3 +463,306 @@ class BookAppointmentAPITests(BookingTestMixin, TestCase):
         ]
         for field in expected_fields:
             self.assertIn(field, response.data, f"Missing field: {field}")
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  Staff Cancellation & Notification Tests
+# ═══════════════════════════════════════════════════════════════════
+
+
+class StaffCancellationNotificationTests(TransactionTestCase):
+    """
+    Tests for cancel_appointment_by_staff() and the notification pipeline.
+
+    Uses TransactionTestCase (not TestCase) so that transaction.on_commit()
+    callbacks fire immediately within the test, matching production behaviour.
+    """
+
+    def setUp(self):
+        # Users
+        self.main_doctor = User.objects.create_user(
+            phone="0592000001", password="testpass", name="Dr. Owner", role="MAIN_DOCTOR"
+        )
+        self.doctor = User.objects.create_user(
+            phone="0592000002", password="testpass", name="Dr. Ahmad", role="DOCTOR"
+        )
+        self.patient = User.objects.create_user(
+            phone="0592000003", password="testpass", name="Patient Ali", role="PATIENT"
+        )
+
+        # Clinics
+        self.clinic = Clinic.objects.create(
+            name="Main Clinic",
+            address="Addr",
+            phone="0591111112",
+            email="main@clinic.com",
+            main_doctor=self.main_doctor,
+        )
+        self.other_clinic = Clinic.objects.create(
+            name="Other Clinic",
+            address="Addr2",
+            phone="0591111113",
+            email="other@clinic.com",
+            main_doctor=self.main_doctor,
+        )
+
+        from clinics.models import ClinicStaff
+        self.clinic_staff = ClinicStaff.objects.create(
+            clinic=self.clinic,
+            user=self.main_doctor,
+            role="SECRETARY",
+            added_by=self.main_doctor,
+        )
+        self.other_clinic_staff = ClinicStaff.objects.create(
+            clinic=self.other_clinic,
+            user=self.doctor,
+            role="SECRETARY",
+            added_by=self.main_doctor,
+        )
+
+        # Appointment
+        self.appointment = Appointment.objects.create(
+            patient=self.patient,
+            clinic=self.clinic,
+            doctor=self.doctor,
+            appointment_date=date.today() + timedelta(days=3),
+            appointment_time=time(10, 0),
+            status=Appointment.Status.CONFIRMED,
+        )
+
+    def _cancel_by_staff(self):
+        """Helper: call the service under test."""
+        from appointments.services.patient_appointments_service import cancel_appointment_by_staff
+        return cancel_appointment_by_staff(self.appointment.id, self.clinic_staff)
+
+    # ── Test 1: In-app notification created on successful cancellation ─────────
+
+    @patch("accounts.services.tweetsms.send_sms")
+    @patch("accounts.email_utils._send_email")
+    def test_notification_created_on_cancellation(self, mock_email, mock_sms):
+        """ClinicStaff cancels CONFIRMED appointment → in-app notification created."""
+        from appointments.models import AppointmentNotification
+
+        result = self._cancel_by_staff()
+
+        self.assertTrue(result)
+        self.appointment.refresh_from_db()
+        self.assertEqual(self.appointment.status, Appointment.Status.CANCELLED)
+
+        notifs = AppointmentNotification.objects.filter(
+            patient=self.patient,
+            appointment=self.appointment,
+            notification_type=AppointmentNotification.Type.APPOINTMENT_CANCELLED,
+        )
+        self.assertEqual(notifs.count(), 1)
+        notif = notifs.first()
+        self.assertTrue(notif.is_delivered)
+        self.assertFalse(notif.is_read)
+        self.assertIn("Dr. Ahmad", notif.message)
+        # FIX 2: audit field populated
+        self.assertEqual(notif.cancelled_by_staff, self.clinic_staff)
+
+    # ── Test 2: PENDING appointment also notified ──────────────────────────────
+
+    @patch("accounts.services.tweetsms.send_sms")
+    @patch("accounts.email_utils._send_email")
+    def test_pending_appointment_also_notified(self, mock_email, mock_sms):
+        """ClinicStaff cancels PENDING appointment → notification created."""
+        from appointments.models import AppointmentNotification
+
+        self.appointment.status = Appointment.Status.PENDING
+        self.appointment.save(update_fields=["status"])
+
+        self._cancel_by_staff()
+
+        self.assertEqual(
+            AppointmentNotification.objects.filter(patient=self.patient).count(), 1
+        )
+
+    # ── Test 3: Email sent when patient has verified email ─────────────────────
+
+    @patch("accounts.services.tweetsms.send_sms")
+    @patch("accounts.email_utils._send_email")
+    def test_email_sent_to_verified_email(self, mock_email, mock_sms):
+        """Email is sent when patient.email is set AND email_verified=True."""
+        self.patient.email = "ali@example.com"
+        self.patient.email_verified = True
+        self.patient.save(update_fields=["email", "email_verified"])
+
+        self._cancel_by_staff()
+
+        mock_email.assert_called_once()
+        call_kwargs = mock_email.call_args
+        # First positional arg is the recipient email
+        self.assertEqual(call_kwargs[0][0], "ali@example.com")
+
+    # ── Test 4: No email when email_verified=False ─────────────────────────────
+
+    @patch("accounts.services.tweetsms.send_sms")
+    @patch("accounts.email_utils._send_email")
+    def test_no_email_when_not_verified(self, mock_email, mock_sms):
+        """No email when patient has an email but email_verified=False."""
+        self.patient.email = "ali@example.com"
+        self.patient.email_verified = False
+        self.patient.save(update_fields=["email", "email_verified"])
+
+        self._cancel_by_staff()
+
+        mock_email.assert_not_called()
+
+    # ── Test 5: No email when patient has no email at all ─────────────────────
+
+    @patch("accounts.services.tweetsms.send_sms")
+    @patch("accounts.email_utils._send_email")
+    def test_no_email_when_email_is_none(self, mock_email, mock_sms):
+        """No email when patient.email is None (not set)."""
+        self.patient.email = None
+        self.patient.email_verified = False
+        self.patient.save(update_fields=["email", "email_verified"])
+
+        self._cancel_by_staff()
+
+        mock_email.assert_not_called()
+
+    # ── Test 6: Duplicate cancellation raises ValueError; no double notification
+
+    @patch("accounts.services.tweetsms.send_sms")
+    @patch("accounts.email_utils._send_email")
+    def test_duplicate_cancellation_raises_error(self, mock_email, mock_sms):
+        """Already-CANCELLED appointment raises ValueError; no extra notification."""
+        from appointments.models import AppointmentNotification
+        from appointments.services.patient_appointments_service import cancel_appointment_by_staff
+
+        # First cancellation succeeds
+        self._cancel_by_staff()
+        notif_count_after_first = AppointmentNotification.objects.filter(
+            patient=self.patient
+        ).count()
+        self.assertEqual(notif_count_after_first, 1)
+
+        # Second cancellation must raise
+        with self.assertRaises(ValueError):
+            cancel_appointment_by_staff(self.appointment.id, self.clinic_staff)
+
+        # No additional notification
+        self.assertEqual(
+            AppointmentNotification.objects.filter(patient=self.patient).count(),
+            1,
+        )
+
+    # ── Test 7: Unauthorized staff raises ValueError; no notification ──────────
+
+    @patch("accounts.services.tweetsms.send_sms")
+    @patch("accounts.email_utils._send_email")
+    def test_unauthorized_staff_cannot_cancel(self, mock_email, mock_sms):
+        """Staff from a different clinic are rejected; no notification created."""
+        from appointments.models import AppointmentNotification
+        from appointments.services.patient_appointments_service import cancel_appointment_by_staff
+
+        with self.assertRaises(ValueError):
+            cancel_appointment_by_staff(self.appointment.id, self.other_clinic_staff)
+
+        self.assertEqual(
+            AppointmentNotification.objects.filter(patient=self.patient).count(), 0
+        )
+
+    # ── FIX 2: cancelled_by_staff audit field is correctly stored ─────────────
+
+    @patch("accounts.services.tweetsms.send_sms")
+    @patch("accounts.email_utils._send_email")
+    def test_cancelled_by_staff_is_stored(self, mock_email, mock_sms):
+        """FIX 2: notification.cancelled_by_staff equals the acting ClinicStaff."""
+        from appointments.models import AppointmentNotification
+
+        self._cancel_by_staff()
+
+        notif = AppointmentNotification.objects.get(
+            patient=self.patient, appointment=self.appointment
+        )
+        self.assertEqual(notif.cancelled_by_staff, self.clinic_staff)
+
+    # ── FIX 3: UniqueConstraint prevents DB-level duplicate ───────────────
+
+    @patch("accounts.services.tweetsms.send_sms")
+    @patch("accounts.email_utils._send_email")
+    def test_unique_constraint_prevents_db_duplicate(self, mock_email, mock_sms):
+        """
+        FIX 3: the UniqueConstraint on (appointment, notification_type) prevents
+        a second DB row even if the service logic somehow allowed it.
+        """
+        from django.db import IntegrityError
+        from appointments.models import AppointmentNotification
+
+        # Create the first notification manually
+        AppointmentNotification.objects.create(
+            patient=self.patient,
+            appointment=self.appointment,
+            notification_type=AppointmentNotification.Type.APPOINTMENT_CANCELLED,
+            title="Test",
+            message="Test",
+        )
+        # Attempting a second one with the same (appointment, type) must fail at DB level
+        with self.assertRaises(IntegrityError):
+            AppointmentNotification.objects.create(
+                patient=self.patient,
+                appointment=self.appointment,
+                notification_type=AppointmentNotification.Type.APPOINTMENT_CANCELLED,
+                title="Duplicate",
+                message="Duplicate",
+            )
+
+    # ── FIX 4: SMS is skipped when not configured ───────────────────────
+
+    @patch("accounts.email_utils._send_email")
+    def test_sms_skipped_when_not_configured(self, mock_email):
+        """
+        FIX 4: when SMS_PROVIDER is blank, send_sms is never called.
+        Uses override_settings to ensure deterministic behaviour regardless
+        of the real local .env configuration.
+        """
+        from django.test import override_settings
+        from appointments.services.patient_appointments_service import _is_sms_configured
+        from unittest.mock import patch as _patch
+
+        # Force unconfigured state in isolation, regardless of real .env
+        with override_settings(SMS_PROVIDER="", TWEETSMS_API_KEY="", TWEETSMS_SENDER=""):
+            # Confirm the gate returns False under these settings
+            self.assertFalse(_is_sms_configured())
+
+            # Assert send_sms is never reached
+            with _patch("accounts.services.tweetsms.send_sms") as mock_sms:
+                self._cancel_by_staff()
+                mock_sms.assert_not_called()
+
+    # ── FIX 5: email failure does NOT block in-app notification ──────────
+
+    @patch("accounts.services.tweetsms.send_sms")
+    @patch(
+        "accounts.email_utils._send_email",
+        side_effect=Exception("Brevo outage"),
+    )
+    def test_email_failure_does_not_block_in_app_notification(
+        self, mock_failing_email, mock_sms
+    ):
+        """
+        FIX 5: even when _send_email raises an unexpected exception, the
+        in-app AppointmentNotification row is still created successfully.
+        """
+        from appointments.models import AppointmentNotification
+
+        # Give the patient a verified email so the email path is exercised
+        self.patient.email = "ali@example.com"
+        self.patient.email_verified = True
+        self.patient.save(update_fields=["email", "email_verified"])
+
+        # Must not raise despite the email failure
+        self._cancel_by_staff()
+
+        # In-app notification still created
+        self.assertEqual(
+            AppointmentNotification.objects.filter(
+                patient=self.patient,
+                appointment=self.appointment,
+            ).count(),
+            1,
+        )
