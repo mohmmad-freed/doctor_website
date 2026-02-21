@@ -161,11 +161,11 @@ def collect_and_validate_intake(post_data, files, questions, rules):
 
     Returns: (answers_dict, file_data, errors)
       - answers_dict: {str(question_id): answer_text}
-      - file_data: {str(question_id): uploaded_file}
+      - file_data: {str(question_id): [list of uploaded files]}  ← list, not single file
       - errors: list of error strings
     """
     answers = {}
-    file_data = {}
+    file_data = {}  # {str(q.id): [UploadedFile, ...]}
 
     for q in questions:
         key = f"intake_{q.id}"
@@ -174,9 +174,12 @@ def collect_and_validate_intake(post_data, files, questions, rules):
             if value:
                 answers[str(q.id)] = "، ".join(value)
         elif q.field_type == DoctorIntakeQuestion.FieldType.FILE:
-            uploaded = files.get(key)
-            if uploaded:
-                file_data[str(q.id)] = uploaded
+            # getlist returns ALL files for this field (multi-file input)
+            uploaded_list = files.getlist(key)
+            # Filter out empty dummy entries (browser sometimes sends empty file)
+            uploaded_list = [f for f in uploaded_list if f and f.size > 0]
+            if uploaded_list:
+                file_data[str(q.id)] = uploaded_list
         elif q.field_type == DoctorIntakeQuestion.FieldType.CHECKBOX:
             value = post_data.get(key, "")
             answers[str(q.id)] = value
@@ -198,20 +201,21 @@ def collect_and_validate_intake(post_data, files, questions, rules):
             continue
 
         if q.field_type == DoctorIntakeQuestion.FieldType.FILE:
-            uploaded = file_data.get(str(q.id))
+            uploaded_list = file_data.get(str(q.id), [])
 
             # Required check
-            if q.is_required and not uploaded:
+            if q.is_required and not uploaded_list:
                 errors.append(f'الحقل "{q.display_text}" مطلوب.')
                 continue
 
-            if uploaded:
+            # Validate each file in the list
+            for uploaded in uploaded_list:
                 # ── File size validation ──
                 if q.max_file_size_mb:
                     max_bytes = q.max_file_size_mb * 1024 * 1024
                     if uploaded.size > max_bytes:
                         errors.append(
-                            f'الملف في "{q.display_text}" يتجاوز الحد الأقصى '
+                            f'الملف "{uploaded.name}" في "{q.display_text}" يتجاوز الحد الأقصى '
                             f'({q.max_file_size_mb} ميغابايت). '
                             f'حجم الملف: {uploaded.size / (1024 * 1024):.1f} ميغابايت.'
                         )
@@ -224,9 +228,8 @@ def collect_and_validate_intake(post_data, files, questions, rules):
                     allowed = [ext.lower().lstrip(".") for ext in q.allowed_extensions]
                     if file_ext not in allowed:
                         errors.append(
-                            f'صيغة الملف في "{q.display_text}" غير مسموحة. '
-                            f'الصيغ المسموحة: {", ".join(allowed)}. '
-                            f'صيغة الملف المرفوع: .{file_ext}.'
+                            f'صيغة الملف "{uploaded.name}" في "{q.display_text}" غير مسموحة. '
+                            f'الصيغ المسموحة: {", ".join(allowed)}.'
                         )
         else:
             if q.is_required and not answers.get(str(q.id)):
@@ -239,6 +242,9 @@ def save_intake_answers(appointment, questions, answers_dict, file_data, uploade
     """
     Create AppointmentAnswer records for each answered question,
     and AppointmentAttachment records for file uploads.
+
+    file_data is now: {str(question_id): [UploadedFile, ...]}
+    One AppointmentAttachment row is created per file.
     """
     answer_objects = []
     for q in questions:
@@ -254,10 +260,13 @@ def save_intake_answers(appointment, questions, answers_dict, file_data, uploade
     if answer_objects:
         AppointmentAnswer.objects.bulk_create(answer_objects)
 
-    # Save file attachments
-    for q_id_str, uploaded_file in file_data.items():
+    # Save file attachments — one row per file per question
+    for q_id_str, uploaded_files in file_data.items():
         q = next((q for q in questions if str(q.id) == q_id_str), None)
-        if q:
+        if not q:
+            continue
+        # uploaded_files is a list (could be 1-5 files)
+        for uploaded_file in uploaded_files:
             AppointmentAttachment.objects.create(
                 appointment=appointment,
                 question=q,
