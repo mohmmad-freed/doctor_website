@@ -78,37 +78,148 @@
                {% if q.is_required %}required{% endif %}>
 
         {% elif q.field_type == "FILE" %}
-        <div class="file-upload-container" data-question-id="{{ q.id }}"
-             {% if q.max_file_size_mb %}data-max-size-mb="{{ q.max_file_size_mb }}"{% endif %}
-             {% if q.allowed_extensions %}data-allowed-ext="{{ q.allowed_extensions|join:"," }}"{% endif %}>
-            <label for="file_{{ q.id }}"
-                   class="flex flex-col items-center justify-center w-full p-4 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg cursor-pointer hover:border-primary-400 dark:hover:border-primary-500 transition-colors bg-white dark:bg-slate-700/30">
-                <i class="fa-solid fa-cloud-arrow-up text-gray-400 dark:text-gray-500 text-2xl mb-2"></i>
-                <span class="text-sm text-gray-500 dark:text-gray-400">اضغط لاختيار ملف</span>
-                {% if q.allowed_extensions %}
-                <span class="text-xs text-gray-400 mt-1">الصيغ المسموحة: {{ q.allowed_extensions|join:", " }}</span>
-                {% endif %}
-                {% if q.max_file_size_mb %}
-                <span class="text-xs text-gray-400">الحد الأقصى: {{ q.max_file_size_mb }} ميغابايت</span>
-                {% endif %}
-            </label>
-            <input type="file" name="intake_{{ q.id }}" id="file_{{ q.id }}"
-                   {% if q.allowed_extensions %}accept="{% for ext in q.allowed_extensions %}.{{ ext }}{% if not forloop.last %},{% endif %}{% endfor %}"{% endif %}
-                   class="hidden"
-                   {% if q.is_required %}data-required="true"{% endif %}>
-            <!-- File info / error shown by JS -->
-            <div id="file-info-{{ q.id }}" class="mt-2 hidden">
-                <div class="flex items-center gap-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 p-2 rounded-lg text-sm file-success hidden">
-                    <i class="fa-solid fa-check-circle"></i>
-                    <span class="file-name truncate"></span>
-                    <span class="text-xs text-green-500 file-size"></span>
-                </div>
-                <div class="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-2 rounded-lg text-sm file-error hidden">
-                    <i class="fa-solid fa-circle-exclamation"></i>
-                    <span class="error-msg"></span>
-                </div>
+        {# ── Multi-photo upload widget: max 5 images, 5 MB each ── #}
+        <div class="multi-file-upload" id="mfu-{{ q.id }}" data-question-id="{{ q.id }}" data-max-files="5" data-max-mb="5">
+
+            {# ── Drop Zone ── #}
+            <div class="mfu-dropzone" id="mfu-dz-{{ q.id }}" role="button" tabindex="0"
+                 aria-label="منطقة رفع الصور">
+                <i class="fa-solid fa-images mfu-dz-icon"></i>
+                <p class="mfu-dz-title">اسحب الصور هنا أو <span class="mfu-dz-link">اضغط للاختيار</span></p>
+                <p class="mfu-dz-hint">
+                    صور فقط (JPG · PNG · WEBP) &nbsp;·&nbsp; حد أقصى <strong>5 صور</strong> &nbsp;·&nbsp; <strong>5 MB</strong> لكل صورة
+                </p>
+                <input type="file" name="intake_{{ q.id }}" id="file_{{ q.id }}"
+                       accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                       multiple
+                       class="mfu-hidden-input"
+                       {% if q.is_required %}data-required="true"{% endif %}>
+            </div>
+
+            {# ── Count badge ── #}
+            <div class="mfu-count-row hidden" id="mfu-count-{{ q.id }}">
+                <span class="mfu-count-badge">
+                    <i class="fa-solid fa-photo-film"></i>
+                    <span class="mfu-count-num">0</span> / 5 صور
+                </span>
+                <button type="button" class="mfu-clear-all" data-target="{{ q.id }}">
+                    <i class="fa-solid fa-trash-can"></i> مسح الكل
+                </button>
+            </div>
+
+            {# ── Thumbnail grid ── #}
+            <div class="mfu-previews" id="mfu-previews-{{ q.id }}"></div>
+
+            {# ── Error banner ── #}
+            <div class="mfu-error hidden" id="mfu-error-{{ q.id }}">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span class="mfu-error-msg"></span>
             </div>
         </div>
+
+        {# ── Scoped styles (injected once via JS guard) ── #}
+        <style id="mfu-styles" data-injected="false">
+        .multi-file-upload { direction: rtl; }
+
+        /* Drop zone */
+        .mfu-dropzone {
+            position: relative;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 6px;
+            padding: 28px 16px;
+            border: 2px dashed #cbd5e1;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            cursor: pointer;
+            transition: border-color .25s, background .25s, box-shadow .25s;
+            outline: none;
+        }
+        .dark .mfu-dropzone {
+            border-color: #475569;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        }
+        .mfu-dropzone:hover, .mfu-dropzone:focus-visible, .mfu-dropzone.mfu-drag-over {
+            border-color: #6366f1;
+            background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+            box-shadow: 0 0 0 4px rgba(99,102,241,.12);
+        }
+        .dark .mfu-dropzone:hover, .dark .mfu-dropzone:focus-visible, .dark .mfu-dropzone.mfu-drag-over {
+            border-color: #818cf8;
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+        }
+        .mfu-dz-icon { font-size: 2rem; color: #94a3b8; transition: color .25s, transform .25s; }
+        .mfu-dropzone:hover .mfu-dz-icon { color: #6366f1; transform: translateY(-3px); }
+        .mfu-dz-title { font-size: .875rem; font-weight: 600; color: #475569; margin: 0; }
+        .dark .mfu-dz-title { color: #94a3b8; }
+        .mfu-dz-link { color: #6366f1; text-decoration: underline; }
+        .mfu-dz-hint { font-size: .75rem; color: #94a3b8; margin: 0; text-align: center; }
+        .mfu-hidden-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+
+        /* Count row */
+        .mfu-count-row {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-top: 10px;
+        }
+        .mfu-count-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 4px 12px; border-radius: 20px;
+            background: #e0e7ff; color: #4338ca;
+            font-size: .78rem; font-weight: 700;
+        }
+        .dark .mfu-count-badge { background: #312e81; color: #a5b4fc; }
+        .mfu-clear-all {
+            font-size: .78rem; color: #ef4444; background: none; border: none;
+            cursor: pointer; display: flex; align-items: center; gap: 5px;
+            padding: 4px 10px; border-radius: 8px;
+            transition: background .2s;
+        }
+        .mfu-clear-all:hover { background: #fee2e2; }
+        .dark .mfu-clear-all:hover { background: #450a0a; }
+
+        /* Thumbnail grid */
+        .mfu-previews {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .mfu-thumb {
+            position: relative; border-radius: 10px; overflow: hidden;
+            aspect-ratio: 1; background: #f1f5f9;
+            box-shadow: 0 2px 8px rgba(0,0,0,.08);
+            animation: mfu-pop .25s cubic-bezier(.34,1.56,.64,1) both;
+        }
+        @keyframes mfu-pop { from { opacity: 0; transform: scale(.7); } to { opacity: 1; transform: scale(1); } }
+        .mfu-thumb img {
+            width: 100%; height: 100%; object-fit: cover; display: block;
+        }
+        .mfu-thumb-remove {
+            position: absolute; top: 4px; left: 4px;
+            width: 22px; height: 22px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; background: rgba(15,23,42,.65);
+            color: #fff; border: none; cursor: pointer; font-size: .65rem;
+            transition: background .2s, transform .2s;
+        }
+        .mfu-thumb-remove:hover { background: #ef4444; transform: scale(1.15); }
+        .mfu-thumb-name {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            padding: 3px 5px;
+            background: rgba(15,23,42,.55);
+            font-size: .6rem; color: #e2e8f0;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            text-align: center;
+        }
+
+        /* Error */
+        .mfu-error {
+            display: flex; align-items: center; gap: 8px;
+            margin-top: 8px; padding: 8px 12px;
+            background: #fef2f2; border: 1px solid #fca5a5; border-radius: 10px;
+            color: #dc2626; font-size: .8rem;
+        }
+        .dark .mfu-error { background: rgba(239,68,68,.1); border-color: #7f1d1d; color: #f87171; }
+        </style>
 
         {% endif %}
     </div>
@@ -124,6 +235,162 @@
         <p class="text-xs text-gray-400 mt-1">الحد الأقصى 1000 حرف</p>
     </div>
 </div>
+
+<!-- Multi-File Upload Widget JS -->
+<script>
+(function () {
+    var MAX_FILES = 5;
+    var MAX_MB    = 5;
+    var MAX_BYTES = MAX_MB * 1024 * 1024;
+    var ALLOWED   = ['image/jpeg', 'image/png', 'image/webp'];
+
+    function initMFU(widget) {
+        var qId      = widget.dataset.questionId;
+        var input    = widget.querySelector('.mfu-hidden-input');
+        var dropzone = widget.querySelector('.mfu-dropzone');
+        var previews = document.getElementById('mfu-previews-' + qId);
+        var countRow = document.getElementById('mfu-count-' + qId);
+        var countNum = countRow.querySelector('.mfu-count-num');
+        var errorEl  = document.getElementById('mfu-error-' + qId);
+        var errMsg   = errorEl.querySelector('.mfu-error-msg');
+        var clearBtn = countRow.querySelector('.mfu-clear-all');
+
+        var files = []; // array of File objects
+
+        function showError(msg) {
+            errMsg.textContent = msg;
+            errorEl.classList.remove('hidden');
+            setTimeout(function () { errorEl.classList.add('hidden'); }, 4000);
+        }
+
+        function syncInput() {
+            var dt = new DataTransfer();
+            files.forEach(function (f) { dt.items.add(f); });
+            input.files = dt.files;
+        }
+
+        function renderPreviews() {
+            previews.innerHTML = '';
+            files.forEach(function (file, idx) {
+                var thumb = document.createElement('div');
+                thumb.className = 'mfu-thumb';
+                var img = document.createElement('img');
+                img.alt = file.name;
+                var reader = new FileReader();
+                reader.onload = function (e) { img.src = e.target.result; };
+                reader.readAsDataURL(file);
+                var nameEl = document.createElement('div');
+                nameEl.className = 'mfu-thumb-name';
+                nameEl.textContent = file.name;
+                var removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'mfu-thumb-remove';
+                removeBtn.setAttribute('aria-label', 'حذف الصورة');
+                removeBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+                removeBtn.addEventListener('click', function () {
+                    files.splice(idx, 1);
+                    syncInput();
+                    refresh();
+                });
+                thumb.appendChild(img);
+                thumb.appendChild(nameEl);
+                thumb.appendChild(removeBtn);
+                previews.appendChild(thumb);
+            });
+            countNum.textContent = files.length;
+            if (files.length > 0) {
+                countRow.classList.remove('hidden');
+            } else {
+                countRow.classList.add('hidden');
+            }
+        }
+
+        function refresh() { renderPreviews(); syncInput(); }
+
+        function addFiles(newFiles) {
+            var added = 0;
+            Array.from(newFiles).forEach(function (file) {
+                if (files.length >= MAX_FILES) {
+                    showError('الحد الأقصى ' + MAX_FILES + ' صور فقط.');
+                    return;
+                }
+                if (ALLOWED.indexOf(file.type) === -1) {
+                    showError('الصيغة غير مدعومة: ' + file.name + '. مسموح فقط JPG, PNG, WEBP.');
+                    return;
+                }
+                if (file.size > MAX_BYTES) {
+                    showError(file.name + ' أكبر من الحد المسموح (' + MAX_MB + ' MB).');
+                    return;
+                }
+                files.push(file);
+                added++;
+            });
+            if (added) refresh();
+        }
+
+        // Click to open file picker (the hidden input covers the drop zone)
+        input.addEventListener('change', function () {
+            addFiles(input.files);
+            input.value = ''; // reset so same file can be re-added after removal
+        });
+
+        // Keyboard accessibility
+        dropzone.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); }
+        });
+
+        // Drag & drop
+        dropzone.addEventListener('dragover', function (e) {
+            e.preventDefault(); dropzone.classList.add('mfu-drag-over');
+        });
+        dropzone.addEventListener('dragleave', function () {
+            dropzone.classList.remove('mfu-drag-over');
+        });
+        dropzone.addEventListener('drop', function (e) {
+            e.preventDefault();
+            dropzone.classList.remove('mfu-drag-over');
+            if (e.dataTransfer && e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+        });
+
+        // Clear all
+        clearBtn.addEventListener('click', function () {
+            files = [];
+            syncInput();
+            refresh();
+        });
+
+        // Required validation on form submit
+        var form = widget.closest('form');
+        if (form && input.dataset.required === 'true') {
+            form.addEventListener('submit', function (e) {
+                if (files.length === 0) {
+                    e.preventDefault();
+                    showError('يرجى رفع صورة واحدة على الأقل.');
+                    dropzone.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, { capture: true });
+        }
+    }
+
+    function initAll() {
+        document.querySelectorAll('.multi-file-upload').forEach(function (w) {
+            if (!w.dataset.mfuInit) {
+                w.dataset.mfuInit = '1';
+                initMFU(w);
+            }
+        });
+    }
+
+    // Run now and after HTMX / any dynamic injection
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAll);
+    } else {
+        initAll();
+    }
+    document.addEventListener('htmx:afterSwap', initAll);
+    document.addEventListener('htmx:load',      initAll);
+})();
+</script>
 
 <!-- Conditional Rules (client-side) -->
 {% if rules_json and rules_json != "[]" %}
