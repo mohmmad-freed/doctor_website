@@ -166,6 +166,16 @@
         class="sticky top-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-gray-200 dark:border-slate-700">
         <div class="container mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
+                <!-- Mobile Menu Button -->
+                <div class="flex items-center md:hidden pr-2">
+                    <button type="button" id="mobile-menu-btn"
+                        class="text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 p-2 rounded-lg transition-colors"
+                        aria-expanded="false">
+                        <span class="sr-only">Open main menu</span>
+                        <i class="fa-solid fa-bars text-xl"></i>
+                    </button>
+                </div>
+
                 <!-- Logo -->
                 <div class="flex-shrink-0 flex items-center gap-2">
                     <div
@@ -174,7 +184,7 @@
                     </div>
                     <span class="font-bold text-xl text-gray-900 dark:text-white tracking-tight">منصتي الطبية</span>
                     <span
-                        class="text-xs bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 px-2 py-0.5 rounded-full mr-2">بوابة
+                        class="text-xs bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 px-2 py-0.5 rounded-full mr-2 hidden sm:inline-block">بوابة
                         المرضى</span>
                 </div>
 
@@ -231,6 +241,20 @@
                         </button>
                     </form>
                 </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu (Hidden by default) -->
+        <div id="mobile-menu" class="hidden md:hidden border-t border-gray-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md">
+            <div class="px-4 pt-2 pb-4 space-y-1">
+                <a href="{% url 'patients:dashboard' %}"
+                    class="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-primary-50 hover:text-primary-600 dark:hover:bg-slate-800 dark:hover:text-primary-400 transition-colors">الرئيسية</a>
+                <a href="{% url 'patients:browse_doctors' %}"
+                    class="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-primary-50 hover:text-primary-600 dark:hover:bg-slate-800 dark:hover:text-primary-400 transition-colors">الأطباء</a>
+                <a href="{% url 'patients:my_appointments' %}"
+                    class="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-primary-50 hover:text-primary-600 dark:hover:bg-slate-800 dark:hover:text-primary-400 transition-colors">مواعيدي</a>
+                <a href="{% url 'patients:clinics_list' %}"
+                    class="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-primary-50 hover:text-primary-600 dark:hover:bg-slate-800 dark:hover:text-primary-400 transition-colors">العيادات</a>
             </div>
         </div>
     </nav>
@@ -339,6 +363,32 @@
                 skel.classList.remove('active');
             });
         })();
+    </script>
+
+    <script>
+        // Mobile Menu Toggle Logic
+        document.addEventListener('DOMContentLoaded', () => {
+            const btn = document.getElementById('mobile-menu-btn');
+            const menu = document.getElementById('mobile-menu');
+            const icon = btn.querySelector('i');
+
+            if (btn && menu) {
+                btn.addEventListener('click', () => {
+                    const isHidden = menu.classList.contains('hidden');
+                    if (isHidden) {
+                        menu.classList.remove('hidden');
+                        icon.classList.remove('fa-bars');
+                        icon.classList.add('fa-xmark');
+                        btn.setAttribute('aria-expanded', 'true');
+                    } else {
+                        menu.classList.add('hidden');
+                        icon.classList.remove('fa-xmark');
+                        icon.classList.add('fa-bars');
+                        btn.setAttribute('aria-expanded', 'false');
+                    }
+                });
+            }
+        });
     </script>
 
     {% block scripts %}{% endblock %}
