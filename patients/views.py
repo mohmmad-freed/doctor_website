@@ -206,79 +206,7 @@ def browse_doctors(request):
 
 @login_required
 def clinics_list(request):
-    """
-    Patient-facing view: Browse all active clinics with search and city filter.
-
-    Supports:
-        - Search by clinic name, address, or specialization (?q=...)
-        - Filter by city (?city_id=...)
-        - Both combined
-
-    Security:
-        - @login_required: unauthenticated users redirected to login.
-        - PATIENT role enforced: non-patients receive HTTP 403.
-    """
-    role = getattr(request.user, "role", None)
-    if role != "PATIENT":
-        return HttpResponseForbidden("Unauthorized: This page is for patients only.")
-
-    from accounts.models import City
-
-    search_query = request.GET.get("q", "").strip()
-    selected_city_id = request.GET.get("city_id", "").strip()
-    selected_city = None
-
-    if selected_city_id:
-        try:
-            selected_city = City.objects.get(id=selected_city_id)
-        except City.DoesNotExist:
-            selected_city_id = ""
-
-    # Base queryset: active clinics with related objects for display
-    clinics_qs = Clinic.objects.filter(is_active=True).select_related(
-        "main_doctor", "city"
-    )
-
-    # Apply search filter
-    if search_query:
-        clinics_qs = clinics_qs.filter(
-            Q(name__icontains=search_query)
-            | Q(address__icontains=search_query)
-            | Q(specialization__icontains=search_query)
-        )
-
-    # Apply city filter
-    if selected_city:
-        clinics_qs = clinics_qs.filter(city=selected_city)
-
-    clinics_qs = clinics_qs.order_by("-created_at")
-
-    # Annotate each clinic with doctor count
-    clinics_data = []
-    for clinic in clinics_qs:
-        # Count main doctor + active staff doctors at this clinic
-        staff_doctor_count = ClinicStaff.objects.filter(
-            clinic=clinic, role="DOCTOR", is_active=True
-        ).count()
-        doctor_count = staff_doctor_count + (1 if clinic.main_doctor else 0)
-
-        clinics_data.append(
-            {
-                "clinic": clinic,
-                "doctor_count": doctor_count,
-            }
-        )
-
-    all_cities = City.objects.order_by("name")
-
-    context = {
-        "clinics_data": clinics_data,
-        "all_cities": all_cities,
-        "selected_city": selected_city,
-        "search_query": search_query,
-        "total_clinics": len(clinics_data),
-    }
-    return render(request, "patients/clinics_list.html", context)
+    return HttpResponse("Available Clinics - Coming Soon!")
 
 
 @login_required
@@ -476,18 +404,32 @@ def edit_appointment_view(request, appointment_id):
         ).values_list("question_id", "answer_text")
         existing_answers = {str(qid): text for qid, text in answers_qs}
 
-    # Fetch existing attachments grouped by question
-    existing_attachments = {}
+    # Fetch existing attachments per question
+    existing_attachments = {}  # {q_id_str: [att, ...]}
     if questions:
-        atts = AppointmentAttachment.objects.filter(appointment=appointment)
+        atts = AppointmentAttachment.objects.filter(
+            appointment=appointment
+        ).order_by("file_group_date", "uploaded_at")
         for att in atts:
             q_id = str(att.question_id) if att.question_id else "none"
             existing_attachments.setdefault(q_id, []).append(att)
 
-    # Annotate each question with its existing answer
+    # Annotate each question with its existing answer + files
     for q in questions:
         q.existing_answer = existing_answers.get(str(q.id), "")
-        q.existing_files = existing_attachments.get(str(q.id), [])
+        q_atts = existing_attachments.get(str(q.id), [])
+
+        if q.field_type == "DATED_FILES":
+            # Group by file_group_date
+            from itertools import groupby
+            groups = []
+            for date_key, group_iter in groupby(q_atts, key=lambda a: a.file_group_date):
+                groups.append((date_key, list(group_iter)))
+            q.existing_file_groups = groups
+            q.existing_files = []
+        else:
+            q.existing_files = q_atts
+            q.existing_file_groups = []
 
     rules_json = ""
     if template:
@@ -631,7 +573,9 @@ def load_edit_intake_form(request, appointment_id):
 
     # Fetch existing attachments
     existing_attachments = {}
-    atts = AppointmentAttachment.objects.filter(appointment=appointment)
+    atts = AppointmentAttachment.objects.filter(
+        appointment=appointment
+    ).order_by("file_group_date", "uploaded_at")
     for att in atts:
         q_id = str(att.question_id) if att.question_id else "none"
         existing_attachments.setdefault(q_id, []).append(att)
@@ -639,7 +583,18 @@ def load_edit_intake_form(request, appointment_id):
     # Annotate questions
     for q in questions:
         q.existing_answer = existing_answers.get(str(q.id), "")
-        q.existing_files = existing_attachments.get(str(q.id), [])
+        q_atts = existing_attachments.get(str(q.id), [])
+
+        if q.field_type == "DATED_FILES":
+            from itertools import groupby
+            groups = []
+            for date_key, group_iter in groupby(q_atts, key=lambda a: a.file_group_date):
+                groups.append((date_key, list(group_iter)))
+            q.existing_file_groups = groups
+            q.existing_files = []
+        else:
+            q.existing_files = q_atts
+            q.existing_file_groups = []
 
     rules_json = json.dumps(get_rules_for_template(template), ensure_ascii=False)
 

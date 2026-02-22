@@ -115,7 +115,7 @@
         </div>
         {% endif %}
 
-        <!-- Attachments -->
+        <!-- Attachments (regular) -->
         {% if attachments %}
         <div class="pt-3 border-t border-gray-200 dark:border-slate-600">
             <p class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
@@ -129,6 +129,38 @@
                     <div class="flex-1 min-w-0">
                         <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ att.original_name }}</p>
                         <p class="text-xs text-gray-400">{{ att.file_size|filesizeformat }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Dated File Groups -->
+        {% if dated_file_groups %}
+        <div class="pt-3 border-t border-gray-200 dark:border-slate-600">
+            <p class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                <i class="fa-solid fa-calendar-days text-primary-500"></i>
+                ملفات مؤرخة
+            </p>
+            <div class="space-y-4">
+                {% for group_date, group_atts in dated_file_groups %}
+                <div class="rounded-lg border border-gray-200 dark:border-slate-600 overflow-hidden">
+                    <div class="flex items-center gap-2 bg-primary-50 dark:bg-primary-900/20 px-4 py-2">
+                        <i class="fa-regular fa-calendar text-primary-500 text-sm"></i>
+                        <span class="text-sm font-semibold text-primary-700 dark:text-primary-300">{{ group_date|date:"Y/m/d" }}</span>
+                        <span class="text-xs text-gray-400 mr-auto">({{ group_atts|length }} ملف)</span>
+                    </div>
+                    <div class="divide-y divide-gray-100 dark:divide-slate-700">
+                        {% for att in group_atts %}
+                        <div class="flex items-center gap-3 px-4 py-2.5">
+                            <i class="fa-solid fa-file text-gray-400 text-sm"></i>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ att.original_name }}</p>
+                                <p class="text-xs text-gray-400">{{ att.file_size|filesizeformat }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
                 </div>
                 {% endfor %}

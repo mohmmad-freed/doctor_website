@@ -195,7 +195,7 @@ class DoctorIntakeFormTemplate(models.Model):
 class DoctorIntakeQuestion(models.Model):
     """
     Individual question within an intake form template.
-    Supports: TEXT, TEXTAREA, SELECT, MULTISELECT, CHECKBOX, DATE, FILE.
+    Supports: TEXT, TEXTAREA, SELECT, MULTISELECT, CHECKBOX, DATE, FILE, DATED_FILES.
     """
 
     class FieldType(models.TextChoices):
@@ -206,6 +206,7 @@ class DoctorIntakeQuestion(models.Model):
         CHECKBOX = "CHECKBOX", "مربع اختيار (نعم/لا)"
         DATE = "DATE", "تاريخ"
         FILE = "FILE", "ملف مرفق"
+        DATED_FILES = "DATED_FILES", "ملفات مؤرخة"
 
     template = models.ForeignKey(
         DoctorIntakeFormTemplate,

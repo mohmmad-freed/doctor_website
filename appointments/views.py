@@ -159,13 +159,26 @@ def collect_and_validate_intake(post_data, files, questions, rules):
     Collect answers from POST, validate required fields (respecting conditional rules),
     and validate file uploads (type + size).
 
+    Two file-related types:
+      FILE         → simple multi-file upload (name="intake_{q_id}")
+      DATED_FILES  → date-grouped uploads, 7 groups × 5 files each
+                     (name="intake_dfile_{q_id}_g{i}", date="intake_dfile_date_{q_id}_g{i}")
+
     Returns: (answers_dict, file_data, errors)
       - answers_dict: {str(question_id): answer_text}
-      - file_data: {str(question_id): [list of uploaded files]}  ← list, not single file
+      - file_data:
+          For FILE:        {q_id_str: [UploadedFile, ...]}
+          For DATED_FILES: {q_id_str: [(date_str, [UploadedFile, ...]), ...]}
       - errors: list of error strings
     """
+    from appointments.models import AppointmentAttachment
+
+    MAX_GROUPS = AppointmentAttachment.MAX_FILE_GROUPS
+    MAX_PER_GROUP = AppointmentAttachment.MAX_FILES_PER_GROUP
+    MAX_TOTAL_BYTES = AppointmentAttachment.MAX_TOTAL_UPLOAD_MB * 1024 * 1024
+
     answers = {}
-    file_data = {}  # {str(q.id): [UploadedFile, ...]}
+    file_data = {}
 
     for q in questions:
         key = f"intake_{q.id}"
@@ -173,13 +186,33 @@ def collect_and_validate_intake(post_data, files, questions, rules):
             value = post_data.getlist(key)
             if value:
                 answers[str(q.id)] = "، ".join(value)
+
         elif q.field_type == DoctorIntakeQuestion.FieldType.FILE:
-            # getlist returns ALL files for this field (multi-file input)
+            # Simple multi-file upload
             uploaded_list = files.getlist(key)
-            # Filter out empty dummy entries (browser sometimes sends empty file)
             uploaded_list = [f for f in uploaded_list if f and f.size > 0]
             if uploaded_list:
                 file_data[str(q.id)] = uploaded_list
+
+        elif q.field_type == DoctorIntakeQuestion.FieldType.DATED_FILES:
+            # Date-grouped files: up to 7 groups × 5 files
+            group_count_str = post_data.get(f"intake_dfile_count_{q.id}", "0")
+            try:
+                group_count = min(int(group_count_str), MAX_GROUPS)
+            except (ValueError, TypeError):
+                group_count = 0
+
+            groups = []
+            for gi in range(group_count):
+                group_date = post_data.get(f"intake_dfile_date_{q.id}_g{gi}", "").strip()
+                group_files = files.getlist(f"intake_dfile_{q.id}_g{gi}")
+                group_files = [f for f in group_files if f and f.size > 0]
+                if group_files:
+                    groups.append((group_date, group_files[:MAX_PER_GROUP]))
+
+            if groups:
+                file_data[str(q.id)] = groups
+
         elif q.field_type == DoctorIntakeQuestion.FieldType.CHECKBOX:
             value = post_data.get(key, "")
             answers[str(q.id)] = value
@@ -203,14 +236,11 @@ def collect_and_validate_intake(post_data, files, questions, rules):
         if q.field_type == DoctorIntakeQuestion.FieldType.FILE:
             uploaded_list = file_data.get(str(q.id), [])
 
-            # Required check
             if q.is_required and not uploaded_list:
                 errors.append(f'الحقل "{q.display_text}" مطلوب.')
                 continue
 
-            # Validate each file in the list
             for uploaded in uploaded_list:
-                # ── File size validation ──
                 if q.max_file_size_mb:
                     max_bytes = q.max_file_size_mb * 1024 * 1024
                     if uploaded.size > max_bytes:
@@ -219,12 +249,64 @@ def collect_and_validate_intake(post_data, files, questions, rules):
                             f'({q.max_file_size_mb} ميغابايت). '
                             f'حجم الملف: {uploaded.size / (1024 * 1024):.1f} ميغابايت.'
                         )
-
-                # ── File extension validation ──
                 if q.allowed_extensions:
-                    file_ext = ""
-                    if "." in uploaded.name:
-                        file_ext = uploaded.name.rsplit(".", 1)[-1].lower()
+                    file_ext = uploaded.name.rsplit(".", 1)[-1].lower() if "." in uploaded.name else ""
+                    allowed = [ext.lower().lstrip(".") for ext in q.allowed_extensions]
+                    if file_ext not in allowed:
+                        errors.append(
+                            f'صيغة الملف "{uploaded.name}" في "{q.display_text}" غير مسموحة. '
+                            f'الصيغ المسموحة: {", ".join(allowed)}.'
+                        )
+
+        elif q.field_type == DoctorIntakeQuestion.FieldType.DATED_FILES:
+            groups = file_data.get(str(q.id), [])
+            all_files = [f for _, gf in groups for f in gf]
+
+            if q.is_required and not all_files:
+                errors.append(f'الحقل "{q.display_text}" مطلوب.')
+                continue
+
+            if len(groups) > MAX_GROUPS:
+                errors.append(
+                    f'الحد الأقصى لمجموعات الملفات في "{q.display_text}" هو {MAX_GROUPS}.'
+                )
+
+            for gi, (group_date, group_files) in enumerate(groups):
+                if not group_date:
+                    errors.append(
+                        f'يرجى تحديد تاريخ للمجموعة {gi + 1} في "{q.display_text}".'
+                    )
+                else:
+                    # Future date check
+                    try:
+                        from datetime import datetime as _dt
+                        parsed = _dt.strptime(group_date, "%Y-%m-%d").date()
+                        if parsed > date.today():
+                            errors.append(
+                                f'تاريخ المجموعة {gi + 1} في "{q.display_text}" '
+                                f'لا يمكن أن يكون في المستقبل.'
+                            )
+                    except ValueError:
+                        errors.append(
+                            f'تاريخ المجموعة {gi + 1} في "{q.display_text}" غير صالح.'
+                        )
+                if len(group_files) > MAX_PER_GROUP:
+                    errors.append(
+                        f'الحد الأقصى للملفات في كل مجموعة هو {MAX_PER_GROUP} '
+                        f'في "{q.display_text}".'
+                    )
+
+            for uploaded in all_files:
+                if q.max_file_size_mb:
+                    max_bytes = q.max_file_size_mb * 1024 * 1024
+                    if uploaded.size > max_bytes:
+                        errors.append(
+                            f'الملف "{uploaded.name}" في "{q.display_text}" يتجاوز الحد الأقصى '
+                            f'({q.max_file_size_mb} ميغابايت). '
+                            f'حجم الملف: {uploaded.size / (1024 * 1024):.1f} ميغابايت.'
+                        )
+                if q.allowed_extensions:
+                    file_ext = uploaded.name.rsplit(".", 1)[-1].lower() if "." in uploaded.name else ""
                     allowed = [ext.lower().lstrip(".") for ext in q.allowed_extensions]
                     if file_ext not in allowed:
                         errors.append(
@@ -235,6 +317,25 @@ def collect_and_validate_intake(post_data, files, questions, rules):
             if q.is_required and not answers.get(str(q.id)):
                 errors.append(f'الحقل "{q.display_text}" مطلوب.')
 
+    # ── Global total file size check (FILE + DATED_FILES combined) ──
+    total_bytes = 0
+    for q_id_str, data in file_data.items():
+        q = next((q for q in questions if str(q.id) == q_id_str), None)
+        if not q:
+            continue
+        if q.field_type == DoctorIntakeQuestion.FieldType.DATED_FILES:
+            for _, gf in data:
+                total_bytes += sum(f.size for f in gf)
+        else:
+            total_bytes += sum(f.size for f in data)
+
+    if total_bytes > MAX_TOTAL_BYTES:
+        total_mb = total_bytes / (1024 * 1024)
+        errors.append(
+            f'الحجم الإجمالي لجميع الملفات المرفقة ({total_mb:.1f} ميغابايت) '
+            f'يتجاوز الحد الأقصى المسموح ({AppointmentAttachment.MAX_TOTAL_UPLOAD_MB} ميغابايت).'
+        )
+
     return answers, file_data, errors
 
 
@@ -243,9 +344,12 @@ def save_intake_answers(appointment, questions, answers_dict, file_data, uploade
     Create AppointmentAnswer records for each answered question,
     and AppointmentAttachment records for file uploads.
 
-    file_data is now: {str(question_id): [UploadedFile, ...]}
-    One AppointmentAttachment row is created per file.
+    file_data format differs by type:
+      FILE:        {q_id_str: [UploadedFile, ...]}
+      DATED_FILES: {q_id_str: [(date_str, [UploadedFile, ...]), ...]}
     """
+    from datetime import datetime as dt_cls
+
     answer_objects = []
     for q in questions:
         text = answers_dict.get(str(q.id), "")
@@ -260,22 +364,44 @@ def save_intake_answers(appointment, questions, answers_dict, file_data, uploade
     if answer_objects:
         AppointmentAnswer.objects.bulk_create(answer_objects)
 
-    # Save file attachments — one row per file per question
-    for q_id_str, uploaded_files in file_data.items():
+    # Save file attachments
+    for q_id_str, data in file_data.items():
         q = next((q for q in questions if str(q.id) == q_id_str), None)
         if not q:
             continue
-        # uploaded_files is a list (could be 1-5 files)
-        for uploaded_file in uploaded_files:
-            AppointmentAttachment.objects.create(
-                appointment=appointment,
-                question=q,
-                file=uploaded_file,
-                original_name=uploaded_file.name,
-                file_size=uploaded_file.size,
-                mime_type=getattr(uploaded_file, "content_type", ""),
-                uploaded_by=uploaded_by,
-            )
+
+        if q.field_type == DoctorIntakeQuestion.FieldType.DATED_FILES:
+            # data = [(date_str, [files]), ...]
+            for group_date_str, group_files in data:
+                group_date = None
+                if group_date_str:
+                    try:
+                        group_date = dt_cls.strptime(group_date_str, "%Y-%m-%d").date()
+                    except ValueError:
+                        pass
+                for uploaded_file in group_files:
+                    AppointmentAttachment.objects.create(
+                        appointment=appointment,
+                        question=q,
+                        file=uploaded_file,
+                        original_name=uploaded_file.name,
+                        file_size=uploaded_file.size,
+                        mime_type=getattr(uploaded_file, "content_type", ""),
+                        file_group_date=group_date,
+                        uploaded_by=uploaded_by,
+                    )
+        else:
+            # FILE: data = [UploadedFile, ...]
+            for uploaded_file in data:
+                AppointmentAttachment.objects.create(
+                    appointment=appointment,
+                    question=q,
+                    file=uploaded_file,
+                    original_name=uploaded_file.name,
+                    file_size=uploaded_file.size,
+                    mime_type=getattr(uploaded_file, "content_type", ""),
+                    uploaded_by=uploaded_by,
+                )
 
 
 # ─── Main Views ───────────────────────────────────────────────────────────
@@ -547,13 +673,26 @@ def booking_confirmation(request, appointment_id):
                 "value": value,
             })
 
-    # Get attachments
-    attachments = appointment.attachments.all()
+    # Get attachments — separate regular from dated, order dated by date
+    all_attachments = appointment.attachments.select_related("question").order_by(
+        "file_group_date", "uploaded_at"
+    )
+    regular_attachments = []
+    dated_groups_dict = {}  # {date: [att, ...]}
+    for att in all_attachments:
+        if att.file_group_date:
+            dated_groups_dict.setdefault(att.file_group_date, []).append(att)
+        else:
+            regular_attachments.append(att)
+
+    # Sort dated groups by date (ascending)
+    dated_file_groups = sorted(dated_groups_dict.items(), key=lambda x: x[0])
 
     context = {
         "appointment": appointment,
         "appointment_date_ar": format_date_ar(appointment.appointment_date),
         "intake_display": intake_display,
-        "attachments": attachments,
+        "attachments": regular_attachments,
+        "dated_file_groups": dated_file_groups,
     }
     return render(request, "appointments/booking_confirmation.html", context)

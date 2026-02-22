@@ -100,7 +100,7 @@
                 {% endfor %}
                 <p class="text-xs text-amber-500 mt-1">
                     <i class="fa-solid fa-info-circle ml-1"></i>
-                    رفع ملف جديد سيستبدل الملف الحالي
+                    رفع ملفات جديدة سيستبدل الملفات الحالية
                 </p>
             </div>
             {% endif %}
@@ -116,12 +116,30 @@
                     {% if q.max_file_size_mb %} · الحد: {{ q.max_file_size_mb }} MB{% endif %}
                 </span>
                 {% endif %}
-                <input type="file" name="intake_file_{{ q.id }}" class="hidden"
+                <input type="file" name="intake_{{ q.id }}" class="hidden"
                        {% if q.is_required and not q.existing_files %}data-required="true"{% endif %}
                        multiple>
             </label>
             <div class="file-feedback mt-1"></div>
         </div>
+
+        {% elif q.field_type == "DATED_FILES" %}
+        <div class="dated-files-widget" data-question-id="{{ q.id }}" data-max-groups="7" data-max-per-group="5"
+             {% if q.max_file_size_mb %}data-max-size-mb="{{ q.max_file_size_mb }}"{% endif %}
+             {% if q.allowed_extensions %}data-allowed-ext="{{ q.allowed_extensions|join:"," }}"{% endif %}
+             {% if q.existing_file_groups %}data-prefill='[{% for date_val, atts in q.existing_file_groups %}{"date":"{{ date_val|date:"Y-m-d" }}","files":[{% for a in atts %}{"name":"{{ a.original_name }}","size":{{ a.file_size }}}{% if not forloop.last %},{% endif %}{% endfor %}]}{% if not forloop.last %},{% endif %}{% endfor %}]'{% endif %}>
+            <input type="hidden" name="intake_dfile_count_{{ q.id }}" value="0" class="dfw-count">
+            <div class="dfw-groups space-y-3"></div>
+            <button type="button" class="dfw-add-btn mt-3 w-full flex items-center justify-center gap-2 py-2.5 px-4 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg text-sm text-gray-500 dark:text-gray-400 hover:border-primary-400 hover:text-primary-500 transition-colors">
+                <i class="fa-solid fa-plus"></i>
+                إضافة مجموعة ملفات بتاريخ
+            </button>
+            <p class="text-xs text-gray-400 mt-1">
+                الحد الأقصى: 7 مجموعات، كل مجموعة حتى 5 ملفات
+                {% if q.max_file_size_mb %} · {{ q.max_file_size_mb }} MB لكل ملف{% endif %}
+            </p>
+        </div>
+
         {% endif %}
     </div>
     {% endfor %}
@@ -182,6 +200,147 @@
     }
     document.addEventListener('htmx:afterSwap', initAll);
     document.addEventListener('htmx:load', initAll);
+})();
+</script>
+
+<!-- Dated Files Widget JS (with pre-fill support) -->
+<script>
+(function() {
+    function initDFW(widget) {
+        var qId = widget.dataset.questionId;
+        var maxGroups = parseInt(widget.dataset.maxGroups) || 7;
+        var maxPerGroup = parseInt(widget.dataset.maxPerGroup) || 5;
+        var maxMb = widget.dataset.maxSizeMb ? parseFloat(widget.dataset.maxSizeMb) : null;
+        var allowedRaw = widget.dataset.allowedExt || '';
+        var allowed = allowedRaw ? allowedRaw.split(',').map(function(e){return e.trim().toLowerCase().replace(/^\./,'');}) : [];
+        var container = widget.querySelector('.dfw-groups');
+        var addBtn = widget.querySelector('.dfw-add-btn');
+        var countInput = widget.querySelector('.dfw-count');
+        var groupCount = 0;
+        var todayStr = new Date().toISOString().split('T')[0];
+
+        function updateCount() { countInput.value = groupCount; }
+
+        function addGroup(prefillDate, prefillFiles) {
+            if (groupCount >= maxGroups) return;
+            var gi = groupCount;
+            groupCount++;
+            updateCount();
+
+            var div = document.createElement('div');
+            div.className = 'dfw-group rounded-lg border border-gray-200 dark:border-slate-600 p-3 space-y-2 bg-white dark:bg-slate-700/30';
+            div.dataset.groupIndex = gi;
+
+            var acceptAttr = allowed.length ? ' accept="' + allowed.map(function(e){return '.'+e;}).join(',') + '"' : '';
+            var dateVal = prefillDate || '';
+
+            // Existing files info
+            var existingHtml = '';
+            if (prefillFiles && prefillFiles.length) {
+                existingHtml = '<div class="space-y-0.5 mb-1">';
+                prefillFiles.forEach(function(f) {
+                    var sizeMB = (f.size / 1024 / 1024).toFixed(1);
+                    existingHtml += '<p class="text-xs text-green-600"><i class="fa-solid fa-file-check ml-1"></i>' + f.name + ' (' + sizeMB + ' MB)</p>';
+                });
+                existingHtml += '<p class="text-xs text-amber-500"><i class="fa-solid fa-info-circle ml-1"></i>رفع ملفات جديدة سيستبدل هذه الملفات</p></div>';
+            }
+
+            div.innerHTML =
+                '<div class="flex items-center justify-between gap-2">' +
+                    '<div class="flex items-center gap-2 flex-1">' +
+                        '<i class="fa-solid fa-calendar-day text-primary-400 text-sm"></i>' +
+                        '<input type="date" name="intake_dfile_date_' + qId + '_g' + gi + '" value="' + dateVal + '" required max="' + todayStr + '" ' +
+                            'class="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 text-sm">' +
+                    '</div>' +
+                    '<button type="button" class="dfw-remove-btn text-red-400 hover:text-red-600 transition-colors p-1" title="حذف المجموعة">' +
+                        '<i class="fa-solid fa-trash-can text-sm"></i>' +
+                    '</button>' +
+                '</div>' +
+                existingHtml +
+                '<label class="flex flex-col items-center justify-center w-full py-3 border-2 border-dashed border-gray-200 dark:border-slate-600 rounded-lg cursor-pointer hover:border-primary-400 transition-colors bg-gray-50 dark:bg-slate-800/30">' +
+                    '<i class="fa-solid fa-cloud-arrow-up text-gray-300 dark:text-slate-500 text-lg mb-1"></i>' +
+                    '<span class="text-xs text-gray-400">اختر الملفات (حتى ' + maxPerGroup + ')</span>' +
+                    '<input type="file" name="intake_dfile_' + qId + '_g' + gi + '" class="hidden" multiple' + acceptAttr + '>' +
+                '</label>' +
+                '<div class="dfw-file-feedback text-xs space-y-0.5"></div>';
+
+            container.appendChild(div);
+
+            div.querySelector('.dfw-remove-btn').addEventListener('click', function() {
+                div.remove();
+                rebuildIndices();
+            });
+
+            var fileInput = div.querySelector('input[type="file"]');
+            var feedback = div.querySelector('.dfw-file-feedback');
+            fileInput.addEventListener('change', function() {
+                feedback.innerHTML = '';
+                var valid = true;
+                var fileArr = Array.from(fileInput.files);
+                if (fileArr.length > maxPerGroup) {
+                    feedback.innerHTML = '<p class="text-red-500"><i class="fa-solid fa-xmark ml-1"></i>الحد الأقصى ' + maxPerGroup + ' ملفات</p>';
+                    fileInput.value = '';
+                    return;
+                }
+                fileArr.forEach(function(f) {
+                    var ext = f.name.split('.').pop().toLowerCase();
+                    var sizeMB = (f.size / 1024 / 1024).toFixed(1);
+                    if (allowed.length && allowed.indexOf(ext) < 0) {
+                        feedback.innerHTML += '<p class="text-red-500"><i class="fa-solid fa-xmark ml-1"></i>صيغة غير مسموحة: .' + ext + '</p>';
+                        valid = false;
+                    } else if (maxMb && f.size > maxMb * 1024 * 1024) {
+                        feedback.innerHTML += '<p class="text-red-500"><i class="fa-solid fa-xmark ml-1"></i>' + f.name + ' يتجاوز ' + maxMb + ' MB</p>';
+                        valid = false;
+                    } else {
+                        feedback.innerHTML += '<p class="text-green-600"><i class="fa-solid fa-check ml-1"></i>' + f.name + ' (' + sizeMB + ' MB)</p>';
+                    }
+                });
+                if (!valid) fileInput.value = '';
+            });
+
+            if (groupCount >= maxGroups) addBtn.style.display = 'none';
+        }
+
+        function rebuildIndices() {
+            var groups = container.querySelectorAll('.dfw-group');
+            groupCount = groups.length;
+            updateCount();
+            groups.forEach(function(g, i) {
+                g.dataset.groupIndex = i;
+                var dateInput = g.querySelector('input[type="date"]');
+                if (dateInput) dateInput.name = 'intake_dfile_date_' + qId + '_g' + i;
+                var fileInput = g.querySelector('input[type="file"]');
+                if (fileInput) fileInput.name = 'intake_dfile_' + qId + '_g' + i;
+            });
+            addBtn.style.display = groupCount >= maxGroups ? 'none' : '';
+        }
+
+        addBtn.addEventListener('click', function() { addGroup('', null); });
+
+        // Pre-fill existing groups
+        var prefillAttr = widget.dataset.prefill;
+        if (prefillAttr) {
+            try {
+                var prefillGroups = JSON.parse(prefillAttr);
+                prefillGroups.forEach(function(g) { addGroup(g.date || '', g.files || null); });
+            } catch(e) { /* ignore parse errors */ }
+        }
+    }
+
+    function initAllDFW() {
+        document.querySelectorAll('.dated-files-widget').forEach(function(w) {
+            if (!w.dataset.dfwInit) {
+                w.dataset.dfwInit = '1';
+                initDFW(w);
+            }
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAllDFW);
+    } else { initAllDFW(); }
+    document.addEventListener('htmx:afterSwap', initAllDFW);
+    document.addEventListener('htmx:load', initAllDFW);
 })();
 </script>
 
