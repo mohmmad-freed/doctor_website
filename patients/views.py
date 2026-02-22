@@ -206,7 +206,79 @@ def browse_doctors(request):
 
 @login_required
 def clinics_list(request):
-    return HttpResponse("Available Clinics - Coming Soon!")
+    """
+    Patient-facing view: Browse all active clinics with search and city filter.
+
+    Supports:
+        - Search by clinic name, address, or specialization (?q=...)
+        - Filter by city (?city_id=...)
+        - Both combined
+
+    Security:
+        - @login_required: unauthenticated users redirected to login.
+        - PATIENT role enforced: non-patients receive HTTP 403.
+    """
+    role = getattr(request.user, "role", None)
+    if role != "PATIENT":
+        return HttpResponseForbidden("Unauthorized: This page is for patients only.")
+
+    from accounts.models import City
+
+    search_query = request.GET.get("q", "").strip()
+    selected_city_id = request.GET.get("city_id", "").strip()
+    selected_city = None
+
+    if selected_city_id:
+        try:
+            selected_city = City.objects.get(id=selected_city_id)
+        except City.DoesNotExist:
+            selected_city_id = ""
+
+    # Base queryset: active clinics with related objects for display
+    clinics_qs = Clinic.objects.filter(is_active=True).select_related(
+        "main_doctor", "city"
+    )
+
+    # Apply search filter
+    if search_query:
+        clinics_qs = clinics_qs.filter(
+            Q(name__icontains=search_query)
+            | Q(address__icontains=search_query)
+            | Q(specialization__icontains=search_query)
+        )
+
+    # Apply city filter
+    if selected_city:
+        clinics_qs = clinics_qs.filter(city=selected_city)
+
+    clinics_qs = clinics_qs.order_by("-created_at")
+
+    # Annotate each clinic with doctor count
+    clinics_data = []
+    for clinic in clinics_qs:
+        # Count main doctor + active staff doctors at this clinic
+        staff_doctor_count = ClinicStaff.objects.filter(
+            clinic=clinic, role="DOCTOR", is_active=True
+        ).count()
+        doctor_count = staff_doctor_count + (1 if clinic.main_doctor else 0)
+
+        clinics_data.append(
+            {
+                "clinic": clinic,
+                "doctor_count": doctor_count,
+            }
+        )
+
+    all_cities = City.objects.order_by("name")
+
+    context = {
+        "clinics_data": clinics_data,
+        "all_cities": all_cities,
+        "selected_city": selected_city,
+        "search_query": search_query,
+        "total_clinics": len(clinics_data),
+    }
+    return render(request, "patients/clinics_list.html", context)
 
 
 @login_required
