@@ -16,12 +16,16 @@ ORM-level ordering:
 Optimised with select_related + prefetch_related — zero N+1 queries.
 """
 
+import logging
 from datetime import datetime
 
+from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
 from appointments.models import Appointment
+
+logger = logging.getLogger(__name__)
 
 
 # ── Status sets ──────────────────────────────────────────────────────────────
@@ -97,12 +101,15 @@ def _serialize_appointment(appointment):
         "doctor_name": doctor_name,
         "doctor_specialty": doctor_specialty,
         "clinic_name": appointment.clinic.name,
+        "clinic_id": appointment.clinic_id,
         "clinic_address": appointment.clinic.address,
         "appointment_type": apt_type_name,
         "appointment_date": appointment.appointment_date,
         "appointment_time": appointment.appointment_time,
         "status": appointment.status,
         "status_display": appointment.get_status_display(),
+        "can_edit": appointment.can_patient_edit,
+        "edits_remaining": appointment.edits_remaining,
     }
 
 
@@ -152,8 +159,6 @@ def get_patient_appointments(patient_user, upcoming_limit=None, past_limit=None)
     base = _base_qs(patient_user)
 
     # ── Upcoming branch ───────────────────────────────────────────────────────
-    # ORM pre-filter: on-or-after today AND active status (fast DB filter).
-    # Python post-filter: exclude same-day appointments whose time has passed.
     upcoming_qs = (
         base
         .filter(
@@ -172,8 +177,6 @@ def get_patient_appointments(patient_user, upcoming_limit=None, past_limit=None)
     upcoming = upcoming_all[:upcoming_limit] if upcoming_limit is not None else upcoming_all
 
     # ── Past branch ───────────────────────────────────────────────────────────
-    # Past = terminal status (any date) OR active status with a date already past
-    # (whole days behind today) OR same-day active appointment whose time has passed.
     past_qs = (
         base
         .filter(
@@ -183,7 +186,6 @@ def get_patient_appointments(patient_user, upcoming_limit=None, past_limit=None)
         .order_by("-appointment_date", "-appointment_time")
     )
 
-    # Same-day rows with active status that have now passed in time
     same_day_passed_qs = (
         base
         .filter(appointment_date=today, status__in=_UPCOMING_STATUSES)
@@ -229,6 +231,10 @@ _TERMINAL_STATUSES = (
     Appointment.Status.NO_SHOW,
 )
 
+# Minimum hours before appointment that a patient can cancel.
+# Set to 0 to allow cancellation at any time.
+CANCELLATION_WINDOW_HOURS = 2
+
 
 def cancel_appointment(appointment_id, patient):
     """
@@ -238,6 +244,11 @@ def cancel_appointment(appointment_id, patient):
     - Ownership enforced at ORM level: filter(id=..., patient=patient).
       A patient can never cancel another patient's appointment.
     - Terminal-status guard prevents re-cancelling already-closed appointments.
+    - Time-based policy: cannot cancel within CANCELLATION_WINDOW_HOURS of appointment.
+
+    Notification:
+    - On successful cancellation, doctor + clinic secretaries are notified
+      via transaction.on_commit to ensure notification fires only after DB commit.
 
     Args:
         appointment_id: PK of the Appointment to cancel.
@@ -249,27 +260,293 @@ def cancel_appointment(appointment_id, patient):
     Raises:
         ValueError: Appointment not found / not owned by patient.
         ValueError: Appointment is already in a terminal state.
+        ValueError: Cancellation window has passed.
     """
     try:
-        appointment = Appointment.objects.get(id=appointment_id, patient=patient)
+        appointment = Appointment.objects.select_related(
+            "doctor", "clinic", "patient"
+        ).get(id=appointment_id, patient=patient)
     except Appointment.DoesNotExist:
-        raise ValueError("Appointment not found.")
+        raise ValueError("الموعد غير موجود.")
 
     if appointment.status in _TERMINAL_STATUSES:
-        raise ValueError("Cannot cancel this appointment.")
+        raise ValueError("لا يمكن إلغاء هذا الموعد.")
+
+    # ── Time-based cancellation policy ────────────────────────────────────
+    if CANCELLATION_WINDOW_HOURS > 0:
+        local_now = timezone.localtime(timezone.now())
+        appt_dt = datetime.combine(
+            appointment.appointment_date, appointment.appointment_time
+        )
+        local_now_naive = local_now.replace(tzinfo=None)
+        hours_until = (appt_dt - local_now_naive).total_seconds() / 3600
+
+        if hours_until < CANCELLATION_WINDOW_HOURS:
+            raise ValueError(
+                f"لا يمكن إلغاء الموعد قبل أقل من {CANCELLATION_WINDOW_HOURS} ساعة من موعده. "
+                f"يرجى التواصل مع العيادة مباشرة."
+            )
 
     appointment.status = Appointment.Status.CANCELLED
-    appointment.save(update_fields=["status"])
+    appointment.save(update_fields=["status", "updated_at"])
+
+    # ── Notify doctor + secretaries after DB commit ───────────────────────
+    transaction.on_commit(
+        lambda: _notify_staff_patient_cancelled(appointment)
+    )
 
     return True
 
 
+# ── Edit Appointment ─────────────────────────────────────────────────────────
+
+MAX_PATIENT_EDITS = 2  # mirrors Appointment.MAX_PATIENT_EDITS
+
+
+def edit_appointment(appointment_id, patient, new_date, new_time, new_type_id=None, new_reason=None):
+    """
+    Edit a patient's own appointment (date, time, type, reason).
+
+    Rules:
+    - Patient can edit up to MAX_PATIENT_EDITS times (2).
+    - Cannot edit doctor (locked).
+    - Only PENDING or CONFIRMED appointments can be edited.
+    - New slot must be available (validated with DB lock).
+    - Same time-based policy as cancellation (cannot edit within 2h).
+
+    Returns:
+        The updated Appointment instance.
+
+    Raises:
+        ValueError on any validation failure.
+    """
+    from doctors.services import generate_slots_for_date
+    from appointments.models import AppointmentType
+
+    try:
+        appointment = Appointment.objects.select_related(
+            "doctor", "clinic", "patient", "appointment_type"
+        ).get(id=appointment_id, patient=patient)
+    except Appointment.DoesNotExist:
+        raise ValueError("الموعد غير موجود.")
+
+    if appointment.status not in (Appointment.Status.PENDING, Appointment.Status.CONFIRMED):
+        raise ValueError("لا يمكن تعديل هذا الموعد.")
+
+    if appointment.patient_edit_count >= MAX_PATIENT_EDITS:
+        raise ValueError(
+            f"لقد استنفدت الحد الأقصى من التعديلات ({MAX_PATIENT_EDITS}). "
+            f"يرجى التواصل مع العيادة لتعديل الموعد."
+        )
+
+    # Time-based policy
+    if CANCELLATION_WINDOW_HOURS > 0:
+        local_now = timezone.localtime(timezone.now())
+        appt_dt = datetime.combine(
+            appointment.appointment_date, appointment.appointment_time
+        )
+        local_now_naive = local_now.replace(tzinfo=None)
+        hours_until = (appt_dt - local_now_naive).total_seconds() / 3600
+        if hours_until < CANCELLATION_WINDOW_HOURS:
+            raise ValueError(
+                f"لا يمكن تعديل الموعد قبل أقل من {CANCELLATION_WINDOW_HOURS} ساعة من موعده. "
+                f"يرجى التواصل مع العيادة مباشرة."
+            )
+
+    # Date validation
+    from datetime import date as date_cls
+    today = date_cls.today()
+    if new_date < today:
+        raise ValueError("لا يمكن اختيار تاريخ في الماضي.")
+    if new_date == today:
+        from datetime import datetime as dt_cls
+        if new_time <= dt_cls.now().time():
+            raise ValueError("لا يمكن اختيار وقت قد مضى اليوم.")
+
+    # Appointment type validation
+    doctor_id = appointment.doctor_id
+    clinic_id = appointment.clinic_id
+    appointment_type = appointment.appointment_type
+
+    if new_type_id and new_type_id != (appointment_type.id if appointment_type else None):
+        try:
+            appointment_type = AppointmentType.objects.get(
+                id=new_type_id, doctor_id=doctor_id, clinic_id=clinic_id, is_active=True,
+            )
+        except AppointmentType.DoesNotExist:
+            raise ValueError("نوع الموعد غير صالح.")
+
+    if not appointment_type:
+        raise ValueError("لم يتم تحديد نوع الموعد.")
+
+    # Slot validation (pre-check)
+    slots = generate_slots_for_date(
+        doctor_id=doctor_id, clinic_id=clinic_id,
+        target_date=new_date, duration_minutes=appointment_type.duration_minutes,
+    )
+    matching_slot = None
+    for slot in slots:
+        if slot["time"] == new_time:
+            matching_slot = slot
+            break
+    if matching_slot is None:
+        raise ValueError("الوقت المحدد غير متاح ضمن جدول الطبيب.")
+
+    is_same_slot = (new_date == appointment.appointment_date and new_time == appointment.appointment_time)
+    if not matching_slot["is_available"] and not is_same_slot:
+        raise ValueError("هذا الموعد محجوز بالفعل. يرجى اختيار وقت آخر.")
+
+    # Atomic update with lock
+    with transaction.atomic():
+        list(
+            Appointment.objects.select_for_update()
+            .filter(
+                doctor_id=doctor_id, appointment_date=new_date,
+                status__in=[
+                    Appointment.Status.CONFIRMED, Appointment.Status.CHECKED_IN,
+                    Appointment.Status.IN_PROGRESS, Appointment.Status.PENDING,
+                ],
+            )
+            .exclude(id=appointment.id)
+            .values_list("appointment_time", flat=True)
+        )
+
+        slots_locked = generate_slots_for_date(
+            doctor_id=doctor_id, clinic_id=clinic_id,
+            target_date=new_date, duration_minutes=appointment_type.duration_minutes,
+        )
+        slot_locked = None
+        for s in slots_locked:
+            if s["time"] == new_time:
+                slot_locked = s
+                break
+        if slot_locked is None:
+            raise ValueError("الوقت المحدد غير متاح.")
+        if not slot_locked["is_available"] and not is_same_slot:
+            raise ValueError("هذا الموعد محجوز بالفعل. يرجى اختيار وقت آخر.")
+
+        old_date = appointment.appointment_date
+        old_time = appointment.appointment_time
+        old_type = appointment.appointment_type
+
+        appointment.appointment_date = new_date
+        appointment.appointment_time = new_time
+        appointment.appointment_type = appointment_type
+        if new_reason is not None:
+            appointment.reason = new_reason
+        appointment.patient_edit_count += 1
+        appointment.save(update_fields=[
+            "appointment_date", "appointment_time", "appointment_type",
+            "reason", "patient_edit_count", "updated_at",
+        ])
+
+    transaction.on_commit(
+        lambda: _notify_staff_patient_edited(appointment, old_date, old_time, old_type)
+    )
+
+    return appointment
+
+
+def _notify_staff_patient_edited(appointment, old_date, old_time, old_type):
+    """Notify doctor and secretaries that a patient edited their appointment."""
+    from appointments.models import AppointmentNotification
+    from clinics.models import ClinicStaff
+
+    patient_name = appointment.patient.name if appointment.patient else "مريض"
+    old_date_str = old_date.strftime("%Y-%m-%d")
+    old_time_str = old_time.strftime("%H:%M")
+    new_date_str = appointment.appointment_date.strftime("%Y-%m-%d")
+    new_time_str = appointment.appointment_time.strftime("%H:%M")
+
+    title = "تعديل موعد من قبل المريض"
+    message = (
+        f"قام المريض {patient_name} بتعديل موعده "
+        f"من {old_date_str} الساعة {old_time_str} "
+        f"إلى {new_date_str} الساعة {new_time_str} "
+        f"في {appointment.clinic.name}."
+    )
+
+    recipients = set()
+    if appointment.doctor_id:
+        recipients.add(appointment.doctor_id)
+    secretary_ids = ClinicStaff.objects.filter(
+        clinic=appointment.clinic, role="SECRETARY", is_active=True,
+    ).values_list("user_id", flat=True)
+    recipients.update(secretary_ids)
+
+    for user_id in recipients:
+        try:
+            AppointmentNotification.objects.create(
+                patient_id=user_id,
+                appointment=appointment,
+                notification_type="APPOINTMENT_EDITED",
+                title=title,
+                message=message,
+                is_delivered=True,
+            )
+        except Exception as exc:
+            logger.warning(
+                "[NOTIFICATION] Could not create edit notification "
+                "for user_id=%s appointment_id=%s: %r",
+                user_id, appointment.id, exc,
+            )
+    """
+    Notify the doctor and clinic secretaries that a patient cancelled.
+
+    Called inside transaction.on_commit() — fires only after successful DB write.
+
+    Creates in-app AppointmentNotification for:
+    1. The assigned doctor (if any)
+    2. All active secretaries at the appointment's clinic
+    """
+    from appointments.models import AppointmentNotification
+    from clinics.models import ClinicStaff
+
+    patient_name = appointment.patient.name if appointment.patient else "مريض"
+    date_str = appointment.appointment_date.strftime("%Y-%m-%d")
+    time_str = appointment.appointment_time.strftime("%H:%M")
+
+    title = "إلغاء موعد من قبل المريض"
+    message = (
+        f"قام المريض {patient_name} بإلغاء موعده "
+        f"بتاريخ {date_str} الساعة {time_str} "
+        f"في {appointment.clinic.name}."
+    )
+
+    recipients = set()
+
+    # 1. Notify the assigned doctor
+    if appointment.doctor_id:
+        recipients.add(appointment.doctor_id)
+
+    # 2. Notify all active secretaries at this clinic
+    secretary_ids = ClinicStaff.objects.filter(
+        clinic=appointment.clinic,
+        role="SECRETARY",
+        is_active=True,
+    ).values_list("user_id", flat=True)
+    recipients.update(secretary_ids)
+
+    for user_id in recipients:
+        try:
+            AppointmentNotification.objects.create(
+                patient_id=user_id,  # recipient (doctor or secretary)
+                appointment=appointment,
+                notification_type=AppointmentNotification.Type.APPOINTMENT_CANCELLED,
+                title=title,
+                message=message,
+                is_delivered=True,
+            )
+        except Exception as exc:
+            # UniqueConstraint or other error — log and continue
+            logger.warning(
+                "[NOTIFICATION] Could not create patient-cancel notification "
+                "for user_id=%s appointment_id=%s: %r",
+                user_id, appointment.id, exc,
+            )
+
+
 # ── Staff Cancellation ────────────────────────────────────────────────────────
-
-import logging
-from django.db import transaction
-
-logger = logging.getLogger(__name__)
 
 
 def _build_cancellation_message(appointment):
@@ -294,11 +571,10 @@ def _build_cancellation_message(appointment):
 
 def _is_sms_configured():
     """
-    FIX 4: Clean configuration gate for TweetsMS.
+    Clean configuration gate for TweetsMS.
 
     Returns True only when ALL required settings are present AND
-    SMS_PROVIDER is set to 'TWEETSMS'.  Matches the pattern used
-    by accounts/otp_utils._is_using_tweetsms().
+    SMS_PROVIDER is set to 'TWEETSMS'.
     """
     from django.conf import settings as django_settings
 
@@ -318,13 +594,10 @@ def _notify_patient_cancellation(appointment, clinic_staff):
     Must be called inside transaction.on_commit() to fire only after
     the cancellation DB write has committed successfully.
 
-    FIX 2: clinic_staff is stored in cancelled_by_staff for audit.
-
     Channels:
     - In-app: ALWAYS created first; email/SMS failures cannot prevent it.
     - Email:   Only if patient.email is set AND patient.email_verified=True.
-    - SMS:     Only if TweetsMS is configured (SMS_PROVIDER=TWEETSMS +
-               TWEETSMS_API_KEY + TWEETSMS_SENDER); skipped silently otherwise.
+    - SMS:     Only if TweetsMS is configured; skipped silently otherwise.
     """
     from appointments.models import AppointmentNotification
     from accounts.email_utils import send_appointment_cancellation_email
@@ -339,7 +612,7 @@ def _notify_patient_cancellation(appointment, clinic_staff):
         notification_type=AppointmentNotification.Type.APPOINTMENT_CANCELLED,
         title=title,
         message=message,
-        cancelled_by_staff=clinic_staff,  # FIX 2: audit field
+        cancelled_by_staff=clinic_staff,
         is_delivered=True,
     )
     logger.info(
@@ -350,7 +623,7 @@ def _notify_patient_cancellation(appointment, clinic_staff):
         clinic_staff.id if clinic_staff else None,
     )
 
-    # ── 2. Email (FIX 5: verified email only; failure never blocks in-app) ────
+    # ── 2. Email (verified email only; failure never blocks in-app) ────
     try:
         send_appointment_cancellation_email(patient, appointment)
     except Exception as exc:
@@ -360,7 +633,7 @@ def _notify_patient_cancellation(appointment, clinic_staff):
             exc,
         )
 
-    # ── 3. SMS (FIX 4: explicit config gate; skip silently if not configured) ─
+    # ── 3. SMS (explicit config gate; skip silently if not configured) ─
     if not _is_sms_configured():
         logger.info(
             "[SMS] TweetsMS not configured; skipping cancellation SMS for patient_id=%s",
@@ -381,7 +654,6 @@ def _notify_patient_cancellation(appointment, clinic_staff):
             phone,
         )
     except Exception as exc:
-        # Network issue or provider error — log and continue
         logger.error(
             "[SMS] Failed to send cancellation SMS to patient_id=%s: %r",
             patient.id,
@@ -397,12 +669,12 @@ def cancel_appointment_by_staff(appointment_id, clinic_staff):
     - clinic_staff.clinic must match appointment.clinic (tenant isolation R-01).
     - Terminal statuses (COMPLETED, CANCELLED, NO_SHOW) cannot be cancelled again.
 
-    Notification (via transaction.on_commit — FIX 6):
+    Notification (via transaction.on_commit):
     - Fires exactly once after the DB commit succeeds.
-    - Passes clinic_staff to the notification helper for audit (FIX 2).
+    - Passes clinic_staff to the notification helper for audit.
     - In-app notification always created.
-    - Email only if patient has a verified email (FIX 5).
-    - SMS only if TweetsMS is configured (FIX 4).
+    - Email only if patient has a verified email.
+    - SMS only if TweetsMS is configured.
 
     Args:
         appointment_id: PK of the Appointment to cancel.
@@ -436,7 +708,7 @@ def cancel_appointment_by_staff(appointment_id, clinic_staff):
     appointment.status = Appointment.Status.CANCELLED
     appointment.save(update_fields=["status", "updated_at"])
 
-    # FIX 6: notify exactly once, after the DB commit, with clinic_staff for audit
+    # Notify exactly once, after the DB commit, with clinic_staff for audit
     transaction.on_commit(
         lambda: _notify_patient_cancellation(appointment, clinic_staff)
     )

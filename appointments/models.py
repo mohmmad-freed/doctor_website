@@ -48,6 +48,7 @@ class Appointment(models.Model):
         CANCELLED = "CANCELLED", "Cancelled"
         NO_SHOW = "NO_SHOW", "No Show"
 
+    MAX_PATIENT_EDITS = 2
     patient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="appointments_as_patient")
     clinic = models.ForeignKey(Clinic, on_delete=models.CASCADE, related_name="appointments")
     doctor = models.ForeignKey(
@@ -66,6 +67,10 @@ class Appointment(models.Model):
         help_text="Legacy JSON responses. New flow uses AppointmentAnswer records.",
     )
     notes = models.TextField(blank=True, help_text="Doctor's notes after appointment")
+    patient_edit_count = models.PositiveIntegerField(
+    default=0,
+    help_text="Number of times the patient has edited this appointment. Max 2.",
+)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="appointments_created",
@@ -75,6 +80,17 @@ class Appointment(models.Model):
 
     def __str__(self):
         return f"{self.patient.name} - {self.clinic.name} on {self.appointment_date}"
+    
+    @property
+    def can_patient_edit(self):
+        return (
+        self.status in (self.Status.PENDING, self.Status.CONFIRMED)
+        and self.patient_edit_count < self.MAX_PATIENT_EDITS
+    )
+
+    @property
+    def edits_remaining(self):
+        return max(0, self.MAX_PATIENT_EDITS - self.patient_edit_count)
 
     class Meta:
         ordering = ["-appointment_date", "-appointment_time"]
@@ -195,6 +211,7 @@ class AppointmentNotification(models.Model):
 
     class Type(models.TextChoices):
         APPOINTMENT_CANCELLED = "APPOINTMENT_CANCELLED", "Appointment Cancelled"
+        APPOINTMENT_EDITED = "APPOINTMENT_EDITED", "Appointment Edited"
 
     patient = models.ForeignKey(
         settings.AUTH_USER_MODEL,

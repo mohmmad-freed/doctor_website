@@ -1,0 +1,228 @@
+{% extends 'patients/base_dashboard.html' %}
+{% load static %}
+
+{% block title %}تعديل الموعد{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-5">
+
+    {# ── Header ─────────────────────────────────────────────────────── #}
+    <div class="glass-card p-5">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
+                    <i class="fa-solid fa-pen-to-square text-amber-500 text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-gray-900 dark:text-white">تعديل الموعد</h1>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                        التعديلات المتبقية:
+                        <span class="font-bold {% if edits_remaining == 1 %}text-amber-500{% elif edits_remaining == 0 %}text-red-500{% else %}text-green-500{% endif %}">
+                            {{ edits_remaining }}
+                        </span>
+                        من {{ appointment.MAX_PATIENT_EDITS }}
+                    </p>
+                </div>
+            </div>
+            <a href="{% url 'patients:my_appointments' %}"
+               class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                <i class="fa-solid fa-arrow-right text-lg"></i>
+            </a>
+        </div>
+    </div>
+
+    {# ── Doctor Info (read-only) ────────────────────────────────────── #}
+    <div class="glass-card p-5">
+        <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-full bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center">
+                <i class="fa-solid fa-user-doctor text-primary-500 text-xl"></i>
+            </div>
+            <div>
+                <h2 class="font-bold text-gray-900 dark:text-white">
+                    د. {{ appointment.doctor.name }}
+                </h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    {{ appointment.clinic.name }}
+                </p>
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                    <i class="fa-solid fa-lock text-[10px] ml-1"></i>
+                    لا يمكن تغيير الطبيب
+                </p>
+            </div>
+        </div>
+    </div>
+
+    {# ── Messages ───────────────────────────────────────────────────── #}
+    {% if messages %}
+    <div class="space-y-2">
+        {% for message in messages %}
+        <div class="p-3 rounded-lg text-sm
+            {% if message.tags == 'error' %}bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800
+            {% elif message.tags == 'success' %}bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-200 dark:border-green-800
+            {% else %}bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {# ── Edit Form ──────────────────────────────────────────────────── #}
+    <form method="post" id="editForm" class="space-y-5" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        {# Step 1: Appointment Type #}
+        <div class="glass-card p-5">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <span class="w-7 h-7 rounded-full bg-primary-500 text-white text-sm flex items-center justify-center font-bold">1</span>
+                نوع الموعد
+            </h2>
+            <div class="space-y-3">
+                {% for type in appointment_types %}
+                <label class="flex items-center gap-4 p-4 rounded-lg border border-gray-200 dark:border-slate-600 hover:border-primary-400 dark:hover:border-primary-500 cursor-pointer transition-colors has-[:checked]:border-primary-500 has-[:checked]:bg-primary-50 dark:has-[:checked]:bg-primary-900/20">
+                    <input type="radio" name="appointment_type_id" value="{{ type.id }}"
+                           class="w-5 h-5 text-primary-500 focus:ring-primary-500"
+                           {% if type.id == appointment.appointment_type.id %}checked{% endif %}>
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between">
+                            <span class="font-semibold text-gray-900 dark:text-white">{{ type.display_name }}</span>
+                            <span class="text-secondary-600 dark:text-secondary-400 font-bold">₪{{ type.price }}</span>
+                        </div>
+                        <div class="flex items-center gap-3 mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            <span><i class="fa-regular fa-clock ml-1"></i>{{ type.duration_minutes }} دقيقة</span>
+                            {% if type.description %}
+                            <span>· {{ type.description }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        {# Step 2: Date #}
+        <div class="glass-card p-5">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <span class="w-7 h-7 rounded-full bg-primary-500 text-white text-sm flex items-center justify-center font-bold">2</span>
+                التاريخ
+            </h2>
+            <input type="date" name="appointment_date" id="editDateInput"
+                   value="{{ appointment.appointment_date|date:'Y-m-d' }}"
+                   min="{{ today }}"
+                   class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+                   required>
+        </div>
+
+        {# Step 3: Time Slot #}
+        <div class="glass-card p-5">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <span class="w-7 h-7 rounded-full bg-primary-500 text-white text-sm flex items-center justify-center font-bold">3</span>
+                الوقت
+            </h2>
+            <input type="hidden" name="appointment_time" id="selectedTime"
+                   value="{{ appointment.appointment_time|time:'H:i' }}">
+            <div id="slotsContainer">
+                <p class="text-gray-400 text-sm">اختر تاريخاً لعرض المواعيد المتاحة...</p>
+            </div>
+        </div>
+
+        {# Step 4: Reason #}
+        <div class="glass-card p-5">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <span class="w-7 h-7 rounded-full bg-primary-500 text-white text-sm flex items-center justify-center font-bold">4</span>
+                وصف الحالة الطبية
+            </h2>
+            <textarea name="reason" rows="3" maxlength="1000"
+                      placeholder="صف حالتك الطبية أو سبب زيارتك باختصار..."
+                      class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors resize-none text-sm">{{ appointment.reason }}</textarea>
+            <p class="text-xs text-gray-400 mt-1">اختياري · الحد الأقصى 1000 حرف</p>
+        </div>
+
+        {# Step 5: Intake Form (dynamic — loaded via HTMX or server-rendered) #}
+        <div class="glass-card p-5" id="intakeFormCard">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <span class="w-7 h-7 rounded-full bg-primary-500 text-white text-sm flex items-center justify-center font-bold">5</span>
+                نموذج الاستقبال
+            </h2>
+            <div id="intakeFormContainer">
+                {% if form_template and questions %}
+                    {% include "patients/partials/edit_intake_form.html" %}
+                {% else %}
+                    <p class="text-gray-400 text-sm py-3">
+                        <i class="fa-solid fa-circle-info ml-1"></i>
+                        لا يوجد نموذج استقبال لنوع الموعد المحدد.
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+
+        {# Submit #}
+        <div class="glass-card p-5">
+            <div class="flex gap-3">
+                <button type="submit" id="submitBtn"
+                        class="flex-1 bg-amber-500 hover:bg-amber-600 text-white px-6 py-4 rounded-lg font-bold text-lg shadow-md transition-all hover:shadow-lg focus:ring-4 focus:ring-amber-100">
+                    <i class="fa-solid fa-check ml-2"></i>
+                    حفظ التعديلات
+                </button>
+                <a href="{% url 'patients:my_appointments' %}"
+                   class="px-6 py-4 rounded-lg border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700 font-medium transition-colors text-center">
+                    إلغاء
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/htmx.org@1.9.12"></script>
+<script>
+    function loadSlots() {
+        const dateVal = document.getElementById('editDateInput').value;
+        const typeEl = document.querySelector('input[name="appointment_type_id"]:checked');
+        const typeId = typeEl ? typeEl.value : '';
+
+        if (!dateVal) return;
+
+        const url = '{% url "patients:htmx_edit_slots" appointment_id=appointment.id %}?appointment_date=' + dateVal + '&appointment_type_id=' + typeId;
+        htmx.ajax('GET', url, {target: '#slotsContainer', swap: 'innerHTML'});
+    }
+
+    function loadIntakeForm() {
+        const typeEl = document.querySelector('input[name="appointment_type_id"]:checked');
+        const typeId = typeEl ? typeEl.value : '';
+
+        const url = '{% url "patients:htmx_edit_intake_form" appointment_id=appointment.id %}?appointment_type_id=' + typeId;
+        htmx.ajax('GET', url, {target: '#intakeFormContainer', swap: 'innerHTML'});
+    }
+
+    // Handle slot selection (event delegation)
+    document.addEventListener('click', function(e) {
+        const slotBtn = e.target.closest('.slot-btn');
+        if (!slotBtn || slotBtn.disabled) return;
+
+        document.querySelectorAll('.slot-btn').forEach(function(btn) {
+            btn.classList.remove('ring-2', 'ring-secondary-500', 'bg-secondary-50', 'dark:bg-secondary-900/30');
+        });
+        slotBtn.classList.add('ring-2', 'ring-secondary-500', 'bg-secondary-50', 'dark:bg-secondary-900/30');
+        document.getElementById('selectedTime').value = slotBtn.dataset.time;
+    });
+
+    // Reload slots on date change
+    document.getElementById('editDateInput').addEventListener('change', function() {
+        document.getElementById('selectedTime').value = '';
+        loadSlots();
+    });
+
+    // Reload slots AND intake form on type change
+    document.addEventListener('change', function(e) {
+        if (e.target.matches('input[name="appointment_type_id"]')) {
+            document.getElementById('selectedTime').value = '';
+            loadSlots();
+            loadIntakeForm();
+        }
+    });
+
+    // Load slots on page load (intake form is already server-rendered on GET)
+    document.addEventListener('DOMContentLoaded', loadSlots);
+</script>
+{% endblock %}

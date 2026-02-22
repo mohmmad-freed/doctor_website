@@ -14,6 +14,21 @@ urlpatterns = [
         name="cancel_appointment",
     ),
     path(
+        "appointments/<int:appointment_id>/edit/",
+        views.edit_appointment_view,
+        name="edit_appointment",
+    ),
+    path(
+        "appointments/<int:appointment_id>/htmx/edit-slots/",
+        views.load_edit_slots,
+        name="htmx_edit_slots",
+    ),
+    path(
+        "appointments/<int:appointment_id>/htmx/edit-intake-form/",
+        views.load_edit_intake_form,
+        name="htmx_edit_intake_form",
+    ),
+    path(
         "appointments/book/<int:clinic_id>/",
         views.book_appointment,
         name="book_appointment",

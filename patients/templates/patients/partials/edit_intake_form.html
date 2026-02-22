@@ -1,0 +1,245 @@
+{% if form_template %}
+<div class="space-y-5" id="intakeFormFields">
+    <!-- Form header -->
+    <div class="flex items-center gap-2 pb-3 border-b border-gray-100 dark:border-slate-700">
+        <i class="fa-solid fa-clipboard-list text-primary-500"></i>
+        <div>
+            <h3 class="font-bold text-gray-900 dark:text-white">{{ form_template.display_title }}</h3>
+            {% if form_template.description %}
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ form_template.description }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {% for q in questions %}
+    <div class="space-y-2 intake-question" data-question-id="{{ q.id }}" id="question-{{ q.id }}">
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+            {{ q.display_text }}
+            {% if q.is_required %}
+            <span class="text-red-500 mr-1">*</span>
+            {% else %}
+            <span class="text-gray-400 text-xs font-normal">(اختياري)</span>
+            {% endif %}
+        </label>
+
+        {% if q.help_text_content %}
+        <p class="text-xs text-gray-400 dark:text-gray-500">{{ q.help_text_content }}</p>
+        {% endif %}
+
+        {% if q.field_type == "TEXT" %}
+        <input type="text" name="intake_{{ q.id }}" placeholder="{{ q.placeholder }}"
+               value="{{ q.existing_answer }}"
+               class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors text-sm"
+               {% if q.is_required %}required{% endif %}>
+
+        {% elif q.field_type == "TEXTAREA" %}
+        <textarea name="intake_{{ q.id }}" rows="3" placeholder="{{ q.placeholder }}"
+                  class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors text-sm resize-none"
+                  {% if q.is_required %}required{% endif %}>{{ q.existing_answer }}</textarea>
+
+        {% elif q.field_type == "SELECT" %}
+        <select name="intake_{{ q.id }}" data-source-question="{{ q.id }}"
+                class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors text-sm"
+                {% if q.is_required %}required{% endif %}>
+            <option value="">-- اختر --</option>
+            {% for choice in q.choices %}
+            <option value="{{ choice }}" {% if q.existing_answer == choice %}selected{% endif %}>{{ choice }}</option>
+            {% endfor %}
+        </select>
+
+        {% elif q.field_type == "MULTISELECT" %}
+        <div class="space-y-2">
+            {% for choice in q.choices %}
+            <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-slate-600 hover:border-primary-300 dark:hover:border-primary-700 cursor-pointer transition-colors bg-white dark:bg-slate-700/50">
+                <input type="checkbox" name="intake_{{ q.id }}" value="{{ choice }}" data-source-question="{{ q.id }}"
+                       class="w-4 h-4 text-primary-500 focus:ring-primary-500 rounded border-gray-300 dark:border-slate-500"
+                       {% if choice in q.existing_answer %}checked{% endif %}>
+                <span class="text-sm text-gray-800 dark:text-gray-200">{{ choice }}</span>
+            </label>
+            {% endfor %}
+        </div>
+
+        {% elif q.field_type == "CHECKBOX" %}
+        <div class="flex items-center gap-4">
+            <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-slate-600 hover:border-primary-300 dark:hover:border-primary-700 cursor-pointer transition-colors bg-white dark:bg-slate-700/50 flex-1">
+                <input type="radio" name="intake_{{ q.id }}" value="نعم" data-source-question="{{ q.id }}"
+                       class="w-4 h-4 text-primary-500 focus:ring-primary-500 border-gray-300 dark:border-slate-500"
+                       {% if q.is_required %}required{% endif %}
+                       {% if q.existing_answer == "نعم" %}checked{% endif %}>
+                <span class="text-sm text-gray-800 dark:text-gray-200 font-medium">نعم</span>
+            </label>
+            <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-slate-600 hover:border-primary-300 dark:hover:border-primary-700 cursor-pointer transition-colors bg-white dark:bg-slate-700/50 flex-1">
+                <input type="radio" name="intake_{{ q.id }}" value="لا" data-source-question="{{ q.id }}"
+                       class="w-4 h-4 text-primary-500 focus:ring-primary-500 border-gray-300 dark:border-slate-500"
+                       {% if q.existing_answer == "لا" %}checked{% endif %}>
+                <span class="text-sm text-gray-800 dark:text-gray-200 font-medium">لا</span>
+            </label>
+        </div>
+
+        {% elif q.field_type == "DATE" %}
+        <input type="date" name="intake_{{ q.id }}"
+               value="{{ q.existing_answer }}"
+               class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors text-sm"
+               {% if q.is_required %}required{% endif %}>
+
+        {% elif q.field_type == "FILE" %}
+        <div class="multi-file-upload" data-question-id="{{ q.id }}"
+             data-max-size="{{ q.max_file_size_mb|default:10 }}"
+             data-extensions="{{ q.allowed_extensions|join:',' }}">
+
+            {# Show existing files #}
+            {% if q.existing_files %}
+            <div class="mb-2 space-y-1">
+                <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">الملفات الحالية:</p>
+                {% for att in q.existing_files %}
+                <div class="flex items-center gap-2 text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-lg px-3 py-2">
+                    <i class="fa-solid fa-file-check"></i>
+                    <span class="truncate">{{ att.original_name }}</span>
+                    <span class="text-gray-400">({{ att.file_size|filesizeformat }})</span>
+                </div>
+                {% endfor %}
+                <p class="text-xs text-amber-500 mt-1">
+                    <i class="fa-solid fa-info-circle ml-1"></i>
+                    رفع ملف جديد سيستبدل الملف الحالي
+                </p>
+            </div>
+            {% endif %}
+
+            <label class="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg cursor-pointer hover:border-primary-400 dark:hover:border-primary-500 transition-colors bg-gray-50 dark:bg-slate-700/30 dropzone">
+                <i class="fa-solid fa-cloud-arrow-up text-2xl text-gray-300 dark:text-slate-500 mb-1"></i>
+                <span class="text-xs text-gray-400 dark:text-gray-500">
+                    اسحب الملفات هنا أو انقر للرفع
+                </span>
+                {% if q.allowed_extensions %}
+                <span class="text-[10px] text-gray-300 dark:text-slate-600 mt-0.5">
+                    الصيغ: {{ q.allowed_extensions|join:", " }}
+                    {% if q.max_file_size_mb %} · الحد: {{ q.max_file_size_mb }} MB{% endif %}
+                </span>
+                {% endif %}
+                <input type="file" name="intake_file_{{ q.id }}" class="hidden"
+                       {% if q.is_required and not q.existing_files %}data-required="true"{% endif %}
+                       multiple>
+            </label>
+            <div class="file-feedback mt-1"></div>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+
+<!-- File Upload JS -->
+<script>
+(function() {
+    function initMFU(w) {
+        var input = w.querySelector('input[type="file"]');
+        var feedback = w.querySelector('.file-feedback');
+        var dropzone = w.querySelector('.dropzone');
+        var maxSize = parseFloat(w.dataset.maxSize || 10);
+        var extensions = w.dataset.extensions ? w.dataset.extensions.split(',').map(function(e){return e.trim().toLowerCase();}) : [];
+
+        if (!input) return;
+
+        input.addEventListener('change', function() {
+            feedback.innerHTML = '';
+            var valid = true;
+            Array.from(input.files).forEach(function(f) {
+                var ext = f.name.split('.').pop().toLowerCase();
+                var sizeMB = (f.size / 1024 / 1024).toFixed(1);
+                if (extensions.length && extensions.indexOf(ext) < 0) {
+                    feedback.innerHTML += '<p class="text-xs text-red-500"><i class="fa-solid fa-xmark ml-1"></i>صيغة غير مسموحة: .' + ext + '</p>';
+                    valid = false;
+                } else if (f.size > maxSize * 1024 * 1024) {
+                    feedback.innerHTML += '<p class="text-xs text-red-500"><i class="fa-solid fa-xmark ml-1"></i>' + f.name + ' (' + sizeMB + ' MB) يتجاوز الحد</p>';
+                    valid = false;
+                } else {
+                    feedback.innerHTML += '<p class="text-xs text-green-600"><i class="fa-solid fa-check ml-1"></i>' + f.name + ' (' + sizeMB + ' MB)</p>';
+                }
+            });
+            if (!valid) {
+                input.value = '';
+                dropzone.classList.add('border-red-400');
+                dropzone.classList.remove('border-green-400');
+            } else if (input.files.length) {
+                dropzone.classList.add('border-green-400');
+                dropzone.classList.remove('border-red-400');
+            }
+        });
+    }
+
+    function initAll() {
+        document.querySelectorAll('.multi-file-upload').forEach(function(w) {
+            if (!w.dataset.mfuInit) {
+                w.dataset.mfuInit = '1';
+                initMFU(w);
+            }
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAll);
+    } else {
+        initAll();
+    }
+    document.addEventListener('htmx:afterSwap', initAll);
+    document.addEventListener('htmx:load', initAll);
+})();
+</script>
+
+<!-- Conditional Rules (client-side) -->
+{% if rules_json and rules_json != "[]" %}
+<script>
+(function() {
+    var rules = {{ rules_json|safe }};
+    if (!rules || !rules.length) return;
+
+    var showTargets = new Set();
+    rules.forEach(function(r) { if (r.action === 'SHOW') showTargets.add(r.target_question_id); });
+
+    showTargets.forEach(function(qId) {
+        var el = document.getElementById('question-' + qId);
+        if (el) el.style.display = 'none';
+    });
+
+    function getVal(qId) {
+        var r = document.querySelector('input[name="intake_' + qId + '"]:checked');
+        if (r) return r.value;
+        var s = document.querySelector('select[name="intake_' + qId + '"]');
+        if (s) return s.value;
+        var t = document.querySelector('[name="intake_' + qId + '"]');
+        if (t && t.type !== 'checkbox' && t.type !== 'radio') return t.value || '';
+        var chks = document.querySelectorAll('input[name="intake_' + qId + '"]:checked');
+        return chks.length ? Array.from(chks).map(function(c) { return c.value; }) : '';
+    }
+
+    function evaluate() {
+        showTargets.forEach(function(qId) {
+            var el = document.getElementById('question-' + qId);
+            if (el) el.style.display = 'none';
+        });
+        rules.forEach(function(r) {
+            var v = getVal(r.source_question_id), match = false;
+            if (r.operator === 'EQUALS') match = v === r.expected_value;
+            else if (r.operator === 'NOT_EQUALS') match = v !== r.expected_value;
+            else if (r.operator === 'CONTAINS') match = Array.isArray(v) ? v.indexOf(r.expected_value) >= 0 : (v||'').indexOf(r.expected_value) >= 0;
+            else if (r.operator === 'IN') match = Array.isArray(v) ? r.expected_value.split(',').some(function(x){return v.indexOf(x.trim())>=0;}) : r.expected_value.split(',').indexOf(v) >= 0;
+            if (match) {
+                var el = document.getElementById('question-' + r.target_question_id);
+                if (el) el.style.display = (r.action === 'SHOW') ? '' : 'none';
+            }
+        });
+    }
+
+    document.addEventListener('change', function(e) {
+        if (e.target.closest('#intakeFormFields')) evaluate();
+    });
+    evaluate();
+})();
+</script>
+{% endif %}
+
+{% else %}
+<p class="text-gray-400 text-sm py-3">
+    <i class="fa-solid fa-circle-info ml-1"></i>
+    لا يوجد نموذج استقبال لنوع الموعد المحدد.
+</p>
+{% endif %}

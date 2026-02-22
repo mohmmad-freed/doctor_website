@@ -69,33 +69,20 @@
                                 د. {{ appt.doctor_name }}
                             </h3>
                             {% if appt.doctor_specialty %}
-                            <span class="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">
-                                {{ appt.doctor_specialty }}
-                            </span>
+                            <span class="text-xs text-gray-400 dark:text-gray-500">· {{ appt.doctor_specialty }}</span>
                             {% endif %}
                         </div>
-
-                        <div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
-                            <span class="flex items-center gap-1.5">
-                                <i class="fa-solid fa-hospital-user text-gray-400 text-xs"></i>
-                                {{ appt.clinic_name }}
-                            </span>
-                            <span class="flex items-center gap-1.5">
-                                <i class="fa-regular fa-clock text-gray-400 text-xs"></i>
-                                {{ appt.appointment_time|time:"H:i" }}
-                            </span>
-                            {% if appt.appointment_type %}
-                            <span class="flex items-center gap-1.5">
-                                <i class="fa-solid fa-stethoscope text-gray-400 text-xs"></i>
-                                {{ appt.appointment_type }}
-                            </span>
-                            {% endif %}
+                        <div class="flex flex-wrap gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
+                            <span><i class="fa-solid fa-hospital text-xs ml-1"></i>{{ appt.clinic_name }}</span>
+                            <span><i class="fa-regular fa-clock text-xs ml-1"></i>{{ appt.appointment_time|time:"H:i" }}</span>
+                            {% if appt.appointment_type %}<span>{{ appt.appointment_type }}</span>{% endif %}
                         </div>
                     </div>
 
-                    {# Status badge #}
-                    <div class="flex-shrink-0">
-                        <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full
+                    {# Status badge + action buttons #}
+                    <div class="flex flex-col items-end gap-2 flex-shrink-0">
+                        {# Status badge #}
+                        <span class="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full
                             {% if appt.status == 'CONFIRMED' %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300
                             {% elif appt.status == 'PENDING' %}bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300
                             {% elif appt.status == 'CHECKED_IN' or appt.status == 'IN_PROGRESS' %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300
@@ -107,24 +94,36 @@
                                 {% else %}bg-gray-400{% endif %}"></span>
                             {{ appt.status_display }}
                         </span>
-                    </div>
 
-                    {# Cancel button — only for cancellable statuses #}
-                    {% if appt.status == 'CONFIRMED' or appt.status == 'PENDING' %}
-                    <div class="flex-shrink-0">
-                        <form method="post"
-                              action="{% url 'patients:cancel_appointment' appt.id %}"
-                              onsubmit="return confirm('هل أنت متأكد أنك تريد إلغاء هذا الموعد؟');">
-                            {% csrf_token %}
-                            <button type="submit"
-                                    class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                                <i class="fa-solid fa-xmark text-xs"></i>
-                                إلغاء الموعد
-                            </button>
-                        </form>
-                    </div>
-                    {% endif %}
+                        {# Action buttons — only for editable/cancellable statuses #}
+                        {% if appt.status == 'CONFIRMED' or appt.status == 'PENDING' %}
+                        <div class="flex items-center gap-2">
+                            {# Edit button #}
+                            {% if appt.can_edit %}
+                            <a href="{% url 'patients:edit_appointment' appt.id %}"
+                               class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl border border-amber-300 dark:border-amber-700 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                               title="التعديلات المتبقية: {{ appt.edits_remaining }}">
+                                <i class="fa-solid fa-pen text-xs"></i>
+                                تعديل
+                                <span class="text-[10px] opacity-70">({{ appt.edits_remaining }})</span>
+                            </a>
+                            {% endif %}
 
+                            {# Cancel button #}
+                            <form method="post"
+                                  action="{% url 'patients:cancel_appointment' appt.id %}"
+                                  onsubmit="return confirm('هل أنت متأكد أنك تريد إلغاء هذا الموعد؟');">
+                                {% csrf_token %}
+                                <button type="submit"
+                                        class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                                    <i class="fa-solid fa-xmark text-xs"></i>
+                                    إلغاء
+                                </button>
+                            </form>
+                        </div>
+                        {% endif %}
+
+                    </div>
                 </div>
             </div>
             {% endfor %}

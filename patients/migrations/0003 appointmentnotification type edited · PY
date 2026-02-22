@@ -1,0 +1,25 @@
+# Generated migration for APPOINTMENT_EDITED notification type
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('appointments', '0002_appointment_patient_edit_count'),
+    ]
+
+    operations = [
+        migrations.AlterField(
+            model_name='appointmentnotification',
+            name='notification_type',
+            field=models.CharField(
+                choices=[
+                    ('APPOINTMENT_CANCELLED', 'Appointment Cancelled'),
+                    ('APPOINTMENT_EDITED', 'Appointment Edited'),
+                ],
+                default='APPOINTMENT_CANCELLED',
+                max_length=40,
+            ),
+        ),
+    ]

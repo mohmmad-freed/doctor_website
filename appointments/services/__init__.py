@@ -19,5 +19,7 @@ from appointments.services.booking_service import (  # noqa: F401
 from appointments.services.patient_appointments_service import (  # noqa: F401
     cancel_appointment,
     cancel_appointment_by_staff,
+    edit_appointment,
     get_patient_appointments,
+    CANCELLATION_WINDOW_HOURS,
 )
