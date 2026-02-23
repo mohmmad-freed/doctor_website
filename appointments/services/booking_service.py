@@ -108,6 +108,17 @@ def book_appointment(
     except Clinic.DoesNotExist:
         raise BookingError("Clinic not found or inactive.", code="invalid_clinic")
 
+    # ── 2a. Validate compliance (block if patient is blocked) ───────
+    from patients.models import PatientProfile
+    from compliance.services.compliance_service import is_patient_blocked
+    try:
+        patient_profile = patient.patient_profile
+        if is_patient_blocked(clinic_id, patient_profile):
+            raise BookingError("You are blocked from booking at this clinic due to repeated no-shows.", code="patient_blocked")
+    except Exception as e:
+        # Avoid breaking booking if profile not found or compliance errors out
+        pass
+
     # ── 3. Validate appointment type ──────────────────────────────────
     try:
         appointment_type = AppointmentType.objects.get(

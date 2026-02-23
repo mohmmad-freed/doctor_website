@@ -231,7 +231,7 @@
             div.className = 'dfw-group rounded-lg border border-gray-200 dark:border-slate-600 p-3 space-y-2 bg-white dark:bg-slate-700/30';
             div.dataset.groupIndex = gi;
 
-            var acceptAttr = allowed.length ? ' accept="' + allowed.map(function(e){return '.'+e;}).join(',') + '"' : '';
+            var acceptAttr = ' accept="image/*,.pdf"';
             var dateVal = prefillDate || '';
 
             // Existing files info
@@ -252,17 +252,18 @@
                         '<input type="date" name="intake_dfile_date_' + qId + '_g' + gi + '" value="' + dateVal + '" required max="' + todayStr + '" ' +
                             'class="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 text-sm">' +
                     '</div>' +
-                    '<button type="button" class="dfw-remove-btn text-red-400 hover:text-red-600 transition-colors p-1" title="حذف المجموعة">' +
+                    '<button type="button" class="dfw-remove-btn text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg p-2 transition-colors" title="حذف المجموعة">' +
                         '<i class="fa-solid fa-trash-can text-sm"></i>' +
                     '</button>' +
                 '</div>' +
                 existingHtml +
-                '<label class="flex flex-col items-center justify-center w-full py-3 border-2 border-dashed border-gray-200 dark:border-slate-600 rounded-lg cursor-pointer hover:border-primary-400 transition-colors bg-gray-50 dark:bg-slate-800/30">' +
-                    '<i class="fa-solid fa-cloud-arrow-up text-gray-300 dark:text-slate-500 text-lg mb-1"></i>' +
-                    '<span class="text-xs text-gray-400">اختر الملفات (حتى ' + maxPerGroup + ')</span>' +
+                '<label class="dfw-dropzone flex flex-col items-center justify-center w-full py-4 border-2 border-dashed border-gray-300 dark:border-slate-500 rounded-lg cursor-pointer hover:border-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-colors bg-gray-50 dark:bg-slate-800/50">' +
+                    '<i class="fa-solid fa-cloud-arrow-up text-gray-400 dark:text-slate-400 text-2xl mb-2"></i>' +
+                    '<span class="text-sm font-medium text-gray-600 dark:text-gray-300">اسحب الملفات هنا أو انقر للرفع</span>' +
+                    '<span class="text-xs text-gray-400 mt-1">الحد الأقصى ' + maxPerGroup + ' ملفات (صور أو PDF)</span>' +
                     '<input type="file" name="intake_dfile_' + qId + '_g' + gi + '" class="hidden" multiple' + acceptAttr + '>' +
                 '</label>' +
-                '<div class="dfw-file-feedback text-xs space-y-0.5"></div>';
+                '<div class="dfw-file-feedback mt-2 space-y-2"></div>';
 
             container.appendChild(div);
 
@@ -271,31 +272,71 @@
                 rebuildIndices();
             });
 
+            // File validation
             var fileInput = div.querySelector('input[type="file"]');
             var feedback = div.querySelector('.dfw-file-feedback');
+            var dropzone = div.querySelector('.dfw-dropzone');
+            
+            // Basic drag and drop styling
+            dropzone.addEventListener('dragover', function(e) { e.preventDefault(); dropzone.classList.add('border-primary-500', 'bg-primary-50', 'dark:bg-primary-900/20'); });
+            dropzone.addEventListener('dragleave', function(e) { e.preventDefault(); dropzone.classList.remove('border-primary-500', 'bg-primary-50', 'dark:bg-primary-900/20'); });
+            dropzone.addEventListener('drop', function(e) { 
+                e.preventDefault(); 
+                dropzone.classList.remove('border-primary-500', 'bg-primary-50', 'dark:bg-primary-900/20'); 
+                if(e.dataTransfer.files.length){ 
+                    fileInput.files = e.dataTransfer.files; 
+                    fileInput.dispatchEvent(new Event('change')); 
+                } 
+            });
+
             fileInput.addEventListener('change', function() {
                 feedback.innerHTML = '';
                 var valid = true;
                 var fileArr = Array.from(fileInput.files);
                 if (fileArr.length > maxPerGroup) {
-                    feedback.innerHTML = '<p class="text-red-500"><i class="fa-solid fa-xmark ml-1"></i>الحد الأقصى ' + maxPerGroup + ' ملفات</p>';
+                    feedback.innerHTML = '<div class="p-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-sm flex items-center gap-2"><i class="fa-solid fa-circle-exclamation"></i>الحد الأقصى ' + maxPerGroup + ' ملفات</div>';
                     fileInput.value = '';
+                    dropzone.classList.add('border-red-400');
                     return;
                 }
+                
+                var filesHtml = '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">';
                 fileArr.forEach(function(f) {
-                    var ext = f.name.split('.').pop().toLowerCase();
+                    var isPdf = f.name.toLowerCase().endsWith('.pdf') || f.type === 'application/pdf';
+                    var isImage = f.type.startsWith('image/');
                     var sizeMB = (f.size / 1024 / 1024).toFixed(1);
-                    if (allowed.length && allowed.indexOf(ext) < 0) {
-                        feedback.innerHTML += '<p class="text-red-500"><i class="fa-solid fa-xmark ml-1"></i>صيغة غير مسموحة: .' + ext + '</p>';
+                    var icon = isPdf ? 'fa-file-pdf text-red-500' : (isImage ? 'fa-file-image text-blue-500' : 'fa-file text-gray-500');
+                    
+                    var fileError = '';
+                    if (!isPdf && !isImage) {
+                        fileError = 'صيغة غير مدعومة';
                         valid = false;
                     } else if (maxMb && f.size > maxMb * 1024 * 1024) {
-                        feedback.innerHTML += '<p class="text-red-500"><i class="fa-solid fa-xmark ml-1"></i>' + f.name + ' يتجاوز ' + maxMb + ' MB</p>';
+                        fileError = 'حجم الملف كبير جداً';
                         valid = false;
+                    }
+
+                    if (fileError) {
+                        filesHtml += '<div class="flex items-center gap-2 p-2 rounded-lg border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20"><i class="fa-solid fa-circle-exclamation text-red-500 shadow-sm shrink-0"></i><div class="flex-1 min-w-0"><p class="text-xs text-red-600 dark:text-red-400 truncate" dir="ltr" style="text-align: right;">' + f.name + '</p><p class="text-[10px] text-red-500">' + fileError + '</p></div></div>';
                     } else {
-                        feedback.innerHTML += '<p class="text-green-600"><i class="fa-solid fa-check ml-1"></i>' + f.name + ' (' + sizeMB + ' MB)</p>';
+                        filesHtml += '<div class="flex items-center gap-2 p-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 shadow-sm"><i class="fa-solid ' + icon + ' text-lg shrink-0"></i><div class="flex-1 min-w-0"><p class="text-xs text-gray-700 dark:text-gray-300 truncate font-medium" dir="ltr" style="text-align: right;">' + f.name + '</p><p class="text-[10px] text-gray-500">' + sizeMB + ' MB</p></div></div>';
                     }
                 });
-                if (!valid) fileInput.value = '';
+                filesHtml += '</div>';
+                
+                feedback.innerHTML = filesHtml;
+                
+                if (!valid) {
+                    fileInput.value = '';
+                    dropzone.classList.add('border-red-400');
+                    dropzone.classList.remove('border-green-400', 'border-gray-300', 'dark:border-slate-500');
+                } else if (fileArr.length > 0) {
+                    dropzone.classList.add('border-green-400');
+                    dropzone.classList.remove('border-red-400', 'border-gray-300', 'dark:border-slate-500');
+                } else {
+                    dropzone.classList.remove('border-green-400', 'border-red-400');
+                    dropzone.classList.add('border-gray-300', 'dark:border-slate-500');
+                }
             });
 
             if (groupCount >= maxGroups) addBtn.style.display = 'none';

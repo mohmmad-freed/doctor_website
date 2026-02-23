@@ -35,7 +35,8 @@
     -   (Optional) Patient/Receptionist uploads relevant files (images/documents) to the appointment.
 5.  **Assign Patient**:
     -   Receptionist searches/selects the patient.
-6.  **Confirm**:
+6.  **Confirm & Validate**:
+    -   **Compliance Check**: System checks if the patient has a `BLOCKED` status at this clinic due to previous No-Shows. If blocked, booking is rejected.
     -   System creates `Appointment` record with status `PENDING` or `CONFIRMED`.
     -   Intake answers and File Attachments are saved with the appointment.
     -   SMS/Email notification sent to Patient (if configured).

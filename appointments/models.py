@@ -2,6 +2,7 @@ import uuid
 from django.db import models
 from django.conf import settings
 from clinics.models import Clinic
+from core.validators.file_validators import validate_file_signature, validate_file_size
 
 
 class AppointmentType(models.Model):
@@ -175,7 +176,10 @@ class AppointmentAttachment(models.Model):
         blank=True,
         related_name="attachments",
     )
-    file = models.FileField(upload_to=appointment_attachment_path)
+    file = models.FileField(
+        upload_to=appointment_attachment_path,
+        validators=[validate_file_signature, validate_file_size]
+    )
     original_name = models.CharField(max_length=255)
     file_size = models.PositiveIntegerField(help_text="Size in bytes.")
     mime_type = models.CharField(max_length=100, blank=True)

@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from core.validators.file_validators import validate_file_extension, validate_file_signature, validate_file_size
 
 
 class PatientProfile(models.Model):
@@ -43,7 +44,12 @@ class PatientProfile(models.Model):
         """
         return f"patients/avatars/user_{instance.user.id}/{filename}"
 
-    avatar = models.ImageField(upload_to=get_avatar_upload_path, blank=True, null=True)
+    avatar = models.ImageField(
+        upload_to=get_avatar_upload_path,
+        blank=True,
+        null=True,
+        validators=[validate_file_extension, validate_file_signature, validate_file_size]
+    )
 
     def __str__(self):
         return f"Patient Profile - {self.user.name}"

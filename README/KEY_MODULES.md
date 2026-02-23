@@ -62,3 +62,12 @@
 -   **Logic**:
     -   Publicly accessible routes for patients to find info.
     -   Self-service booking interface (if enabled).
+
+## 8. `compliance` App
+**Core Responsibility**: Patient No-Show & Penalty Tracking
+-   **Models**: `PatientClinicCompliance`, `ComplianceEvent`, `ClinicComplianceSettings`
+-   **Key Logic**:
+    -   Tracking patient no-shows and calculating penalty scores per clinic.
+    -   Evaluating whether a patient is blocked at a clinic.
+    -   Emitting global warnings for blocked patients to other clinics.
+    -   Handling manual waivers and automatic forgiveness.

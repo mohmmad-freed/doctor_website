@@ -81,3 +81,11 @@ The standard lifecycle is:
 ### R-15: Registration State
 -   **Minimum Viable Profile**: A user is not considered "Registered" until they have established at least a verified presence (Phone + Password + Name).
 -   **Atomic Creation**: The registration flow should ideally result in a complete user or no user (using atomic transactions), preventing "ghost" accounts with missing credentials.
+
+## 7. Patient Compliance (No-Shows)
+
+### R-16: Clinic-Based Compliance Scores
+-   A patient's compliance score is maintained STRICTLY per-clinic. A high no-show rate at Clinic A does not directly penalize the patient at Clinic B.
+-   When a patient's score exceeds the clinic's `score_threshold_block`, they are given the `BLOCKED` status for that clinic.
+-   Blocked patients CANNOT book appointments at the clinic where they are blocked unless manually waived by staff or automatically forgiven (if enabled by clinic settings).
+-   Global visibility: While a block is clinic-specific, the fact that a patient is blocked at *any* clinic is visible as a warning to other clinics during the booking process.

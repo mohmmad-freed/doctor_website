@@ -103,3 +103,36 @@
 | `clinic` | FK | -> `Clinic` | **Tenant Scope** |
 | `date` | Date | | Clinic closed on this date |
 | `reason` | Char | | "National Holiday", "Renovation" |
+
+## 5. Compliance System
+
+### `compliance.PatientClinicCompliance`
+| Field | Type | Attributes | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | UUID | PK | |
+| `clinic` | FK | -> `Clinic` | **Tenant Scope** |
+| `patient` | FK | -> `PatientProfile` | Global patient reference |
+| `bad_score` | Int | Default=0 | Number of accumulated penalties |
+| `status` | Enum | `OK`, `WARNED`, `BLOCKED` | Current compliance standing |
+| `last_violation_at` | DateTime | Nullable | Time of last penalty |
+| `blocked_at` | DateTime | Nullable | Time patient was blocked |
+
+### `compliance.ComplianceEvent`
+| Field | Type | Attributes | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | UUID | PK | |
+| `clinic` | FK | -> `Clinic` | **Tenant Scope** |
+| `patient` | FK | -> `PatientProfile` | Global patient reference |
+| `event_type` | Enum | `NO_SHOW`, `MANUAL_WAIVER`, `AUTO_FORGIVENESS` | Type of event |
+| `score_change` | Int | | Change applied (e.g. +1, -3) |
+| `appointment` | FK | -> `Appointment` | Related appointment (Nullable) |
+
+### `compliance.ClinicComplianceSettings`
+| Field | Type | Attributes | Description |
+| :--- | :--- | :--- | :--- |
+| `clinic` | OneToOne | -> `Clinic` | **Tenant Scope**, PK |
+| `score_increment_per_no_show` | Int | Default=1 | Penalty per no-show |
+| `score_threshold_block` | Int | Default=3 | Threshold to block patient |
+| `max_score` | Int | Default=5 | Maximum penalty score tracked |
+| `auto_forgive_enabled` | Bool | Default=False | Enable automatic waivers |
+| `auto_forgive_after_days` | Int | Nullable | Days of compliance for waiver |

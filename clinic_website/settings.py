@@ -77,6 +77,7 @@ INSTALLED_APPS = [
     "doctors",
     "secretary",
     "clinics",
+    "compliance",
     "rest_framework",
     "rest_framework_simplejwt",
 ]
