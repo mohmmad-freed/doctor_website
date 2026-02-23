@@ -490,6 +490,9 @@ def _notify_staff_patient_edited(appointment, old_date, old_time, old_type):
                 "for user_id=%s appointment_id=%s: %r",
                 user_id, appointment.id, exc,
             )
+
+
+def _notify_staff_patient_cancelled(appointment):
     """
     Notify the doctor and clinic secretaries that a patient cancelled.
 
