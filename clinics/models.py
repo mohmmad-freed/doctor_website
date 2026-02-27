@@ -5,12 +5,23 @@ from django.conf import settings
 class Clinic(models.Model):
     """Clinic model - each clinic has a main doctor and staff"""
 
+    STATUS_CHOICES = [
+        ("PENDING", "Pending Review"),
+        ("ACTIVE", "Active"),
+        ("SUSPENDED", "Suspended"),
+    ]
+
     name = models.CharField(max_length=255)
     address = models.TextField()
     phone = models.CharField(max_length=20)
-    email = models.EmailField()
+    email = models.EmailField(blank=True)
     description = models.TextField(blank=True)
     specialization = models.CharField(max_length=100, blank=True)
+    specialties = models.ManyToManyField(
+        "doctors.Specialty",
+        blank=True,
+        related_name="clinics",
+    )
     city = models.ForeignKey(
         "accounts.City",
         on_delete=models.SET_NULL,
@@ -21,6 +32,7 @@ class Clinic(models.Model):
     main_doctor = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="owned_clinic"
     )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="PENDING")
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
 
@@ -71,6 +83,21 @@ class ClinicActivationCode(models.Model):
 
     code = models.CharField(max_length=20, unique=True)
     clinic_name = models.CharField(max_length=255, help_text="Pre-assigned clinic name")
+    phone = models.CharField(
+        max_length=20,
+        default="",
+        help_text="Normalized phone of the intended owner (059/056 format)",
+    )
+    national_id = models.CharField(
+        max_length=9,
+        default="",
+        help_text="9-digit national ID of the intended owner",
+    )
+    expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Optional expiry date. Leave blank for no expiry.",
+    )
     is_used = models.BooleanField(default=False)
     used_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

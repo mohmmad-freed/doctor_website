@@ -416,11 +416,12 @@ def register_main_doctor(request):
                     address=form.cleaned_data["clinic_address"],
                     city=form.cleaned_data["clinic_city"],
                     phone=form.cleaned_data["clinic_phone"],
-                    email=form.cleaned_data["clinic_email"],
-                    specialization=form.cleaned_data["specialization"],
+                    email=form.cleaned_data.get("clinic_email") or "",
                     description=form.cleaned_data.get("clinic_description", ""),
+                    status="PENDING",
                     main_doctor=user,
                 )
+                clinic.specialties.set(form.cleaned_data["specialties"])
 
                 activation_code_obj.is_used = True
                 activation_code_obj.used_by = user
