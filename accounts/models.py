@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.conf import settings
 from django.db.models import Q
@@ -23,6 +24,10 @@ class CustomUserManager(BaseUserManager):
     def create_user(self, phone, password=None, **extra_fields):
         if not phone:
             raise ValueError("The Phone field must be set")
+        # Auto-populate roles from role if not explicitly provided
+        if "roles" not in extra_fields:
+            role = extra_fields.get("role", "PATIENT")
+            extra_fields["roles"] = [role]
         user = self.model(phone=phone, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
@@ -60,6 +65,12 @@ class CustomUser(AbstractUser):
     name = models.CharField(max_length=255)
     phone = models.CharField(max_length=20, unique=True)  # Required and unique
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="PATIENT")
+    roles = ArrayField(
+        models.CharField(max_length=20, choices=ROLE_CHOICES),
+        default=list,
+        blank=True,
+        help_text="All roles assigned to this user (a user may hold multiple roles simultaneously).",
+    )
     is_verified = models.BooleanField(
         default=False,
         help_text="Designates whether the user has verified their phone number.",
@@ -83,6 +94,10 @@ class CustomUser(AbstractUser):
     REQUIRED_FIELDS = []
 
     objects = CustomUserManager()
+
+    def has_role(self, role):
+        """Return True if *role* is in this user's roles list."""
+        return role in (self.roles or [])
 
     def __str__(self):
         return f"{self.name} ({self.phone}) - {self.role}"

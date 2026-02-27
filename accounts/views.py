@@ -18,6 +18,7 @@ from .forms import (
 from .otp_utils import request_otp, verify_otp, is_in_cooldown, get_remaining_resends
 from clinics.models import Clinic
 from patients.models import PatientProfile
+from patients.services import ensure_patient_profile
 from .email_utils import (
     send_verification_email,
     verify_email_token,
@@ -30,7 +31,18 @@ User = get_user_model()
 
 @login_required
 def home_redirect(request):
-    """Redirect users to their role-specific dashboard with welcome message"""
+    """
+    Redirect users to the highest-priority dashboard they have access to.
+
+    Priority order (checked via actual data, not the single role field):
+      1. Clinic owner  → clinic dashboard
+      2. Doctor        → doctor dashboard
+      3. Secretary     → secretary dashboard
+      4. (default)     → patient dashboard
+
+    This lets multi-role users (e.g. a patient who became a clinic owner) land
+    on the right dashboard automatically while still having access to others.
+    """
     user = request.user
 
     if request.session.get("just_registered", False):
@@ -40,16 +52,20 @@ def home_redirect(request):
         )
         del request.session["just_registered"]
 
-    if user.role == "PATIENT":
-        return redirect("patients:dashboard")
-    elif user.role == "DOCTOR":
-        return redirect("doctors:dashboard")
-    elif user.role == "SECRETARY":
-        return redirect("secretary:dashboard")
-    elif user.role == "MAIN_DOCTOR":
+    # 1. Clinic owner — owns at least one clinic
+    if Clinic.objects.filter(main_doctor=user).exists():
         return redirect("clinics:my_clinic")
-    else:
-        return redirect("admin:index")
+
+    # 2. Doctor — has a doctor profile
+    if hasattr(user, "doctor_profile"):
+        return redirect("doctors:dashboard")
+
+    # 3. Secretary — active staff member in any clinic as secretary
+    if user.clinic_employments.filter(role="SECRETARY", is_active=True).exists():
+        return redirect("secretary:dashboard")
+
+    # 4. Default: patient dashboard
+    return redirect("patients:dashboard")
 
 
 def login_view(request):
@@ -408,6 +424,11 @@ def register_main_doctor(request):
         if form.is_valid():
             try:
                 user = form.save()
+
+                # Every registered user is also a potential patient —
+                # create their PatientProfile if it doesn't exist yet
+                # (existing patients who register as clinic owners keep theirs).
+                ensure_patient_profile(user)
 
                 activation_code_obj = form.cleaned_data["activation_code_obj"]
 

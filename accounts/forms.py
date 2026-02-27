@@ -102,6 +102,7 @@ class PatientRegistrationForm(forms.ModelForm):
         user = super().save(commit=False)
         user.set_password(self.cleaned_data["password1"])
         user.role = "PATIENT"
+        user.roles = ["PATIENT"]
         if commit:
             user.save()
         return user
@@ -319,10 +320,16 @@ class MainDoctorRegistrationForm(forms.ModelForm):
         original = getattr(self, "_existing_original", None)
 
         if original is not None:
-            # ── Existing user: upgrade to MAIN_DOCTOR ──────────────────────────
+            # ── Existing user: add MAIN_DOCTOR role while keeping all prior roles ──
             user.role = "MAIN_DOCTOR"
             user.set_password(password)
             user.is_verified = True
+            # Preserve existing roles and ensure both PATIENT and MAIN_DOCTOR are present
+            existing_roles = list(user.roles or [])
+            for r in ("PATIENT", "MAIN_DOCTOR"):
+                if r not in existing_roles:
+                    existing_roles.append(r)
+            user.roles = existing_roles
             # construct_instance already set fields from form data; selectively
             # restore values that must NOT be overwritten.
             if original["email"]:
@@ -344,6 +351,8 @@ class MainDoctorRegistrationForm(forms.ModelForm):
             user.role = "MAIN_DOCTOR"
             user.is_verified = True
             user.set_password(password)
+            # New clinic owners always hold both PATIENT and MAIN_DOCTOR roles
+            user.roles = ["PATIENT", "MAIN_DOCTOR"]
 
         if commit:
             user.save()

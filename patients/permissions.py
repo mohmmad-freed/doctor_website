@@ -10,5 +10,5 @@ class IsPatient(permissions.BasePermission):
         return bool(
             request.user
             and request.user.is_authenticated
-            and request.user.role == "PATIENT"
+            and request.user.has_role("PATIENT")
         )

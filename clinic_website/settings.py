@@ -80,6 +80,7 @@ INSTALLED_APPS = [
     "compliance",
     "rest_framework",
     "rest_framework_simplejwt",
+    "django.contrib.postgres",
 ]
 
 MIDDLEWARE = [

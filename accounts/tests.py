@@ -7,6 +7,7 @@ from accounts.forms import PatientRegistrationForm, LoginForm, MainDoctorRegistr
 from clinics.models import Clinic, ClinicActivationCode
 from doctors.models import Specialty
 from patients.models import PatientProfile
+from patients.services import ensure_patient_profile
 
 
 class PhoneNumberValidationTest(TestCase):
@@ -526,6 +527,9 @@ class MainDoctorSignupTest(TestCase):
         patient.refresh_from_db()
         self.assertEqual(patient.role, "MAIN_DOCTOR")
         self.assertEqual(patient.national_id, self.OWNER_NID)
+        # Both roles present
+        self.assertIn("PATIENT", patient.roles)
+        self.assertIn("MAIN_DOCTOR", patient.roles)
 
     # ── 4. Existing user identity scenarios ──────────────────────────────
 
@@ -542,7 +546,7 @@ class MainDoctorSignupTest(TestCase):
         self.assertIn("national_id", form.errors)
 
     def test_existing_patient_role_updated_to_main_doctor(self):
-        """Existing PATIENT has their role promoted to MAIN_DOCTOR after clinic signup."""
+        """Existing PATIENT primary role is set to MAIN_DOCTOR after clinic signup."""
         patient = CustomUser.objects.create_user(
             phone=self.OWNER_PHONE,
             name="Patient User",
@@ -554,6 +558,17 @@ class MainDoctorSignupTest(TestCase):
         self.assertEqual(response.status_code, 302)
         patient.refresh_from_db()
         self.assertEqual(patient.role, "MAIN_DOCTOR")
+        # PATIENT role is preserved in the roles list
+        self.assertIn("PATIENT", patient.roles)
+        self.assertIn("MAIN_DOCTOR", patient.roles)
+
+    def test_new_clinic_owner_has_both_roles(self):
+        """A brand-new clinic owner gets both PATIENT and MAIN_DOCTOR in their roles list."""
+        response = self.client.post(self.url, self._valid_data())
+        self.assertEqual(response.status_code, 302)
+        user = CustomUser.objects.get(phone=self.OWNER_PHONE)
+        self.assertIn("PATIENT", user.roles)
+        self.assertIn("MAIN_DOCTOR", user.roles)
 
     def test_existing_patient_password_updated(self):
         """Existing user's password is replaced by the one submitted in the signup form."""
@@ -621,3 +636,73 @@ class MainDoctorSignupTest(TestCase):
         self.activation_code.save()
         form = MainDoctorRegistrationForm(data=self._valid_data(phone="+970594073100"))
         self.assertTrue(form.is_valid(), f"Form should be valid: {form.errors}")
+
+    # ── 5. PatientProfile auto-creation ──────────────────────────────────
+
+    def test_new_clinic_owner_gets_patient_profile(self):
+        """A brand-new clinic owner user automatically gets a PatientProfile."""
+        response = self.client.post(self.url, self._valid_data())
+        self.assertEqual(response.status_code, 302)
+        user = CustomUser.objects.get(phone=self.OWNER_PHONE)
+        self.assertTrue(
+            PatientProfile.objects.filter(user=user).exists(),
+            "PatientProfile must be created for a new clinic owner.",
+        )
+
+    def test_existing_patient_profile_reused_not_duplicated(self):
+        """
+        Existing patient who registers as clinic owner keeps their PatientProfile
+        — no duplicate is created and no error is raised.
+        """
+        patient = CustomUser.objects.create_user(
+            phone=self.OWNER_PHONE,
+            name="Patient User",
+            national_id=self.OWNER_NID,
+            password="pass12345",
+        )
+        original_profile = PatientProfile.objects.create(user=patient)
+
+        response = self.client.post(self.url, self._valid_data())
+        self.assertEqual(response.status_code, 302)
+
+        # Still exactly one PatientProfile for this user
+        self.assertEqual(PatientProfile.objects.filter(user=patient).count(), 1)
+        # Same row — pk unchanged
+        patient.refresh_from_db()
+        self.assertEqual(patient.patient_profile.pk, original_profile.pk)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ensure_patient_profile service tests
+# ─────────────────────────────────────────────────────────────────────────────
+
+class EnsurePatientProfileTest(TestCase):
+    """Unit tests for patients.services.ensure_patient_profile."""
+
+    def setUp(self):
+        self.user = CustomUser.objects.create_user(
+            phone="0591234567",
+            name="Test User",
+            password="TestPass1!",
+        )
+
+    def test_creates_profile_when_none_exists(self):
+        """First call creates a PatientProfile and returns created=True."""
+        profile, created = ensure_patient_profile(self.user)
+        self.assertTrue(created)
+        self.assertEqual(profile.user, self.user)
+        self.assertTrue(PatientProfile.objects.filter(user=self.user).exists())
+
+    def test_reuses_existing_profile(self):
+        """Second call returns the same profile with created=False."""
+        profile1, _ = ensure_patient_profile(self.user)
+        profile2, created = ensure_patient_profile(self.user)
+        self.assertFalse(created)
+        self.assertEqual(profile1.pk, profile2.pk)
+
+    def test_idempotent_no_duplicate(self):
+        """Calling multiple times never creates more than one row."""
+        ensure_patient_profile(self.user)
+        ensure_patient_profile(self.user)
+        ensure_patient_profile(self.user)
+        self.assertEqual(PatientProfile.objects.filter(user=self.user).count(), 1)

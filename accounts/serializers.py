@@ -54,7 +54,7 @@ class LoginSerializer(TokenObtainPairSerializer):
                 )
 
         # 3. Check Role (API is strict on Patient)
-        if user.role != "PATIENT":
+        if not user.has_role("PATIENT"):
             raise serializers.ValidationError(
                 {"detail": "Access denied. Patients only."}
             )
@@ -80,4 +80,5 @@ class LoginSerializer(TokenObtainPairSerializer):
         # Add custom claims
         token["name"] = user.name
         token["role"] = user.role
+        token["roles"] = user.roles
         return token
