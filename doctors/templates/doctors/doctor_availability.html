@@ -18,22 +18,24 @@
     <!-- Doctor Header -->
     <div class="glass-card p-6 relative overflow-hidden">
         <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary-500 to-primary-700"></div>
-        <div class="flex items-center gap-4">
-            <div class="w-14 h-14 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center flex-shrink-0">
-                <i class="fa-solid fa-user-doctor text-primary-600 dark:text-primary-400 text-xl"></i>
+        <div class="flex flex-col items-center text-center gap-4 sm:flex-row sm:items-start sm:text-right sm:justify-between">
+            <div class="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+                <div class="w-16 h-16 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center flex-shrink-0">
+                    <span class="text-2xl font-bold text-primary-600 dark:text-primary-400">{{ doctor.name|slice:":1" }}</span>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">د. {{ doctor.name }}</h1>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">جدول المواعيد المتاحة</p>
+                </div>
             </div>
-            <div>
-                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">د. {{ doctor.name }}</h1>
-                <p class="text-gray-500 dark:text-gray-400 text-sm">جدول المواعيد المتاحة</p>
-            </div>
-            <div class="mr-auto flex items-center gap-2">
+            <div class="flex flex-col gap-2 w-full sm:w-auto mt-4 sm:mt-0">
                 <a href="{% url 'appointments:book_appointment' clinic_id=clinic_id %}?doctor_id={{ doctor.id }}"
-                   class="inline-flex items-center gap-2 text-sm font-bold text-white bg-secondary-500 hover:bg-secondary-600 px-5 py-2.5 rounded-xl transition-all shadow-sm hover:shadow-md">
+                   class="inline-flex justify-center items-center gap-2 text-sm font-bold text-white bg-secondary-500 hover:bg-secondary-600 px-6 py-3 rounded-xl transition-all shadow-sm hover:shadow-md w-full">
                     <i class="fa-solid fa-calendar-check"></i>
                     احجز موعد
                 </a>
                 <a href="{% url 'doctors:doctor_appointment_types' doctor.id %}?clinic_id={{ clinic_id }}"
-                   class="inline-flex items-center gap-2 text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors bg-primary-50 dark:bg-primary-900/20 px-4 py-2 rounded-xl">
+                   class="inline-flex justify-center items-center gap-2 text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors bg-primary-50 dark:bg-primary-900/20 px-6 py-3 rounded-xl w-full">
                     <i class="fa-solid fa-list-check"></i>
                     أنواع المواعيد
                 </a>

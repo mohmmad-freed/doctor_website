@@ -98,24 +98,26 @@
         {% for clinic_data in doctors_by_clinic %}
         <div class="glass-card p-6">
             <!-- Clinic Header -->
-            <div class="flex items-center gap-3 mb-5 pb-4 border-b border-gray-100 dark:border-slate-700">
-                <div class="w-10 h-10 rounded-lg bg-secondary-50 dark:bg-secondary-900/30 flex items-center justify-center">
-                    <i class="fa-solid fa-hospital text-secondary-500"></i>
-                </div>
-                <div>
-                    <h2 class="text-lg font-bold text-gray-800 dark:text-white">{{ clinic_data.clinic.name }}</h2>
-                    {% if clinic_data.clinic.address %}
-                    <p class="text-sm text-gray-500 dark:text-gray-400">
-                        <i class="fa-solid fa-map-pin ml-1 text-xs"></i>
-                        {{ clinic_data.clinic.address }}
-                    </p>
-                    {% endif %}
-                    {% if clinic_data.clinic.specialization %}
-                    <p class="text-xs text-gray-400 dark:text-gray-500">{{ clinic_data.clinic.specialization }}</p>
-                    {% endif %}
+            <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-5 pb-4 border-b border-gray-100 dark:border-slate-700">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-secondary-50 dark:bg-secondary-900/30 flex items-center justify-center">
+                        <i class="fa-solid fa-hospital text-secondary-500"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-800 dark:text-white">{{ clinic_data.clinic.name }}</h2>
+                        {% if clinic_data.clinic.address %}
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            <i class="fa-solid fa-map-pin ml-1 text-xs"></i>
+                            {{ clinic_data.clinic.address }}
+                        </p>
+                        {% endif %}
+                        {% if clinic_data.clinic.specialization %}
+                        <p class="text-xs text-gray-400 dark:text-gray-500">{{ clinic_data.clinic.specialization }}</p>
+                        {% endif %}
+                    </div>
                 </div>
                 {% if clinic_data.clinic.city %}
-                <span class="mr-auto text-xs bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400 px-3 py-1 rounded-full">
+                <span class="w-fit sm:mr-auto text-xs bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400 px-3 py-1 rounded-full mt-2 sm:mt-0">
                     <i class="fa-solid fa-location-dot ml-1"></i>
                     {{ clinic_data.clinic.city.name }}
                 </span>
