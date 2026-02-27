@@ -58,7 +58,7 @@
                 <h1 class="text-display animate-text-gradient">رعاية صحية متطورة <br> في متناول يدك</h1>
                 <p class="text-body-l text-muted">منصة طبية شاملة تربطك بأفضل الأطباء والخدمات الصحية بسهولة. إدارة
                     مواعيد، سجلات إلكترونية، واستشارات عن بعد.</p>
-                <div class="hero-actions" style="display: flex; gap: var(--space-4);">
+                <div class="hero-actions" style="display: flex; gap: var(--space-4); justify-content: center; flex-wrap: wrap;">
                     {% if user.is_authenticated %}
                     <a href="{% url 'accounts:home' %}" class="btn btn-primary btn-pulse">ابدأ رحلتك الصحية</a>
                     {% else %}

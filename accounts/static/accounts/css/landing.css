@@ -299,6 +299,20 @@ body, html {
   }
 }
 
+@keyframes popIn {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 .reveal-on-scroll {
   opacity: 1;
   transform: none;
@@ -806,13 +820,13 @@ html.js .reveal-on-scroll.is-visible {
 .badge-top-right {
   top: 40px;
   right: -30px;
-  animation: float 6s ease-in-out infinite;
+  animation: popIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards, float 6s ease-in-out infinite 0.8s;
 }
 
 .badge-bottom-left {
   bottom: 40px;
   left: -30px;
-  animation: float 6s ease-in-out infinite 2s;
+  animation: popIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s backwards, float 6s ease-in-out infinite 1.1s;
 }
 
 .badge-text span {
@@ -864,16 +878,24 @@ html.js .reveal-on-scroll.is-visible {
 }
 
 @media (max-width: 768px) {
+  @keyframes popInMobile {
+    0% { transform: scale(0); opacity: 0; }
+    70% { transform: scale(0.6); }
+    100% { transform: scale(0.5); opacity: 1; }
+  }
+
   .floating-badge {
-    transform: scale(0.9);
+    transform: scale(0.5);
   }
   .badge-top-right {
-    top: 20px;
-    right: -10px; /* Reduced to avoid pushing width */
+    top: 0px;
+    right: -35px; /* Adjust slightly based on scale */
+    animation: popInMobile 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards, float 6s ease-in-out infinite 0.8s;
   }
   .badge-bottom-left {
-    bottom: 20px;
-    left: -10px; /* Reduced to avoid pushing width */
+    bottom: 0px;
+    left: -35px;
+    animation: popInMobile 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.5s backwards, float 6s ease-in-out infinite 1.3s;
   }
   .hero-image-wrapper {
     /* make sure it does not exceed body width */
