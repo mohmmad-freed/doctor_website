@@ -1,7 +1,11 @@
 from django.test import TestCase, Client
 from django.urls import reverse
+from django.utils import timezone
+from datetime import timedelta
 from accounts.models import CustomUser, City
-from accounts.forms import PatientRegistrationForm, LoginForm
+from accounts.forms import PatientRegistrationForm, LoginForm, MainDoctorRegistrationForm
+from clinics.models import Clinic, ClinicActivationCode
+from doctors.models import Specialty
 from patients.models import PatientProfile
 
 
@@ -329,7 +333,7 @@ class NameValidationTest(TestCase):
             ('AB', 'name'),        # Too short
             ('123', 'name'),       # No letters
         ]
-        
+
         for idx, (name, expected_field) in enumerate(invalid_names):
             form_data = {
                 'name': name,
@@ -342,3 +346,168 @@ class NameValidationTest(TestCase):
             form = PatientRegistrationForm(data=form_data)
             self.assertFalse(form.is_valid(), f"Name '{name}' should be invalid")
             self.assertIn(expected_field, form.errors)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Main Doctor / Clinic Owner Signup Tests
+# ─────────────────────────────────────────────────────────────────────────────
+
+class MainDoctorSignupTest(TestCase):
+    """Tests for the clinic owner single-page signup form and view."""
+
+    OWNER_PHONE = "0594073100"
+    OWNER_NID   = "123456789"
+    CODE        = "TESTCODE123"
+
+    def setUp(self):
+        self.client = Client()
+        self.city = City.objects.create(name="Ramallah")
+        self.specialty = Specialty.objects.create(
+            name="General Practice",
+            name_ar="الممارسة العامة",
+        )
+        self.activation_code = ClinicActivationCode.objects.create(
+            code=self.CODE,
+            clinic_name="عيادة الاختبار",
+            phone=self.OWNER_PHONE,
+            national_id=self.OWNER_NID,
+        )
+        self.url = reverse("accounts:register_main_doctor")
+
+    def _valid_data(self, **overrides):
+        data = {
+            "activation_code": self.CODE,
+            "first_name": "محمد",
+            "last_name": "أحمد",
+            "phone": self.OWNER_PHONE,
+            "national_id": self.OWNER_NID,
+            "email": "doctor@test.com",
+            "password": "StrongPass123!",
+            "confirm_password": "StrongPass123!",
+            "clinic_name": "عيادة الشفاء",
+            "clinic_phone": "0569001234",
+            "clinic_email": "",
+            "clinic_address": "شارع النصر، مبنى 5",
+            "clinic_city": self.city.id,
+            "specialties": [self.specialty.id],
+        }
+        data.update(overrides)
+        return data
+
+    # ── 1. Happy path ─────────────────────────────────────────────────────
+    def test_valid_signup_creates_clinic_with_pending_status(self):
+        """Full valid form submission creates user + clinic with status=PENDING."""
+        response = self.client.post(self.url, self._valid_data())
+        self.assertEqual(response.status_code, 302, f"Expected redirect but got errors: {response.context['form'].errors if response.context and 'form' in response.context else ''}")
+
+        user = CustomUser.objects.get(phone=self.OWNER_PHONE)
+        self.assertEqual(user.role, "MAIN_DOCTOR")
+        self.assertEqual(user.national_id, self.OWNER_NID)
+        self.assertTrue(user.is_verified)
+
+        clinic = Clinic.objects.get(main_doctor=user)
+        self.assertEqual(clinic.status, "PENDING")
+        self.assertIn(self.specialty, clinic.specialties.all())
+
+        # Activation code marked as used
+        self.activation_code.refresh_from_db()
+        self.assertTrue(self.activation_code.is_used)
+        self.assertEqual(self.activation_code.used_by, user)
+
+    # ── 2. Activation code checks ─────────────────────────────────────────
+    def test_invalid_code_blocked(self):
+        """Wrong activation code is rejected."""
+        form = MainDoctorRegistrationForm(data=self._valid_data(activation_code="WRONGCODE"))
+        self.assertFalse(form.is_valid())
+        self.assertIn("activation_code", form.errors)
+
+    def test_used_code_blocked(self):
+        """Already-used activation code is rejected."""
+        self.activation_code.is_used = True
+        self.activation_code.save()
+        form = MainDoctorRegistrationForm(data=self._valid_data())
+        self.assertFalse(form.is_valid())
+        self.assertIn("activation_code", form.errors)
+
+    def test_expired_code_blocked(self):
+        """Expired activation code is rejected."""
+        self.activation_code.expires_at = timezone.now() - timedelta(hours=1)
+        self.activation_code.save()
+        form = MainDoctorRegistrationForm(data=self._valid_data())
+        self.assertFalse(form.is_valid())
+        self.assertIn("activation_code", form.errors)
+
+    def test_phone_mismatch_blocked(self):
+        """Correct code but mismatched owner phone is rejected."""
+        form = MainDoctorRegistrationForm(data=self._valid_data(phone="0591111111"))
+        self.assertFalse(form.is_valid())
+        self.assertIn("activation_code", form.errors)
+
+    def test_national_id_mismatch_blocked(self):
+        """Correct code but mismatched national ID is rejected."""
+        form = MainDoctorRegistrationForm(data=self._valid_data(national_id="999999999"))
+        self.assertFalse(form.is_valid())
+        self.assertIn("activation_code", form.errors)
+
+    # ── 3. Field validations ──────────────────────────────────────────────
+    def test_specialties_required(self):
+        """Form is invalid when no specialty is selected."""
+        form = MainDoctorRegistrationForm(data=self._valid_data(specialties=[]))
+        self.assertFalse(form.is_valid())
+        self.assertIn("specialties", form.errors)
+
+    def test_password_mismatch(self):
+        """Mismatched passwords are rejected."""
+        form = MainDoctorRegistrationForm(data=self._valid_data(confirm_password="DifferentPass!"))
+        self.assertFalse(form.is_valid())
+        self.assertIn("confirm_password", form.errors)
+
+    def test_password_too_short(self):
+        """Password shorter than 8 characters is rejected."""
+        form = MainDoctorRegistrationForm(data=self._valid_data(password="short", confirm_password="short"))
+        self.assertFalse(form.is_valid())
+        self.assertIn("password", form.errors)
+
+    def test_invalid_owner_phone_format(self):
+        """Bad phone format for owner is rejected."""
+        form = MainDoctorRegistrationForm(data=self._valid_data(phone="123456789"))
+        self.assertFalse(form.is_valid())
+        self.assertIn("phone", form.errors)
+
+    def test_invalid_clinic_phone_format(self):
+        """Bad phone format for clinic is rejected."""
+        form = MainDoctorRegistrationForm(data=self._valid_data(clinic_phone="123456789"))
+        self.assertFalse(form.is_valid())
+        self.assertIn("clinic_phone", form.errors)
+
+    def test_duplicate_owner_phone_blocked(self):
+        """Phone already in use by another user is rejected."""
+        CustomUser.objects.create_user(phone=self.OWNER_PHONE, name="Existing", password="pass12345")
+        form = MainDoctorRegistrationForm(data=self._valid_data())
+        self.assertFalse(form.is_valid())
+        self.assertIn("phone", form.errors)
+
+    def test_national_id_invalid_format(self):
+        """National ID that is not 9 digits is rejected."""
+        form = MainDoctorRegistrationForm(data=self._valid_data(national_id="12345", phone="0591234567"))
+        self.assertFalse(form.is_valid())
+        self.assertIn("national_id", form.errors)
+
+    def test_clinic_email_optional(self):
+        """Clinic email can be left blank."""
+        form = MainDoctorRegistrationForm(data=self._valid_data(clinic_email=""))
+        self.assertTrue(form.is_valid(), f"Form should be valid but has errors: {form.errors}")
+
+    def test_clinic_email_validated_when_provided(self):
+        """When clinic email is provided, it must be a valid email."""
+        form = MainDoctorRegistrationForm(data=self._valid_data(clinic_email="not-an-email"))
+        self.assertFalse(form.is_valid())
+        self.assertIn("clinic_email", form.errors)
+
+    def test_phone_plus970_format_accepted(self):
+        """Owner phone in +970 format is normalized and accepted."""
+        # Update activation code to normalized format so it matches
+        self.activation_code.phone = "0594073100"
+        self.activation_code.save()
+        form = MainDoctorRegistrationForm(data=self._valid_data(phone="+970594073100"))
+        self.assertTrue(form.is_valid(), f"Form should be valid: {form.errors}")

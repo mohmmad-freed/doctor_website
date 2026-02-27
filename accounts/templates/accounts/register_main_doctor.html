@@ -1,17 +1,15 @@
 {% extends 'accounts/base.html' %}
 
-{% block title %}تسجيل طبيب (صاحب عيادة){% endblock %}
+{% block title %}تسجيل صاحب عيادة{% endblock %}
 
 {% block content %}
 <section class="auth-wrapper">
     <div class="container" style="display: flex; justify-content: center;">
-        <div class="auth-card reveal-on-scroll" style="max-width: 800px; padding: 0; overflow: hidden;">
+        <div class="auth-card reveal-on-scroll" style="max-width: 860px; padding: 0; overflow: hidden;">
 
-            <!-- Hero Header for the Card -->
-            <div
-                style="background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500)); padding: 40px 20px; text-align: center; color: white;">
-                <div
-                    style="width: 70px; height: 70px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; backdrop-filter: blur(5px);">
+            <!-- Hero Header -->
+            <div style="background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500)); padding: 40px 20px; text-align: center; color: white;">
+                <div style="width: 70px; height: 70px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; backdrop-filter: blur(5px);">
                     <i class="fa-solid fa-user-doctor" style="font-size: 32px; color: white;"></i>
                 </div>
                 <h2 class="text-h2" style="color: white; margin-bottom: 8px;">انضم إلينا كشريك</h2>
@@ -19,110 +17,257 @@
             </div>
 
             <div style="padding: 40px;">
-                <form method="post">
+
+                {% if messages %}
+                <div style="margin-bottom: 24px;">
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}" style="margin-bottom: 8px;">{{ message }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <form method="post" id="signup-form" novalidate>
                     {% csrf_token %}
 
-                    <!-- Section: Activation -->
-                    <div
-                        style="background: var(--color-secondary-100); padding: 20px; border-radius: var(--radius-md); border: 1px dashed var(--color-secondary-500); margin-bottom: 32px;">
+                    <!-- ── Section: Activation Code ─────────────────── -->
+                    <div style="background: var(--color-secondary-100); padding: 20px; border-radius: var(--radius-md); border: 1px dashed var(--color-secondary-500); margin-bottom: 36px;">
                         <div class="form-group" style="margin-bottom: 0;">
-                            <label for="{{ form.activation_code.id_for_label }}"
-                                style="color: var(--color-secondary-500); display: flex; align-items: center; gap: 8px;">
-                                <i class="fa-solid fa-key"></i> كود التفعيل
+                            <label for="{{ form.activation_code.id_for_label }}" style="color: var(--color-secondary-700); display: flex; align-items: center; gap: 8px; font-weight: 600;">
+                                <i class="fa-solid fa-key"></i> كود التفعيل <span class="required-star">*</span>
                             </label>
-                            <input type="text" name="{{ form.activation_code.name }}"
-                                id="{{ form.activation_code.id_for_label }}"
-                                style="text-align: center; letter-spacing: 2px; font-weight: bold; border-color: var(--color-secondary-500);"
-                                placeholder="أدخل الكود هنا">
-                            {% if form.activation_code.errors %}
-                            <ul class="errorlist" style="text-align: center;">
-                                {% for error in form.activation_code.errors %}<li>{{ error }}</li>{% endfor %}
-                            </ul>
-                            {% endif %}
+                            <input type="text"
+                                   name="{{ form.activation_code.name }}"
+                                   id="{{ form.activation_code.id_for_label }}"
+                                   value="{{ form.activation_code.value|default:'' }}"
+                                   style="text-align: center; letter-spacing: 2px; font-weight: bold; border-color: var(--color-secondary-500);"
+                                   placeholder="أدخل الكود هنا"
+                                   autocomplete="off">
+                            <span class="field-error" id="err-activation_code">
+                                {% if form.activation_code.errors %}{{ form.activation_code.errors|first }}{% endif %}
+                            </span>
                         </div>
                     </div>
 
-                    <!-- Section: Personal Info -->
+                    <!-- ── Section: Owner Info ──────────────────────── -->
                     <h3 class="text-h3" style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-                        <span
-                            style="width: 8px; height: 30px; background: var(--color-primary-500); border-radius: 4px; display: block;"></span>
+                        <span style="width: 8px; height: 30px; background: var(--color-primary-500); border-radius: 4px; display: block;"></span>
                         المعلومات الشخصية
                     </h3>
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
                         <div class="form-group">
-                            <label>الاسم الأول</label>
-                            {{ form.first_name }}
-                            {{ form.first_name.errors }}
+                            <label for="{{ form.first_name.id_for_label }}">الاسم الأول <span class="required-star">*</span></label>
+                            <input type="text"
+                                   name="{{ form.first_name.name }}"
+                                   id="{{ form.first_name.id_for_label }}"
+                                   value="{{ form.first_name.value|default:'' }}"
+                                   placeholder="محمد">
+                            <span class="field-error" id="err-first_name">
+                                {% if form.first_name.errors %}{{ form.first_name.errors|first }}{% endif %}
+                            </span>
                         </div>
                         <div class="form-group">
-                            <label>الاسم الأخير</label>
-                            {{ form.last_name }}
-                            {{ form.last_name.errors }}
+                            <label for="{{ form.last_name.id_for_label }}">الاسم الأخير <span class="required-star">*</span></label>
+                            <input type="text"
+                                   name="{{ form.last_name.name }}"
+                                   id="{{ form.last_name.id_for_label }}"
+                                   value="{{ form.last_name.value|default:'' }}"
+                                   placeholder="أحمد">
+                            <span class="field-error" id="err-last_name">
+                                {% if form.last_name.errors %}{{ form.last_name.errors|first }}{% endif %}
+                            </span>
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>رقم الهاتف</label>
-                        {{ form.phone }}
-                        {{ form.phone.errors }}
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
                         <div class="form-group">
-                            <label>كلمة المرور</label>
-                            {{ form.password }}
-                            {{ form.password.errors }}
+                            <label for="{{ form.phone.id_for_label }}">رقم الهاتف <span class="required-star">*</span></label>
+                            <input type="tel"
+                                   name="{{ form.phone.name }}"
+                                   id="{{ form.phone.id_for_label }}"
+                                   value="{{ form.phone.value|default:'' }}"
+                                   placeholder="059XXXXXXX"
+                                   inputmode="tel"
+                                   dir="ltr">
+                            <span class="field-error" id="err-phone">
+                                {% if form.phone.errors %}{{ form.phone.errors|first }}{% endif %}
+                            </span>
                         </div>
                         <div class="form-group">
-                            <label>تأكيد كلمة المرور</label>
-                            {{ form.confirm_password }}
-                            {{ form.confirm_password.errors }}
+                            <label for="{{ form.national_id.id_for_label }}">رقم الهوية الوطنية <span class="required-star">*</span></label>
+                            <input type="text"
+                                   name="{{ form.national_id.name }}"
+                                   id="{{ form.national_id.id_for_label }}"
+                                   value="{{ form.national_id.value|default:'' }}"
+                                   placeholder="9 أرقام"
+                                   maxlength="9"
+                                   inputmode="numeric"
+                                   dir="ltr">
+                            <span class="field-error" id="err-national_id">
+                                {% if form.national_id.errors %}{{ form.national_id.errors|first }}{% endif %}
+                            </span>
                         </div>
                     </div>
 
-                    <!-- Section: Clinic Info -->
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label for="{{ form.email.id_for_label }}">البريد الإلكتروني <span class="required-star">*</span></label>
+                        <input type="email"
+                               name="{{ form.email.name }}"
+                               id="{{ form.email.id_for_label }}"
+                               value="{{ form.email.value|default:'' }}"
+                               placeholder="doctor@example.com"
+                               dir="ltr">
+                        <span class="field-error" id="err-email">
+                            {% if form.email.errors %}{{ form.email.errors|first }}{% endif %}
+                        </span>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 36px;">
+                        <div class="form-group">
+                            <label for="{{ form.password.id_for_label }}">كلمة المرور <span class="required-star">*</span></label>
+                            <input type="password"
+                                   name="{{ form.password.name }}"
+                                   id="{{ form.password.id_for_label }}"
+                                   placeholder="8 أحرف على الأقل">
+                            <span class="field-error" id="err-password">
+                                {% if form.password.errors %}{{ form.password.errors|first }}{% endif %}
+                            </span>
+                        </div>
+                        <div class="form-group">
+                            <label for="{{ form.confirm_password.id_for_label }}">تأكيد كلمة المرور <span class="required-star">*</span></label>
+                            <input type="password"
+                                   name="{{ form.confirm_password.name }}"
+                                   id="{{ form.confirm_password.id_for_label }}"
+                                   placeholder="أعد كتابة كلمة المرور">
+                            <span class="field-error" id="err-confirm_password">
+                                {% if form.confirm_password.errors %}{{ form.confirm_password.errors|first }}{% endif %}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- ── Section: Clinic Info ─────────────────────── -->
                     <h3 class="text-h3" style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-                        <span
-                            style="width: 8px; height: 30px; background: var(--color-secondary-500); border-radius: 4px; display: block;"></span>
+                        <span style="width: 8px; height: 30px; background: var(--color-secondary-500); border-radius: 4px; display: block;"></span>
                         تفاصيل العيادة
                     </h3>
 
-                    <div class="form-group">
-                        <label>اسم العيادة</label>
-                        {{ form.clinic_name }}
-                        {{ form.clinic_name.errors }}
-                    </div>
-
-                    <div class="form-group">
-                        <label>التخصص الطبية</label>
-                        {{ form.specialization }}
-                        {{ form.specialization.errors }}
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
                         <div class="form-group">
-                            <label>المدينة</label>
-                            {{ form.clinic_city }}
-                            {{ form.clinic_city.errors }}
+                            <label for="{{ form.clinic_name.id_for_label }}">اسم العيادة <span class="required-star">*</span></label>
+                            <input type="text"
+                                   name="{{ form.clinic_name.name }}"
+                                   id="{{ form.clinic_name.id_for_label }}"
+                                   value="{{ form.clinic_name.value|default:'' }}"
+                                   placeholder="عيادة الشفاء">
+                            <span class="field-error" id="err-clinic_name">
+                                {% if form.clinic_name.errors %}{{ form.clinic_name.errors|first }}{% endif %}
+                            </span>
                         </div>
                         <div class="form-group">
-                            <label>العنوان التفصيلي</label>
-                            {{ form.clinic_address }}
-                            {{ form.clinic_address.errors }}
+                            <label for="{{ form.clinic_phone.id_for_label }}">هاتف العيادة <span class="required-star">*</span></label>
+                            <input type="tel"
+                                   name="{{ form.clinic_phone.name }}"
+                                   id="{{ form.clinic_phone.id_for_label }}"
+                                   value="{{ form.clinic_phone.value|default:'' }}"
+                                   placeholder="059XXXXXXX"
+                                   inputmode="tel"
+                                   dir="ltr">
+                            <span class="field-error" id="err-clinic_phone">
+                                {% if form.clinic_phone.errors %}{{ form.clinic_phone.errors|first }}{% endif %}
+                            </span>
                         </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                        <div class="form-group">
+                            <label for="{{ form.clinic_city.id_for_label }}">المدينة <span class="required-star">*</span></label>
+                            <select name="{{ form.clinic_city.name }}" id="{{ form.clinic_city.id_for_label }}">
+                                <option value="">اختر المدينة</option>
+                                {% for city in form.clinic_city.field.queryset %}
+                                <option value="{{ city.pk }}" {% if form.clinic_city.value == city.pk|stringformat:"s" %}selected{% endif %}>{{ city.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <span class="field-error" id="err-clinic_city">
+                                {% if form.clinic_city.errors %}{{ form.clinic_city.errors|first }}{% endif %}
+                            </span>
+                        </div>
+                        <div class="form-group">
+                            <label for="{{ form.clinic_email.id_for_label }}">بريد العيادة الإلكتروني <span style="font-size: 0.8em; color: var(--color-neutral-500);">(اختياري)</span></label>
+                            <input type="email"
+                                   name="{{ form.clinic_email.name }}"
+                                   id="{{ form.clinic_email.id_for_label }}"
+                                   value="{{ form.clinic_email.value|default:'' }}"
+                                   placeholder="clinic@example.com"
+                                   dir="ltr">
+                            <span class="field-error" id="err-clinic_email">
+                                {% if form.clinic_email.errors %}{{ form.clinic_email.errors|first }}{% endif %}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label for="{{ form.clinic_address.id_for_label }}">العنوان التفصيلي <span class="required-star">*</span></label>
+                        <textarea name="{{ form.clinic_address.name }}"
+                                  id="{{ form.clinic_address.id_for_label }}"
+                                  rows="2"
+                                  placeholder="الشارع، الحي، المبنى...">{{ form.clinic_address.value|default:'' }}</textarea>
+                        <span class="field-error" id="err-clinic_address">
+                            {% if form.clinic_address.errors %}{{ form.clinic_address.errors|first }}{% endif %}
+                        </span>
+                    </div>
+
+                    <!-- Specialties -->
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 12px;">
+                            التخصصات الطبية <span class="required-star">*</span>
+                            <span style="font-size: 0.8em; color: var(--color-neutral-500); margin-right: 6px;">(اختر واحداً أو أكثر)</span>
+                        </label>
+
+                        {% if form.specialties.field.queryset.exists %}
+                        <div class="specialties-grid" id="specialties-container">
+                            {% for choice in form.specialties %}
+                            <label class="specialty-label" for="{{ choice.id_for_label }}">
+                                <input type="checkbox"
+                                       name="{{ choice.data.name }}"
+                                       value="{{ choice.data.value }}"
+                                       id="{{ choice.id_for_label }}"
+                                       class="specialty-checkbox-input"
+                                       {% if choice.data.selected %}checked{% endif %}>
+                                <span class="specialty-name">{{ choice.choice_label }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p style="color: var(--color-neutral-500); font-size: 0.9em; padding: 12px; background: var(--color-neutral-100); border-radius: var(--radius-sm);">
+                            <i class="fa-solid fa-circle-info"></i>
+                            لا توجد تخصصات متاحة حالياً. يرجى التواصل مع الإدارة.
+                        </p>
+                        {% endif %}
+
+                        <span class="field-error" id="err-specialties">
+                            {% if form.specialties.errors %}{{ form.specialties.errors|first }}{% endif %}
+                        </span>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 36px;">
+                        <label for="{{ form.clinic_description.id_for_label }}">وصف العيادة <span style="font-size: 0.8em; color: var(--color-neutral-500);">(اختياري)</span></label>
+                        <textarea name="{{ form.clinic_description.name }}"
+                                  id="{{ form.clinic_description.id_for_label }}"
+                                  rows="3"
+                                  placeholder="نبذة مختصرة عن العيادة وخدماتها...">{{ form.clinic_description.value|default:'' }}</textarea>
                     </div>
 
                     <!-- Actions -->
-                    <div style="margin-top: 40px; display: flex; flex-direction: column; gap: 16px;">
-                        <button type="submit" class="btn btn-primary"
-                            style="width: 100%; padding: 16px; font-size: 18px;">
-                            إنشاء الحساب ومساحة العمل <i class="fa-solid fa-arrow-left" style="margin-right: 8px;"></i>
+                    <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 16px;">
+                        <button type="submit" id="submit-btn" class="btn btn-primary"
+                                style="width: 100%; padding: 16px; font-size: 18px;">
+                            إنشاء الحساب ومساحة العمل
+                            <i class="fa-solid fa-arrow-left" style="margin-right: 8px;"></i>
                         </button>
 
                         <div class="text-center">
                             <a href="{% url 'accounts:register' %}" class="text-muted"
-                                style="display: inline-flex; align-items: center; gap: 8px;">
+                               style="display: inline-flex; align-items: center; gap: 8px;">
                                 <i class="fa-solid fa-arrow-right"></i> تراجع واختيار حساب آخر
                             </a>
                         </div>
@@ -133,4 +278,314 @@
         </div>
     </div>
 </section>
+
+<style>
+.required-star {
+    color: var(--color-danger-500, #e53e3e);
+    margin-right: 2px;
+}
+
+.field-error {
+    display: block;
+    color: var(--color-danger-500, #e53e3e);
+    font-size: 0.82em;
+    margin-top: 4px;
+    min-height: 1.1em;
+}
+
+/* Specialties grid */
+.specialties-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+    padding: 16px;
+    background: var(--color-neutral-50, #f9fafb);
+    border: 1px solid var(--color-neutral-200, #e5e7eb);
+    border-radius: var(--radius-md, 8px);
+}
+
+.specialty-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: white;
+    border: 1.5px solid var(--color-neutral-200, #e5e7eb);
+    border-radius: var(--radius-sm, 6px);
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    font-size: 0.9em;
+    user-select: none;
+}
+
+.specialty-label:hover {
+    border-color: var(--color-primary-400, #6ea8fe);
+    background: var(--color-primary-50, #eff6ff);
+}
+
+.specialty-label:has(input:checked) {
+    border-color: var(--color-primary-500, #0d6efd);
+    background: var(--color-primary-50, #eff6ff);
+    color: var(--color-primary-700, #084298);
+    font-weight: 600;
+}
+
+.specialty-checkbox-input {
+    accent-color: var(--color-primary-500, #0d6efd);
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.specialties-grid.has-error {
+    border-color: var(--color-danger-500, #e53e3e);
+}
+
+@media (max-width: 600px) {
+    .specialties-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+</style>
+
+<script>
+(function () {
+    "use strict";
+
+    const form = document.getElementById("signup-form");
+
+    // ── Helpers ────────────────────────────────────────────────
+    function showError(fieldId, message) {
+        const el = document.getElementById("err-" + fieldId);
+        if (el) el.textContent = message;
+    }
+    function clearError(fieldId) {
+        const el = document.getElementById("err-" + fieldId);
+        if (el) el.textContent = "";
+    }
+
+    const PHONE_RE = /^(059|056)\d{7}$|^\+970(59|56)\d{7}$/;
+    const NID_RE   = /^\d{9}$/;
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    // ── Per-field live validation ──────────────────────────────
+    function bindLive(name, validate) {
+        const el = form.querySelector(`[name="${name}"]`);
+        if (!el) return;
+        el.addEventListener("blur", () => validate(el.value));
+        el.addEventListener("input", () => {
+            // Clear on input so the user sees a clean slate while typing
+            clearError(name);
+        });
+    }
+
+    bindLive("activation_code", function (v) {
+        if (!v.trim()) showError("activation_code", "يرجى إدخال كود التفعيل.");
+        else clearError("activation_code");
+    });
+
+    bindLive("first_name", function (v) {
+        if (!v.trim()) showError("first_name", "يرجى إدخال الاسم الأول.");
+        else clearError("first_name");
+    });
+
+    bindLive("last_name", function (v) {
+        if (!v.trim()) showError("last_name", "يرجى إدخال الاسم الأخير.");
+        else clearError("last_name");
+    });
+
+    bindLive("phone", function (v) {
+        const raw = v.replace(/\s|-/g, "");
+        if (!raw) { showError("phone", "يرجى إدخال رقم الهاتف."); return; }
+        if (!PHONE_RE.test(raw)) showError("phone", "رقم الهاتف غير صحيح. يجب أن يبدأ بـ 059 أو 056 ويتكون من 10 أرقام (مثال: 0594073157).");
+        else clearError("phone");
+    });
+
+    bindLive("national_id", function (v) {
+        const raw = v.replace(/\s|-/g, "");
+        if (!raw) { showError("national_id", "يرجى إدخال رقم الهوية."); return; }
+        if (!NID_RE.test(raw)) showError("national_id", "رقم الهوية يجب أن يتكون من 9 أرقام فقط.");
+        else clearError("national_id");
+    });
+
+    bindLive("email", function (v) {
+        if (!v.trim()) { showError("email", "يرجى إدخال البريد الإلكتروني."); return; }
+        if (!EMAIL_RE.test(v.trim())) showError("email", "تنسيق البريد الإلكتروني غير صحيح.");
+        else clearError("email");
+    });
+
+    bindLive("password", function (v) {
+        if (!v) { showError("password", "يرجى إدخال كلمة المرور."); return; }
+        if (v.length < 8) showError("password", "كلمة المرور يجب أن تكون 8 أحرف على الأقل.");
+        else clearError("password");
+        // Re-validate confirm too
+        const c = form.querySelector("[name='confirm_password']");
+        if (c && c.value) validateConfirm(c.value);
+    });
+
+    function validateConfirm(v) {
+        const p = form.querySelector("[name='password']");
+        if (!v) { showError("confirm_password", "يرجى تأكيد كلمة المرور."); return; }
+        if (p && v !== p.value) showError("confirm_password", "كلمتا المرور غير متطابقتين.");
+        else clearError("confirm_password");
+    }
+    bindLive("confirm_password", function (v) { validateConfirm(v); });
+
+    bindLive("clinic_name", function (v) {
+        if (!v.trim()) showError("clinic_name", "يرجى إدخال اسم العيادة.");
+        else clearError("clinic_name");
+    });
+
+    bindLive("clinic_phone", function (v) {
+        const raw = v.replace(/\s|-/g, "");
+        if (!raw) { showError("clinic_phone", "يرجى إدخال هاتف العيادة."); return; }
+        if (!PHONE_RE.test(raw)) showError("clinic_phone", "هاتف العيادة غير صحيح. يجب أن يبدأ بـ 059 أو 056 ويتكون من 10 أرقام.");
+        else clearError("clinic_phone");
+    });
+
+    bindLive("clinic_city", function (v) {
+        if (!v) showError("clinic_city", "يرجى اختيار المدينة.");
+        else clearError("clinic_city");
+    });
+
+    // Optional clinic email — only validate if filled
+    bindLive("clinic_email", function (v) {
+        if (v.trim() && !EMAIL_RE.test(v.trim())) showError("clinic_email", "تنسيق بريد العيادة غير صحيح.");
+        else clearError("clinic_email");
+    });
+
+    bindLive("clinic_address", function (v) {
+        if (!v.trim()) showError("clinic_address", "يرجى إدخال عنوان العيادة.");
+        else clearError("clinic_address");
+    });
+
+    // ── Submit validation ──────────────────────────────────────
+    form.addEventListener("submit", function (e) {
+        let valid = true;
+
+        function require(name, msg) {
+            const el = form.querySelector(`[name="${name}"]`);
+            if (!el || !el.value.trim()) {
+                showError(name, msg);
+                valid = false;
+            }
+        }
+
+        require("activation_code", "يرجى إدخال كود التفعيل.");
+        require("first_name",      "يرجى إدخال الاسم الأول.");
+        require("last_name",       "يرجى إدخال الاسم الأخير.");
+        require("clinic_name",     "يرجى إدخال اسم العيادة.");
+        require("clinic_address",  "يرجى إدخال عنوان العيادة.");
+
+        // Phone
+        const phoneEl = form.querySelector("[name='phone']");
+        if (phoneEl) {
+            const raw = phoneEl.value.replace(/\s|-/g, "");
+            if (!raw) {
+                showError("phone", "يرجى إدخال رقم الهاتف."); valid = false;
+            } else if (!PHONE_RE.test(raw)) {
+                showError("phone", "رقم الهاتف غير صحيح."); valid = false;
+            }
+        }
+
+        // National ID
+        const nidEl = form.querySelector("[name='national_id']");
+        if (nidEl) {
+            const raw = nidEl.value.replace(/\s|-/g, "");
+            if (!raw) {
+                showError("national_id", "يرجى إدخال رقم الهوية."); valid = false;
+            } else if (!NID_RE.test(raw)) {
+                showError("national_id", "رقم الهوية يجب أن يتكون من 9 أرقام فقط."); valid = false;
+            }
+        }
+
+        // Email
+        const emailEl = form.querySelector("[name='email']");
+        if (emailEl) {
+            if (!emailEl.value.trim()) {
+                showError("email", "يرجى إدخال البريد الإلكتروني."); valid = false;
+            } else if (!EMAIL_RE.test(emailEl.value.trim())) {
+                showError("email", "تنسيق البريد الإلكتروني غير صحيح."); valid = false;
+            }
+        }
+
+        // Password
+        const pwEl  = form.querySelector("[name='password']");
+        const cpwEl = form.querySelector("[name='confirm_password']");
+        if (pwEl) {
+            if (!pwEl.value) {
+                showError("password", "يرجى إدخال كلمة المرور."); valid = false;
+            } else if (pwEl.value.length < 8) {
+                showError("password", "كلمة المرور يجب أن تكون 8 أحرف على الأقل."); valid = false;
+            }
+        }
+        if (cpwEl && pwEl) {
+            if (!cpwEl.value) {
+                showError("confirm_password", "يرجى تأكيد كلمة المرور."); valid = false;
+            } else if (cpwEl.value !== pwEl.value) {
+                showError("confirm_password", "كلمتا المرور غير متطابقتين."); valid = false;
+            }
+        }
+
+        // Clinic phone
+        const cpEl = form.querySelector("[name='clinic_phone']");
+        if (cpEl) {
+            const raw = cpEl.value.replace(/\s|-/g, "");
+            if (!raw) {
+                showError("clinic_phone", "يرجى إدخال هاتف العيادة."); valid = false;
+            } else if (!PHONE_RE.test(raw)) {
+                showError("clinic_phone", "هاتف العيادة غير صحيح."); valid = false;
+            }
+        }
+
+        // City
+        const cityEl = form.querySelector("[name='clinic_city']");
+        if (cityEl && !cityEl.value) {
+            showError("clinic_city", "يرجى اختيار المدينة."); valid = false;
+        }
+
+        // Optional clinic email
+        const ceEl = form.querySelector("[name='clinic_email']");
+        if (ceEl && ceEl.value.trim() && !EMAIL_RE.test(ceEl.value.trim())) {
+            showError("clinic_email", "تنسيق بريد العيادة غير صحيح."); valid = false;
+        }
+
+        // At least one specialty
+        const checked = form.querySelectorAll(".specialty-checkbox-input:checked");
+        const container = document.getElementById("specialties-container");
+        if (container) {
+            if (checked.length === 0) {
+                showError("specialties", "يرجى اختيار تخصص طبي واحد على الأقل.");
+                container.classList.add("has-error");
+                valid = false;
+            } else {
+                clearError("specialties");
+                container.classList.remove("has-error");
+            }
+        }
+
+        if (!valid) {
+            e.preventDefault();
+            // Scroll to first error
+            const firstErr = form.querySelector(".field-error:not(:empty)");
+            if (firstErr) {
+                firstErr.closest(".form-group, div")?.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+        }
+    });
+
+    // Clear specialty error on any checkbox change
+    form.querySelectorAll(".specialty-checkbox-input").forEach(function (cb) {
+        cb.addEventListener("change", function () {
+            const anyChecked = form.querySelectorAll(".specialty-checkbox-input:checked").length > 0;
+            const container = document.getElementById("specialties-container");
+            if (anyChecked) {
+                clearError("specialties");
+                if (container) container.classList.remove("has-error");
+            }
+        });
+    });
+
+})();
+</script>
 {% endblock %}
