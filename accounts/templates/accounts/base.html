@@ -50,7 +50,11 @@
     {% include 'accounts/navbar.html' %}
 
     <!-- Main Content -->
-    <main style="min-height: 80vh;">
+    <main style="min-height: 80vh; position: relative;">
+        <!-- Aurora Background Glows (Mobile Only) -->
+        <div class="aurora-glow aurora-glow-1"></div>
+        <div class="aurora-glow aurora-glow-2"></div>
+
         <!-- Messages -->
         {% block messages %}
         <div class="container" style="margin-top: 2rem;">

@@ -1396,3 +1396,112 @@ html.js .reveal-on-scroll.is-visible {
   font-weight: 600;
   color: var(--color-text-body);
 }
+
+/* =========================================
+   Mobile Aurora Design Overrides
+   (Applies specifically to phones <= 768px)
+========================================= */
+
+@media (max-width: 768px) {
+  /* Hide the old top-strip page transition skeleton auth elements on mobile */
+  .skel-layout-auth .skel-nav { display: none; }
+
+  /* Background adjustment to add padding for the floating navigation */
+  body {
+    padding-bottom: 100px; 
+  }
+
+  /* Aurora Background Glows */
+  .aurora-glow {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.15;
+    pointer-events: none;
+    z-index: 0;
+  }
+  
+  .aurora-glow-1 {
+    width: 250px;
+    height: 250px;
+    background: #38bdf8;
+    top: -50px;
+    right: -50px;
+  }
+  
+  .aurora-glow-2 {
+    width: 200px;
+    height: 200px;
+    background: #a78bfa;
+    bottom: 20%;
+    left: -50px;
+  }
+
+  [data-theme="dark"] .aurora-glow-1 { background: #3b82f6; opacity: 0.25; }
+  [data-theme="dark"] .aurora-glow-2 { background: #8b5cf6; opacity: 0.25; }
+
+  /* Glass/Aurora Cards specifically for Login/Register choice and Hero Feature cards */
+  .auth-card,
+  .choice-card,
+  .feature-card,
+  .step-card {
+    background: rgba(255, 255, 255, 0.7) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(255, 255, 255, 1) !important;
+    box-shadow: 0 10px 30px rgba(14, 165, 233, 0.05) !important;
+    border-radius: 24px !important;
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+  }
+
+  [data-theme="dark"] .auth-card,
+  [data-theme="dark"] .choice-card,
+  [data-theme="dark"] .feature-card,
+  [data-theme="dark"] .step-card {
+    background: rgba(30, 41, 59, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+  }
+
+  /* Inputs Aurora Style on Mobile */
+  .form-group input {
+    background: rgba(248, 250, 252, 0.8) !important;
+    border: 1px solid rgba(226, 232, 240, 1) !important;
+    border-radius: 16px !important;
+    padding: 14px 16px !important;
+    color: #1e293b !important;
+    transition: all 0.3s ease;
+  }
+
+  .form-group input:focus {
+    border-color: #0ea5e9 !important;
+    box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1) !important;
+    background: #fff !important;
+  }
+  
+  [data-theme="dark"] .form-group input {
+    background: rgba(15, 23, 42, 0.6) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: white !important;
+  }
+  
+  [data-theme="dark"] .form-group input:focus {
+    border-color: #06b6d4 !important;
+    box-shadow: 0 0 15px rgba(6, 182, 212, 0.2) !important;
+  }
+
+  /* Button Aurora Style on Mobile */
+  .btn-primary {
+    background: linear-gradient(90deg, #0ea5e9, #3b82f6) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 10px 20px rgba(14, 165, 233, 0.2) !important;
+    border: none !important;
+  }
+
+  [data-theme="dark"] .btn-primary {
+    background: linear-gradient(90deg, #06b6d4, #3b82f6) !important;
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.4) !important;
+  }
+}

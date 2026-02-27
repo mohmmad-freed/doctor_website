@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preview 3 - Minimalist Clean</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Tajawal', sans-serif; /* Using Tajawal for a very clean, sharp modern look */
+            background: #fdfdfd;
+            min-height: 100vh;
+            margin: 0;
+            padding: 2rem;
+            background-image: linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .preview-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+            justify-content: center;
+            align-items: center;
+        }
+        .mockup {
+            width: 375px;
+            height: 812px;
+            background: #ffffff;
+            border-radius: 40px;
+            box-shadow: 0 30px 60px -15px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.05);
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        .screen-title {
+            text-align: center;
+            color: #111827;
+            font-weight: 800;
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+        }
+        /* Minimalist Styles */
+        .min-input {
+            width: 100%;
+            border: 2px solid #f3f4f6;
+            background: #f9fafb;
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.2s;
+            color: #111827;
+        }
+        .min-input:focus {
+            border-color: #111827;
+            background: #ffffff;
+        }
+        .min-btn {
+            width: 100%;
+            background: #111827;
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .min-btn:hover { background: #374151; }
+        
+        .min-card {
+            border: 2px solid #f3f4f6;
+            border-radius: 16px;
+            padding: 20px;
+            background: #ffffff;
+            transition: all 0.2s;
+        }
+        
+        /* Dashboard Nav */
+        .bottom-nav {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: #ffffff;
+            display: flex;
+            justify-content: space-around;
+            padding: 15px 10px 25px 10px;
+            border-top: 1px solid #f3f4f6;
+            z-index: 50;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #9ca3af;
+            font-size: 1.25rem;
+            gap: 4px;
+        }
+        .nav-item.active {
+            color: #111827;
+        }
+        .nav-item span {
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+    <div class="text-center mb-10">
+        <h1 class="text-4xl font-bold text-gray-900 bg-white inline-block px-6 py-2 rounded-xl border-2 border-dashed border-gray-300">النموذج 3: البساطة الأنيقة (Minimalist)</h1>
+        <p class="text-gray-600 mt-2 text-lg font-medium">خطوط حادة، تصميم مسطح، وتباين عالي مع مساحات بيضاء مريحة</p>
+    </div>
+
+    <div class="preview-container">
+        <!-- 1. Login Screen -->
+        <div>
+            <div class="screen-title">تسجيل الدخول</div>
+            <div class="mockup">
+                <!-- Top Minimalist Graphic -->
+                <div class="pt-16 pb-8 px-8">
+                    <div class="w-16 h-16 bg-black rounded-lg flex items-center justify-center text-white text-2xl mb-6">
+                        <i class="fa-solid fa-plus"></i>
+                    </div>
+                    <h2 class="text-3xl font-black text-gray-900 leading-tight">تسجيل<br>الدخول</h2>
+                </div>
+
+                <div class="px-8 flex-1">
+                    <div class="space-y-6">
+                        <div>
+                            <input type="text" class="min-input text-left" dir="ltr" placeholder="Phone Number">
+                        </div>
+                        <div>
+                            <input type="password" class="min-input text-left" dir="ltr" placeholder="Password">
+                        </div>
+                        <div class="text-left">
+                            <a href="#" class="text-gray-500 font-bold text-sm underline hover:text-black">نسيت الرمز؟</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-8 mt-auto border-t border-gray-100">
+                    <button class="min-btn mb-4">الدخول الآن</button>
+                    <p class="text-center text-sm font-bold text-gray-500">حساب جديد؟ <a href="#" class="text-black">سجل هنا</a></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Registration Screen -->
+        <div>
+            <div class="screen-title">إنشاء حساب</div>
+            <div class="mockup">
+                <!-- Header -->
+                <div class="px-6 pt-12 pb-6 flex items-center gap-4">
+                    <button class="w-10 h-10 border-2 border-gray-200 rounded-lg flex items-center justify-center text-gray-900">
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                    <h2 class="text-xl font-bold">حساب جديد</h2>
+                </div>
+
+                <div class="px-6 pb-4">
+                    <h1 class="text-3xl font-black text-gray-900 mb-2">من أنت؟</h1>
+                    <p class="text-gray-500 font-medium">لنقم بضبط إعداداتك بالشكل الصحيح.</p>
+                </div>
+
+                <!-- Registration Choices -->
+                <div class="px-6 space-y-4 pt-4">
+                    
+                    <!-- Patient -->
+                    <label class="min-card flex items-center gap-4 cursor-pointer hover:border-black relative">
+                        <input type="radio" name="account_type" class="w-5 h-5 accent-black absolute left-6">
+                        <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-900 text-lg">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <div class="pl-8">
+                            <h3 class="font-bold text-lg text-gray-900">مريض</h3>
+                            <p class="text-sm text-gray-500 mt-1">حجز مواعيد وتصفح الأطباء.</p>
+                        </div>
+                    </label>
+
+                    <!-- Doctor -->
+                    <label class="min-card flex items-center gap-4 cursor-pointer hover:border-black relative">
+                        <input type="radio" name="account_type" class="w-5 h-5 accent-black absolute left-6">
+                        <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-900 text-lg">
+                            <i class="fa-solid fa-briefcase-medical"></i>
+                        </div>
+                        <div class="pl-8">
+                            <h3 class="font-bold text-lg text-gray-900">طبيب / عيادة</h3>
+                            <p class="text-sm text-gray-500 mt-1">إدارة متكاملة لعيادتك.</p>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="mt-auto p-6">
+                     <button class="min-btn">المتابعة <i class="fa-solid fa-arrow-left ml-2 text-sm"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Landing Page Screen -->
+        <div>
+            <div class="screen-title">الصفحة الرئيسية (الرئيسية)</div>
+            <div class="mockup" style="overflow-y: auto;">
+                
+                <!-- Navbar -->
+                <div class="px-6 py-5 flex justify-between items-center border-b-2 border-gray-100 bg-white sticky top-0 z-50">
+                    <div class="font-black text-2xl tracking-tighter text-black flex items-center gap-2">
+                        <div class="w-6 h-6 bg-black text-white flex items-center justify-center rounded text-xs"><i class="fa-solid fa-plus"></i></div>
+                        منصتي
+                    </div>
+                    <button class="font-bold text-sm text-black border-2 border-black rounded-lg px-4 py-1.5 hover:bg-black hover:text-white transition">
+                        دخول
+                    </button>
+                </div>
+
+                <!-- Hero Section -->
+                <div class="px-6 pt-12 pb-8">
+                    <h1 class="text-[2.5rem] font-black leading-[1.1] text-gray-900 mb-4 tracking-tight">
+                        الرعاية <br>
+                        الصحية.<br>
+                        <span class="text-gray-400">ببساطة.</span>
+                    </h1>
+                    <p class="text-gray-600 font-medium text-lg leading-relaxed mb-8 border-r-4 border-black pr-4 py-1">
+                        احجز مع أفضل الأطباء، وأدر ملفك الطبي عبر منصة واحدة متكاملة وسهلة الاستخدام.
+                    </p>
+                    
+                    <button class="min-btn mb-3 flex justify-between items-center mx-auto text-lg">
+                        ابدأ الآن 
+                        <span class="bg-white text-black w-8 h-8 rounded-lg flex items-center justify-center text-sm"><i class="fa-solid fa-arrow-left"></i></span>
+                    </button>
+                    <button class="w-full bg-white text-black border-2 border-gray-200 rounded-xl padding py-4 font-bold text-lg hover:border-black transition">لمنصة الأطباء</button>
+                </div>
+
+                <!-- Abstract Art / Features -->
+                <div class="mt-4 px-6 pb-12">
+                    <div class="min-card bg-gray-50 border-gray-200 relative overflow-hidden">
+                        <div class="relative z-10">
+                            <h3 class="font-black text-xl text-black mb-4">المميزات الرئيسية</h3>
+                            
+                            <ul class="space-y-4">
+                                <li class="flex items-start gap-3">
+                                    <div class="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center flex-shrink-0 text-xs mt-0.5"><i class="fa-solid fa-check"></i></div>
+                                    <div>
+                                        <strong class="block text-black">أطباء معتمدون</strong>
+                                        <span class="text-sm text-gray-500 font-medium">نخبة من الاختصاصيين</span>
+                                    </div>
+                                </li>
+                                <li class="flex items-start gap-3">
+                                    <div class="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center flex-shrink-0 text-xs mt-0.5"><i class="fa-solid fa-check"></i></div>
+                                    <div>
+                                        <strong class="block text-black">حجز المواعيد فورياً</strong>
+                                        <span class="text-sm text-gray-500 font-medium">بضغطة زر واحدة</span>
+                                    </div>
+                                </li>
+                                <li class="flex items-start gap-3">
+                                    <div class="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center flex-shrink-0 text-xs mt-0.5"><i class="fa-solid fa-check"></i></div>
+                                    <div>
+                                        <strong class="block text-black">ملف طبي شامل</strong>
+                                        <span class="text-sm text-gray-500 font-medium">كل تاريخك في مكان واحد</span>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Geometric Decorations -->
+                        <div class="absolute -left-10 -bottom-10 w-40 h-40 border-[12px] border-gray-200 rounded-full opacity-50"></div>
+                        <div class="absolute right-0 top-0 w-20 h-20 bg-gray-200" style="clip-path: polygon(100% 0, 0 0, 100% 100%);"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
