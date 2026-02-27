@@ -104,30 +104,50 @@
     .choice-grid {
         display: grid;
         grid-template-columns: 1fr;
-        gap: 24px;
+        gap: 16px;
         margin-bottom: 40px;
     }
 
     @media(min-width: 768px) {
         .choice-grid {
             grid-template-columns: 1fr 1fr;
+            gap: 24px;
         }
     }
 
     .choice-card {
         background: var(--choice-bg);
         border: 2px solid var(--choice-border);
-        border-radius: 20px;
-        padding: 40px 30px;
+        border-radius: 16px;
+        padding: 20px;
         cursor: pointer;
         transition: var(--transition);
         position: relative;
         overflow: hidden;
         text-decoration: none;
         display: flex;
-        flex-direction: column;
+        flex-direction: row; /* Horizontal layout on mobile */
         align-items: center;
-        height: 100%;
+        text-align: right;
+        gap: 20px;
+    }
+
+    @media(min-width: 768px) {
+        .choice-card {
+            flex-direction: column; /* Vertical layout on desktop */
+            text-align: center;
+            padding: 40px 30px;
+            border-radius: 20px;
+            height: 100%;
+        }
+    }
+
+    /* Content Wrapper for mobile text alignment */
+    .choice-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     }
 
     .choice-card:hover {
@@ -143,48 +163,80 @@
     }
 
     .icon-box {
-        width: 80px;
-        height: 80px;
+        width: 64px;
+        height: 64px;
+        flex-shrink: 0;
         background: var(--icon-bg);
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 2rem;
+        font-size: 1.5rem;
         color: var(--primary);
-        margin-bottom: 24px;
         transition: var(--transition);
+        margin-bottom: 0; /* Removed for mobile horizontal layout */
+    }
+    
+    @media(min-width: 768px) {
+        .icon-box {
+            width: 80px;
+            height: 80px;
+            font-size: 2rem;
+            margin-bottom: 24px;
+        }
     }
 
     .choice-title {
-        font-size: 1.4rem;
+        font-size: 1.1rem;
         font-weight: 700;
         color: var(--text-main);
-        margin-bottom: 12px;
+        margin-bottom: 8px;
+    }
+
+    @media(min-width: 768px) {
+        .choice-title {
+            font-size: 1.4rem;
+            margin-bottom: 12px;
+        }
     }
 
     .choice-desc {
         color: var(--text-sub);
-        font-size: 0.95rem;
-        line-height: 1.5;
+        font-size: 0.85rem;
+        line-height: 1.4;
+    }
+
+    @media(min-width: 768px) {
+        .choice-desc {
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
     }
 
     .choice-arrow {
-        margin-top: auto;
-        padding-top: 24px;
+        margin-top: 12px;
         color: var(--primary);
         font-weight: 600;
         display: flex;
         align-items: center;
         gap: 8px;
-        opacity: 0;
-        transform: translateY(10px);
+        font-size: 0.9rem;
         transition: var(--transition);
     }
 
-    .choice-card:hover .choice-arrow {
-        opacity: 1;
-        transform: translateY(0);
+    @media(min-width: 768px) {
+        .choice-arrow {
+            margin-top: auto;
+            padding-top: 24px;
+            opacity: 0;
+            transform: translateY(10px);
+            font-size: 1rem;
+        }
+        
+        .choice-card:hover .choice-arrow {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     /* Doctor Card Specifics */
@@ -249,10 +301,12 @@
                 <div class="icon-box">
                     <i class="fa-solid fa-user-injured"></i>
                 </div>
-                <h3 class="choice-title">حساب مريض</h3>
-                <p class="choice-desc">احجز المواعيد بسهولة، تابع ملفك الطبي، وتواصل مع أطبائك المفضلين في أي وقت.</p>
-                <div class="choice-arrow">
-                    ابدأ التسجيل <i class="fa-solid fa-arrow-left"></i>
+                <div class="choice-content">
+                    <h3 class="choice-title">حساب مريض</h3>
+                    <p class="choice-desc">احجز المواعيد بسهولة، تابع ملفك الطبي، وتواصل مع أطبائك المفضلين في أي وقت.</p>
+                    <div class="choice-arrow">
+                        ابدأ التسجيل <i class="fa-solid fa-arrow-left"></i>
+                    </div>
                 </div>
             </a>
 
@@ -261,10 +315,12 @@
                 <div class="icon-box">
                     <i class="fa-solid fa-user-doctor"></i>
                 </div>
-                <h3 class="choice-title">طبيب / عيادة</h3>
-                <p class="choice-desc">أدر عيادتك بكفاءة، نظم جدول مواعيدك، ووسع قاعدة مرضاك مع أدواتنا المتكاملة.</p>
-                <div class="choice-arrow">
-                    سجل عيادتك <i class="fa-solid fa-arrow-left"></i>
+                <div class="choice-content">
+                    <h3 class="choice-title">طبيب / عيادة</h3>
+                    <p class="choice-desc">أدر عيادتك بكفاءة، نظم جدول مواعيدك، ووسع قاعدة مرضاك مع أدواتنا المتكاملة.</p>
+                    <div class="choice-arrow">
+                        سجل عيادتك <i class="fa-solid fa-arrow-left"></i>
+                    </div>
                 </div>
             </a>
         </div>

@@ -124,6 +124,75 @@
         .cloud-1 { width: 15px; height: 15px; bottom: 2px; left: 5px; }
         .cloud-2 { width: 20px; height: 20px; bottom: -4px; right: 5px; }
 
+        /* Mobile Nav Glass Island */
+        .mobile-nav-glass {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 92%;
+            max-width: 400px;
+            height: 65px;
+            background: rgba(255, 255, 255, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 35px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 10px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            z-index: 50;
+        }
+        .dark .mobile-nav-glass {
+            background: rgba(30, 41, 59, 0.75);
+            border-color: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+        }
+        .mobile-nav-item {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-decoration: none;
+            color: #64748b;
+            width: 50px;
+            height: 45px;
+            border-radius: 25px;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            z-index: 1;
+        }
+        .dark .mobile-nav-item {
+            color: #94a3b8;
+        }
+        .mobile-nav-item i {
+            font-size: 20px;
+            transition: all 0.3s;
+        }
+        .mobile-nav-item.active {
+            color: #ffffff !important;
+            width: 125px;
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            box-shadow: 0 8px 15px rgba(37, 99, 235, 0.3);
+        }
+        .mobile-nav-item.active i {
+            margin-left: 8px; /* RTL space */
+        }
+        .mobile-nav-item .text {
+            font-size: 14px;
+            font-weight: 600;
+            opacity: 0;
+            width: 0;
+            overflow: hidden;
+            transition: all 0.4s;
+            white-space: nowrap;
+        }
+        .mobile-nav-item.active .text {
+            opacity: 1;
+            width: max-content;
+        }
+
     </style>
     {% block extra_head %}{% endblock %}
 
@@ -166,15 +235,7 @@
         class="sticky top-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-gray-200 dark:border-slate-700">
         <div class="container mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
-                <!-- Mobile Menu Button -->
-                <div class="flex items-center md:hidden pr-2">
-                    <button type="button" id="mobile-menu-btn"
-                        class="text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 p-2 rounded-lg transition-colors"
-                        aria-expanded="false">
-                        <span class="sr-only">Open main menu</span>
-                        <i class="fa-solid fa-bars text-xl"></i>
-                    </button>
-                </div>
+                <!-- Mobile Menu Button (Removed in favor of bottom nav) -->
 
                 <!-- Logo -->
                 <div class="flex-shrink-0 flex items-center gap-2">
@@ -244,23 +305,10 @@
             </div>
         </div>
 
-        <!-- Mobile Menu (Hidden by default) -->
-        <div id="mobile-menu" class="hidden md:hidden border-t border-gray-100 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md">
-            <div class="px-4 pt-2 pb-4 space-y-1">
-                <a href="{% url 'patients:dashboard' %}"
-                    class="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-primary-50 hover:text-primary-600 dark:hover:bg-slate-800 dark:hover:text-primary-400 transition-colors">الرئيسية</a>
-                <a href="{% url 'patients:browse_doctors' %}"
-                    class="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-primary-50 hover:text-primary-600 dark:hover:bg-slate-800 dark:hover:text-primary-400 transition-colors">الأطباء</a>
-                <a href="{% url 'patients:my_appointments' %}"
-                    class="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-primary-50 hover:text-primary-600 dark:hover:bg-slate-800 dark:hover:text-primary-400 transition-colors">مواعيدي</a>
-                <a href="{% url 'patients:clinics_list' %}"
-                    class="block px-3 py-2 rounded-lg text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-primary-50 hover:text-primary-600 dark:hover:bg-slate-800 dark:hover:text-primary-400 transition-colors">العيادات</a>
-            </div>
-        </div>
     </nav>
 
     <!-- Main Content -->
-    <main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-32 md:py-8">
         <!-- Alerts/Messages -->
         {% if messages %}
         <div class="mb-6 space-y-2 max-w-3xl mx-auto">
@@ -286,6 +334,26 @@
 
         {% block content %}{% endblock %}
     </main>
+
+    <!-- Mobile Glass Navigation (Hidden on desktop) -->
+    <nav class="mobile-nav-glass md:hidden">
+        <a href="{% url 'patients:dashboard' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+            <i class="fa-solid fa-house"></i>
+            <span class="text">الرئيسية</span>
+        </a>
+        <a href="{% url 'patients:clinics_list' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'clinics_list' %}active{% endif %}">
+            <i class="fa-solid fa-building-user"></i>
+            <span class="text">العيادات</span>
+        </a>
+        <a href="{% url 'patients:browse_doctors' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'browse_doctors' %}active{% endif %}">
+            <i class="fa-solid fa-user-doctor"></i>
+            <span class="text">الأطباء</span>
+        </a>
+        <a href="{% url 'patients:my_appointments' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'my_appointments' %}active{% endif %}">
+            <i class="fa-regular fa-calendar-check"></i>
+            <span class="text">مواعيدي</span>
+        </a>
+    </nav>
 
     <!-- Footer -->
     <footer
@@ -365,31 +433,7 @@
         })();
     </script>
 
-    <script>
-        // Mobile Menu Toggle Logic
-        document.addEventListener('DOMContentLoaded', () => {
-            const btn = document.getElementById('mobile-menu-btn');
-            const menu = document.getElementById('mobile-menu');
-            const icon = btn.querySelector('i');
-
-            if (btn && menu) {
-                btn.addEventListener('click', () => {
-                    const isHidden = menu.classList.contains('hidden');
-                    if (isHidden) {
-                        menu.classList.remove('hidden');
-                        icon.classList.remove('fa-bars');
-                        icon.classList.add('fa-xmark');
-                        btn.setAttribute('aria-expanded', 'true');
-                    } else {
-                        menu.classList.add('hidden');
-                        icon.classList.remove('fa-xmark');
-                        icon.classList.add('fa-bars');
-                        btn.setAttribute('aria-expanded', 'false');
-                    }
-                });
-            }
-        });
-    </script>
+    <!-- Mobile menu logic removed -->
 
     {% block scripts %}{% endblock %}
 

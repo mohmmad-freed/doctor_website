@@ -83,6 +83,10 @@
   padding: 0;
 }
 
+html {
+  overflow-x: hidden;
+}
+
 body {
   font-family: var(--font-family-primary);
   background-color: var(--color-surface-ground);
@@ -93,6 +97,7 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
   overflow-x: hidden;
   /* Prevent blob overflow */
+  width: 100%;
 }
 
 a {
@@ -135,6 +140,12 @@ img {
   .container {
     max-width: 1320px;
   }
+}
+
+/* Base utility to prevent horizontal scrolling */
+body, html {
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 /* =========================================
@@ -443,6 +454,11 @@ html.js .reveal-on-scroll.is-visible {
     position: relative;
   }
 
+  /* Hide the top navbar login/register buttons on mobile, as they are in the bottom nav now */
+  .navbar-actions .btn {
+    display: none;
+  }
+
   .navbar-menu {
     display: none;
     position: absolute;
@@ -468,7 +484,98 @@ html.js .reveal-on-scroll.is-visible {
   }
 
   .mobile-menu-btn {
-    display: block;
+    display: none; /* Removed in favor of bottom nav */
+  }
+}
+
+/* =========================================
+   Mobile Nav Glass Island
+========================================= */
+.mobile-nav-glass {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 92%;
+  max-width: 400px;
+  height: 65px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 35px;
+  display: flex;
+  justify-content: space-between; /* Better spread for 4 elements */
+  align-items: center;
+  padding: 0 16px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
+[data-theme="dark"] .mobile-nav-glass {
+  background: rgba(30, 41, 59, 0.75);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+}
+
+.mobile-nav-item {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-decoration: none;
+  color: var(--color-text-muted);
+  width: 45px;
+  height: 45px;
+  border-radius: 25px;
+  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  z-index: 1;
+  flex-shrink: 0; /* Prevent icons from crushing */
+}
+
+.mobile-nav-item i {
+  font-size: 20px;
+  transition: all 0.3s;
+}
+
+.mobile-nav-item.active {
+  color: #ffffff !important;
+  width: min(130px, max-content + 40px); /* Responsive active width */
+  padding: 0 16px;
+  background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-600) 100%);
+  box-shadow: 0 8px 15px rgba(0, 120, 212, 0.3);
+}
+
+.mobile-nav-item.active i {
+  margin-left: 8px; /* RTL space */
+}
+
+.mobile-nav-item .text {
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+  transition: all 0.4s;
+  white-space: nowrap;
+}
+
+.mobile-nav-item.active .text {
+  opacity: 1;
+  width: max-content;
+}
+
+/* Hide on desktop */
+@media (min-width: 769px) {
+  .mobile-nav-glass {
+    display: none !important;
+  }
+}
+
+/* Add padding to the bottom of the page on mobile so content isn't covered by the floating nav */
+@media (max-width: 768px) {
+  body {
+    padding-bottom: 90px;
   }
 }
 
@@ -756,6 +863,24 @@ html.js .reveal-on-scroll.is-visible {
   }
 }
 
+@media (max-width: 768px) {
+  .floating-badge {
+    transform: scale(0.9);
+  }
+  .badge-top-right {
+    top: 20px;
+    right: -10px; /* Reduced to avoid pushing width */
+  }
+  .badge-bottom-left {
+    bottom: 20px;
+    left: -10px; /* Reduced to avoid pushing width */
+  }
+  .hero-image-wrapper {
+    /* make sure it does not exceed body width */
+    max-width: 90vw;
+  }
+}
+
 /* =========================================
    Layout: Features Section
 ========================================= */
@@ -972,6 +1097,14 @@ html.js .reveal-on-scroll.is-visible {
   margin-bottom: var(--space-12);
 }
 
+@media (max-width: 768px) {
+  .footer-grid {
+    grid-template-columns: 1fr;
+    text-align: center;
+    gap: var(--space-6);
+  }
+}
+
 .footer-col h4 {
   margin-bottom: var(--space-4);
   color: var(--color-text-main);
@@ -979,6 +1112,8 @@ html.js .reveal-on-scroll.is-visible {
 
 .footer-links li {
   margin-bottom: var(--space-2);
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 .footer-links a {

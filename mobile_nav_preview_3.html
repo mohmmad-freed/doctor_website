@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Bar 3: Neon Glow</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: #0d0d12;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .phone-mockup {
+            width: 375px;
+            height: 812px;
+            background: #15151b;
+            border-radius: 40px;
+            position: relative;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5), inset 0 0 0 10px #000;
+            overflow: hidden;
+            border: 4px solid #333;
+        }
+        .nav {
+            position: absolute;
+            bottom: 25px;
+            left: 20px;
+            right: 20px;
+            height: 75px;
+            background: #202028;
+            border-radius: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+        }
+        .nav-item {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #707080;
+            text-decoration: none;
+            width: 60px;
+            height: 60px;
+            transition: 0.3s ease;
+        }
+        .nav-item i {
+            font-size: 24px;
+            transition: 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            position: relative;
+            z-index: 2;
+        }
+        .nav-item .text {
+            font-size: 10px;
+            font-weight: 500;
+            margin-top: 5px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: 0.4s ease;
+            position: absolute;
+            bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .nav-item.active {
+            color: #00ffcc;
+        }
+        .nav-item.active i {
+            transform: translateY(-12px);
+            text-shadow: 0 0 15px rgba(0, 255, 204, 0.8);
+        }
+        .nav-item.active .text {
+            opacity: 1;
+            transform: translateY(0);
+            color: #fff;
+        }
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            bottom: 18px;
+            width: 5px;
+            height: 5px;
+            background: #00ffcc;
+            border-radius: 50%;
+            opacity: 0;
+            transition: 0.4s ease;
+            box-shadow: 0 0 10px 3px rgba(0, 255, 204, 0.8);
+            transform: scale(0);
+        }
+        .nav-item.active::before {
+            opacity: 1;
+            transform: scale(1);
+        }
+        /* Glow background morph */
+        .glow-bg {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: radial-gradient(circle, rgba(0,255,204,0.15) 0%, rgba(255,255,255,0) 60%);
+            border-radius: 50%;
+            transition: left 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-mockup">
+        <nav class="nav">
+            <div class="glow-bg"></div>
+            <a href="#" class="nav-item active" onclick="setActive(this)">
+                <i class="fa-solid fa-heart-pulse"></i>
+                <span class="text">Home</span>
+            </a>
+            <a href="#" class="nav-item" onclick="setActive(this)">
+                <i class="fa-regular fa-calendar-check"></i>
+                <span class="text">Appointments</span>
+            </a>
+            <a href="#" class="nav-item" onclick="setActive(this)">
+                <i class="fa-regular fa-comment-dots"></i>
+                <span class="text">Chat</span>
+            </a>
+            <a href="#" class="nav-item" onclick="setActive(this)">
+                <i class="fa-regular fa-circle-user"></i>
+                <span class="text">Profile</span>
+            </a>
+        </nav>
+    </div>
+    <script>
+        function setActive(element) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+            document.querySelector('.glow-bg').style.left = `${element.offsetLeft}px`;
+        }
+        window.onload = () => {
+            const active = document.querySelector('.nav-item.active');
+            document.querySelector('.glow-bg').style.left = `${active.offsetLeft}px`;
+        }
+    </script>
+</body>
+</html>
