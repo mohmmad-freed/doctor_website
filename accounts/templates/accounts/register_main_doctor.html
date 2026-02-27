@@ -414,10 +414,25 @@
         else clearError("email");
     });
 
+    bindLive("clinic_city", function (v) {
+        if (!v) showError("clinic_city", "يرجى اختيار المدينة.");
+        else clearError("clinic_city");
+    });
+
+    function validatePassword(v) {
+        if (!v) { showError("password", "يرجى إدخال كلمة المرور."); return false; }
+        const missing = [];
+        if (v.length < 8)              missing.push("8 أحرف على الأقل");
+        if (!/[A-Z]/.test(v))          missing.push("حرف كبير");
+        if (!/[a-z]/.test(v))          missing.push("حرف صغير");
+        if (!/\d/.test(v))             missing.push("رقم");
+        if (!/[!@#$%^&*()\-_=+\[\]{};:'",.<>?/\\|`~]/.test(v)) missing.push("رمز خاص");
+        if (missing.length) { showError("password", "يجب أن تحتوي على: " + missing.join(" • ")); return false; }
+        clearError("password");
+        return true;
+    }
     bindLive("password", function (v) {
-        if (!v) { showError("password", "يرجى إدخال كلمة المرور."); return; }
-        if (v.length < 8) showError("password", "كلمة المرور يجب أن تكون 8 أحرف على الأقل.");
-        else clearError("password");
+        validatePassword(v);
         // Re-validate confirm too
         const c = form.querySelector("[name='confirm_password']");
         if (c && c.value) validateConfirm(c.value);
@@ -443,10 +458,6 @@
         else clearError("clinic_phone");
     });
 
-    bindLive("clinic_city", function (v) {
-        if (!v) showError("clinic_city", "يرجى اختيار المدينة.");
-        else clearError("clinic_city");
-    });
 
     // Optional clinic email — only validate if filled
     bindLive("clinic_email", function (v) {
@@ -513,11 +524,7 @@
         const pwEl  = form.querySelector("[name='password']");
         const cpwEl = form.querySelector("[name='confirm_password']");
         if (pwEl) {
-            if (!pwEl.value) {
-                showError("password", "يرجى إدخال كلمة المرور."); valid = false;
-            } else if (pwEl.value.length < 8) {
-                showError("password", "كلمة المرور يجب أن تكون 8 أحرف على الأقل."); valid = false;
-            }
+            if (!validatePassword(pwEl.value)) valid = false;
         }
         if (cpwEl && pwEl) {
             if (!cpwEl.value) {

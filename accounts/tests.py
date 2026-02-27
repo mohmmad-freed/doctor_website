@@ -468,6 +468,35 @@ class MainDoctorSignupTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("password", form.errors)
 
+    def test_password_no_uppercase(self):
+        """Password without an uppercase letter is rejected."""
+        form = MainDoctorRegistrationForm(data=self._valid_data(password="weakpass1!", confirm_password="weakpass1!"))
+        self.assertFalse(form.is_valid())
+        self.assertIn("password", form.errors)
+
+    def test_password_no_lowercase(self):
+        """Password without a lowercase letter is rejected."""
+        form = MainDoctorRegistrationForm(data=self._valid_data(password="WEAKPASS1!", confirm_password="WEAKPASS1!"))
+        self.assertFalse(form.is_valid())
+        self.assertIn("password", form.errors)
+
+    def test_password_no_digit(self):
+        """Password without a digit is rejected."""
+        form = MainDoctorRegistrationForm(data=self._valid_data(password="WeakPass!", confirm_password="WeakPass!"))
+        self.assertFalse(form.is_valid())
+        self.assertIn("password", form.errors)
+
+    def test_password_no_special_char(self):
+        """Password without a special character is rejected."""
+        form = MainDoctorRegistrationForm(data=self._valid_data(password="WeakPass1", confirm_password="WeakPass1"))
+        self.assertFalse(form.is_valid())
+        self.assertIn("password", form.errors)
+
+    def test_strong_password_accepted(self):
+        """Password meeting all strength rules is accepted."""
+        form = MainDoctorRegistrationForm(data=self._valid_data(password="StrongPass1!", confirm_password="StrongPass1!"))
+        self.assertTrue(form.is_valid(), f"Expected valid but got: {form.errors}")
+
     def test_invalid_owner_phone_format(self):
         """Bad phone format for owner is rejected."""
         form = MainDoctorRegistrationForm(data=self._valid_data(phone="123456789"))
@@ -480,12 +509,93 @@ class MainDoctorSignupTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("clinic_phone", form.errors)
 
-    def test_duplicate_owner_phone_blocked(self):
-        """Phone already in use by another user is rejected."""
-        CustomUser.objects.create_user(phone=self.OWNER_PHONE, name="Existing", password="pass12345")
+    def test_existing_patient_without_nid_is_reused(self):
+        """Existing user with same phone (no national_id set) is reused — not duplicated."""
+        patient = CustomUser.objects.create_user(
+            phone=self.OWNER_PHONE, name="Existing Patient", password="pass12345"
+        )
+        response = self.client.post(self.url, self._valid_data())
+        self.assertEqual(
+            response.status_code,
+            302,
+            f"Expected redirect but got errors: "
+            f"{response.context['form'].errors if response.context and 'form' in response.context else ''}",
+        )
+        # Exactly one user with this phone — no duplicate created
+        self.assertEqual(CustomUser.objects.filter(phone=self.OWNER_PHONE).count(), 1)
+        patient.refresh_from_db()
+        self.assertEqual(patient.role, "MAIN_DOCTOR")
+        self.assertEqual(patient.national_id, self.OWNER_NID)
+
+    # ── 4. Existing user identity scenarios ──────────────────────────────
+
+    def test_existing_user_blocked_if_national_id_conflicts(self):
+        """Existing user with same phone but a different national_id is blocked."""
+        CustomUser.objects.create_user(
+            phone=self.OWNER_PHONE,
+            name="Other Person",
+            national_id="999999999",  # different from OWNER_NID
+            password="pass12345",
+        )
         form = MainDoctorRegistrationForm(data=self._valid_data())
         self.assertFalse(form.is_valid())
-        self.assertIn("phone", form.errors)
+        self.assertIn("national_id", form.errors)
+
+    def test_existing_patient_role_updated_to_main_doctor(self):
+        """Existing PATIENT has their role promoted to MAIN_DOCTOR after clinic signup."""
+        patient = CustomUser.objects.create_user(
+            phone=self.OWNER_PHONE,
+            name="Patient User",
+            national_id=self.OWNER_NID,
+            password="pass12345",
+            role="PATIENT",
+        )
+        response = self.client.post(self.url, self._valid_data())
+        self.assertEqual(response.status_code, 302)
+        patient.refresh_from_db()
+        self.assertEqual(patient.role, "MAIN_DOCTOR")
+
+    def test_existing_patient_password_updated(self):
+        """Existing user's password is replaced by the one submitted in the signup form."""
+        patient = CustomUser.objects.create_user(
+            phone=self.OWNER_PHONE,
+            name="Patient User",
+            national_id=self.OWNER_NID,
+            password="OldPassword123!",
+        )
+        response = self.client.post(self.url, self._valid_data())
+        self.assertEqual(response.status_code, 302)
+        patient.refresh_from_db()
+        self.assertTrue(patient.check_password("StrongPass123!"))
+
+    def test_existing_patient_email_preserved_when_already_set(self):
+        """Existing user's email is NOT overwritten even if a different email is submitted."""
+        original_email = "original@patient.com"
+        patient = CustomUser.objects.create_user(
+            phone=self.OWNER_PHONE,
+            name="Patient User",
+            national_id=self.OWNER_NID,
+            email=original_email,
+            password="pass12345",
+        )
+        response = self.client.post(self.url, self._valid_data(email="new@doctor.com"))
+        self.assertEqual(response.status_code, 302)
+        patient.refresh_from_db()
+        self.assertEqual(patient.email, original_email)  # original preserved
+
+    def test_existing_patient_email_filled_when_missing(self):
+        """Form email is written to existing user when they have no email yet."""
+        patient = CustomUser.objects.create_user(
+            phone=self.OWNER_PHONE,
+            name="Patient User",
+            national_id=self.OWNER_NID,
+            email=None,
+            password="pass12345",
+        )
+        response = self.client.post(self.url, self._valid_data(email="doctor@test.com"))
+        self.assertEqual(response.status_code, 302)
+        patient.refresh_from_db()
+        self.assertEqual(patient.email, "doctor@test.com")
 
     def test_national_id_invalid_format(self):
         """National ID that is not 9 digits is rejected."""

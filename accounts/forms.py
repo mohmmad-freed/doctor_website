@@ -184,9 +184,7 @@ class MainDoctorRegistrationForm(forms.ModelForm):
                 "رقم الهاتف غير صحيح. يجب أن يبدأ بـ 059 أو 056 ويتكون من 10 أرقام."
             )
 
-        if CustomUser.objects.filter(phone=phone).exists():
-            raise ValidationError("رقم الهاتف هذا مسجل بالفعل.")
-
+        # No uniqueness check here — existing users are reused in save()
         return phone
 
     def clean_national_id(self):
@@ -196,8 +194,20 @@ class MainDoctorRegistrationForm(forms.ModelForm):
         if not re.match(r"^\d{9}$", nid):
             raise ValidationError("رقم الهوية يجب أن يتكون من 9 أرقام فقط.")
 
-        if CustomUser.objects.filter(national_id=nid).exists():
-            raise ValidationError("رقم الهوية الوطنية هذا مسجل بالفعل.")
+        phone = self.cleaned_data.get("phone")  # already cleaned (phone comes before national_id)
+        existing_user = CustomUser.objects.filter(phone=phone).first() if phone else None
+
+        if existing_user:
+            # If this user already has a different national_id, block — cannot change it via signup
+            if existing_user.national_id and existing_user.national_id != nid:
+                raise ValidationError("رقم الهوية لا يتطابق مع بيانات حسابك الحالي.")
+            # Also block if another user (not this one) already owns this national_id
+            if CustomUser.objects.filter(national_id=nid).exclude(pk=existing_user.pk).exists():
+                raise ValidationError("رقم الهوية الوطنية هذا مسجل بالفعل.")
+        else:
+            # New user — no one may own this national_id
+            if CustomUser.objects.filter(national_id=nid).exists():
+                raise ValidationError("رقم الهوية الوطنية هذا مسجل بالفعل.")
 
         return nid
 
@@ -205,14 +215,31 @@ class MainDoctorRegistrationForm(forms.ModelForm):
         email = self.cleaned_data.get("email", "").strip()
         if not email:
             return email
-        if CustomUser.objects.filter(email__iexact=email).exists():
+
+        phone = self.cleaned_data.get("phone")  # already cleaned
+        qs = CustomUser.objects.filter(email__iexact=email)
+        if phone:
+            # Existing user is allowed to submit their own email
+            qs = qs.exclude(phone=phone)
+        if qs.exists():
             raise ValidationError("البريد الإلكتروني هذا مسجل بالفعل.")
         return email
 
     def clean_password(self):
         password = self.cleaned_data.get("password", "")
+        errors = []
         if len(password) < 8:
-            raise ValidationError("كلمة المرور يجب أن تكون 8 أحرف على الأقل.")
+            errors.append("8 أحرف على الأقل")
+        if not re.search(r"[A-Z]", password):
+            errors.append("حرف كبير واحد على الأقل")
+        if not re.search(r"[a-z]", password):
+            errors.append("حرف صغير واحد على الأقل")
+        if not re.search(r"\d", password):
+            errors.append("رقم واحد على الأقل")
+        if not re.search(r"[!@#$%^&*()\-_=+\[\]{};:'\",.<>?/\\|`~]", password):
+            errors.append("رمز خاص واحد على الأقل")
+        if errors:
+            raise ValidationError(f"كلمة المرور يجب أن تحتوي على: {' • '.join(errors)}.")
         return password
 
     def clean_confirm_password(self):
@@ -262,15 +289,61 @@ class MainDoctorRegistrationForm(forms.ModelForm):
         self.cleaned_data["activation_code_obj"] = activation_code
         return code
 
+    def _post_clean(self):
+        """
+        If a user with the submitted phone already exists, swap self.instance to that
+        user BEFORE Django's construct_instance / validate_unique run.  This ensures
+        the DB-level unique check on `phone` (and `national_id`) is evaluated
+        against the existing row — not against a phantom new record — so validation
+        passes correctly for the reuse path.
+
+        We also snapshot the original email / name / national_id values here so that
+        save() can honour the "fill missing fields only" rule even after
+        construct_instance has overwritten those attributes in memory.
+        """
+        phone = self.cleaned_data.get("phone")
+        if phone:
+            existing = CustomUser.objects.filter(phone=phone).first()
+            if existing:
+                self._existing_original = {
+                    "email": existing.email,
+                    "name": existing.name,
+                    "national_id": existing.national_id,
+                }
+                self.instance = existing
+        super()._post_clean()
+
     def save(self, commit=True):
-        user = super().save(commit=False)
-        user.name = f"{self.cleaned_data['first_name']} {self.cleaned_data['last_name']}".strip()
-        user.phone = self.cleaned_data["phone"]
-        user.national_id = self.cleaned_data["national_id"]
-        user.email = self.cleaned_data["email"]
-        user.role = "MAIN_DOCTOR"
-        user.is_verified = True
-        user.set_password(self.cleaned_data["password"])
+        user = self.instance  # either the existing user (set in _post_clean) or a new instance
+        password = self.cleaned_data["password"]
+        original = getattr(self, "_existing_original", None)
+
+        if original is not None:
+            # ── Existing user: upgrade to MAIN_DOCTOR ──────────────────────────
+            user.role = "MAIN_DOCTOR"
+            user.set_password(password)
+            user.is_verified = True
+            # construct_instance already set fields from form data; selectively
+            # restore values that must NOT be overwritten.
+            if original["email"]:
+                user.email = original["email"]        # keep existing email
+            if original["national_id"]:
+                user.national_id = original["national_id"]  # keep existing national_id
+            if original["name"]:
+                user.name = original["name"]          # keep existing name
+            else:
+                # No name was ever set — fill it from the form
+                user.name = (
+                    f"{self.cleaned_data['first_name']} {self.cleaned_data['last_name']}".strip()
+                )
+        else:
+            # ── New user: set all required fields ──────────────────────────────
+            user.name = (
+                f"{self.cleaned_data['first_name']} {self.cleaned_data['last_name']}".strip()
+            )
+            user.role = "MAIN_DOCTOR"
+            user.is_verified = True
+            user.set_password(password)
 
         if commit:
             user.save()
