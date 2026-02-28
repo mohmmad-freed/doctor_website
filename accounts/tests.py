@@ -5,7 +5,7 @@ from django.utils import timezone
 from datetime import timedelta
 from accounts.models import CustomUser, City
 from accounts.forms import PatientRegistrationForm, LoginForm, MainDoctorRegistrationForm
-from clinics.models import Clinic, ClinicActivationCode, ClinicStaff
+from clinics.models import Clinic, ClinicActivationCode, ClinicStaff, ClinicSubscription
 from clinics.services import create_clinic_for_main_doctor
 from doctors.models import Specialty
 from patients.models import PatientProfile
@@ -374,6 +374,9 @@ class MainDoctorSignupTest(TestCase):
             clinic_name="عيادة الاختبار",
             phone=self.OWNER_PHONE,
             national_id=self.OWNER_NID,
+            plan_type="MONTHLY",
+            subscription_expires_at=timezone.now() + timedelta(days=30),
+            max_doctors=3,
         )
         self.url = reverse("accounts:register_main_doctor")
 
@@ -743,6 +746,9 @@ class CreateClinicServiceTest(TestCase):
             clinic_name="عيادة الخدمة",
             phone="0591111111",
             national_id="987654321",
+            plan_type="YEARLY",
+            subscription_expires_at=timezone.now() + timedelta(days=365),
+            max_doctors=5,
         )
         self.cleaned_data = {
             "clinic_name": "عيادة الاختبار",
@@ -847,6 +853,9 @@ class CreateClinicServiceTest(TestCase):
             code="VIEW001",
             clinic_name="عيادة المشهد",
             phone="0592222222",
+            plan_type="MONTHLY",
+            subscription_expires_at=timezone.now() + timedelta(days=30),
+            max_doctors=2,
             national_id="111222333",
         )
         data = {
@@ -875,3 +884,141 @@ class CreateClinicServiceTest(TestCase):
                 clinic=clinic, user=user, role="MAIN_DOCTOR"
             ).exists()
         )
+
+
+class ClinicSubscriptionTest(TestCase):
+    """
+    Tests for subscription binding from ClinicActivationCode → ClinicSubscription.
+
+    Covers:
+    - Subscription record is created with correct field values
+    - plan_type, expires_at, max_doctors are copied from the activation code
+    - Subscription status defaults to ACTIVE
+    - OneToOne constraint: clinic has exactly one subscription
+    - Atomic rollback: if subscription creation fails, no Clinic is saved
+    - Dashboard view exposes subscription context
+    """
+
+    def setUp(self):
+        self.city = City.objects.create(name="Jenin")
+        self.specialty = Specialty.objects.create(name="Neurology", name_ar="الأعصاب")
+        self.user = CustomUser.objects.create_user(
+            phone="0593333333",
+            name="Dr. Sub",
+            national_id="111333555",
+            password="Pass1234!",
+            role="MAIN_DOCTOR",
+        )
+        self.sub_expires = timezone.now() + timedelta(days=365)
+        self.activation_code = ClinicActivationCode.objects.create(
+            code="SUB001",
+            clinic_name="عيادة الاشتراك",
+            phone="0593333333",
+            national_id="111333555",
+            plan_type="YEARLY",
+            subscription_expires_at=self.sub_expires,
+            max_doctors=7,
+        )
+        self.cleaned_data = {
+            "clinic_name": "عيادة الاشتراك",
+            "clinic_address": "شارع النور",
+            "clinic_city": self.city,
+            "clinic_phone": "0569007777",
+            "clinic_email": "",
+            "clinic_description": "",
+            "specialties": [self.specialty],
+        }
+
+    # ── Happy path ────────────────────────────────────────────────────────
+
+    def test_subscription_is_created(self):
+        """Service creates a ClinicSubscription row for the new clinic."""
+        clinic = create_clinic_for_main_doctor(
+            self.user, self.cleaned_data, self.activation_code
+        )
+        self.assertTrue(ClinicSubscription.objects.filter(clinic=clinic).exists())
+
+    def test_subscription_plan_type_copied(self):
+        """plan_type is copied from the activation code."""
+        clinic = create_clinic_for_main_doctor(
+            self.user, self.cleaned_data, self.activation_code
+        )
+        self.assertEqual(clinic.subscription.plan_type, "YEARLY")
+
+    def test_subscription_expires_at_copied(self):
+        """expires_at is copied from activation_code.subscription_expires_at."""
+        clinic = create_clinic_for_main_doctor(
+            self.user, self.cleaned_data, self.activation_code
+        )
+        # Compare at second precision to avoid microsecond drift
+        self.assertEqual(
+            clinic.subscription.expires_at.replace(microsecond=0),
+            self.sub_expires.replace(microsecond=0),
+        )
+
+    def test_subscription_max_doctors_copied(self):
+        """max_doctors is copied from the activation code."""
+        clinic = create_clinic_for_main_doctor(
+            self.user, self.cleaned_data, self.activation_code
+        )
+        self.assertEqual(clinic.subscription.max_doctors, 7)
+
+    def test_subscription_status_defaults_to_active(self):
+        """Newly created subscription status is ACTIVE."""
+        clinic = create_clinic_for_main_doctor(
+            self.user, self.cleaned_data, self.activation_code
+        )
+        self.assertEqual(clinic.subscription.status, "ACTIVE")
+
+    def test_subscription_one_to_one(self):
+        """Each clinic has exactly one subscription (OneToOne enforced)."""
+        clinic = create_clinic_for_main_doctor(
+            self.user, self.cleaned_data, self.activation_code
+        )
+        self.assertEqual(ClinicSubscription.objects.filter(clinic=clinic).count(), 1)
+
+    def test_rollback_on_subscription_creation_failure(self):
+        """
+        If ClinicSubscription.objects.create raises, the whole transaction
+        rolls back: no Clinic row, no ClinicStaff, activation code stays unused.
+        """
+        with patch(
+            "clinics.services.ClinicSubscription.objects.create",
+            side_effect=Exception("simulated subscription error"),
+        ):
+            with self.assertRaises(Exception):
+                create_clinic_for_main_doctor(
+                    self.user, self.cleaned_data, self.activation_code
+                )
+
+        self.assertEqual(Clinic.objects.count(), 0)
+        self.assertEqual(ClinicStaff.objects.count(), 0)
+        self.assertEqual(ClinicSubscription.objects.count(), 0)
+        self.activation_code.refresh_from_db()
+        self.assertFalse(self.activation_code.is_used)
+
+    # ── Dashboard view ────────────────────────────────────────────────────
+
+    def test_my_clinic_view_exposes_subscription(self):
+        """my_clinic view passes subscription to template context."""
+        from django.test import Client as TestClient
+        clinic = create_clinic_for_main_doctor(
+            self.user, self.cleaned_data, self.activation_code
+        )
+        client = TestClient()
+        client.force_login(self.user)
+        response = client.get(reverse("clinics:my_clinic"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("subscription", response.context)
+        self.assertEqual(response.context["subscription"], clinic.subscription)
+
+    def test_my_clinic_view_exposes_clinic(self):
+        """my_clinic view passes clinic to template context."""
+        from django.test import Client as TestClient
+        clinic = create_clinic_for_main_doctor(
+            self.user, self.cleaned_data, self.activation_code
+        )
+        client = TestClient()
+        client.force_login(self.user)
+        response = client.get(reverse("clinics:my_clinic"))
+        self.assertEqual(response.context["clinic"], clinic)

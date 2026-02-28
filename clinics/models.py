@@ -79,8 +79,43 @@ class ClinicStaff(models.Model):
         verbose_name_plural = "Clinic Staff"
 
 
+class ClinicSubscription(models.Model):
+    """Subscription plan bound to a clinic, seeded from the activation code."""
+
+    PLAN_CHOICES = [
+        ("MONTHLY", "Monthly"),
+        ("YEARLY", "Yearly"),
+    ]
+    STATUS_CHOICES = [
+        ("ACTIVE", "Active"),
+        ("EXPIRED", "Expired"),
+        ("SUSPENDED", "Suspended"),
+    ]
+
+    clinic = models.OneToOneField(
+        Clinic, on_delete=models.CASCADE, related_name="subscription"
+    )
+    plan_type = models.CharField(max_length=10, choices=PLAN_CHOICES, default="MONTHLY")
+    expires_at = models.DateTimeField()
+    max_doctors = models.PositiveIntegerField(default=2)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="ACTIVE")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.clinic.name} — {self.plan_type} (expires {self.expires_at:%Y-%m-%d})"
+
+    class Meta:
+        verbose_name = "Clinic Subscription"
+        verbose_name_plural = "Clinic Subscriptions"
+
+
 class ClinicActivationCode(models.Model):
     """Activation codes for creating new clinics with main doctor"""
+
+    PLAN_CHOICES = [
+        ("MONTHLY", "Monthly"),
+        ("YEARLY", "Yearly"),
+    ]
 
     code = models.CharField(max_length=20, unique=True)
     clinic_name = models.CharField(max_length=255, help_text="Pre-assigned clinic name")
@@ -93,6 +128,19 @@ class ClinicActivationCode(models.Model):
         max_length=9,
         default="",
         help_text="9-digit national ID of the intended owner",
+    )
+    plan_type = models.CharField(
+        max_length=10,
+        choices=PLAN_CHOICES,
+        default="MONTHLY",
+        help_text="Subscription plan granted to the clinic.",
+    )
+    subscription_expires_at = models.DateTimeField(
+        help_text="When the subscription granted by this code expires.",
+    )
+    max_doctors = models.PositiveIntegerField(
+        default=2,
+        help_text="Maximum number of doctors allowed under this subscription.",
     )
     expires_at = models.DateTimeField(
         null=True,

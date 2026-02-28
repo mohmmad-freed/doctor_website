@@ -1,11 +1,18 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
+
+from .models import Clinic, ClinicSubscription
 
 
 @login_required
 def my_clinic(request):
-    return render(request, "clinics/my_clinic.html")
+    clinic = get_object_or_404(Clinic, main_doctor=request.user, is_active=True)
+    subscription = getattr(clinic, "subscription", None)
+    return render(request, "clinics/my_clinic.html", {
+        "clinic": clinic,
+        "subscription": subscription,
+    })
 
 
 @login_required

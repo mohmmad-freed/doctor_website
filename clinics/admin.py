@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Clinic, ClinicStaff, ClinicActivationCode
+from .models import Clinic, ClinicStaff, ClinicActivationCode, ClinicSubscription
 
 
 @admin.register(Clinic)
@@ -42,8 +42,8 @@ class ClinicStaffAdmin(admin.ModelAdmin):
 
 @admin.register(ClinicActivationCode)
 class ClinicActivationCodeAdmin(admin.ModelAdmin):
-    list_display = ['code', 'clinic_name', 'phone', 'national_id', 'expires_at', 'is_used', 'used_by', 'created_at', 'used_at']
-    list_filter = ['is_used', 'created_at']
+    list_display = ['code', 'clinic_name', 'phone', 'national_id', 'plan_type', 'max_doctors', 'subscription_expires_at', 'expires_at', 'is_used', 'used_by', 'created_at', 'used_at']
+    list_filter = ['is_used', 'plan_type', 'created_at']
     search_fields = ['code', 'clinic_name', 'phone', 'national_id', 'used_by__name']
     readonly_fields = ['is_used', 'used_by', 'used_at', 'created_at']
 
@@ -55,7 +55,28 @@ class ClinicActivationCodeAdmin(admin.ModelAdmin):
             'fields': ('phone', 'national_id'),
             'description': 'Phone and national ID of the intended clinic owner. These must match what the user enters during signup.',
         }),
+        ('Subscription', {
+            'fields': ('plan_type', 'subscription_expires_at', 'max_doctors'),
+            'description': 'Subscription terms that will be bound to the clinic when this code is used.',
+        }),
         ('Usage', {
             'fields': ('is_used', 'used_by', 'used_at', 'created_at'),
+        }),
+    )
+
+
+@admin.register(ClinicSubscription)
+class ClinicSubscriptionAdmin(admin.ModelAdmin):
+    list_display = ['clinic', 'plan_type', 'max_doctors', 'expires_at', 'status', 'created_at']
+    list_filter = ['plan_type', 'status', 'created_at']
+    search_fields = ['clinic__name']
+    readonly_fields = ['created_at']
+
+    fieldsets = (
+        ('Subscription Details', {
+            'fields': ('clinic', 'plan_type', 'expires_at', 'max_doctors', 'status')
+        }),
+        ('Metadata', {
+            'fields': ('created_at',)
         }),
     )
