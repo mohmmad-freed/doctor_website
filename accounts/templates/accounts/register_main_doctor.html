@@ -18,11 +18,9 @@
 
             <div style="padding: 40px;">
 
-                {% if messages %}
-                <div style="margin-bottom: 24px;">
-                    {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }}" style="margin-bottom: 8px;">{{ message }}</div>
-                    {% endfor %}
+                {% if form.errors %}
+                <div class="alert alert-error" style="margin-bottom: 24px;">
+                    يوجد أخطاء في البيانات المدخلة، يرجى مراجعتها وتصحيحها.
                 </div>
                 {% endif %}
 

@@ -4,7 +4,6 @@ from django.contrib.auth import login, logout, authenticate, get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.conf import settings
-from django.utils import timezone
 from django.http import JsonResponse
 import re
 
@@ -17,6 +16,7 @@ from .forms import (
 )
 from .otp_utils import request_otp, verify_otp, is_in_cooldown, get_remaining_resends
 from clinics.models import Clinic
+from clinics.services import create_clinic_for_main_doctor
 from patients.models import PatientProfile
 from patients.services import ensure_patient_profile
 from .email_utils import (
@@ -432,25 +432,11 @@ def register_main_doctor(request):
 
                 activation_code_obj = form.cleaned_data["activation_code_obj"]
 
-                clinic = Clinic.objects.create(
-                    name=form.cleaned_data["clinic_name"],
-                    address=form.cleaned_data["clinic_address"],
-                    city=form.cleaned_data["clinic_city"],
-                    phone=form.cleaned_data["clinic_phone"],
-                    email=form.cleaned_data.get("clinic_email") or "",
-                    description=form.cleaned_data.get("clinic_description", ""),
-                    status="PENDING",
-                    main_doctor=user,
+                clinic = create_clinic_for_main_doctor(
+                    user=user,
+                    cleaned_data=form.cleaned_data,
+                    activation_code_obj=activation_code_obj,
                 )
-                clinic.specialties.set(form.cleaned_data["specialties"])
-
-                activation_code_obj.is_used = True
-                activation_code_obj.used_by = user
-                activation_code_obj.clinic_name = (
-                    clinic.name
-                )  # Update activation code with actual name used
-                activation_code_obj.used_at = timezone.now()
-                activation_code_obj.save()
 
                 login(request, user, backend="accounts.backends.PhoneNumberAuthBackend")
                 request.session["just_registered"] = True
@@ -465,10 +451,8 @@ def register_main_doctor(request):
             except Exception as e:
                 messages.error(
                     request,
-                    f"An error occurred during registration. Please try again. Error: {str(e)}",
+                    f"حدث خطأ أثناء التسجيل. يرجى المحاولة مرة أخرى. ({str(e)})",
                 )
-        else:
-            messages.error(request, "Please correct the errors below.")
     else:
         form = MainDoctorRegistrationForm()
 

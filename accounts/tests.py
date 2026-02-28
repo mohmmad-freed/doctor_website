@@ -1,10 +1,12 @@
+from unittest.mock import patch
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
 from accounts.models import CustomUser, City
 from accounts.forms import PatientRegistrationForm, LoginForm, MainDoctorRegistrationForm
-from clinics.models import Clinic, ClinicActivationCode
+from clinics.models import Clinic, ClinicActivationCode, ClinicStaff
+from clinics.services import create_clinic_for_main_doctor
 from doctors.models import Specialty
 from patients.models import PatientProfile
 from patients.services import ensure_patient_profile
@@ -706,3 +708,170 @@ class EnsurePatientProfileTest(TestCase):
         ensure_patient_profile(self.user)
         ensure_patient_profile(self.user)
         self.assertEqual(PatientProfile.objects.filter(user=self.user).count(), 1)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# create_clinic_for_main_doctor service tests
+# ─────────────────────────────────────────────────────────────────────────────
+
+class CreateClinicServiceTest(TestCase):
+    """
+    Unit tests for clinics.services.create_clinic_for_main_doctor.
+
+    Covers:
+    - Happy path: all records created correctly in one call
+    - ClinicStaff(role=MAIN_DOCTOR) is created
+    - Activation code is fully marked as used
+    - Atomic rollback: if any step raises, no partial records remain
+    """
+
+    def setUp(self):
+        self.city = City.objects.create(name="Hebron")
+        self.specialty = Specialty.objects.create(
+            name="Cardiology",
+            name_ar="أمراض القلب",
+        )
+        self.user = CustomUser.objects.create_user(
+            phone="0591111111",
+            name="Dr. Test",
+            national_id="987654321",
+            password="Pass1234!",
+            role="MAIN_DOCTOR",
+        )
+        self.activation_code = ClinicActivationCode.objects.create(
+            code="SVC001",
+            clinic_name="عيادة الخدمة",
+            phone="0591111111",
+            national_id="987654321",
+        )
+        self.cleaned_data = {
+            "clinic_name": "عيادة الاختبار",
+            "clinic_address": "شارع الرئيسي 1",
+            "clinic_city": self.city,
+            "clinic_phone": "0569001111",
+            "clinic_email": "clinic@test.com",
+            "clinic_description": "وصف",
+            "specialties": [self.specialty],
+        }
+
+    # ── Happy path ────────────────────────────────────────────────────────
+
+    def test_creates_clinic_record(self):
+        """Service creates a Clinic row with correct field values."""
+        clinic = create_clinic_for_main_doctor(
+            self.user, self.cleaned_data, self.activation_code
+        )
+        self.assertIsNotNone(clinic.pk)
+        self.assertEqual(clinic.name, "عيادة الاختبار")
+        self.assertEqual(clinic.main_doctor, self.user)
+        self.assertEqual(clinic.status, "PENDING")
+        self.assertEqual(clinic.city, self.city)
+
+    def test_sets_specialties(self):
+        """Service wires up specialties M2M correctly."""
+        clinic = create_clinic_for_main_doctor(
+            self.user, self.cleaned_data, self.activation_code
+        )
+        self.assertIn(self.specialty, clinic.specialties.all())
+
+    def test_creates_clinic_staff_main_doctor(self):
+        """Service creates a ClinicStaff row with role=MAIN_DOCTOR."""
+        clinic = create_clinic_for_main_doctor(
+            self.user, self.cleaned_data, self.activation_code
+        )
+        staff = ClinicStaff.objects.get(clinic=clinic, user=self.user)
+        self.assertEqual(staff.role, "MAIN_DOCTOR")
+        self.assertEqual(staff.added_by, self.user)
+
+    def test_marks_activation_code_used(self):
+        """Service marks the activation code as used with all audit fields."""
+        clinic = create_clinic_for_main_doctor(
+            self.user, self.cleaned_data, self.activation_code
+        )
+        self.activation_code.refresh_from_db()
+        self.assertTrue(self.activation_code.is_used)
+        self.assertEqual(self.activation_code.used_by, self.user)
+        self.assertEqual(self.activation_code.used_by_clinic, clinic)
+        self.assertIsNotNone(self.activation_code.used_at)
+
+    # ── Atomic rollback ───────────────────────────────────────────────────
+
+    def test_rollback_on_staff_creation_failure(self):
+        """
+        If ClinicStaff creation raises, the whole transaction rolls back:
+        no Clinic row, no ClinicStaff row, activation code stays unused.
+        """
+        with patch(
+            "clinics.services.ClinicStaff.objects.create",
+            side_effect=Exception("simulated DB error"),
+        ):
+            with self.assertRaises(Exception):
+                create_clinic_for_main_doctor(
+                    self.user, self.cleaned_data, self.activation_code
+                )
+
+        self.assertEqual(Clinic.objects.count(), 0)
+        self.assertEqual(ClinicStaff.objects.count(), 0)
+        self.activation_code.refresh_from_db()
+        self.assertFalse(self.activation_code.is_used)
+
+    def test_rollback_on_activation_code_save_failure(self):
+        """
+        If saving the activation code raises, the whole transaction rolls back:
+        no Clinic row, no ClinicStaff row.
+        """
+        with patch.object(
+            self.activation_code.__class__,
+            "save",
+            side_effect=Exception("simulated save error"),
+        ):
+            with self.assertRaises(Exception):
+                create_clinic_for_main_doctor(
+                    self.user, self.cleaned_data, self.activation_code
+                )
+
+        self.assertEqual(Clinic.objects.count(), 0)
+        self.assertEqual(ClinicStaff.objects.count(), 0)
+
+    # ── Integration: view still creates ClinicStaff ───────────────────────
+
+    def test_signup_view_creates_clinic_staff(self):
+        """
+        End-to-end: POST to register_main_doctor creates a ClinicStaff row
+        with role=MAIN_DOCTOR for the new owner.
+        """
+        client = Client()
+        city = City.objects.create(name="Nablus")
+        specialty = Specialty.objects.create(name="Dermatology", name_ar="الجلدية")
+        activation_code = ClinicActivationCode.objects.create(
+            code="VIEW001",
+            clinic_name="عيادة المشهد",
+            phone="0592222222",
+            national_id="111222333",
+        )
+        data = {
+            "activation_code": "VIEW001",
+            "first_name": "سامي",
+            "last_name": "خالد",
+            "phone": "0592222222",
+            "national_id": "111222333",
+            "email": "sami@test.com",
+            "password": "StrongPass123!",
+            "confirm_password": "StrongPass123!",
+            "clinic_name": "عيادة المشهد",
+            "clinic_phone": "0569009999",
+            "clinic_email": "",
+            "clinic_address": "شارع الحرية",
+            "clinic_city": city.id,
+            "specialties": [specialty.id],
+        }
+        response = client.post(reverse("accounts:register_main_doctor"), data)
+        self.assertEqual(response.status_code, 302)
+
+        user = CustomUser.objects.get(phone="0592222222")
+        clinic = Clinic.objects.get(main_doctor=user)
+        self.assertTrue(
+            ClinicStaff.objects.filter(
+                clinic=clinic, user=user, role="MAIN_DOCTOR"
+            ).exists()
+        )

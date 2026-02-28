@@ -47,6 +47,7 @@ class ClinicStaff(models.Model):
     """Staff members (doctors and secretaries) working at a clinic"""
 
     ROLE_CHOICES = [
+        ("MAIN_DOCTOR", "Main Doctor"),
         ("DOCTOR", "Doctor"),
         ("SECRETARY", "Secretary"),
     ]
@@ -105,6 +106,13 @@ class ClinicActivationCode(models.Model):
         null=True,
         blank=True,
         related_name="clinic_activation_used",
+    )
+    used_by_clinic = models.OneToOneField(
+        "Clinic",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="activation_code",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     used_at = models.DateTimeField(null=True, blank=True)

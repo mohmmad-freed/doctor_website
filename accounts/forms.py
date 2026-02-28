@@ -1,5 +1,4 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from .models import CustomUser, City
@@ -195,36 +194,10 @@ class MainDoctorRegistrationForm(forms.ModelForm):
         if not re.match(r"^\d{9}$", nid):
             raise ValidationError("رقم الهوية يجب أن يتكون من 9 أرقام فقط.")
 
-        phone = self.cleaned_data.get("phone")  # already cleaned (phone comes before national_id)
-        existing_user = CustomUser.objects.filter(phone=phone).first() if phone else None
-
-        if existing_user:
-            # If this user already has a different national_id, block — cannot change it via signup
-            if existing_user.national_id and existing_user.national_id != nid:
-                raise ValidationError("رقم الهوية لا يتطابق مع بيانات حسابك الحالي.")
-            # Also block if another user (not this one) already owns this national_id
-            if CustomUser.objects.filter(national_id=nid).exclude(pk=existing_user.pk).exists():
-                raise ValidationError("رقم الهوية الوطنية هذا مسجل بالفعل.")
-        else:
-            # New user — no one may own this national_id
-            if CustomUser.objects.filter(national_id=nid).exists():
-                raise ValidationError("رقم الهوية الوطنية هذا مسجل بالفعل.")
-
         return nid
 
     def clean_email(self):
-        email = self.cleaned_data.get("email", "").strip()
-        if not email:
-            return email
-
-        phone = self.cleaned_data.get("phone")  # already cleaned
-        qs = CustomUser.objects.filter(email__iexact=email)
-        if phone:
-            # Existing user is allowed to submit their own email
-            qs = qs.exclude(phone=phone)
-        if qs.exists():
-            raise ValidationError("البريد الإلكتروني هذا مسجل بالفعل.")
-        return email
+        return self.cleaned_data.get("email", "").strip()
 
     def clean_password(self):
         password = self.cleaned_data.get("password", "")
@@ -290,6 +263,51 @@ class MainDoctorRegistrationForm(forms.ModelForm):
         self.cleaned_data["activation_code_obj"] = activation_code
         return code
 
+    def clean(self):
+        """
+        Cross-field uniqueness checks for national_id and email.
+
+        These run here (after clean_activation_code) so we can suppress them
+        entirely when the activation code itself is invalid — showing NID/email
+        "already registered" errors while the real problem is a phone mismatch
+        or a wrong code would be misleading noise.
+        """
+        cleaned_data = super().clean()
+
+        # Skip uniqueness checks when activation_code already has an error.
+        if "activation_code" in self.errors:
+            return cleaned_data
+
+        phone = cleaned_data.get("phone")
+        existing_user = CustomUser.objects.filter(phone=phone).first() if phone else None
+
+        # ── NID uniqueness ────────────────────────────────────────────────
+        nid = cleaned_data.get("national_id")
+        if nid:
+            if existing_user:
+                if existing_user.national_id and existing_user.national_id != nid:
+                    self.add_error(
+                        "national_id", "رقم الهوية لا يتطابق مع بيانات حسابك الحالي."
+                    )
+                elif CustomUser.objects.filter(national_id=nid).exclude(
+                    pk=existing_user.pk
+                ).exists():
+                    self.add_error("national_id", "رقم الهوية الوطنية هذا مسجل بالفعل.")
+            else:
+                if CustomUser.objects.filter(national_id=nid).exists():
+                    self.add_error("national_id", "رقم الهوية الوطنية هذا مسجل بالفعل.")
+
+        # ── Email uniqueness ──────────────────────────────────────────────
+        email = cleaned_data.get("email", "")
+        if email:
+            qs = CustomUser.objects.filter(email__iexact=email)
+            if phone:
+                qs = qs.exclude(phone=phone)
+            if qs.exists():
+                self.add_error("email", "البريد الإلكتروني هذا مسجل بالفعل.")
+
+        return cleaned_data
+
     def _post_clean(self):
         """
         If a user with the submitted phone already exists, swap self.instance to that
@@ -312,7 +330,20 @@ class MainDoctorRegistrationForm(forms.ModelForm):
                     "national_id": existing.national_id,
                 }
                 self.instance = existing
+
+        # Snapshot NID errors before model-level validate_unique() adds its own.
+        nid_errors_before = list(self._errors.get("national_id", []))
+
         super()._post_clean()
+
+        # If the activation code itself has an error (e.g. phone mismatch), discard
+        # any national_id uniqueness error added by validate_unique() — showing
+        # "NID already exists" when the real problem is a bad activation code is noise.
+        if "activation_code" in self.errors:
+            if nid_errors_before:
+                self._errors["national_id"] = self.error_class(nid_errors_before)
+            elif "national_id" in self._errors:
+                del self._errors["national_id"]
 
     def save(self, commit=True):
         user = self.instance  # either the existing user (set in _post_clean) or a new instance
