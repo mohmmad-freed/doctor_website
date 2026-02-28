@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Clinic, ClinicStaff, ClinicActivationCode, ClinicSubscription
+from .models import Clinic, ClinicStaff, ClinicActivationCode, ClinicSubscription, ClinicVerification
 
 
 @admin.register(Clinic)
@@ -62,6 +62,43 @@ class ClinicActivationCodeAdmin(admin.ModelAdmin):
         ('Usage', {
             'fields': ('is_used', 'used_by', 'used_at', 'created_at'),
         }),
+    )
+
+
+@admin.register(ClinicVerification)
+class ClinicVerificationAdmin(admin.ModelAdmin):
+    list_display = [
+        "clinic",
+        "owner_phone_verified_at",
+        "owner_email_verified_at",
+        "clinic_phone_verified_at",
+        "clinic_email_verified_at",
+        "created_at",
+    ]
+    list_filter = ["created_at"]
+    search_fields = ["clinic__name", "clinic__main_doctor__name"]
+    readonly_fields = [
+        "owner_phone_verified_at",
+        "owner_email_verified_at",
+        "clinic_phone_verified_at",
+        "clinic_email_verified_at",
+        "created_at",
+    ]
+
+    fieldsets = (
+        ("Clinic", {"fields": ("clinic",)}),
+        (
+            "Verification Timestamps",
+            {
+                "fields": (
+                    "owner_phone_verified_at",
+                    "owner_email_verified_at",
+                    "clinic_phone_verified_at",
+                    "clinic_email_verified_at",
+                )
+            },
+        ),
+        ("Metadata", {"fields": ("created_at",)}),
     )
 
 

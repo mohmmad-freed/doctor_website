@@ -173,3 +173,48 @@ class ClinicActivationCode(models.Model):
         verbose_name = "Clinic Activation Code"
         verbose_name_plural = "Clinic Activation Codes"
         ordering = ["-created_at"]
+
+
+class ClinicVerification(models.Model):
+    """Tracks OTP verification status for each communication channel of a clinic."""
+
+    clinic = models.OneToOneField(
+        Clinic, on_delete=models.CASCADE, related_name="verification"
+    )
+    owner_phone_verified_at = models.DateTimeField(null=True, blank=True)
+    owner_email_verified_at = models.DateTimeField(null=True, blank=True)
+    clinic_phone_verified_at = models.DateTimeField(null=True, blank=True)
+    clinic_email_verified_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def is_fully_verified(self):
+        """True when all required channels are verified."""
+        if not self.owner_phone_verified_at:
+            return False
+        if not self.owner_email_verified_at:
+            return False
+        if not self.clinic_phone_verified_at:
+            return False
+        if self.clinic.email and not self.clinic_email_verified_at:
+            return False
+        return True
+
+    def next_pending_step(self):
+        """Return URL name of the next unverified step, or None if all done."""
+        if not self.owner_phone_verified_at:
+            return "clinics:verify_owner_phone"
+        if not self.owner_email_verified_at:
+            return "clinics:verify_owner_email"
+        if not self.clinic_phone_verified_at:
+            return "clinics:verify_clinic_phone"
+        if self.clinic.email and not self.clinic_email_verified_at:
+            return "clinics:verify_clinic_email"
+        return None
+
+    def __str__(self):
+        return f"Verification for {self.clinic.name}"
+
+    class Meta:
+        verbose_name = "Clinic Verification"
+        verbose_name_plural = "Clinic Verifications"

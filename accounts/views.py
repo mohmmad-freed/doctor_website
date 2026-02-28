@@ -54,6 +54,12 @@ def home_redirect(request):
 
     # 1. Clinic owner — owns at least one clinic
     if Clinic.objects.filter(main_doctor=user).exists():
+        clinic = Clinic.objects.filter(main_doctor=user).first()
+        verification = getattr(clinic, "verification", None)
+        if verification:
+            next_step = verification.next_pending_step()
+            if next_step:
+                return redirect(next_step)
         return redirect("clinics:my_clinic")
 
     # 2. Doctor — has a doctor profile
@@ -439,14 +445,15 @@ def register_main_doctor(request):
                 )
 
                 login(request, user, backend="accounts.backends.PhoneNumberAuthBackend")
-                request.session["just_registered"] = True
 
-                messages.success(
-                    request,
-                    f'Welcome, Dr. {user.name}! Your clinic "{clinic.name}" has been successfully created.',
-                )
+                # Kick off verification — send OTP for step 1 (owner phone)
+                request_otp(user.phone)
 
-                return redirect("accounts:home")
+                # Store welcome name in session so verify_owner_phone can show it
+                # once with proper styling (avoids base.html's messages area)
+                request.session["clinic_welcome_name"] = user.name
+
+                return redirect("clinics:verify_owner_phone")
 
             except Exception as e:
                 messages.error(

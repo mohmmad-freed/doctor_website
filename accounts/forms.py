@@ -135,7 +135,7 @@ class MainDoctorRegistrationForm(forms.ModelForm):
     )
     clinic_city = forms.ModelChoiceField(
         queryset=City.objects.all(),
-        required=True,
+        required=False,
         label="المدينة",
         empty_label="اختر المدينة",
     )

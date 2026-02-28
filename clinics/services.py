@@ -1,7 +1,7 @@
 from django.db import transaction
 from django.utils import timezone
 
-from .models import Clinic, ClinicStaff, ClinicSubscription
+from .models import Clinic, ClinicStaff, ClinicSubscription, ClinicVerification
 
 
 @transaction.atomic
@@ -13,7 +13,8 @@ def create_clinic_for_main_doctor(user, cleaned_data, activation_code_obj):
     2. Set specialties (M2M).
     3. Create ClinicStaff(role=MAIN_DOCTOR) linking the owner.
     4. Create ClinicSubscription seeded from the activation code.
-    5. Mark the ClinicActivationCode as used.
+    5. Create ClinicVerification (all channels start unverified).
+    6. Mark the ClinicActivationCode as used.
 
     If any step raises an exception the whole transaction is rolled back,
     leaving the DB in a clean state.
@@ -46,6 +47,8 @@ def create_clinic_for_main_doctor(user, cleaned_data, activation_code_obj):
         max_doctors=activation_code_obj.max_doctors,
         status="ACTIVE",
     )
+
+    ClinicVerification.objects.create(clinic=clinic)
 
     activation_code_obj.is_used = True
     activation_code_obj.used_by = user
