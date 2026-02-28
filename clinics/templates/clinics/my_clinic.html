@@ -31,6 +31,48 @@
         .logout-btn:hover {
             background-color: #c82333;
         }
+
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            max-width: 480px;
+        }
+
+        .card h2 {
+            margin-top: 0;
+            font-size: 1.1rem;
+            color: #333;
+        }
+
+        .card dl {
+            margin: 0;
+        }
+
+        .card dt {
+            font-weight: bold;
+            color: #555;
+            margin-top: 8px;
+        }
+
+        .card dd {
+            margin: 0 0 0 0;
+            color: #222;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+
+        .badge-active   { background: #d4edda; color: #155724; }
+        .badge-expired  { background: #f8d7da; color: #721c24; }
+        .badge-suspended{ background: #fff3cd; color: #856404; }
+        .badge-pending  { background: #d1ecf1; color: #0c5460; }
     </style>
 </head>
 
@@ -41,8 +83,47 @@
     </header>
 
     <main>
-        <p>Welcome to your clinic dashboard!</p>
-        <p><em>(More features coming soon...)</em></p>
+        <div class="card">
+            <h2>Clinic Info</h2>
+            <dl>
+                <dt>Name</dt><dd>{{ clinic.name }}</dd>
+                <dt>Phone</dt><dd>{{ clinic.phone }}</dd>
+                <dt>Address</dt><dd>{{ clinic.address }}</dd>
+                <dt>Status</dt>
+                <dd>
+                    {% if clinic.status == "ACTIVE" %}
+                        <span class="badge badge-active">Active</span>
+                    {% elif clinic.status == "PENDING" %}
+                        <span class="badge badge-pending">Pending Review</span>
+                    {% else %}
+                        <span class="badge badge-suspended">{{ clinic.get_status_display }}</span>
+                    {% endif %}
+                </dd>
+            </dl>
+        </div>
+
+        {% if subscription %}
+        <div class="card">
+            <h2>Subscription</h2>
+            <dl>
+                <dt>Plan</dt><dd>{{ subscription.get_plan_type_display }}</dd>
+                <dt>Expires</dt><dd>{{ subscription.expires_at|date:"Y-m-d" }}</dd>
+                <dt>Max Doctors</dt><dd>{{ subscription.max_doctors }}</dd>
+                <dt>Status</dt>
+                <dd>
+                    {% if subscription.status == "ACTIVE" %}
+                        <span class="badge badge-active">Active</span>
+                    {% elif subscription.status == "EXPIRED" %}
+                        <span class="badge badge-expired">Expired</span>
+                    {% else %}
+                        <span class="badge badge-suspended">Suspended</span>
+                    {% endif %}
+                </dd>
+            </dl>
+        </div>
+        {% else %}
+        <p><em>No subscription found for this clinic.</em></p>
+        {% endif %}
     </main>
 </body>
 

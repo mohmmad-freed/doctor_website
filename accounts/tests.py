@@ -5,7 +5,7 @@ from django.utils import timezone
 from datetime import timedelta
 from accounts.models import CustomUser, City
 from accounts.forms import PatientRegistrationForm, LoginForm, MainDoctorRegistrationForm
-from clinics.models import Clinic, ClinicActivationCode, ClinicStaff
+from clinics.models import Clinic, ClinicActivationCode, ClinicStaff, ClinicSubscription, ClinicVerification
 from clinics.services import create_clinic_for_main_doctor
 from doctors.models import Specialty
 from patients.models import PatientProfile
@@ -374,6 +374,9 @@ class MainDoctorSignupTest(TestCase):
             clinic_name="عيادة الاختبار",
             phone=self.OWNER_PHONE,
             national_id=self.OWNER_NID,
+            plan_type="MONTHLY",
+            subscription_expires_at=timezone.now() + timedelta(days=30),
+            max_doctors=3,
         )
         self.url = reverse("accounts:register_main_doctor")
 
@@ -743,6 +746,9 @@ class CreateClinicServiceTest(TestCase):
             clinic_name="عيادة الخدمة",
             phone="0591111111",
             national_id="987654321",
+            plan_type="YEARLY",
+            subscription_expires_at=timezone.now() + timedelta(days=365),
+            max_doctors=5,
         )
         self.cleaned_data = {
             "clinic_name": "عيادة الاختبار",
@@ -847,6 +853,9 @@ class CreateClinicServiceTest(TestCase):
             code="VIEW001",
             clinic_name="عيادة المشهد",
             phone="0592222222",
+            plan_type="MONTHLY",
+            subscription_expires_at=timezone.now() + timedelta(days=30),
+            max_doctors=2,
             national_id="111222333",
         )
         data = {
@@ -875,3 +884,367 @@ class CreateClinicServiceTest(TestCase):
                 clinic=clinic, user=user, role="MAIN_DOCTOR"
             ).exists()
         )
+
+
+class ClinicSubscriptionTest(TestCase):
+    """
+    Tests for subscription binding from ClinicActivationCode → ClinicSubscription.
+
+    Covers:
+    - Subscription record is created with correct field values
+    - plan_type, expires_at, max_doctors are copied from the activation code
+    - Subscription status defaults to ACTIVE
+    - OneToOne constraint: clinic has exactly one subscription
+    - Atomic rollback: if subscription creation fails, no Clinic is saved
+    - Dashboard view exposes subscription context
+    """
+
+    def setUp(self):
+        self.city = City.objects.create(name="Jenin")
+        self.specialty = Specialty.objects.create(name="Neurology", name_ar="الأعصاب")
+        self.user = CustomUser.objects.create_user(
+            phone="0593333333",
+            name="Dr. Sub",
+            national_id="111333555",
+            password="Pass1234!",
+            role="MAIN_DOCTOR",
+        )
+        self.sub_expires = timezone.now() + timedelta(days=365)
+        self.activation_code = ClinicActivationCode.objects.create(
+            code="SUB001",
+            clinic_name="عيادة الاشتراك",
+            phone="0593333333",
+            national_id="111333555",
+            plan_type="YEARLY",
+            subscription_expires_at=self.sub_expires,
+            max_doctors=7,
+        )
+        self.cleaned_data = {
+            "clinic_name": "عيادة الاشتراك",
+            "clinic_address": "شارع النور",
+            "clinic_city": self.city,
+            "clinic_phone": "0569007777",
+            "clinic_email": "",
+            "clinic_description": "",
+            "specialties": [self.specialty],
+        }
+
+    # ── Happy path ────────────────────────────────────────────────────────
+
+    def test_subscription_is_created(self):
+        """Service creates a ClinicSubscription row for the new clinic."""
+        clinic = create_clinic_for_main_doctor(
+            self.user, self.cleaned_data, self.activation_code
+        )
+        self.assertTrue(ClinicSubscription.objects.filter(clinic=clinic).exists())
+
+    def test_subscription_plan_type_copied(self):
+        """plan_type is copied from the activation code."""
+        clinic = create_clinic_for_main_doctor(
+            self.user, self.cleaned_data, self.activation_code
+        )
+        self.assertEqual(clinic.subscription.plan_type, "YEARLY")
+
+    def test_subscription_expires_at_copied(self):
+        """expires_at is copied from activation_code.subscription_expires_at."""
+        clinic = create_clinic_for_main_doctor(
+            self.user, self.cleaned_data, self.activation_code
+        )
+        # Compare at second precision to avoid microsecond drift
+        self.assertEqual(
+            clinic.subscription.expires_at.replace(microsecond=0),
+            self.sub_expires.replace(microsecond=0),
+        )
+
+    def test_subscription_max_doctors_copied(self):
+        """max_doctors is copied from the activation code."""
+        clinic = create_clinic_for_main_doctor(
+            self.user, self.cleaned_data, self.activation_code
+        )
+        self.assertEqual(clinic.subscription.max_doctors, 7)
+
+    def test_subscription_status_defaults_to_active(self):
+        """Newly created subscription status is ACTIVE."""
+        clinic = create_clinic_for_main_doctor(
+            self.user, self.cleaned_data, self.activation_code
+        )
+        self.assertEqual(clinic.subscription.status, "ACTIVE")
+
+    def test_subscription_one_to_one(self):
+        """Each clinic has exactly one subscription (OneToOne enforced)."""
+        clinic = create_clinic_for_main_doctor(
+            self.user, self.cleaned_data, self.activation_code
+        )
+        self.assertEqual(ClinicSubscription.objects.filter(clinic=clinic).count(), 1)
+
+    def test_rollback_on_subscription_creation_failure(self):
+        """
+        If ClinicSubscription.objects.create raises, the whole transaction
+        rolls back: no Clinic row, no ClinicStaff, activation code stays unused.
+        """
+        with patch(
+            "clinics.services.ClinicSubscription.objects.create",
+            side_effect=Exception("simulated subscription error"),
+        ):
+            with self.assertRaises(Exception):
+                create_clinic_for_main_doctor(
+                    self.user, self.cleaned_data, self.activation_code
+                )
+
+        self.assertEqual(Clinic.objects.count(), 0)
+        self.assertEqual(ClinicStaff.objects.count(), 0)
+        self.assertEqual(ClinicSubscription.objects.count(), 0)
+        self.activation_code.refresh_from_db()
+        self.assertFalse(self.activation_code.is_used)
+
+    # ── Dashboard view ────────────────────────────────────────────────────
+
+    def test_my_clinic_view_exposes_subscription(self):
+        """my_clinic view passes subscription to template context."""
+        from django.test import Client as TestClient
+        clinic = create_clinic_for_main_doctor(
+            self.user, self.cleaned_data, self.activation_code
+        )
+        client = TestClient()
+        client.force_login(self.user)
+        response = client.get(reverse("clinics:my_clinic"))
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("subscription", response.context)
+        self.assertEqual(response.context["subscription"], clinic.subscription)
+
+    def test_my_clinic_view_exposes_clinic(self):
+        """my_clinic view passes clinic to template context."""
+        from django.test import Client as TestClient
+        clinic = create_clinic_for_main_doctor(
+            self.user, self.cleaned_data, self.activation_code
+        )
+        client = TestClient()
+        client.force_login(self.user)
+        response = client.get(reverse("clinics:my_clinic"))
+        self.assertEqual(response.context["clinic"], clinic)
+
+
+class ClinicVerificationTest(TestCase):
+    """
+    Tests for the 4-step sequential clinic channel verification flow.
+
+    Steps:
+        1. verify_owner_phone   — SMS OTP to owner's phone
+        2. verify_owner_email   — email OTP to owner's email
+        3. verify_clinic_phone  — SMS OTP to clinic's phone
+        4. verify_clinic_email  — email OTP to clinic's email (optional)
+    """
+
+    def _make_activation_code(self, code, phone, national_id):
+        return ClinicActivationCode.objects.create(
+            code=code,
+            clinic_name="عيادة التحقق",
+            phone=phone,
+            national_id=national_id,
+            plan_type="MONTHLY",
+            subscription_expires_at=timezone.now() + timedelta(days=30),
+            max_doctors=2,
+        )
+
+    def setUp(self):
+        self.city = City.objects.create(name="Ramallah")
+        self.specialty = Specialty.objects.create(name="Cardiology", name_ar="أمراض القلب")
+        self.user = CustomUser.objects.create_user(
+            phone="0591234510",
+            name="Dr. Verify",
+            national_id="123400010",
+            email="doctor.verify@example.com",
+            password="Pass1234!",
+            role="MAIN_DOCTOR",
+        )
+        self.activation_code = self._make_activation_code("VER001", "0591234510", "123400010")
+        self.cleaned_data = {
+            "clinic_name": "عيادة التحقق",
+            "clinic_address": "شارع التحقق",
+            "clinic_city": self.city,
+            "clinic_phone": "0569001234",
+            "clinic_email": "clinic.verify@example.com",
+            "clinic_description": "",
+            "specialties": [self.specialty],
+        }
+        self.clinic = create_clinic_for_main_doctor(
+            self.user, self.cleaned_data, self.activation_code
+        )
+        self.client = Client()
+        self.client.force_login(self.user)
+
+    # ------------------------------------------------------------------
+    # 1. ClinicVerification record created atomically with clinic
+    # ------------------------------------------------------------------
+    def test_verification_record_created_with_clinic(self):
+        """ClinicVerification is created atomically inside create_clinic_for_main_doctor."""
+        self.assertTrue(ClinicVerification.objects.filter(clinic=self.clinic).exists())
+        v = self.clinic.verification
+        self.assertIsNone(v.owner_phone_verified_at)
+        self.assertIsNone(v.owner_email_verified_at)
+        self.assertIsNone(v.clinic_phone_verified_at)
+        self.assertIsNone(v.clinic_email_verified_at)
+
+    # ------------------------------------------------------------------
+    # 2. verify_owner_phone: correct OTP marks timestamp, redirects
+    # ------------------------------------------------------------------
+    @patch("clinics.views.verify_otp", return_value=(True, "verified"))
+    @patch("clinics.views.send_email_otp", return_value=(True, "sent"))
+    def test_verify_owner_phone_success(self, mock_send_email, mock_verify_otp):
+        response = self.client.post(
+            reverse("clinics:verify_owner_phone"),
+            {"otp": "123456"},
+        )
+        self.assertRedirects(response, reverse("clinics:verify_owner_email"))
+        self.clinic.verification.refresh_from_db()
+        self.assertIsNotNone(self.clinic.verification.owner_phone_verified_at)
+        # Next step pre-send was called
+        mock_send_email.assert_called_once()
+
+    # ------------------------------------------------------------------
+    # 3. verify_owner_phone: expired OTP (nothing in cache) returns error
+    # ------------------------------------------------------------------
+    def test_verify_owner_phone_expired_otp(self):
+        """With no OTP in cache, submission stays on the page with an error."""
+        response = self.client.post(
+            reverse("clinics:verify_owner_phone"),
+            {"otp": "000000"},
+        )
+        # Re-renders with 200 (errors shown via messages)
+        self.assertEqual(response.status_code, 200)
+        self.clinic.verification.refresh_from_db()
+        self.assertIsNone(self.clinic.verification.owner_phone_verified_at)
+
+    # ------------------------------------------------------------------
+    # 4. verify_owner_phone: too many wrong attempts
+    # ------------------------------------------------------------------
+    @patch("clinics.views.verify_otp", return_value=(False, "Too many incorrect attempts. Please request a new OTP."))
+    def test_verify_owner_phone_max_attempts(self, mock_verify_otp):
+        response = self.client.post(
+            reverse("clinics:verify_owner_phone"),
+            {"otp": "000000"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.clinic.verification.refresh_from_db()
+        self.assertIsNone(self.clinic.verification.owner_phone_verified_at)
+
+    # ------------------------------------------------------------------
+    # 5. verify_owner_email: correct OTP marks timestamp, redirects
+    # ------------------------------------------------------------------
+    @patch("clinics.views.verify_email_otp", return_value=(True, "verified"))
+    @patch("clinics.views.request_otp", return_value=(True, "sent"))
+    def test_verify_owner_email_success(self, mock_request_otp, mock_verify_email_otp):
+        v = self.clinic.verification
+        v.owner_phone_verified_at = timezone.now()
+        v.save()
+
+        response = self.client.post(
+            reverse("clinics:verify_owner_email"),
+            {"otp": "123456"},
+        )
+        self.assertRedirects(response, reverse("clinics:verify_clinic_phone"))
+        v.refresh_from_db()
+        self.assertIsNotNone(v.owner_email_verified_at)
+        # Clinic phone OTP pre-send was called
+        mock_request_otp.assert_called_once_with(self.clinic.phone)
+
+    # ------------------------------------------------------------------
+    # 6. verify_email_otp unit: expired OTP returns (False, message)
+    # ------------------------------------------------------------------
+    def test_verify_email_otp_unit_expired(self):
+        from accounts.email_utils import verify_email_otp as _verify
+        success, msg = _verify("nobody@example.com", "123456")
+        self.assertFalse(success)
+        self.assertIn("انتهت", msg)
+
+    # ------------------------------------------------------------------
+    # 7. verify_clinic_phone: correct OTP marks timestamp, redirects
+    # ------------------------------------------------------------------
+    @patch("clinics.views.verify_otp", return_value=(True, "verified"))
+    @patch("clinics.views.send_email_otp", return_value=(True, "sent"))
+    def test_verify_clinic_phone_success(self, mock_send_email, mock_verify_otp):
+        v = self.clinic.verification
+        v.owner_phone_verified_at = timezone.now()
+        v.owner_email_verified_at = timezone.now()
+        v.save()
+
+        response = self.client.post(
+            reverse("clinics:verify_clinic_phone"),
+            {"otp": "123456"},
+        )
+        # Clinic has email → redirect to step 4
+        self.assertRedirects(response, reverse("clinics:verify_clinic_email"))
+        v.refresh_from_db()
+        self.assertIsNotNone(v.clinic_phone_verified_at)
+
+    # ------------------------------------------------------------------
+    # 8. verify_clinic_email: correct OTP marks timestamp, activates clinic
+    # ------------------------------------------------------------------
+    @patch("clinics.views.verify_email_otp", return_value=(True, "verified"))
+    def test_verify_clinic_email_success_activates_clinic(self, mock_verify_email_otp):
+        v = self.clinic.verification
+        v.owner_phone_verified_at = timezone.now()
+        v.owner_email_verified_at = timezone.now()
+        v.clinic_phone_verified_at = timezone.now()
+        v.save()
+
+        response = self.client.post(
+            reverse("clinics:verify_clinic_email"),
+            {"otp": "123456"},
+        )
+        self.assertRedirects(response, reverse("clinics:my_clinic"))
+        v.refresh_from_db()
+        self.assertIsNotNone(v.clinic_email_verified_at)
+        self.clinic.refresh_from_db()
+        self.assertEqual(self.clinic.status, "ACTIVE")
+
+    # ------------------------------------------------------------------
+    # 9. Clinic without email activates after 3 steps
+    # ------------------------------------------------------------------
+    @patch("clinics.views.verify_otp", return_value=(True, "verified"))
+    def test_activation_without_clinic_email(self, mock_verify_otp):
+        """Clinic becomes ACTIVE after step 3 when no clinic email is provided."""
+        no_email_code = self._make_activation_code("VER002", "0591234511", "123400011")
+        user2 = CustomUser.objects.create_user(
+            phone="0591234511",
+            name="Dr. NoEmail",
+            national_id="123400011",
+            email="noemail.dr@example.com",
+            password="Pass1234!",
+            role="MAIN_DOCTOR",
+        )
+        clinic2 = create_clinic_for_main_doctor(
+            user2,
+            {**self.cleaned_data, "clinic_email": "", "clinic_city": self.city},
+            no_email_code,
+        )
+        v = clinic2.verification
+        v.owner_phone_verified_at = timezone.now()
+        v.owner_email_verified_at = timezone.now()
+        v.save()
+
+        client2 = Client()
+        client2.force_login(user2)
+        response = client2.post(
+            reverse("clinics:verify_clinic_phone"),
+            {"otp": "123456"},
+        )
+        self.assertRedirects(response, reverse("clinics:my_clinic"))
+        clinic2.refresh_from_db()
+        self.assertEqual(clinic2.status, "ACTIVE")
+
+    # ------------------------------------------------------------------
+    # 10. Sequential guard: visiting step 2 before step 1 done redirects back
+    # ------------------------------------------------------------------
+    def test_sequential_guard_redirects_to_pending_step(self):
+        """Visiting verify_owner_email before step 1 is done → redirect to step 1."""
+        response = self.client.get(reverse("clinics:verify_owner_email"))
+        self.assertRedirects(response, reverse("clinics:verify_owner_phone"))
+
+    # ------------------------------------------------------------------
+    # 11. home_redirect routes PENDING clinic owner to first pending step
+    # ------------------------------------------------------------------
+    def test_home_redirect_routes_owner_to_first_pending_step(self):
+        """A clinic owner with unverified channels is routed to verify_owner_phone."""
+        response = self.client.get(reverse("accounts:home"))
+        self.assertRedirects(response, reverse("clinics:verify_owner_phone"))

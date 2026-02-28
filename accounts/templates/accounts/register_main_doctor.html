@@ -178,7 +178,7 @@
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
                         <div class="form-group">
-                            <label for="{{ form.clinic_city.id_for_label }}">المدينة <span class="required-star">*</span></label>
+                            <label for="{{ form.clinic_city.id_for_label }}">المدينة</label>
                             <select name="{{ form.clinic_city.name }}" id="{{ form.clinic_city.id_for_label }}">
                                 <option value="">اختر المدينة</option>
                                 {% for city in form.clinic_city.field.queryset %}
@@ -475,10 +475,7 @@
         else clearError("clinic_address");
     });
 
-    bindLive("clinic_city", function (v) {
-        if (!v) showError("clinic_city", "يرجى اختيار المدينة.");
-        else clearError("clinic_city");
-    });
+    // clinic_city is optional — no live validation needed
 
     // ── Submit validation ──────────────────────────────────────
     form.addEventListener("submit", function (e) {
@@ -553,12 +550,6 @@
             } else if (!PHONE_RE.test(raw)) {
                 showError("clinic_phone", "هاتف العيادة غير صحيح."); valid = false;
             }
-        }
-
-        // City (required)
-        const cityEl = form.querySelector("[name='clinic_city']");
-        if (cityEl && !cityEl.value) {
-            showError("clinic_city", "يرجى اختيار المدينة."); valid = false;
         }
 
         // Optional clinic email

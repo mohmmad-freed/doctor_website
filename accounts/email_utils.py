@@ -1,3 +1,4 @@
+import random
 import sib_api_v3_sdk
 from sib_api_v3_sdk.rest import ApiException
 from django.conf import settings
@@ -141,6 +142,98 @@ def send_change_email_verification(email, request):
             f"[EMAIL] Failed to send change email verification to {email}: {e}"
         )
         return False, "Failed to send verification email. Please try again."
+
+
+# ============================================
+# EMAIL OTP (6-digit code for clinic verification)
+# ============================================
+EMAIL_OTP_EXPIRY_SECONDS = 10 * 60  # 10 minutes
+_EMAIL_OTP_MAX_ATTEMPTS = 3
+_EMAIL_OTP_COOLDOWN_SECONDS = 60
+
+
+def _email_otp_key(email):
+    return f"email_otp:code:{email.lower()}"
+
+
+def _email_otp_attempts_key(email):
+    return f"email_otp:attempts:{email.lower()}"
+
+
+def _email_otp_cooldown_key(email):
+    return f"email_otp:cooldown:{email.lower()}"
+
+
+def send_email_otp(email, recipient_name):
+    """
+    Generate a 6-digit OTP, store in Redis, and deliver via Brevo.
+    Returns (True, message) or (False, error_message).
+    """
+    if cache.get(_email_otp_cooldown_key(email)):
+        return False, "يرجى الانتظار قبل طلب رمز جديد."
+
+    otp = str(random.randint(100000, 999999))
+    cache.set(_email_otp_key(email), otp, timeout=EMAIL_OTP_EXPIRY_SECONDS)
+
+    subject = "رمز التحقق — Clinic"
+    text_content = (
+        f"مرحباً {recipient_name}،\n\n"
+        f"رمز التحقق الخاص بك هو: {otp}\n\n"
+        f"الرمز صالح لمدة 10 دقائق.\n\n"
+        f"إذا لم تطلب هذا الرمز، يرجى تجاهل هذه الرسالة.\n\n"
+        f"مع تحيات،\nفريق كلينك"
+    )
+    html_content = (
+        f"<p>مرحباً <strong>{recipient_name}</strong>،</p>"
+        f"<p>رمز التحقق الخاص بك هو:</p>"
+        f"<h2 style='letter-spacing:8px;font-size:2rem;font-family:monospace;'>{otp}</h2>"
+        f"<p>الرمز صالح لمدة 10 دقائق.</p>"
+        f"<p>إذا لم تطلب هذا الرمز، يرجى تجاهل هذه الرسالة.</p>"
+        f"<br><p>مع تحيات،<br>فريق كلينك</p>"
+    )
+
+    try:
+        _send_email(email, subject, html_content, text_content)
+    except Exception as e:
+        logger.error("[EMAIL OTP] Failed to send to %s: %r", email, e)
+        cache.delete(_email_otp_key(email))
+        return False, "فشل إرسال رمز التحقق. يرجى المحاولة مرة أخرى."
+
+    cache.set(_email_otp_cooldown_key(email), True, timeout=_EMAIL_OTP_COOLDOWN_SECONDS)
+    cache.delete(_email_otp_attempts_key(email))
+    logger.info("[EMAIL OTP] sent to %s", email)
+    return True, "تم إرسال رمز التحقق إلى بريدك الإلكتروني."
+
+
+def verify_email_otp(email, entered_otp):
+    """
+    Verify a 6-digit OTP sent to an email address.
+    Returns (True, message) or (False, error_message).
+    """
+    stored = cache.get(_email_otp_key(email))
+
+    if stored is None:
+        return False, "انتهت صلاحية رمز التحقق أو لم يُطلب. يرجى طلب رمز جديد."
+
+    if str(entered_otp).strip() == str(stored).strip():
+        cache.delete(_email_otp_key(email))
+        cache.delete(_email_otp_attempts_key(email))
+        return True, "تم التحقق من البريد الإلكتروني بنجاح."
+
+    attempts = (cache.get(_email_otp_attempts_key(email)) or 0) + 1
+    cache.set(_email_otp_attempts_key(email), attempts, timeout=EMAIL_OTP_EXPIRY_SECONDS)
+    remaining = _EMAIL_OTP_MAX_ATTEMPTS - attempts
+
+    if remaining <= 0:
+        cache.delete(_email_otp_key(email))
+        cache.delete(_email_otp_attempts_key(email))
+        return False, "عدد كبير من المحاولات الخاطئة. يرجى طلب رمز جديد."
+
+    return False, f"رمز التحقق غير صحيح. لديك {remaining} محاولة متبقية."
+
+
+def is_email_otp_in_cooldown(email):
+    return cache.get(_email_otp_cooldown_key(email)) is not None
 
 
 def send_appointment_cancellation_email(user, appointment):
