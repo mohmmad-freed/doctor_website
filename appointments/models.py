@@ -6,9 +6,8 @@ from core.validators.file_validators import validate_file_signature, validate_fi
 
 
 class AppointmentType(models.Model):
-    """Types of appointments a doctor offers (e.g. General Checkup, Follow-up)."""
+    """Types of appointments a clinic offers (e.g. General Checkup, Follow-up)."""
 
-    doctor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="appointment_types")
     clinic = models.ForeignKey(Clinic, on_delete=models.CASCADE, related_name="appointment_types")
     name = models.CharField(max_length=100)
     name_ar = models.CharField(max_length=100, blank=True, default="")
@@ -24,13 +23,13 @@ class AppointmentType(models.Model):
         ordering = ["name"]
         constraints = [
             models.UniqueConstraint(
-                fields=["doctor", "clinic", "name"],
-                name="unique_appointment_type_per_doctor_clinic",
+                fields=["clinic", "name"],
+                name="unique_appointment_type_per_clinic",
             )
         ]
 
     def __str__(self):
-        return f"{self.name} ({self.duration_minutes}min, ₪{self.price}) - Dr. {self.doctor.name}"
+        return f"{self.name} ({self.duration_minutes}min, ₪{self.price})"
 
     @property
     def display_name(self):

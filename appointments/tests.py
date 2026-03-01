@@ -88,7 +88,6 @@ class BookingTestMixin:
 
         # Appointment type: 30 min, 100 ILS
         self.appointment_type = AppointmentType.objects.create(
-            doctor=self.doctor,
             clinic=self.clinic,
             name="General Checkup",
             duration_minutes=30,
@@ -278,7 +277,6 @@ class BookingServiceTests(BookingTestMixin, TestCase):
             end_time=time(17, 0),
         )
         type_b = AppointmentType.objects.create(
-            doctor=self.doctor,
             clinic=clinic_b,
             name="General Checkup",
             duration_minutes=30,

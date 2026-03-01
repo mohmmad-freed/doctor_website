@@ -118,13 +118,12 @@ def book_appointment(
     try:
         appointment_type = AppointmentType.objects.get(
             id=appointment_type_id,
-            doctor_id=doctor_id,
             clinic_id=clinic_id,
             is_active=True,
         )
     except AppointmentType.DoesNotExist:
         raise BookingError(
-            "Appointment type not found for this doctor and clinic.",
+            "Appointment type not found for this clinic.",
             code="invalid_appointment_type",
         )
 

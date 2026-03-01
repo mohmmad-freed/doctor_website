@@ -4,14 +4,14 @@ from .models import Appointment, AppointmentAnswer, AppointmentAttachment, Appoi
 
 @admin.register(AppointmentType)
 class AppointmentTypeAdmin(admin.ModelAdmin):
-    list_display = ["name", "name_ar", "doctor", "clinic", "duration_minutes", "price", "is_active"]
-    list_filter = ["is_active", "clinic", "doctor"]
-    search_fields = ["name", "name_ar", "doctor__name", "clinic__name"]
-    list_editable = ["name_ar", "is_active"]
-    ordering = ["doctor", "name"]
+    list_display = ("name", "name_ar", "clinic", "duration_minutes", "price", "is_active")
+    list_filter = ("is_active", "clinic")
+    search_fields = ("name", "name_ar", "description")
+    list_editable = ("name_ar", "is_active")
+    ordering = ("clinic", "name")
 
     fieldsets = (
-        (None, {"fields": ("doctor", "clinic")}),
+        (None, {"fields": ("clinic",)}),
         ("Details", {"fields": ("name", "name_ar", "duration_minutes", "price", "description", "is_active")}),
     )
 

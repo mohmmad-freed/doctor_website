@@ -66,9 +66,8 @@ def doctor_availability_view(request, doctor_id):
         is_active=True,
     )
 
-    # Appointment types for this doctor at this clinic
+    # Appointment types for this clinic
     appointment_types = AppointmentType.objects.filter(
-        doctor=doctor,
         clinic_id=clinic_id,
         is_active=True,
     )
@@ -90,7 +89,6 @@ def doctor_availability_view(request, doctor_id):
             try:
                 selected_type = AppointmentType.objects.get(
                     id=appointment_type_id,
-                    doctor=doctor,
                     clinic_id=clinic_id,
                     is_active=True,
                 )
@@ -135,7 +133,6 @@ def doctor_appointment_types_view(request, doctor_id):
         )
 
     appointment_types = AppointmentType.objects.filter(
-        doctor=doctor,
         clinic_id=clinic_id,
         is_active=True,
     )
