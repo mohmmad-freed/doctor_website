@@ -5,7 +5,7 @@ from .models import Clinic, ClinicStaff, ClinicSubscription, ClinicVerification
 
 
 @transaction.atomic
-def create_clinic_for_main_doctor(user, cleaned_data, activation_code_obj):
+def create_clinic_for_main_doctor(user, cleaned_data, activation_code_obj, owner_verified_at=None):
     """
     Atomically create a clinic and wire up all related records:
 
@@ -13,22 +13,25 @@ def create_clinic_for_main_doctor(user, cleaned_data, activation_code_obj):
     2. Set specialties (M2M).
     3. Create ClinicStaff(role=MAIN_DOCTOR) linking the owner.
     4. Create ClinicSubscription seeded from the activation code.
-    5. Create ClinicVerification (all channels start unverified).
+    5. Create ClinicVerification (channels pre-stamped if owner_verified_at given).
     6. Mark the ClinicActivationCode as used.
 
-    If any step raises an exception the whole transaction is rolled back,
-    leaving the DB in a clean state.
+    owner_verified_at: if provided, owner phone + email are already verified
+    (new 3-stage wizard flow) — clinic is created ACTIVE and verification
+    timestamps are set to this value. If None (old single-page flow), clinic
+    status is PENDING and verification timestamps remain null.
 
     Returns the newly created Clinic instance.
     """
+    status = "ACTIVE" if owner_verified_at else "PENDING"
     clinic = Clinic.objects.create(
         name=cleaned_data["clinic_name"],
         address=cleaned_data["clinic_address"],
         city=cleaned_data["clinic_city"],
-        phone=cleaned_data["clinic_phone"],
+        phone=cleaned_data.get("clinic_phone", ""),
         email=cleaned_data.get("clinic_email") or "",
         description=cleaned_data.get("clinic_description", ""),
-        status="PENDING",
+        status=status,
         main_doctor=user,
     )
     clinic.specialties.set(cleaned_data["specialties"])
@@ -48,7 +51,11 @@ def create_clinic_for_main_doctor(user, cleaned_data, activation_code_obj):
         status="ACTIVE",
     )
 
-    ClinicVerification.objects.create(clinic=clinic)
+    ClinicVerification.objects.create(
+        clinic=clinic,
+        owner_phone_verified_at=owner_verified_at,
+        owner_email_verified_at=owner_verified_at,
+    )
 
     activation_code_obj.is_used = True
     activation_code_obj.used_by = user

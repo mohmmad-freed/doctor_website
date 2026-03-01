@@ -8,6 +8,211 @@ from .backends import PhoneNumberAuthBackend
 import re
 
 
+# ============================================================
+# 3-STAGE CLINIC OWNER REGISTRATION FORMS
+# ============================================================
+
+class ClinicRegStep1Form(forms.Form):
+    """Stage 1: Activation code + identity verification."""
+
+    activation_code = forms.CharField(
+        max_length=20,
+        required=True,
+        label="كود التفعيل",
+        help_text="أدخل كود التفعيل المقدم من قِبل الإدارة",
+        widget=forms.TextInput(attrs={"placeholder": "XXXX-XXXX-XXXX"}),
+    )
+    phone = forms.CharField(
+        max_length=20,
+        required=True,
+        label="رقم الهاتف",
+        widget=forms.TextInput(attrs={"placeholder": "059XXXXXXX"}),
+    )
+    national_id = forms.CharField(
+        max_length=9,
+        required=True,
+        label="رقم الهوية الوطنية",
+        widget=forms.TextInput(attrs={"placeholder": "9 أرقام"}),
+    )
+
+    def clean_phone(self):
+        phone = self.cleaned_data.get("phone", "").strip()
+        phone = PhoneNumberAuthBackend.normalize_phone_number(phone)
+        if not PhoneNumberAuthBackend.is_valid_phone_number(phone):
+            raise ValidationError(
+                "رقم الهاتف غير صحيح. يجب أن يبدأ بـ 059 أو 056 ويتكون من 10 أرقام."
+            )
+        return phone
+
+    def clean_national_id(self):
+        nid = (self.cleaned_data.get("national_id") or "").strip()
+        nid = nid.replace(" ", "").replace("-", "")
+        if not re.match(r"^\d{9}$", nid):
+            raise ValidationError("رقم الهوية يجب أن يتكون من 9 أرقام فقط.")
+        return nid
+
+    def clean_activation_code(self):
+        code = (self.cleaned_data.get("activation_code") or "").strip()
+        _GENERIC_CODE_ERROR = "رمز التفعيل غير صالح أو منتهي الصلاحية"
+
+        try:
+            ac = ClinicActivationCode.objects.get(code=code)
+        except ClinicActivationCode.DoesNotExist:
+            raise ValidationError(_GENERIC_CODE_ERROR)
+
+        if ac.is_used:
+            raise ValidationError(_GENERIC_CODE_ERROR)
+
+        if ac.expires_at and ac.expires_at < timezone.now():
+            raise ValidationError(_GENERIC_CODE_ERROR)
+
+        self.cleaned_data["_activation_code_obj"] = ac
+        return code
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        # Skip cross-field checks if field-level errors already exist.
+        if self.errors:
+            return cleaned_data
+
+        phone = cleaned_data.get("phone")
+        nid = cleaned_data.get("national_id")
+        ac = cleaned_data.get("_activation_code_obj")
+
+        # Validate phone/NID match the activation code's assigned values.
+        if ac and phone and ac.phone and ac.phone != phone:
+            self.add_error("activation_code", "رمز التفعيل غير صالح أو منتهي الصلاحية")
+        if ac and nid and ac.national_id and ac.national_id != nid:
+            self.add_error("activation_code", "رمز التفعيل غير صالح أو منتهي الصلاحية")
+
+        if self.errors:
+            return cleaned_data
+
+        # Cross-field: if the NID exists in DB but is linked to a DIFFERENT phone,
+        # the user may have given the admin the wrong phone → reject without revealing why.
+        if nid and phone:
+            existing_by_nid = CustomUser.objects.filter(national_id=nid).first()
+            if existing_by_nid and existing_by_nid.phone != phone:
+                _msg = "تأكد من صحة المعلومات المُدخلة"
+                self.add_error("phone", _msg)
+                self.add_error("national_id", _msg)
+
+        return cleaned_data
+
+
+class ClinicRegStep2NewUserForm(forms.Form):
+    """Stage 2 (new user path): personal info + password."""
+
+    first_name = forms.CharField(max_length=100, required=True, label="الاسم الأول")
+    last_name = forms.CharField(max_length=100, required=True, label="الاسم الأخير")
+    email = forms.EmailField(required=True, label="البريد الإلكتروني")
+    password = forms.CharField(
+        widget=forms.PasswordInput, required=True, label="كلمة المرور"
+    )
+    confirm_password = forms.CharField(
+        widget=forms.PasswordInput, required=True, label="تأكيد كلمة المرور"
+    )
+
+    def __init__(self, *args, phone=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._phone = phone  # used to exclude this phone's user from email uniqueness check
+
+    def _clean_name_field(self, value, label):
+        value = (value or "").strip()
+        if len(value) < 2:
+            raise ValidationError(f"{label} يجب أن يكون حرفين على الأقل.")
+        if not re.search(r"[a-zA-Z\u0600-\u06FF]", value):
+            raise ValidationError(f"{label} يجب أن يحتوي على حروف.")
+        return value
+
+    def clean_first_name(self):
+        return self._clean_name_field(self.cleaned_data.get("first_name"), "الاسم الأول")
+
+    def clean_last_name(self):
+        return self._clean_name_field(self.cleaned_data.get("last_name"), "الاسم الأخير")
+
+    def clean_email(self):
+        email = (self.cleaned_data.get("email") or "").strip()
+        qs = CustomUser.objects.filter(email__iexact=email)
+        if self._phone:
+            qs = qs.exclude(phone=self._phone)
+        if qs.exists():
+            raise ValidationError("البريد الإلكتروني هذا مسجل بالفعل.")
+        return email
+
+    def clean_password(self):
+        password = self.cleaned_data.get("password", "")
+        errors = []
+        if len(password) < 8:
+            errors.append("8 أحرف على الأقل")
+        if not re.search(r"[A-Z]", password):
+            errors.append("حرف كبير واحد على الأقل")
+        if not re.search(r"[a-z]", password):
+            errors.append("حرف صغير واحد على الأقل")
+        if not re.search(r"\d", password):
+            errors.append("رقم واحد على الأقل")
+        if not re.search(r"[!@#$%^&*()\-_=+\[\]{};:'\",.<>?/\\|`~]", password):
+            errors.append("رمز خاص واحد على الأقل")
+        if errors:
+            raise ValidationError(f"كلمة المرور يجب أن تحتوي على: {' • '.join(errors)}.")
+        return password
+
+    def clean_confirm_password(self):
+        password = self.cleaned_data.get("password")
+        confirm = self.cleaned_data.get("confirm_password")
+        if password and confirm and password != confirm:
+            raise ValidationError("كلمتا المرور غير متطابقتين.")
+        return confirm
+
+
+class ClinicRegStep2EmailOnlyForm(forms.Form):
+    """Stage 2 (existing user without email path): collect email only."""
+
+    email = forms.EmailField(required=True, label="البريد الإلكتروني")
+
+    def __init__(self, *args, phone=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._phone = phone
+
+    def clean_email(self):
+        email = (self.cleaned_data.get("email") or "").strip()
+        qs = CustomUser.objects.filter(email__iexact=email)
+        if self._phone:
+            qs = qs.exclude(phone=self._phone)
+        if qs.exists():
+            raise ValidationError("البريد الإلكتروني هذا مسجل بالفعل.")
+        return email
+
+
+class ClinicRegStep3Form(forms.Form):
+    """Stage 3: Clinic information (no phone/email — added from dashboard)."""
+
+    clinic_name = forms.CharField(max_length=255, required=True, label="اسم العيادة")
+    clinic_address = forms.CharField(
+        widget=forms.Textarea(attrs={"rows": 2}),
+        required=True,
+        label="العنوان التفصيلي",
+    )
+    clinic_city = forms.ModelChoiceField(
+        queryset=City.objects.all(),
+        required=False,
+        label="المدينة",
+        empty_label="اختر المدينة",
+    )
+    specialties = forms.ModelMultipleChoiceField(
+        queryset=Specialty.objects.all(),
+        widget=forms.CheckboxSelectMultiple,
+        required=True,
+        label="التخصصات الطبية",
+    )
+    clinic_description = forms.CharField(
+        widget=forms.Textarea(attrs={"rows": 3}),
+        required=False,
+        label="وصف العيادة",
+    )
+
+
 class LoginForm(forms.Form):
     phone = forms.CharField(
         max_length=20,

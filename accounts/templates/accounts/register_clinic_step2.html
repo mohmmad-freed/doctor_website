@@ -1,0 +1,151 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}تسجيل العيادة — الخطوة 2 من 3{% endblock %}
+
+{% block content %}
+<section class="auth-wrapper">
+    <div class="container" style="display: flex; justify-content: center;">
+        <div class="auth-card reveal-on-scroll" style="max-width: 600px; padding: 0; overflow: hidden;">
+
+            <!-- Hero Header -->
+            <div style="background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500)); padding: 36px 20px; text-align: center; color: white;">
+                <div style="width: 65px; height: 65px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; backdrop-filter: blur(5px);">
+                    <i class="fa-solid fa-user" style="font-size: 28px; color: white;"></i>
+                </div>
+                <h2 style="color: white; margin-bottom: 6px; font-size: 1.6rem; font-weight: 800;">معلوماتك الشخصية</h2>
+                <p style="opacity: 0.9; font-size: 0.95rem;">الخطوة 2 من 3 —
+                    {% if user_exists %}أضف بريدك الإلكتروني{% else %}أنشئ حسابك{% endif %}
+                </p>
+            </div>
+
+            <!-- Step Indicator -->
+            <div style="display: flex; justify-content: center; align-items: center; padding: 20px 0 0; gap: 0;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                        <div style="width:34px;height:34px;border-radius:50%;background:#48bb78;color:white;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.95rem;">
+                            <i class="fa-solid fa-check" style="font-size:0.85rem;"></i>
+                        </div>
+                        <span style="font-size:0.7rem;color:#48bb78;font-weight:600;">التفعيل</span>
+                    </div>
+                    <div style="width:50px;height:3px;background:#48bb78;border-radius:2px;"></div>
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                        <div style="width:34px;height:34px;border-radius:50%;background:var(--color-primary-500);color:white;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.95rem;box-shadow:0 4px 12px rgba(102,126,234,0.4);">2</div>
+                        <span style="font-size:0.7rem;color:var(--color-primary-600);font-weight:600;">معلوماتك</span>
+                    </div>
+                    <div style="width:50px;height:3px;background:var(--color-neutral-200);border-radius:2px;"></div>
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                        <div style="width:34px;height:34px;border-radius:50%;background:var(--color-neutral-200);color:var(--color-neutral-500);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.95rem;">3</div>
+                        <span style="font-size:0.7rem;color:var(--color-neutral-400);">العيادة</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="padding: 30px 40px 40px;">
+
+                {% if form.non_field_errors %}
+                <div class="alert alert-error" style="margin-bottom: 20px;">
+                    {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                </div>
+                {% endif %}
+
+                {% if user_exists %}
+                <div class="alert" style="background:#fefce8;border:1px solid #fde68a;color:#92400e;border-radius:10px;padding:14px;margin-bottom:20px;font-size:0.9rem;">
+                    <i class="fa-solid fa-circle-info" style="margin-left:6px;"></i>
+                    لديك حساب مسبق بهذا الرقم. يمكنك إضافة بريدك الإلكتروني لإتمام التسجيل.
+                </div>
+                {% endif %}
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if not user_exists %}
+                    <!-- New user: full personal info -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px;">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="{{ form.first_name.id_for_label }}">{{ form.first_name.label }} <span class="required-star">*</span></label>
+                            <input type="text"
+                                   name="{{ form.first_name.name }}"
+                                   id="{{ form.first_name.id_for_label }}"
+                                   value="{{ form.first_name.value|default:'' }}"
+                                   placeholder="محمد">
+                            {% if form.first_name.errors %}
+                            <span class="field-error">{{ form.first_name.errors|first }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="{{ form.last_name.id_for_label }}">{{ form.last_name.label }} <span class="required-star">*</span></label>
+                            <input type="text"
+                                   name="{{ form.last_name.name }}"
+                                   id="{{ form.last_name.id_for_label }}"
+                                   value="{{ form.last_name.value|default:'' }}"
+                                   placeholder="أحمد">
+                            {% if form.last_name.errors %}
+                            <span class="field-error">{{ form.last_name.errors|first }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="form-group">
+                        <label for="{{ form.email.id_for_label }}">{{ form.email.label }} <span class="required-star">*</span></label>
+                        <input type="email"
+                               name="{{ form.email.name }}"
+                               id="{{ form.email.id_for_label }}"
+                               value="{{ form.email.value|default:'' }}"
+                               placeholder="example@email.com"
+                               dir="ltr"
+                               autocomplete="email">
+                        {% if form.email.errors %}
+                        <span class="field-error">{{ form.email.errors|first }}</span>
+                        {% endif %}
+                    </div>
+
+                    {% if not user_exists %}
+                    <!-- Password fields for new users -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px;">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="{{ form.password.id_for_label }}">{{ form.password.label }} <span class="required-star">*</span></label>
+                            <input type="password"
+                                   name="{{ form.password.name }}"
+                                   id="{{ form.password.id_for_label }}"
+                                   placeholder="••••••••"
+                                   autocomplete="new-password"
+                                   id="id_password">
+                            {% if form.password.errors %}
+                            <span class="field-error">{{ form.password.errors|first }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="{{ form.confirm_password.id_for_label }}">{{ form.confirm_password.label }} <span class="required-star">*</span></label>
+                            <input type="password"
+                                   name="{{ form.confirm_password.name }}"
+                                   id="{{ form.confirm_password.id_for_label }}"
+                                   placeholder="••••••••"
+                                   autocomplete="new-password">
+                            {% if form.confirm_password.errors %}
+                            <span class="field-error">{{ form.confirm_password.errors|first }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;margin-bottom:24px;font-size:0.82rem;color:#6b7280;">
+                        <strong>متطلبات كلمة المرور:</strong>
+                        8 أحرف على الأقل • حرف كبير • حرف صغير • رقم • رمز خاص
+                    </div>
+                    {% endif %}
+
+                    <div style="display: flex; gap: 12px; margin-top: 8px;">
+                        <button type="submit" name="action" value="back" class="btn" style="flex:0 0 auto;height:52px;padding:0 20px;background:var(--color-neutral-100);color:var(--color-neutral-700);border:1px solid var(--color-neutral-300);font-weight:600;">
+                            <i class="fa-solid fa-arrow-right" style="margin-left:6px;"></i>رجوع
+                        </button>
+                        <button type="submit" class="btn btn-primary" style="flex:1;height:52px;font-size:1rem;font-weight:700;">
+                            <i class="fa-solid fa-arrow-left" style="margin-right:6px;"></i>التالي
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+    </div>
+</section>
+{% endblock %}

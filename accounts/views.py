@@ -5,6 +5,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.conf import settings
 from django.http import JsonResponse
+from django.db import transaction
+from django.utils import timezone
 import re
 
 from .forms import (
@@ -13,18 +15,27 @@ from .forms import (
     MainDoctorRegistrationForm,
     ForgotPasswordPhoneForm,
     ResetPasswordForm,
+    ClinicRegStep1Form,
+    ClinicRegStep2NewUserForm,
+    ClinicRegStep2EmailOnlyForm,
+    ClinicRegStep3Form,
 )
 from .otp_utils import request_otp, verify_otp, is_in_cooldown, get_remaining_resends
-from clinics.models import Clinic
-from clinics.services import create_clinic_for_main_doctor
-from patients.models import PatientProfile
-from patients.services import ensure_patient_profile
 from .email_utils import (
     send_verification_email,
     verify_email_token,
     send_change_email_verification,
+    send_email_otp,
+    verify_email_otp,
+    is_email_otp_in_cooldown,
 )
-from accounts.backends import PhoneNumberAuthBackend
+from .models import City
+from .backends import PhoneNumberAuthBackend
+from clinics.models import Clinic, ClinicActivationCode
+from clinics.services import create_clinic_for_main_doctor
+from doctors.models import Specialty
+from patients.models import PatientProfile
+from patients.services import ensure_patient_profile
 
 User = get_user_model()
 
@@ -464,6 +475,356 @@ def register_main_doctor(request):
         form = MainDoctorRegistrationForm()
 
     return render(request, "accounts/register_main_doctor.html", {"form": form})
+
+
+# ============================================================
+# 3-STAGE CLINIC OWNER REGISTRATION
+# ============================================================
+
+def _clinic_reg_session(request):
+    """Return the clinic_reg session dict, or None if missing."""
+    return request.session.get("clinic_reg")
+
+
+def register_clinic_step1(request):
+    """Stage 1: Activation code + phone + national_id."""
+    if request.user.is_authenticated:
+        return redirect("accounts:home")
+
+    if request.method == "POST":
+        form = ClinicRegStep1Form(request.POST)
+        if form.is_valid():
+            phone = form.cleaned_data["phone"]
+            nid = form.cleaned_data["national_id"]
+            code = form.cleaned_data["activation_code"]
+
+            existing = User.objects.filter(phone=phone).first()
+            user_exists = existing is not None
+            user_has_email = bool(existing and existing.email)
+
+            reg = {
+                "activation_code": code,
+                "phone": phone,
+                "national_id": nid,
+                "user_exists": user_exists,
+                "user_has_email": user_has_email,
+            }
+
+            if user_has_email:
+                # Existing user already has email — skip stage 2
+                reg["stage2_done"] = True
+                reg["first_name"] = None
+                reg["last_name"] = None
+                reg["email"] = existing.email
+                reg["password"] = None
+
+            request.session["clinic_reg"] = reg
+
+            if user_has_email:
+                return redirect("accounts:register_clinic_step3")
+            return redirect("accounts:register_clinic_step2")
+    else:
+        form = ClinicRegStep1Form()
+
+    return render(request, "accounts/register_clinic_step1.html", {"form": form})
+
+
+def register_clinic_step2(request):
+    """Stage 2: Personal info (conditional on user state)."""
+    if request.user.is_authenticated:
+        return redirect("accounts:home")
+
+    reg = _clinic_reg_session(request)
+    if not reg or "phone" not in reg:
+        return redirect("accounts:register_clinic_step1")
+
+    # If already done (existing user with email), skip to step 3.
+    if reg.get("stage2_done"):
+        return redirect("accounts:register_clinic_step3")
+
+    phone = reg["phone"]
+    user_exists = reg.get("user_exists", False)
+    FormClass = ClinicRegStep2EmailOnlyForm if user_exists else ClinicRegStep2NewUserForm
+
+    if request.method == "POST":
+        if request.POST.get("action") == "back":
+            # Clear everything beyond stage 1.
+            for k in ("stage2_done", "first_name", "last_name", "email", "password",
+                      "stage3_done", "clinic_name", "clinic_address", "clinic_city_id",
+                      "specialty_ids", "clinic_description", "phone_verified"):
+                reg.pop(k, None)
+            request.session["clinic_reg"] = reg
+            return redirect("accounts:register_clinic_step1")
+
+        form = FormClass(request.POST, phone=phone)
+        if form.is_valid():
+            d = form.cleaned_data
+            reg["stage2_done"] = True
+            reg["email"] = d["email"]
+            if user_exists:
+                reg["first_name"] = None
+                reg["last_name"] = None
+                reg["password"] = None
+            else:
+                reg["first_name"] = d["first_name"]
+                reg["last_name"] = d["last_name"]
+                reg["password"] = d["password"]
+            request.session["clinic_reg"] = reg
+            return redirect("accounts:register_clinic_step3")
+    else:
+        # Pre-fill from session if user went back from step 3.
+        initial = {}
+        if reg.get("email"):
+            initial["email"] = reg["email"]
+        if not user_exists:
+            if reg.get("first_name"):
+                initial["first_name"] = reg["first_name"]
+            if reg.get("last_name"):
+                initial["last_name"] = reg["last_name"]
+        form = FormClass(initial=initial, phone=phone)
+
+    return render(request, "accounts/register_clinic_step2.html", {
+        "form": form,
+        "user_exists": user_exists,
+    })
+
+
+def register_clinic_step3(request):
+    """Stage 3: Clinic info (no phone/email)."""
+    if request.user.is_authenticated:
+        return redirect("accounts:home")
+
+    reg = _clinic_reg_session(request)
+    if not reg or not reg.get("stage2_done"):
+        return redirect("accounts:register_clinic_step2")
+
+    user_exists = reg.get("user_exists", False)
+
+    if request.method == "POST":
+        if request.POST.get("action") == "back":
+            # Clear step 3+ data, preserve step 1 & 2.
+            for k in ("stage3_done", "clinic_name", "clinic_address", "clinic_city_id",
+                      "specialty_ids", "clinic_description", "phone_verified",
+                      "stage2_done"):
+                reg.pop(k, None)
+            request.session["clinic_reg"] = reg
+            # Existing user with email skipped step 2, so send back to step 1.
+            if user_exists and reg.get("user_has_email"):
+                return redirect("accounts:register_clinic_step1")
+            return redirect("accounts:register_clinic_step2")
+
+        form = ClinicRegStep3Form(request.POST)
+        if form.is_valid():
+            d = form.cleaned_data
+            city = d.get("clinic_city")
+            specialties = d.get("specialties")
+            reg["stage3_done"] = True
+            reg["clinic_name"] = d["clinic_name"]
+            reg["clinic_address"] = d["clinic_address"]
+            reg["clinic_city_id"] = city.pk if city else None
+            reg["specialty_ids"] = list(specialties.values_list("pk", flat=True))
+            reg["clinic_description"] = d.get("clinic_description") or ""
+            # Clear old verification state in case user is coming back.
+            reg.pop("phone_verified", None)
+            request.session["clinic_reg"] = reg
+
+            # Send OTP for owner phone verification.
+            request_otp(reg["phone"])
+            return redirect("accounts:register_clinic_verify_phone")
+    else:
+        # Pre-fill from session (user came back from verification).
+        initial = {}
+        if reg.get("clinic_name"):
+            initial["clinic_name"] = reg["clinic_name"]
+        if reg.get("clinic_address"):
+            initial["clinic_address"] = reg["clinic_address"]
+        if reg.get("clinic_city_id"):
+            try:
+                initial["clinic_city"] = City.objects.get(pk=reg["clinic_city_id"])
+            except City.DoesNotExist:
+                pass
+        if reg.get("specialty_ids"):
+            initial["specialties"] = Specialty.objects.filter(pk__in=reg["specialty_ids"])
+        if reg.get("clinic_description"):
+            initial["clinic_description"] = reg["clinic_description"]
+        form = ClinicRegStep3Form(initial=initial)
+
+    return render(request, "accounts/register_clinic_step3.html", {"form": form})
+
+
+def register_clinic_verify_phone(request):
+    """Registration: verify owner phone via SMS OTP (no DB user yet)."""
+    if request.user.is_authenticated:
+        return redirect("accounts:home")
+
+    reg = _clinic_reg_session(request)
+    if not reg or not reg.get("stage3_done"):
+        return redirect("accounts:register_clinic_step3")
+
+    phone = reg["phone"]
+
+    if request.method == "POST":
+        if request.POST.get("action") == "back":
+            reg.pop("phone_verified", None)
+            request.session["clinic_reg"] = reg
+            return redirect("accounts:register_clinic_step3")
+
+        if request.POST.get("action") == "resend":
+            success, msg = request_otp(phone)
+            if success:
+                messages.success(request, msg)
+            else:
+                messages.error(request, msg)
+            return redirect("accounts:register_clinic_verify_phone")
+
+        entered = request.POST.get("otp", "").strip()
+        success, msg = verify_otp(phone, entered)
+        if success:
+            reg["phone_verified"] = True
+            request.session["clinic_reg"] = reg
+            # Get the name to use in the email OTP.
+            if reg.get("user_exists"):
+                existing = User.objects.filter(phone=phone).first()
+                recipient_name = existing.name if existing else ""
+            else:
+                recipient_name = f"{reg.get('first_name', '')} {reg.get('last_name', '')}".strip()
+            send_email_otp(reg["email"], recipient_name)
+            return redirect("accounts:register_clinic_verify_email")
+        messages.error(request, msg)
+
+    return render(request, "accounts/register_clinic_verify_phone.html", {
+        "phone": phone,
+        "cooldown": is_in_cooldown(phone),
+        "remaining_resends": get_remaining_resends(phone),
+    })
+
+
+def register_clinic_verify_email(request):
+    """Registration: verify owner email via email OTP, then create user + clinic."""
+    if request.user.is_authenticated:
+        return redirect("accounts:home")
+
+    reg = _clinic_reg_session(request)
+    if not reg or not reg.get("phone_verified"):
+        return redirect("accounts:register_clinic_verify_phone")
+
+    email = reg["email"]
+
+    if request.method == "POST":
+        if request.POST.get("action") == "back":
+            reg.pop("phone_verified", None)
+            request.session["clinic_reg"] = reg
+            return redirect("accounts:register_clinic_step3")
+
+        if request.POST.get("action") == "resend":
+            if reg.get("user_exists"):
+                existing = User.objects.filter(phone=reg["phone"]).first()
+                recipient_name = existing.name if existing else ""
+            else:
+                recipient_name = f"{reg.get('first_name', '')} {reg.get('last_name', '')}".strip()
+            success, msg = send_email_otp(email, recipient_name)
+            if success:
+                messages.success(request, msg)
+            else:
+                messages.error(request, msg)
+            return redirect("accounts:register_clinic_verify_email")
+
+        entered = request.POST.get("otp", "").strip()
+        success, msg = verify_email_otp(email, entered)
+        if not success:
+            messages.error(request, msg)
+            return render(request, "accounts/register_clinic_verify_email.html", {
+                "email": email,
+                "cooldown": is_email_otp_in_cooldown(email),
+            })
+
+        # ── OTP verified — atomically create user + clinic ──────────────────
+        try:
+            with transaction.atomic():
+                now = timezone.now()
+
+                # 1. Create or update user.
+                if reg.get("user_exists"):
+                    user = User.objects.select_for_update().get(phone=reg["phone"])
+                    if not user.email:
+                        user.email = email
+                        user.email_verified = True
+                    user.role = "MAIN_DOCTOR"
+                    user.is_verified = True
+                    existing_roles = list(user.roles or [])
+                    for r in ("PATIENT", "MAIN_DOCTOR"):
+                        if r not in existing_roles:
+                            existing_roles.append(r)
+                    user.roles = existing_roles
+                    user.save()
+                else:
+                    user = User(
+                        phone=reg["phone"],
+                        national_id=reg["national_id"],
+                        name=f"{reg['first_name']} {reg['last_name']}".strip(),
+                        email=email,
+                        email_verified=True,
+                        is_verified=True,
+                        role="MAIN_DOCTOR",
+                        roles=["PATIENT", "MAIN_DOCTOR"],
+                    )
+                    user.set_password(reg["password"])
+                    user.save()
+
+                # 2. Patient profile.
+                ensure_patient_profile(user)
+
+                # 3. Resolve city + specialties.
+                city = None
+                if reg.get("clinic_city_id"):
+                    try:
+                        city = City.objects.get(pk=reg["clinic_city_id"])
+                    except City.DoesNotExist:
+                        pass
+                specialties = Specialty.objects.filter(pk__in=reg.get("specialty_ids", []))
+
+                # 4. Get activation code (lock row to prevent race).
+                activation_code_obj = ClinicActivationCode.objects.select_for_update().get(
+                    code=reg["activation_code"], is_used=False
+                )
+
+                # 5. Create clinic + all related records (ACTIVE, both channels verified).
+                create_clinic_for_main_doctor(
+                    user=user,
+                    cleaned_data={
+                        "clinic_name": reg["clinic_name"],
+                        "clinic_address": reg["clinic_address"],
+                        "clinic_city": city,
+                        "specialties": specialties,
+                        "clinic_description": reg.get("clinic_description", ""),
+                    },
+                    activation_code_obj=activation_code_obj,
+                    owner_verified_at=now,
+                )
+
+            # Clear registration session data.
+            del request.session["clinic_reg"]
+
+            login(request, user, backend="accounts.backends.PhoneNumberAuthBackend")
+            messages.success(request, f"مرحباً {user.name}! تم إنشاء عيادتك بنجاح.")
+            return redirect("clinics:my_clinic")
+
+        except ClinicActivationCode.DoesNotExist:
+            messages.error(
+                request,
+                "رمز التفعيل لم يعد صالحاً. يرجى التواصل مع الإدارة.",
+            )
+            return redirect("accounts:register_clinic_step1")
+        except Exception as e:
+            messages.error(
+                request,
+                f"حدث خطأ أثناء إنشاء الحساب. يرجى المحاولة مرة أخرى. ({e})",
+            )
+
+    return render(request, "accounts/register_clinic_verify_email.html", {
+        "email": email,
+        "cooldown": is_email_otp_in_cooldown(email),
+    })
 
 
 def logout_view(request):

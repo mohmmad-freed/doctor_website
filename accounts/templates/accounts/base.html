@@ -25,6 +25,31 @@
     <link rel="stylesheet" href="{% static 'accounts/css/landing.css' %}">
     <link rel="stylesheet" href="{% static 'accounts/css/loader.css' %}">
     {% block extra_css %}{% endblock %}
+    <style>
+        /* Field-level validation error — inline to bypass CSS caching */
+        .field-error {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 6px;
+            color: #DC2626;
+            font-size: 0.82rem;
+            font-weight: 500;
+        }
+        .field-error::before {
+            content: '\f06a';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+        .form-group:has(.field-error) input,
+        .form-group:has(.field-error) select,
+        .form-group:has(.field-error) textarea {
+            border-color: #DC2626 !important;
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12) !important;
+        }
+    </style>
 </head>
 
 <body>

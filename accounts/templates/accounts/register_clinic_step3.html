@@ -1,0 +1,359 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}تسجيل العيادة — الخطوة 3 من 3{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── Specialty Card Picker ────────────────────────────────────────── */
+    :root {
+        --sp-selected-bg  : rgba(0, 120, 212, 0.08);
+        --sp-hover-bg     : rgba(0, 120, 212, 0.04);
+        --sp-shadow-sel   : 0 4px 18px rgba(0, 120, 212, 0.18);
+        --sp-shadow-hover : 0 4px 12px rgba(0, 120, 212, 0.10);
+    }
+    [data-theme="dark"] {
+        --sp-selected-bg  : rgba(59, 143, 217, 0.15);
+        --sp-hover-bg     : rgba(59, 143, 217, 0.07);
+        --sp-shadow-sel   : 0 4px 18px rgba(59, 143, 217, 0.22);
+        --sp-shadow-hover : 0 4px 12px rgba(59, 143, 217, 0.14);
+    }
+
+    .specialty-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+        gap: 12px;
+        margin-top: 12px;
+    }
+
+    /* Each specialty card */
+    .spec-chip {
+        position: relative;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        padding: 20px 12px 16px;
+        border: 2px solid var(--color-surface-border);
+        border-radius: 18px;
+        background: var(--input-bg);
+        transition: border-color .2s, background .2s, box-shadow .2s, transform .18s;
+        user-select: none;
+        -webkit-user-select: none;
+        text-align: center;
+    }
+
+    .spec-chip:hover {
+        border-color: var(--color-primary-500);
+        background: var(--sp-hover-bg);
+        transform: translateY(-3px);
+        box-shadow: var(--sp-shadow-hover);
+    }
+
+    /* Hide native checkbox */
+    .spec-chip input[type="checkbox"] {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+        pointer-events: none;
+    }
+
+    /* Floating checkmark badge */
+    .spec-badge {
+        position: absolute;
+        top: 9px;
+        right: 9px;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: var(--color-primary-500);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.6rem;
+        opacity: 0;
+        transform: scale(0.3);
+        transition: opacity .2s, transform .25s cubic-bezier(.34,1.56,.64,1);
+        pointer-events: none;
+    }
+
+    /* Specialty icon circle */
+    .spec-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        background: var(--color-surface-card);
+        border: 2px solid var(--color-surface-border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.35rem;
+        color: var(--color-text-muted);
+        transition: background .2s, color .2s, border-color .2s, box-shadow .2s;
+        flex-shrink: 0;
+    }
+
+    /* Specialty name */
+    .spec-name {
+        font-size: 0.83rem;
+        font-weight: 600;
+        color: var(--color-text-main);
+        line-height: 1.35;
+        transition: color .2s;
+    }
+
+    /* ── Selected state ─────── */
+    .spec-chip:has(input:checked),
+    .spec-chip.selected {
+        border-color: var(--color-primary-500);
+        background: var(--sp-selected-bg);
+        box-shadow: var(--sp-shadow-sel);
+        transform: translateY(-3px);
+    }
+
+    .spec-chip:has(input:checked) .spec-badge,
+    .spec-chip.selected .spec-badge {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    .spec-chip:has(input:checked) .spec-icon,
+    .spec-chip.selected .spec-icon {
+        background: var(--color-primary-500);
+        border-color: var(--color-primary-500);
+        color: #fff;
+        box-shadow: 0 4px 14px rgba(0,120,212,.35);
+    }
+
+    [data-theme="dark"] .spec-chip:has(input:checked) .spec-icon,
+    [data-theme="dark"] .spec-chip.selected .spec-icon {
+        box-shadow: 0 4px 14px rgba(59,143,217,.35);
+    }
+
+    .spec-chip:has(input:checked) .spec-name,
+    .spec-chip.selected .spec-name {
+        color: var(--color-primary-500);
+        font-weight: 700;
+    }
+
+    /* ── Counter bar ─────────── */
+    .spec-counter {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        border-radius: 999px;
+        background: var(--color-surface-card);
+        border: 1px solid var(--color-surface-border);
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--color-text-muted);
+        transition: color .2s, border-color .2s, background .2s;
+    }
+
+    .spec-counter.has-selection {
+        border-color: var(--color-primary-500);
+        color: var(--color-primary-500);
+        background: var(--sp-selected-bg);
+    }
+
+    .spec-counter-num { font-weight: 800; }
+
+    /* Empty state */
+    .specialty-empty {
+        padding: 28px;
+        text-align: center;
+        color: var(--color-text-muted);
+        font-size: 0.9rem;
+        border: 2px dashed var(--color-surface-border);
+        border-radius: 14px;
+        margin-top: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="auth-wrapper">
+    <div class="container" style="display: flex; justify-content: center;">
+        <div class="auth-card reveal-on-scroll" style="max-width: 720px; padding: 0; overflow: hidden;">
+
+            <!-- Hero Header -->
+            <div style="background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500)); padding: 36px 20px; text-align: center; color: white;">
+                <div style="width: 65px; height: 65px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; backdrop-filter: blur(5px);">
+                    <i class="fa-solid fa-hospital" style="font-size: 28px; color: white;"></i>
+                </div>
+                <h2 style="color: white; margin-bottom: 6px; font-size: 1.6rem; font-weight: 800;">معلومات العيادة</h2>
+                <p style="opacity: 0.9; font-size: 0.95rem;">الخطوة 3 من 3 — يمكنك إضافة هاتف وبريد العيادة لاحقاً من لوحة التحكم</p>
+            </div>
+
+            <!-- Step Indicator -->
+            <div style="display: flex; justify-content: center; align-items: center; padding: 20px 0 0; gap: 0;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                        <div style="width:34px;height:34px;border-radius:50%;background:#48bb78;color:white;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.95rem;">
+                            <i class="fa-solid fa-check" style="font-size:0.85rem;"></i>
+                        </div>
+                        <span style="font-size:0.7rem;color:#48bb78;font-weight:600;">التفعيل</span>
+                    </div>
+                    <div style="width:50px;height:3px;background:#48bb78;border-radius:2px;"></div>
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                        <div style="width:34px;height:34px;border-radius:50%;background:#48bb78;color:white;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.95rem;">
+                            <i class="fa-solid fa-check" style="font-size:0.85rem;"></i>
+                        </div>
+                        <span style="font-size:0.7rem;color:#48bb78;font-weight:600;">معلوماتك</span>
+                    </div>
+                    <div style="width:50px;height:3px;background:#48bb78;border-radius:2px;"></div>
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                        <div style="width:34px;height:34px;border-radius:50%;background:var(--color-primary-500);color:white;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.95rem;box-shadow:0 4px 12px rgba(102,126,234,0.4);">3</div>
+                        <span style="font-size:0.7rem;color:var(--color-primary-600);font-weight:600;">العيادة</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="padding: 30px 40px 40px;">
+
+                {% if form.non_field_errors %}
+                <div class="alert alert-error" style="margin-bottom: 20px;">
+                    {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                </div>
+                {% endif %}
+
+                {% for message in messages %}
+                <div class="alert alert-error" style="margin-bottom: 16px;">{{ message }}</div>
+                {% endfor %}
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    <div class="form-group">
+                        <label for="{{ form.clinic_name.id_for_label }}">{{ form.clinic_name.label }} <span class="required-star">*</span></label>
+                        <input type="text"
+                               name="{{ form.clinic_name.name }}"
+                               id="{{ form.clinic_name.id_for_label }}"
+                               value="{{ form.clinic_name.value|default:'' }}"
+                               placeholder="عيادة د. محمد">
+                        {% if form.clinic_name.errors %}
+                        <span class="field-error">{{ form.clinic_name.errors|first }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px;">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="{{ form.clinic_address.id_for_label }}">{{ form.clinic_address.label }} <span class="required-star">*</span></label>
+                            <textarea name="{{ form.clinic_address.name }}"
+                                      id="{{ form.clinic_address.id_for_label }}"
+                                      rows="3"
+                                      placeholder="شارع، حي، مدينة">{{ form.clinic_address.value|default:'' }}</textarea>
+                            {% if form.clinic_address.errors %}
+                            <span class="field-error">{{ form.clinic_address.errors|first }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label for="{{ form.clinic_city.id_for_label }}">{{ form.clinic_city.label }}</label>
+                            <select name="{{ form.clinic_city.name }}" id="{{ form.clinic_city.id_for_label }}">
+                                <option value="">اختر المدينة</option>
+                                {% for city in form.clinic_city.field.queryset %}
+                                <option value="{{ city.pk }}" {% if form.clinic_city.value == city.pk|stringformat:"s" %}selected{% endif %}>{{ city }}</option>
+                                {% endfor %}
+                            </select>
+                            {% if form.clinic_city.errors %}
+                            <span class="field-error">{{ form.clinic_city.errors|first }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- ── Specialties ───────────────────────────────────── -->
+                    <div class="form-group">
+                        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
+                            <label style="margin:0;">{{ form.specialties.label }} <span class="required-star">*</span></label>
+                            <span class="spec-counter" id="specCounter">
+                                <i class="fa-solid fa-circle-check" style="font-size:0.9rem;"></i>
+                                <span>تم اختيار <span class="spec-counter-num" id="specCount">0</span></span>
+                            </span>
+                        </div>
+
+                        {% if form.specialties.errors %}
+                        <span class="field-error" style="display:block;margin-bottom:6px;">{{ form.specialties.errors|first }}</span>
+                        {% endif %}
+
+                        {% if form.specialties.field.queryset.exists %}
+                        <div class="specialty-grid" id="specialtyGrid">
+                            {% for choice in form.specialties %}
+                            <label class="spec-chip">
+                                {{ choice.tag }}
+                                <div class="spec-badge"><i class="fa-solid fa-check"></i></div>
+                                <div class="spec-icon"><i class="fa-solid fa-stethoscope"></i></div>
+                                <span class="spec-name">{{ choice.choice_label }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="specialty-empty">
+                            <i class="fa-solid fa-circle-info" style="margin-bottom:8px;font-size:1.4rem;"></i>
+                            <p>لا توجد تخصصات متاحة حالياً</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <!-- ────────────────────────────────────────────────── -->
+
+                    <div class="form-group">
+                        <label for="{{ form.clinic_description.id_for_label }}">{{ form.clinic_description.label }}</label>
+                        <textarea name="{{ form.clinic_description.name }}"
+                                  id="{{ form.clinic_description.id_for_label }}"
+                                  rows="3"
+                                  placeholder="وصف مختصر للعيادة وخدماتها...">{{ form.clinic_description.value|default:'' }}</textarea>
+                        {% if form.clinic_description.errors %}
+                        <span class="field-error">{{ form.clinic_description.errors|first }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div style="display: flex; gap: 12px; margin-top: 8px;">
+                        <button type="submit" name="action" value="back" class="btn" style="flex:0 0 auto;height:52px;padding:0 20px;background:var(--color-neutral-100);color:var(--color-neutral-700);border:1px solid var(--color-neutral-300);font-weight:600;">
+                            <i class="fa-solid fa-arrow-right" style="margin-left:6px;"></i>رجوع
+                        </button>
+                        <button type="submit" class="btn btn-primary" style="flex:1;height:52px;font-size:1rem;font-weight:700;">
+                            <i class="fa-solid fa-mobile-screen" style="margin-right:6px;"></i>
+                            إرسال رمز التحقق على هاتفك
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+{% block extra_js %}
+<script>
+(function () {
+    var grid    = document.getElementById('specialtyGrid');
+    var countEl = document.getElementById('specCount');
+    var counter = document.getElementById('specCounter');
+    if (!grid) return;
+
+    function syncChips() {
+        var total = 0;
+        grid.querySelectorAll('.spec-chip').forEach(function (chip) {
+            var cb = chip.querySelector('input[type="checkbox"]');
+            var checked = cb && cb.checked;
+            chip.classList.toggle('selected', checked);
+            if (checked) total++;
+        });
+        countEl.textContent = total;
+        counter.classList.toggle('has-selection', total > 0);
+    }
+
+    grid.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+        cb.addEventListener('change', syncChips);
+    });
+
+    // Sync on load (handles pre-checked state on form re-render)
+    syncChips();
+}());
+</script>
+{% endblock %}
+{% endblock %}

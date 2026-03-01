@@ -1026,13 +1026,11 @@ class ClinicSubscriptionTest(TestCase):
 
 class ClinicVerificationTest(TestCase):
     """
-    Tests for the 4-step sequential clinic channel verification flow.
+    Tests for the clinic channel verification flow (via legacy single-page path).
 
-    Steps:
-        1. verify_owner_phone   — SMS OTP to owner's phone
-        2. verify_owner_email   — email OTP to owner's email
-        3. verify_clinic_phone  — SMS OTP to clinic's phone
-        4. verify_clinic_email  — email OTP to clinic's email (optional)
+    ClinicVerification.is_fully_verified now only requires the two owner channels
+    (phone + email).  Steps 3-4 (clinic phone/email) remain available via
+    clinics/views.py for future dashboard-based verification.
     """
 
     def _make_activation_code(self, code, phone, national_id):
@@ -1248,3 +1246,508 @@ class ClinicVerificationTest(TestCase):
         """A clinic owner with unverified channels is routed to verify_owner_phone."""
         response = self.client.get(reverse("accounts:home"))
         self.assertRedirects(response, reverse("clinics:verify_owner_phone"))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 3-Stage Clinic Owner Registration Wizard Tests
+# ─────────────────────────────────────────────────────────────────────────────
+
+class ClinicRegWizardTest(TestCase):
+    """
+    Tests for the new 3-stage clinic owner registration wizard.
+
+    Flow: step-1 → step-2 → step-3 → verify-phone → verify-email → clinic created.
+    DB records (user + clinic) are only created at the verify-email success step.
+    """
+
+    OWNER_PHONE = "0594050000"
+    OWNER_NID   = "200200200"
+    CODE        = "WIZARD001"
+
+    def setUp(self):
+        self.client = Client()
+        self.city = City.objects.create(name="Nablus")
+        self.specialty = Specialty.objects.create(
+            name="General Practice", name_ar="الممارسة العامة"
+        )
+        self.activation_code = ClinicActivationCode.objects.create(
+            code=self.CODE,
+            clinic_name="عيادة الأمل",
+            phone=self.OWNER_PHONE,
+            national_id=self.OWNER_NID,
+            plan_type="MONTHLY",
+            subscription_expires_at=timezone.now() + timedelta(days=30),
+            max_doctors=3,
+        )
+        self.step1_url = reverse("accounts:register_clinic_step1")
+        self.step2_url = reverse("accounts:register_clinic_step2")
+        self.step3_url = reverse("accounts:register_clinic_step3")
+        self.verify_phone_url = reverse("accounts:register_clinic_verify_phone")
+        self.verify_email_url = reverse("accounts:register_clinic_verify_email")
+
+    def _post_step1(self):
+        return self.client.post(self.step1_url, {
+            "activation_code": self.CODE,
+            "phone": self.OWNER_PHONE,
+            "national_id": self.OWNER_NID,
+        })
+
+    def _post_step2(self):
+        return self.client.post(self.step2_url, {
+            "first_name": "محمد",
+            "last_name": "أحمد",
+            "email": "wizard@test.com",
+            "password": "StrongPass123!",
+            "confirm_password": "StrongPass123!",
+        })
+
+    def _post_step3(self):
+        return self.client.post(self.step3_url, {
+            "clinic_name": "عيادة الأمل",
+            "clinic_address": "شارع الأمل 1",
+            "clinic_city": self.city.id,
+            "specialties": [self.specialty.id],
+            "clinic_description": "وصف",
+        })
+
+    # ── 1. Session gates ──────────────────────────────────────────────────
+
+    def test_step2_redirects_without_step1_session(self):
+        """Accessing step-2 without completing step-1 → redirect to step-1."""
+        response = self.client.get(self.step2_url)
+        self.assertRedirects(response, self.step1_url)
+
+    def test_step3_redirects_without_step2_session(self):
+        """Accessing step-3 without completing step-2 → redirect to step-2."""
+        self._post_step1()
+        response = self.client.get(self.step3_url)
+        self.assertRedirects(response, self.step2_url)
+
+    def test_verify_phone_redirects_without_step3_session(self):
+        """Accessing verify-phone without completing step-3 → redirect to step-3."""
+        self._post_step1()
+        self._post_step2()
+        response = self.client.get(self.verify_phone_url)
+        self.assertRedirects(response, self.step3_url)
+
+    def test_verify_email_redirects_without_phone_verified(self):
+        """Accessing verify-email before phone is verified → redirect to verify-phone."""
+        self._post_step1()
+        self._post_step2()
+        with patch("accounts.views.request_otp", return_value=(True, "sent")):
+            self._post_step3()
+        response = self.client.get(self.verify_email_url)
+        self.assertRedirects(response, self.verify_phone_url)
+
+    # ── 2. Step-1 validation ──────────────────────────────────────────────
+
+    def test_step1_invalid_code_generic_error(self):
+        """Wrong activation code → single generic error, no details leaked."""
+        response = self.client.post(self.step1_url, {
+            "activation_code": "WRONGCODE",
+            "phone": self.OWNER_PHONE,
+            "national_id": self.OWNER_NID,
+        })
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        self.assertFalse(form.is_valid())
+        self.assertIn("activation_code", form.errors)
+        error_text = form.errors["activation_code"][0]
+        self.assertIn("غير صالح", error_text)
+
+    def test_step1_used_code_generic_error(self):
+        """Used activation code → same generic error as wrong code."""
+        self.activation_code.is_used = True
+        self.activation_code.save()
+        response = self.client.post(self.step1_url, {
+            "activation_code": self.CODE,
+            "phone": self.OWNER_PHONE,
+            "national_id": self.OWNER_NID,
+        })
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        self.assertIn("activation_code", form.errors)
+        # Crucially, the error text is the same generic message — not "used"
+        error_text = form.errors["activation_code"][0]
+        self.assertNotIn("استخدام", error_text.lower())
+
+    def test_step1_nid_linked_to_different_phone_generic_error(self):
+        """NID exists in DB linked to a different phone → generic error on both fields."""
+        CustomUser.objects.create_user(
+            phone="0591111111",  # different phone
+            name="Other Person",
+            national_id=self.OWNER_NID,
+            password="OtherPass1!",
+        )
+        response = self.client.post(self.step1_url, {
+            "activation_code": self.CODE,
+            "phone": self.OWNER_PHONE,
+            "national_id": self.OWNER_NID,
+        })
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        # Error on phone and/or national_id, not "already taken"
+        has_error = "phone" in form.errors or "national_id" in form.errors
+        self.assertTrue(has_error)
+        for field in ("phone", "national_id"):
+            if field in form.errors:
+                self.assertNotIn("مسجل", form.errors[field][0])
+
+    def test_step1_valid_redirects_to_step2(self):
+        """Valid step-1 submission for new user → redirect to step-2."""
+        response = self._post_step1()
+        self.assertRedirects(response, self.step2_url)
+
+    def test_step1_existing_user_with_email_skips_step2(self):
+        """If the phone belongs to an existing user with email, step-2 is skipped."""
+        CustomUser.objects.create_user(
+            phone=self.OWNER_PHONE,
+            name="Existing Doc",
+            national_id=self.OWNER_NID,
+            email="existing@test.com",
+            password="ExistPass1!",
+        )
+        response = self._post_step1()
+        self.assertRedirects(response, self.step3_url)
+        session = self.client.session
+        reg = session["clinic_reg"]
+        self.assertTrue(reg["stage2_done"])
+        self.assertEqual(reg["email"], "existing@test.com")
+
+    # ── 3. Step-2 back navigation ──────────────────────────────────────────
+
+    def test_step2_back_button_goes_to_step1(self):
+        """Back button in step-2 → redirect to step-1, preserving step-1 session data."""
+        self._post_step1()
+        response = self.client.post(self.step2_url, {"action": "back"})
+        self.assertRedirects(response, self.step1_url)
+
+    # ── 4. Step-3 back navigation ──────────────────────────────────────────
+
+    def test_step3_back_button_goes_to_step2(self):
+        """Back button in step-3 → redirect to step-2 (for new user)."""
+        self._post_step1()
+        self._post_step2()
+        response = self.client.post(self.step3_url, {"action": "back"})
+        self.assertRedirects(response, self.step2_url)
+
+    # ── 5. Verify-phone back navigation ───────────────────────────────────
+
+    def test_verify_phone_back_goes_to_step3(self):
+        """Back from verify-phone → step-3, session 'stage3_done' preserved."""
+        self._post_step1()
+        self._post_step2()
+        with patch("accounts.views.request_otp", return_value=(True, "sent")):
+            self._post_step3()
+        response = self.client.post(self.verify_phone_url, {"action": "back"})
+        self.assertRedirects(response, self.step3_url)
+        # Session still has clinic info
+        reg = self.client.session["clinic_reg"]
+        self.assertIn("clinic_name", reg)
+
+    # ── 6. Verify-email back navigation ───────────────────────────────────
+
+    def test_verify_email_back_goes_to_step3(self):
+        """Back from verify-email → step-3, phone_verified cleared from session."""
+        self._post_step1()
+        self._post_step2()
+        with patch("accounts.views.request_otp", return_value=(True, "sent")):
+            self._post_step3()
+        # Manually mark phone as verified in session
+        session = self.client.session
+        session["clinic_reg"]["phone_verified"] = True
+        session.save()
+        response = self.client.post(self.verify_email_url, {"action": "back"})
+        self.assertRedirects(response, self.step3_url)
+        reg = self.client.session["clinic_reg"]
+        self.assertNotIn("phone_verified", reg)
+
+    # ── 7. Happy path: new user, full flow ───────────────────────────────
+
+    @patch("accounts.views.send_email_otp", return_value=(True, "sent"))
+    @patch("accounts.views.verify_email_otp", return_value=(True, "verified"))
+    @patch("accounts.views.verify_otp", return_value=(True, "verified"))
+    @patch("accounts.views.request_otp", return_value=(True, "sent"))
+    def test_full_wizard_flow_new_user(
+        self, mock_req_otp, mock_verify_otp, mock_verify_email_otp, mock_send_email
+    ):
+        """
+        Full happy path: new user completes all 5 steps →
+        user + clinic created, clinic ACTIVE, logged in.
+        """
+        self._post_step1()
+        self._post_step2()
+        self._post_step3()
+
+        # Verify phone
+        self.client.post(self.verify_phone_url, {"otp": "123456"})
+
+        # Verify email → creation happens here
+        response = self.client.post(self.verify_email_url, {"otp": "654321"})
+
+        # Should redirect to clinic dashboard
+        self.assertRedirects(response, reverse("clinics:my_clinic"), fetch_redirect_response=False)
+
+        # User created correctly
+        user = CustomUser.objects.get(phone=self.OWNER_PHONE)
+        self.assertEqual(user.role, "MAIN_DOCTOR")
+        self.assertIn("PATIENT", user.roles)
+        self.assertIn("MAIN_DOCTOR", user.roles)
+        self.assertTrue(user.is_verified)
+        self.assertTrue(user.email_verified)
+        self.assertEqual(user.email, "wizard@test.com")
+
+        # Clinic created ACTIVE with correct data
+        clinic = Clinic.objects.get(main_doctor=user)
+        self.assertEqual(clinic.status, "ACTIVE")
+        self.assertEqual(clinic.name, "عيادة الأمل")
+        self.assertIn(self.specialty, clinic.specialties.all())
+
+        # Activation code marked used
+        self.activation_code.refresh_from_db()
+        self.assertTrue(self.activation_code.is_used)
+
+        # ClinicVerification has both owner channels stamped
+        v = clinic.verification
+        self.assertIsNotNone(v.owner_phone_verified_at)
+        self.assertIsNotNone(v.owner_email_verified_at)
+
+        # Session cleared
+        self.assertNotIn("clinic_reg", self.client.session)
+
+    # ── 8. Happy path: existing user with email (step-2 skipped) ─────────
+
+    @patch("accounts.views.send_email_otp", return_value=(True, "sent"))
+    @patch("accounts.views.verify_email_otp", return_value=(True, "verified"))
+    @patch("accounts.views.verify_otp", return_value=(True, "verified"))
+    @patch("accounts.views.request_otp", return_value=(True, "sent"))
+    def test_full_wizard_flow_existing_user_with_email(
+        self, mock_req_otp, mock_verify_otp, mock_verify_email_otp, mock_send_email
+    ):
+        """Existing user with email: step-2 is skipped, their account gets MAIN_DOCTOR role."""
+        existing = CustomUser.objects.create_user(
+            phone=self.OWNER_PHONE,
+            name="Existing Patient",
+            national_id=self.OWNER_NID,
+            email="existing@test.com",
+            password="OldPass1!",
+            role="PATIENT",
+        )
+        PatientProfile.objects.create(user=existing)
+
+        self._post_step1()   # should redirect straight to step-3
+        self._post_step3()
+
+        self.client.post(self.verify_phone_url, {"otp": "111111"})
+        response = self.client.post(self.verify_email_url, {"otp": "222222"})
+
+        self.assertRedirects(response, reverse("clinics:my_clinic"), fetch_redirect_response=False)
+
+        existing.refresh_from_db()
+        self.assertEqual(existing.role, "MAIN_DOCTOR")
+        self.assertIn("PATIENT", existing.roles)
+        self.assertIn("MAIN_DOCTOR", existing.roles)
+        # Email preserved — not overwritten
+        self.assertEqual(existing.email, "existing@test.com")
+
+        clinic = Clinic.objects.get(main_doctor=existing)
+        self.assertEqual(clinic.status, "ACTIVE")
+
+    # ── 9. Happy path: existing user WITHOUT email ─────────────────────────
+
+    @patch("accounts.views.send_email_otp", return_value=(True, "sent"))
+    @patch("accounts.views.verify_email_otp", return_value=(True, "verified"))
+    @patch("accounts.views.verify_otp", return_value=(True, "verified"))
+    @patch("accounts.views.request_otp", return_value=(True, "sent"))
+    def test_full_wizard_flow_existing_user_no_email(
+        self, mock_req_otp, mock_verify_otp, mock_verify_email_otp, mock_send_email
+    ):
+        """
+        Existing user without email: step-2 shows email-only form,
+        email is saved to account, clinic created ACTIVE.
+        """
+        existing = CustomUser.objects.create_user(
+            phone=self.OWNER_PHONE,
+            name="Existing No Email",
+            national_id=self.OWNER_NID,
+            password="OldPass1!",
+            role="PATIENT",
+        )
+        PatientProfile.objects.create(user=existing)
+
+        # Step 1 → should redirect to step-2 (user exists but has no email)
+        resp = self._post_step1()
+        self.assertRedirects(resp, self.step2_url)
+        reg = self.client.session["clinic_reg"]
+        self.assertFalse(reg.get("stage2_done"))
+
+        # Step 2 → email-only form
+        resp = self.client.post(self.step2_url, {"email": "newemail@test.com"})
+        self.assertRedirects(resp, self.step3_url)
+        reg = self.client.session["clinic_reg"]
+        self.assertTrue(reg["stage2_done"])
+        self.assertEqual(reg["email"], "newemail@test.com")
+
+        # Step 3 → verify phone → verify email
+        self._post_step3()
+        self.client.post(self.verify_phone_url, {"otp": "111111"})
+        response = self.client.post(self.verify_email_url, {"otp": "222222"})
+
+        self.assertRedirects(response, reverse("clinics:my_clinic"), fetch_redirect_response=False)
+
+        existing.refresh_from_db()
+        self.assertEqual(existing.role, "MAIN_DOCTOR")
+        self.assertIn("PATIENT", existing.roles)
+        self.assertIn("MAIN_DOCTOR", existing.roles)
+        # Email was added
+        self.assertEqual(existing.email, "newemail@test.com")
+        self.assertTrue(existing.email_verified)
+
+        clinic = Clinic.objects.get(main_doctor=existing)
+        self.assertEqual(clinic.status, "ACTIVE")
+        # Activation code marked used
+        self.activation_code.refresh_from_db()
+        self.assertTrue(self.activation_code.is_used)
+
+    # ── 10. Step-1: expired activation code ────────────────────────────────
+
+    def test_step1_expired_code_generic_error(self):
+        """Expired activation code → same generic error, expiry date NOT revealed."""
+        self.activation_code.expires_at = timezone.now() - timedelta(days=1)
+        self.activation_code.save()
+        response = self.client.post(self.step1_url, {
+            "activation_code": self.CODE,
+            "phone": self.OWNER_PHONE,
+            "national_id": self.OWNER_NID,
+        })
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        self.assertIn("activation_code", form.errors)
+        # Generic message — must not mention expiry explicitly
+        error_text = form.errors["activation_code"][0]
+        self.assertIn("غير صالح", error_text)
+        self.assertNotIn("انتهت", error_text)
+
+    # ── 11. Step-1: activation code phone mismatch ─────────────────────────
+
+    def test_step1_code_phone_mismatch_error_on_activation_code(self):
+        """Activation code assigned to a different phone → error on activation_code field."""
+        response = self.client.post(self.step1_url, {
+            "activation_code": self.CODE,
+            "phone": "0591111111",   # different from OWNER_PHONE on the code
+            "national_id": self.OWNER_NID,
+        })
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        self.assertIn("activation_code", form.errors)
+        self.assertNotIn("phone", form.errors)
+
+    # ── 12. Step-2: duplicate email rejected for new user ──────────────────
+
+    def test_step2_new_user_duplicate_email_rejected(self):
+        """New user entering an email already in use → email field error."""
+        # Create another user who already has that email
+        CustomUser.objects.create_user(
+            phone="0591000001",
+            name="Other",
+            password="Other1!aA",
+            email="taken@test.com",
+        )
+        self._post_step1()
+        response = self.client.post(self.step2_url, {
+            "first_name": "علي",
+            "last_name": "محمد",
+            "email": "taken@test.com",
+            "password": "StrongPass123!",
+            "confirm_password": "StrongPass123!",
+        })
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        self.assertIn("email", form.errors)
+
+    # ── 13. Step-2: weak password rejected for new user ───────────────────
+
+    def test_step2_new_user_weak_password_rejected(self):
+        """New user entering a weak password → password field error."""
+        self._post_step1()
+        response = self.client.post(self.step2_url, {
+            "first_name": "علي",
+            "last_name": "محمد",
+            "email": "newuser@test.com",
+            "password": "weak",
+            "confirm_password": "weak",
+        })
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        self.assertIn("password", form.errors)
+
+    # ── 14. Step-3: missing required clinic info rejected ─────────────────
+
+    def test_step3_missing_specialties_rejected(self):
+        """Submitting step-3 without specialties → form error."""
+        self._post_step1()
+        self._post_step2()
+        response = self.client.post(self.step3_url, {
+            "clinic_name": "عيادة",
+            "clinic_address": "شارع",
+            # no specialties
+        })
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        self.assertIn("specialties", form.errors)
+
+    # ── 15. ClinicVerification.is_fully_verified checks only owner channels ──
+
+    def test_is_fully_verified_requires_only_owner_channels(self):
+        """is_fully_verified returns True when only owner channels are stamped."""
+        ac = ClinicActivationCode.objects.create(
+            code="FV001", clinic_name="x",
+            plan_type="MONTHLY",
+            subscription_expires_at=timezone.now() + timedelta(days=30),
+        )
+        user = CustomUser.objects.create_user(
+            phone="0590000001", name="T", password="P1!aA"
+        )
+        clinic = create_clinic_for_main_doctor(
+            user,
+            {"clinic_name": "x", "clinic_address": "x", "clinic_city": None,
+             "specialties": [], "clinic_description": ""},
+            ac,
+        )
+        v = clinic.verification
+        self.assertFalse(v.is_fully_verified)
+
+        v.owner_phone_verified_at = timezone.now()
+        v.save()
+        self.assertFalse(v.is_fully_verified)  # only phone → not fully verified
+
+        v.owner_email_verified_at = timezone.now()
+        v.save()
+        self.assertTrue(v.is_fully_verified)   # both owner channels → fully verified
+
+    def test_next_pending_step_returns_none_after_owner_channels(self):
+        """next_pending_step returns None once both owner channels are verified."""
+        ac = ClinicActivationCode.objects.create(
+            code="NPS001", clinic_name="y",
+            plan_type="MONTHLY",
+            subscription_expires_at=timezone.now() + timedelta(days=30),
+        )
+        user = CustomUser.objects.create_user(
+            phone="0590000002", name="U", password="P1!bB"
+        )
+        clinic = create_clinic_for_main_doctor(
+            user,
+            {"clinic_name": "y", "clinic_address": "y", "clinic_city": None,
+             "specialties": [], "clinic_description": ""},
+            ac,
+        )
+        v = clinic.verification
+        self.assertEqual(v.next_pending_step(), "clinics:verify_owner_phone")
+
+        v.owner_phone_verified_at = timezone.now()
+        v.save()
+        self.assertEqual(v.next_pending_step(), "clinics:verify_owner_email")
+
+        v.owner_email_verified_at = timezone.now()
+        v.save()
+        self.assertIsNone(v.next_pending_step())

@@ -38,9 +38,38 @@ urlpatterns = [
         name="send_email_verification",
     ),
     path("verify-email/<str:token>/", views.verify_email, name="verify_email"),
-    # Main doctor registration
+    # Clinic owner registration (3-stage wizard)
     path(
-        "register/main-doctor/", views.register_main_doctor, name="register_main_doctor"
+        "register/clinic/step-1/",
+        views.register_clinic_step1,
+        name="register_clinic_step1",
+    ),
+    path(
+        "register/clinic/step-2/",
+        views.register_clinic_step2,
+        name="register_clinic_step2",
+    ),
+    path(
+        "register/clinic/step-3/",
+        views.register_clinic_step3,
+        name="register_clinic_step3",
+    ),
+    path(
+        "register/clinic/verify-phone/",
+        views.register_clinic_verify_phone,
+        name="register_clinic_verify_phone",
+    ),
+    path(
+        "register/clinic/verify-email/",
+        views.register_clinic_verify_email,
+        name="register_clinic_verify_email",
+    ),
+    # Legacy single-page registration view (kept for backwards compat with existing tests).
+    # New user-facing traffic uses the 3-stage wizard (register_clinic_step1 above).
+    path(
+        "register/main-doctor/",
+        views.register_main_doctor,
+        name="register_main_doctor",
     ),
     # Change Phone Number
     path(
