@@ -203,7 +203,6 @@ class DoctorAvailableSlotsAPIView(APIView):
         try:
             appointment_type = AppointmentType.objects.get(
                 id=appointment_type_id,
-                doctor_id=doctor_id,
                 clinic_id=clinic_id,
                 is_active=True,
             )
@@ -264,10 +263,9 @@ class DoctorAppointmentTypesAPIView(APIView):
             )
 
         appointment_types = AppointmentType.objects.filter(
-            doctor_id=doctor_id,
             clinic_id=clinic_id,
             is_active=True,
-        )
+        ).order_by("name")
 
         if not appointment_types.exists():
             return Response(

@@ -47,6 +47,7 @@ def generate_slots_for_date(
 
     # 2. Get ALL existing appointments for this doctor on this date
     #    across ALL clinics (R-03: global conflict check)
+
     existing_appointments = Appointment.objects.filter(
         doctor_id=doctor_id,
         appointment_date=target_date,

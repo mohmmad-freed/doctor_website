@@ -64,3 +64,93 @@ def create_clinic_for_main_doctor(user, cleaned_data, activation_code_obj, owner
     activation_code_obj.save()
 
     return clinic
+
+
+# === Clinic Working Hours Services (SCRUM-243..246) ===
+
+from django.core.exceptions import ValidationError
+from .models import ClinicWorkingHours
+
+
+def create_working_hours(clinic, weekday, start_time, end_time, is_closed=False):
+    """
+    Creates a new ClinicWorkingHours record.
+    """
+    working_hours = ClinicWorkingHours(
+        clinic=clinic,
+        weekday=weekday,
+        start_time=start_time,
+        end_time=end_time,
+        is_closed=is_closed
+    )
+    # The models' clean() method will ensure data integrity
+    working_hours.full_clean()
+    working_hours.save()
+    return working_hours
+
+
+def update_working_hours(instance, start_time, end_time, is_closed):
+    """
+    Updates an existing ClinicWorkingHours record.
+    """
+    instance.start_time = start_time
+    instance.end_time = end_time
+    instance.is_closed = is_closed
+    instance.full_clean()
+    instance.save()
+    return instance
+
+
+def delete_working_hours(instance):
+    """
+    Deletes an existing ClinicWorkingHours record.
+    """
+    instance.delete()
+
+
+def get_clinic_working_hours(clinic):
+    """
+    Retrieves all ClinicWorkingHours for a given clinic, ordered by weekday and start_time.
+    """
+    return clinic.working_hours.all()
+
+
+def validate_doctor_availability_within_clinic_hours(clinic, weekday, start_time, end_time):
+    """
+    Validates that a doctor's proposed availability falls within the clinic's defined working hours.
+    
+    Rules:
+    - If the weekday is marked explicitly as closed, raises a ValidationError.
+    - If working ranges are defined, the proposed availability must fall completely
+      within at least ONE valid working range.
+    - If no working ranges are defined at all for this weekday (and not marked closed),
+      validation passes (allows backward compatibility / optional use).
+    """
+    hours_for_day = ClinicWorkingHours.objects.filter(clinic=clinic, weekday=weekday)
+
+    # If no records exist for this day at all, we don't block (optional enforcement)
+    if not hours_for_day.exists():
+        return
+
+    # If any record explicitly marks the day as closed
+    if hours_for_day.filter(is_closed=True).exists():
+        raise ValidationError(
+            f"The clinic '{clinic.name}' is closed on this day. Doctors cannot schedule availability."
+        )
+    
+    # We must find AT LEAST ONE working range that completely contains the proposed availability
+    valid_range_found = False
+    for working_range in hours_for_day:
+        if working_range.start_time <= start_time and working_range.end_time >= end_time:
+            valid_range_found = True
+            break
+            
+    if not valid_range_found:
+        # Build a helpful error message to show available times
+        ranges_str = ", ".join(
+            [f"{hr.start_time.strftime('%H:%M')}-{hr.end_time.strftime('%H:%M')}" for hr in hours_for_day]
+        )
+        raise ValidationError(
+            f"The proposed availability ({start_time.strftime('%H:%M')}-{end_time.strftime('%H:%M')}) "
+            f"falls outside the clinic's operating hours for this day ({ranges_str})."
+        )

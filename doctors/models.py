@@ -106,6 +106,15 @@ class DoctorAvailability(models.Model):
                 raise ValidationError({"end_time": "End time must be after start time."})
 
         if self.doctor_id and self.day_of_week is not None and self.start_time and self.end_time:
+            # Validate against general clinic working hours
+            from clinics.services import validate_doctor_availability_within_clinic_hours
+            validate_doctor_availability_within_clinic_hours(
+                clinic=self.clinic,
+                weekday=self.day_of_week,
+                start_time=self.start_time,
+                end_time=self.end_time
+            )
+
             overlapping = DoctorAvailability.objects.filter(
                 doctor=self.doctor, day_of_week=self.day_of_week, is_active=True,
                 start_time__lt=self.end_time, end_time__gt=self.start_time,

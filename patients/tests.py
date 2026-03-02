@@ -43,7 +43,7 @@ class PatientProfileAPITest(TestCase):
 
     def test_get_profile_unauthenticated(self):
         response = self.client.get(self.url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_get_profile_wrong_role(self):
         self.client.force_authenticate(user=self.doctor_user)

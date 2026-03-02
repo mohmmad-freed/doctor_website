@@ -19,4 +19,10 @@ urlpatterns = [
     path('appointment-types/create/', appointment_types_views.appointment_type_create, name='appointment_type_create'),
     path('appointment-types/<int:type_id>/edit/', appointment_types_views.appointment_type_update, name='appointment_type_update'),
     path('appointment-types/<int:type_id>/toggle/', appointment_types_views.appointment_type_toggle, name='appointment_type_toggle'),
+    
+    # Clinic Working Hours
+    path('settings/working-hours/', views.clinic_working_hours_list_view, name='working_hours_list'),
+    path('settings/working-hours/create/', views.clinic_working_hours_create_view, name='working_hours_create'),
+    path('settings/working-hours/<int:id>/update/', views.clinic_working_hours_update_view, name='working_hours_update'),
+    path('settings/working-hours/<int:id>/delete/', views.clinic_working_hours_delete_view, name='working_hours_delete'),
 ]

@@ -371,7 +371,7 @@ def edit_appointment(appointment_id, patient, new_date, new_time, new_type_id=No
     if new_type_id and new_type_id != (appointment_type.id if appointment_type else None):
         try:
             appointment_type = AppointmentType.objects.get(
-                id=new_type_id, doctor_id=doctor_id, clinic_id=clinic_id, is_active=True,
+                id=new_type_id, clinic_id=clinic_id, is_active=True,
             )
         except AppointmentType.DoesNotExist:
             raise ValueError("نوع الموعد غير صالح.")

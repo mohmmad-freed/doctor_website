@@ -206,3 +206,98 @@ class ClinicVerification(models.Model):
     class Meta:
         verbose_name = "Clinic Verification"
         verbose_name_plural = "Clinic Verifications"
+
+
+class ClinicWorkingHours(models.Model):
+    """
+    General clinic working hours. Defines when the clinic is open.
+    Doctors must schedule their availability within these bounds.
+    """
+
+    DAY_CHOICES = [
+        (0, "الاثنين"),
+        (1, "الثلاثاء"),
+        (2, "الأربعاء"),
+        (3, "الخميس"),
+        (4, "الجمعة"),
+        (5, "السبت"),
+        (6, "الأحد"),
+    ]
+
+    clinic = models.ForeignKey(Clinic, on_delete=models.CASCADE, related_name="working_hours")
+    weekday = models.IntegerField(choices=DAY_CHOICES)
+    start_time = models.TimeField(null=True, blank=True)
+    end_time = models.TimeField(null=True, blank=True)
+    is_closed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Clinic Working Hours"
+        verbose_name_plural = "Clinic Working Hours"
+        ordering = ["weekday", "start_time"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["clinic", "weekday", "start_time", "end_time"],
+                name="unique_clinic_working_hours"
+            )
+        ]
+
+    def __str__(self):
+        day = self.get_weekday_display()
+        if self.is_closed:
+            return f"{self.clinic.name} - {day} (Closed)"
+        return f"{self.clinic.name} - {day} ({self.start_time:%H:%M}-{self.end_time:%H:%M})"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        super().clean()
+
+        if self.is_closed:
+            # Option A: If closed, explicitly forbid start_time/end_time
+            if self.start_time is not None or self.end_time is not None:
+                raise ValidationError("If the clinic is closed on this day, start time and end time must be empty.")
+            
+            # Prevent creating additional ranges for this weekday if marked as closed
+            if self.clinic_id is not None and self.weekday is not None:
+                existing = ClinicWorkingHours.objects.filter(clinic=self.clinic, weekday=self.weekday)
+                if self.pk:
+                    existing = existing.exclude(pk=self.pk)
+                if existing.exists():
+                    raise ValidationError("Cannot mark the day as closed when other working hour ranges exist for this day.")
+        else:
+            if self.start_time is None or self.end_time is None:
+                raise ValidationError("Start time and end time are required unless the day is marked as closed.")
+            
+            if self.start_time >= self.end_time:
+                raise ValidationError({"end_time": "End time must be after start time."})
+            
+            # Prevent overlaps
+            if self.clinic_id is not None and self.weekday is not None:
+                # First check if there is a 'closed' record for this day
+                existing_closed = ClinicWorkingHours.objects.filter(clinic=self.clinic, weekday=self.weekday, is_closed=True)
+                if self.pk:
+                    existing_closed = existing_closed.exclude(pk=self.pk)
+                if existing_closed.exists():
+                    raise ValidationError("Cannot add working hours to a day that is marked as closed.")
+
+                overlapping = ClinicWorkingHours.objects.filter(
+                    clinic=self.clinic,
+                    weekday=self.weekday,
+                    start_time__lt=self.end_time,
+                    end_time__gt=self.start_time,
+                    is_closed=False
+                )
+                if self.pk:
+                    overlapping = overlapping.exclude(pk=self.pk)
+                if overlapping.exists():
+                    conflict = overlapping.first()
+                    raise ValidationError(
+                        f"This time overlaps with an existing working hour range on "
+                        f"{self.get_weekday_display()}: "
+                        f"{conflict.start_time:%H:%M}-{conflict.end_time:%H:%M}."
+                    )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)

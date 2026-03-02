@@ -22,12 +22,11 @@ if not patient:
 appt_type = AppointmentType.objects.first()
 if appt_type:
     clinic = appt_type.clinic
-    doctor = appt_type.doctor
+    doctor = clinic.main_doctor
 else:
     # Manual fallback for empty database scenarios
     doctor = clinic.main_doctor
-    from appointments.models import AppointmentType
-    appt_type = AppointmentType.objects.create(doctor=doctor, clinic=clinic, name='Test Appt', duration_minutes=30, price=100)
+    appt_type = AppointmentType.objects.create(clinic=clinic, name='Test Appt', duration_minutes=30, price=100)
 
 print("--- Testing Booking Flow ---")
 print(f"Patient: {patient.name} (Blocked Status: ", end="")

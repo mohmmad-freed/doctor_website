@@ -241,3 +241,116 @@ def verify_clinic_email(request):
         "step": 4,
         "total_steps": 4,
     })
+
+# ============================================
+# CLINIC WORKING HOURS
+# ============================================
+from django.utils.dateparse import parse_time
+from .models import ClinicWorkingHours
+from .services import (
+    create_working_hours, 
+    update_working_hours, 
+    delete_working_hours, 
+    get_clinic_working_hours
+)
+
+@login_required
+def clinic_working_hours_list_view(request):
+    clinic = get_object_or_404(Clinic, main_doctor=request.user, is_active=True)
+    working_hours = get_clinic_working_hours(clinic)
+    
+    # Group by weekday for easier display
+    days = ClinicWorkingHours.DAY_CHOICES
+    schedule = []
+    for day_val, day_name in days:
+        day_hours = [wh for wh in working_hours if wh.weekday == day_val]
+        schedule.append({
+            'day_val': day_val,
+            'day_name': day_name,
+            'hours': day_hours,
+            'is_closed': any(wh.is_closed for wh in day_hours) if day_hours else False
+        })
+
+    return render(request, "clinics/working_hours.html", {
+        "clinic": clinic,
+        "schedule": schedule,
+        "days": days
+    })
+
+@login_required
+def clinic_working_hours_create_view(request):
+    clinic = get_object_or_404(Clinic, main_doctor=request.user, is_active=True)
+    if request.method == "POST":
+        weekday = request.POST.get("weekday")
+        is_closed = request.POST.get("is_closed") == "on"
+        start_time_str = request.POST.get("start_time")
+        end_time_str = request.POST.get("end_time")
+        
+        try:
+            weekday = int(weekday)
+            if is_closed:
+                start_time = None
+                end_time = None
+            else:
+                if not start_time_str or not end_time_str:
+                    from django.core.exceptions import ValidationError
+                    raise ValidationError("Start time and end time are required.")
+                
+                start_time = parse_time(start_time_str)
+                end_time = parse_time(end_time_str)
+                
+            create_working_hours(clinic, weekday, start_time, end_time, is_closed)
+            messages.success(request, "تمت إضافة ساعات العمل بنجاح.")
+        except Exception as e:
+            err_msg = str(e)
+            if hasattr(e, 'message_dict'):
+                err_msg = " ".join([f"{k}: {', '.join(v)}" for k, v in e.message_dict.items()])
+            elif hasattr(e, 'messages'):
+                err_msg = " ".join(e.messages)
+            messages.error(request, f"خطأ: {err_msg}")
+            
+    return redirect("clinics:working_hours_list")
+
+@login_required
+def clinic_working_hours_update_view(request, id):
+    clinic = get_object_or_404(Clinic, main_doctor=request.user, is_active=True)
+    instance = get_object_or_404(ClinicWorkingHours, id=id, clinic=clinic)
+    
+    if request.method == "POST":
+        is_closed = request.POST.get("is_closed") == "on"
+        start_time_str = request.POST.get("start_time")
+        end_time_str = request.POST.get("end_time")
+        
+        try:
+            if is_closed:
+                start_time = None
+                end_time = None
+            else:
+                if not start_time_str or not end_time_str:
+                    from django.core.exceptions import ValidationError
+                    raise ValidationError("Start time and end time are required.")
+                start_time = parse_time(start_time_str)
+                end_time = parse_time(end_time_str)
+                
+            update_working_hours(instance, start_time, end_time, is_closed)
+            messages.success(request, "تم تحديث ساعات العمل بنجاح.")
+        except Exception as e:
+            err_msg = str(e)
+            if hasattr(e, 'message_dict'):
+                err_msg = " ".join([f"{k}: {', '.join(v)}" for k, v in e.message_dict.items()])
+            elif hasattr(e, 'messages'):
+                err_msg = " ".join(e.messages)
+            messages.error(request, f"خطأ: {err_msg}")
+            
+    return redirect("clinics:working_hours_list")
+
+@login_required
+def clinic_working_hours_delete_view(request, id):
+    clinic = get_object_or_404(Clinic, main_doctor=request.user, is_active=True)
+    instance = get_object_or_404(ClinicWorkingHours, id=id, clinic=clinic)
+    
+    if request.method == "POST":
+        delete_working_hours(instance)
+        messages.success(request, "تم حذف ساعات العمل بنجاح.")
+        
+    return redirect("clinics:working_hours_list")

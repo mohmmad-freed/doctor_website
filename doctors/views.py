@@ -135,7 +135,7 @@ def doctor_appointment_types_view(request, doctor_id):
     appointment_types = AppointmentType.objects.filter(
         clinic_id=clinic_id,
         is_active=True,
-    )
+    ).order_by("name")
 
     context = {
         "doctor": doctor,

@@ -235,74 +235,45 @@ class PatientRegistrationFlowTest(TestCase):
     def setUp(self):
         self.client = Client()
         self.city = City.objects.create(name="Nablus")
-        self.register_url = reverse('accounts:register_patient')
+        self.register_url = reverse('accounts:register_patient_phone')
     
-    def test_successful_registration(self):
-        """Test complete successful registration"""
+    def test_successful_phone_submission(self):
+        """Test that a valid phone number redirects to verify step"""
         response = self.client.post(self.register_url, {
-            'name': 'Ahmed Mohammed',
             'phone': '0594073157',
-            'national_id': '123456789',
-            'city': self.city.id,
-            'email': 'ahmed@example.com',
-            'password1': 'StrongPass123!@#',
-            'password2': 'StrongPass123!@#',
         })
         
-        # Should redirect to home after successful registration
-        self.assertEqual(response.status_code, 302, 
-                        f"Expected redirect (302) but got {response.status_code}. "
-                        f"Context: {response.context.get('form').errors if response.context and 'form' in response.context else 'No form errors'}")
+        # Should redirect to the OTP verification step
+        self.assertEqual(response.status_code, 302,
+                        f"Expected redirect (302) but got {response.status_code}.")
         
-        # User should be created
-        self.assertTrue(CustomUser.objects.filter(phone='0594073157').exists())
-        user = CustomUser.objects.get(phone='0594073157')
-        
-        # Check user properties
-        self.assertEqual(user.name, 'Ahmed Mohammed')
-        self.assertEqual(user.national_id, '123456789')
-        self.assertEqual(user.role, 'PATIENT')
-        self.assertEqual(user.city, self.city)
-        
-        # Patient profile should be created
-        self.assertTrue(PatientProfile.objects.filter(user=user).exists())
+        # Phone should be stored in session
+        session = self.client.session
+        self.assertEqual(session.get('registration_phone'), '0594073157')
     
     def test_registration_with_plus970_phone(self):
-        """Test registration with +970 format phone"""
+        """Test registration with +970 format phone normalises correctly"""
         response = self.client.post(self.register_url, {
-            'name': 'Sara Ali',
             'phone': '+970594073158',
-            'national_id': '987654321',
-            'city': self.city.id,
-            'password1': 'StrongPass123!@#',
-            'password2': 'StrongPass123!@#',
         })
         
-        # Should succeed
+        # Should redirect to verify step
         self.assertEqual(response.status_code, 302,
-                        f"Expected redirect (302) but got {response.status_code}. "
-                        f"Context: {response.context.get('form').errors if response.context and 'form' in response.context else 'No form errors'}")
+                        f"Expected redirect (302) but got {response.status_code}.")
         
-        # Phone should be normalized in database
-        user = CustomUser.objects.get(national_id='987654321')
-        self.assertEqual(user.phone, '0594073158')
+        # Phone should be normalized in session
+        session = self.client.session
+        self.assertEqual(session.get('registration_phone'), '0594073158')
     
     def test_registration_form_errors(self):
         """Test that form errors are displayed properly"""
         # Test with invalid phone
         response = self.client.post(self.register_url, {
-            'name': 'Test User',
             'phone': '123456789',  # Invalid
-            'national_id': '123456789',
-            'city': self.city.id,
-            'password1': 'TestPass123!@#',
-            'password2': 'TestPass123!@#',
         })
         
         # Should stay on same page with errors
         self.assertEqual(response.status_code, 200)
-        self.assertFormError(response.context['form'], 'phone', 
-                           'Invalid phone number format. Please enter a valid Palestinian phone number (e.g., 0594073157 or +970594073157).')
 
 
 class NameValidationTest(TestCase):

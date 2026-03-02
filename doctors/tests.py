@@ -217,8 +217,11 @@ class SlotGenerationServiceTests(DoctorAvailabilityModelTestMixin, TestCase):
             start_time=time(9, 0),
             end_time=time(12, 0),
         )
+        from clinics.services import create_working_hours
+        create_working_hours(self.clinic_a, 0, time(8, 0), time(20, 0))
+        create_working_hours(self.clinic_a, 1, time(8, 0), time(20, 0))
+        
         self.appointment_type = AppointmentType.objects.create(
-            doctor=self.doctor,
             clinic=self.clinic_a,
             name="General Checkup",
             duration_minutes=30,
@@ -388,7 +391,6 @@ class DoctorAvailabilityAPITests(DoctorAvailabilityModelTestMixin, TestCase):
             end_time=time(14, 0),
         )
         self.appointment_type = AppointmentType.objects.create(
-            doctor=self.doctor,
             clinic=self.clinic_a,
             name="Checkup",
             duration_minutes=30,
@@ -577,7 +579,6 @@ class AppointmentTypeModelTests(DoctorAvailabilityModelTestMixin, TestCase):
 
     def test_create_appointment_type(self):
         apt = AppointmentType.objects.create(
-            doctor=self.doctor,
             clinic=self.clinic_a,
             name="Follow-up",
             duration_minutes=15,
@@ -591,7 +592,6 @@ class AppointmentTypeModelTests(DoctorAvailabilityModelTestMixin, TestCase):
     def test_unique_name_per_doctor_clinic(self):
         """Same name for same doctor+clinic should fail."""
         AppointmentType.objects.create(
-            doctor=self.doctor,
             clinic=self.clinic_a,
             name="Checkup",
             duration_minutes=30,
@@ -601,7 +601,6 @@ class AppointmentTypeModelTests(DoctorAvailabilityModelTestMixin, TestCase):
 
         with self.assertRaises(IntegrityError):
             AppointmentType.objects.create(
-                doctor=self.doctor,
                 clinic=self.clinic_a,
                 name="Checkup",
                 duration_minutes=60,
@@ -611,14 +610,12 @@ class AppointmentTypeModelTests(DoctorAvailabilityModelTestMixin, TestCase):
     def test_same_name_different_clinic_ok(self):
         """Same name at different clinics should work."""
         AppointmentType.objects.create(
-            doctor=self.doctor,
             clinic=self.clinic_a,
             name="Checkup",
             duration_minutes=30,
             price=Decimal("50.00"),
         )
         apt2 = AppointmentType.objects.create(
-            doctor=self.doctor,
             clinic=self.clinic_b,
             name="Checkup",
             duration_minutes=30,

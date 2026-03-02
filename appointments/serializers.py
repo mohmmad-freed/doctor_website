@@ -5,7 +5,6 @@ from .models import Appointment, AppointmentType
 class AppointmentTypeSerializer(serializers.ModelSerializer):
     """Serializer for appointment types offered by a doctor."""
 
-    doctor_name = serializers.CharField(source="doctor.name", read_only=True)
     clinic_name = serializers.CharField(source="clinic.name", read_only=True)
 
     class Meta:
@@ -16,8 +15,6 @@ class AppointmentTypeSerializer(serializers.ModelSerializer):
             "duration_minutes",
             "price",
             "description",
-            "doctor",
-            "doctor_name",
             "clinic",
             "clinic_name",
             "is_active",
