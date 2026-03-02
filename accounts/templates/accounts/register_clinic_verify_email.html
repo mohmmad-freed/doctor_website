@@ -1,5 +1,5 @@
 {% extends 'accounts/base.html' %}
-{% load static %}
+{% load static mask_filters %}
 
 {% block title %}التحقق من بريدك الإلكتروني{% endblock %}
 
@@ -70,7 +70,7 @@
             <h1 class="page-title">التحقق من بريدك الإلكتروني</h1>
             <p class="page-subtitle">
                 أرسلنا رمز التحقق إلى
-                <span class="email-highlight">{{ email }}</span>
+                <span class="email-highlight">{{ email|mask_email }}</span>
             </p>
         </div>
 

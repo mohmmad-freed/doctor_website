@@ -1,6 +1,7 @@
 {% extends 'accounts/base.html' %}
-{% load static %}
+{% load static mask_filters %}
 
+{% block messages %}{% endblock %}
 {% block title %}التحقق من رقم الهاتف{% endblock %}
 
 {% block extra_css %}
@@ -315,7 +316,7 @@
             </div>
             <h1 class="page-title">آمان حسابك</h1>
             <p class="page-subtitle">
-                أدخل الرمز الذي أرسلناه إلى <span class="phone-highlight" dir="ltr">{{ phone }}</span>
+                أدخل الرمز الذي أرسلناه إلى <span class="phone-highlight" dir="ltr">{{ phone|mask_phone }}</span>
             </p>
         </div>
 
@@ -329,6 +330,14 @@
                 <div class="step-dot" title="البيانات"></div>
             </div>
         </div>
+
+        {% if messages %}
+            {% for message in messages %}
+            <div class="{% if message.tags == 'success' %}alert-success{% else %}alert-error{% endif %}">
+                <i class="fa-solid {% if message.tags == 'success' %}fa-circle-check{% else %}fa-circle-exclamation{% endif %}"></i> {{ message }}
+            </div>
+            {% endfor %}
+        {% endif %}
 
         <form method="post" id="otpForm" data-has-error="{% if error %}true{% else %}false{% endif %}">
             {% csrf_token %}

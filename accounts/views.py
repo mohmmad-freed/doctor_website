@@ -158,13 +158,13 @@ def register_patient_phone(request):
         if not PhoneNumberAuthBackend.is_valid_phone_number(phone):
             messages.error(
                 request,
-                "Invalid phone number. Must start with 059 or 056 and be 10 digits.",
+                "رقم هاتف غير صالح. يجب أن يبدأ بـ 059 أو 056 ويتكون من 10 أرقام.",
             )
             return render(request, "accounts/register_patient_phone.html")
 
         # Check if already registered
         if User.objects.filter(phone=phone).exists():
-            messages.error(request, "This phone number is already registered.")
+            messages.error(request, "هذا الرقم مسجل مسبقاً.")
             return render(request, "accounts/register_patient_phone.html")
 
         # Request OTP
@@ -189,7 +189,7 @@ def register_patient_verify(request):
 
     phone = request.session.get("registration_phone")
     if not phone:
-        messages.error(request, "Session expired. Please start registration again.")
+        messages.error(request, "انتهت الجلسة. يرجى البدء من جديد.")
         return redirect("accounts:register_patient_phone")
 
     if request.method == "POST":
@@ -200,7 +200,7 @@ def register_patient_verify(request):
             remaining = get_remaining_resends(phone)
             if remaining <= 0:
                 messages.error(
-                    request, "You have reached the maximum OTP requests for today."
+                    request, "لقد وصلت إلى الحد الأقصى لطلبات رمز التحقق لهذا اليوم."
                 )
             else:
                 success, message = request_otp(phone)
@@ -214,7 +214,7 @@ def register_patient_verify(request):
         entered_otp = request.POST.get("otp", "").strip()
 
         if not entered_otp:
-            messages.error(request, "Please enter the OTP code.")
+            messages.error(request, "يرجى إدخال رمز التحقق.")
             return render(
                 request,
                 "accounts/register_patient_verify.html",

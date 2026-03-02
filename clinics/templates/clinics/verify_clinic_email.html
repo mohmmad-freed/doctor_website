@@ -1,5 +1,5 @@
 {% extends 'accounts/base.html' %}
-{% load static %}
+{% load static mask_filters %}
 
 {% block title %}التحقق من بريد العيادة — الخطوة 4 من 4{% endblock %}
 
@@ -103,7 +103,7 @@
             <h1 class="page-title">التحقق من بريد العيادة</h1>
             <p class="page-subtitle">
                 أدخل الرمز الذي أرسلناه إلى
-                <span class="email-highlight">{{ email }}</span>
+                <span class="email-highlight">{{ email|mask_email }}</span>
             </p>
         </div>
 
@@ -122,8 +122,8 @@
 
         {% if messages %}
             {% for message in messages %}
-            <div class="alert-error">
-                <i class="fa-solid fa-circle-exclamation"></i> {{ message }}
+            <div class="{% if message.tags == 'success' %}alert-success{% else %}alert-error{% endif %}">
+                <i class="fa-solid {% if message.tags == 'success' %}fa-circle-check{% else %}fa-circle-exclamation{% endif %}"></i> {{ message }}
             </div>
             {% endfor %}
         {% endif %}

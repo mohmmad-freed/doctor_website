@@ -68,24 +68,27 @@ def send_verification_email(email, request):
             reverse("accounts:verify_email", kwargs={"token": token})
         )
 
-        subject = "Verify Your Email - Clinic Website"
+        subject = "تحقق من بريدك الإلكتروني — كلينك"
         text_content = (
-            f"Hello {user.name},\n\n"
-            f"Thank you for registering with Clinic Website!\n\n"
-            f"Please verify your email address by clicking the link below:\n\n"
+            "\u200f"
+            f"مرحباً {user.name}،\n\n"
+            f"شكراً لتسجيلك في منصة كلينك!\n\n"
+            f"يرجى التحقق من بريدك الإلكتروني بالضغط على الرابط أدناه:\n\n"
             f"{verification_url}\n\n"
-            f"This link will expire in 15 minutes.\n\n"
-            f"If you didn't request this, please ignore this email.\n\n"
-            f"Best regards,\nClinic Website Team"
+            f"ينتهي صلاحية هذا الرابط خلال 15 دقيقة.\n\n"
+            f"إذا لم تطلب هذا، يرجى تجاهل هذه الرسالة.\n\n"
+            f"مع تحيات،\nفريق كلينك"
         )
         html_content = (
-            f"<h2>Welcome {user.name}!</h2>"
-            f"<p>Thank you for registering with Clinic Website!</p>"
-            f"<p>Please verify your email address by clicking the link below:</p>"
-            f"<p><a href='{verification_url}'>Verify My Email</a></p>"
-            f"<p>This link will expire in 15 minutes.</p>"
-            f"<p>If you didn't request this, please ignore this email.</p>"
-            f"<br><p>Best regards,<br>Clinic Website Team</p>"
+            f"<div dir='rtl'>"
+            f"<h2>مرحباً {user.name}!</h2>"
+            f"<p>شكراً لتسجيلك في منصة كلينك!</p>"
+            f"<p>يرجى التحقق من بريدك الإلكتروني بالضغط على الرابط أدناه:</p>"
+            f"<p><a href='{verification_url}'>تحقق من بريدي الإلكتروني</a></p>"
+            f"<p>ينتهي صلاحية هذا الرابط خلال 15 دقيقة.</p>"
+            f"<p>إذا لم تطلب هذا، يرجى تجاهل هذه الرسالة.</p>"
+            f"<br><p>مع تحيات،<br>فريق كلينك</p>"
+            f"</div>"
         )
 
         _send_email(email, subject, html_content, text_content)
@@ -109,24 +112,27 @@ def send_change_email_verification(email, request):
             reverse("accounts:verify_change_email", kwargs={"token": token})
         )
 
-        subject = "Confirm Your New Email Address - Clinic Website"
+        subject = "تأكيد عنوان بريدك الإلكتروني الجديد — كلينك"
         text_content = (
-            f"Hello {user.name},\n\n"
-            f"You have requested to change your email address on Clinic Website.\n\n"
-            f"Please confirm your new email address by clicking the link below:\n\n"
+            "\u200f"
+            f"مرحباً {user.name}،\n\n"
+            f"لقد طلبت تغيير بريدك الإلكتروني على منصة كلينك.\n\n"
+            f"يرجى تأكيد عنوان بريدك الإلكتروني الجديد بالضغط على الرابط أدناه:\n\n"
             f"{verification_url}\n\n"
-            f"This link will expire in 15 minutes.\n\n"
-            f"If you didn't request this change, please ignore this email.\n\n"
-            f"Best regards,\nClinic Website Team"
+            f"ينتهي صلاحية هذا الرابط خلال 15 دقيقة.\n\n"
+            f"إذا لم تطلب هذا التغيير، يرجى تجاهل هذه الرسالة.\n\n"
+            f"مع تحيات،\nفريق كلينك"
         )
         html_content = (
-            f"<h2>Email Change Request</h2>"
-            f"<p>You have requested to change your email address on Clinic Website.</p>"
-            f"<p>Please confirm your new email address by clicking the link below:</p>"
-            f"<p><a href='{verification_url}'>Confirm New Email</a></p>"
-            f"<p>This link will expire in 15 minutes.</p>"
-            f"<p>If you didn't request this change, please ignore this email.</p>"
-            f"<br><p>Best regards,<br>Clinic Website Team</p>"
+            f"<div dir='rtl'>"
+            f"<h2>طلب تغيير البريد الإلكتروني</h2>"
+            f"<p>لقد طلبت تغيير بريدك الإلكتروني على منصة كلينك.</p>"
+            f"<p>يرجى تأكيد عنوان بريدك الإلكتروني الجديد بالضغط على الرابط أدناه:</p>"
+            f"<p><a href='{verification_url}'>تأكيد البريد الإلكتروني الجديد</a></p>"
+            f"<p>ينتهي صلاحية هذا الرابط خلال 15 دقيقة.</p>"
+            f"<p>إذا لم تطلب هذا التغيير، يرجى تجاهل هذه الرسالة.</p>"
+            f"<br><p>مع تحيات،<br>فريق كلينك</p>"
+            f"</div>"
         )
 
         _send_email(email, subject, html_content, text_content)
@@ -177,6 +183,7 @@ def send_email_otp(email, recipient_name):
 
     subject = "رمز التحقق — Clinic"
     text_content = (
+        "\u200f"
         f"مرحباً {recipient_name}،\n\n"
         f"رمز التحقق الخاص بك هو: {otp}\n\n"
         f"الرمز صالح لمدة 10 دقائق.\n\n"
@@ -184,12 +191,14 @@ def send_email_otp(email, recipient_name):
         f"مع تحيات،\nفريق كلينك"
     )
     html_content = (
+        f"<div dir='rtl'>"
         f"<p>مرحباً <strong>{recipient_name}</strong>،</p>"
         f"<p>رمز التحقق الخاص بك هو:</p>"
         f"<h2 style='letter-spacing:8px;font-size:2rem;font-family:monospace;'>{otp}</h2>"
         f"<p>الرمز صالح لمدة 10 دقائق.</p>"
         f"<p>إذا لم تطلب هذا الرمز، يرجى تجاهل هذه الرسالة.</p>"
         f"<br><p>مع تحيات،<br>فريق كلينك</p>"
+        f"</div>"
     )
 
     try:

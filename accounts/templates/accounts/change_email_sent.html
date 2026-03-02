@@ -1,4 +1,5 @@
 {% extends 'patients/base_dashboard.html' %}
+{% load mask_filters %}
 
 {% block title %}تم إرسال رابط التحقق{% endblock %}
 
@@ -14,7 +15,7 @@
 
         <div class="text-gray-600 dark:text-gray-300 mb-6 space-y-2">
             <p>تم إرسال رابط التحقق إلى:</p>
-            <p class="font-bold text-lg text-primary-600 dir-ltr">{{ email }}</p>
+            <p class="font-bold text-lg text-primary-600 dir-ltr">{{ email|mask_email }}</p>
         </div>
 
         <p class="text-sm text-gray-500 dark:text-gray-400 mb-8">

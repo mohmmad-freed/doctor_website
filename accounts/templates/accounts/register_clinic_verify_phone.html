@@ -1,5 +1,5 @@
 {% extends 'accounts/base.html' %}
-{% load static %}
+{% load static mask_filters %}
 
 {% block title %}التحقق من رقم هاتفك{% endblock %}
 
@@ -69,7 +69,7 @@
             <h1 class="page-title">التحقق من رقم هاتفك</h1>
             <p class="page-subtitle">
                 أرسلنا رمز التحقق إلى
-                <span class="phone-highlight" dir="ltr">{{ phone }}</span>
+                <span class="phone-highlight" dir="ltr">{{ phone|mask_phone }}</span>
             </p>
         </div>
 
