@@ -154,3 +154,91 @@ def validate_doctor_availability_within_clinic_hours(clinic, weekday, start_time
             f"The proposed availability ({start_time.strftime('%H:%M')}-{end_time.strftime('%H:%M')}) "
             f"falls outside the clinic's operating hours for this day ({ranges_str})."
         )
+
+
+# === Clinic Compliance Settings Services ===
+
+from compliance.models import ClinicComplianceSettings
+
+
+def get_clinic_compliance_settings(clinic):
+    """
+    Retrieves (or creates) the ClinicComplianceSettings for a given clinic.
+    Enforces clinic isolation by querying only the given clinic.
+    Uses the reverse relation to keep Django's OneToOne cache in sync.
+    """
+    try:
+        return clinic.compliance_settings
+    except ClinicComplianceSettings.DoesNotExist:
+        settings = ClinicComplianceSettings.objects.create(clinic=clinic)
+        # Populate the reverse cache so subsequent accesses see this object
+        clinic.compliance_settings = settings
+        return settings
+
+
+def update_clinic_compliance_settings(clinic, max_no_show_count, forgiveness_enabled, forgiveness_days):
+    """
+    Updates the clinic's compliance settings.
+
+    Maps user-facing parameter names to existing model fields:
+      max_no_show_count  → score_threshold_block
+      forgiveness_enabled → auto_forgive_enabled
+      forgiveness_days    → auto_forgive_after_days
+
+    Validates via model clean() before saving.
+    """
+    settings = get_clinic_compliance_settings(clinic)
+    settings.score_threshold_block = max_no_show_count
+    settings.auto_forgive_enabled = forgiveness_enabled
+    settings.auto_forgive_after_days = forgiveness_days if forgiveness_enabled else None
+    settings.save()  # triggers full_clean() via model override
+    return settings
+
+
+def should_block_patient(clinic, patient):
+    """
+    Returns True if the patient should be blocked at this clinic.
+    Delegates to the compliance service layer.
+    """
+    from compliance.services.compliance_service import is_patient_blocked
+    return is_patient_blocked(clinic, patient)
+
+
+def apply_auto_forgiveness(clinic):
+    """
+    Runs auto-forgiveness logic for a single clinic.
+    Only applies if the clinic has auto_forgive_enabled=True.
+    """
+    from compliance.services.compliance_service import run_auto_forgiveness as _run_all
+    from compliance.models import PatientClinicCompliance, ComplianceEvent
+    from django.utils import timezone as tz
+    from django.db import transaction as txn
+
+    settings = get_clinic_compliance_settings(clinic)
+    if not settings.auto_forgive_enabled or not settings.auto_forgive_after_days:
+        return
+
+    now = tz.now()
+    threshold_date = now - tz.timedelta(days=settings.auto_forgive_after_days)
+
+    with txn.atomic():
+        compliances = PatientClinicCompliance.objects.filter(
+            clinic=clinic,
+            bad_score__gt=0,
+            last_violation_at__lte=threshold_date,
+        )
+        for compliance in compliances:
+            old_score = compliance.bad_score
+            compliance.bad_score = 0
+            compliance.status = 'OK'
+            compliance.blocked_at = None
+            compliance.last_forgiven_at = now
+            compliance.save()
+
+            ComplianceEvent.objects.create(
+                clinic=clinic,
+                patient=compliance.patient,
+                event_type='AUTO_FORGIVENESS',
+                score_change=-old_score,
+                appointment=None,
+            )

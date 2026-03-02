@@ -25,4 +25,8 @@ urlpatterns = [
     path('settings/working-hours/create/', views.clinic_working_hours_create_view, name='working_hours_create'),
     path('settings/working-hours/<int:id>/update/', views.clinic_working_hours_update_view, name='working_hours_update'),
     path('settings/working-hours/<int:id>/delete/', views.clinic_working_hours_delete_view, name='working_hours_delete'),
+
+    # Compliance Settings
+    path('settings/compliance/', views.compliance_settings_view, name='compliance_settings'),
+    path('settings/compliance/update/', views.compliance_settings_update_view, name='compliance_settings_update'),
 ]

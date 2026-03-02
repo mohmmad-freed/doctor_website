@@ -73,3 +73,21 @@ class ClinicComplianceSettings(models.Model):
 
     def __str__(self):
         return f"Compliance Settings for {self.clinic.name}"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        super().clean()
+        if not self.auto_forgive_enabled:
+            if self.auto_forgive_after_days is not None:
+                raise ValidationError(
+                    "auto_forgive_after_days must be NULL when auto_forgive_enabled is False."
+                )
+        else:
+            if self.auto_forgive_after_days is None or self.auto_forgive_after_days <= 0:
+                raise ValidationError(
+                    "auto_forgive_after_days must be greater than 0 when auto_forgive_enabled is True."
+                )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)

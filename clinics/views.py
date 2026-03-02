@@ -354,3 +354,50 @@ def clinic_working_hours_delete_view(request, id):
         messages.success(request, "تم حذف ساعات العمل بنجاح.")
         
     return redirect("clinics:working_hours_list")
+
+
+# ============================================
+# CLINIC COMPLIANCE SETTINGS
+# ============================================
+from .services import get_clinic_compliance_settings, update_clinic_compliance_settings
+
+
+@login_required
+def compliance_settings_view(request):
+    """Display current compliance settings for the clinic owner."""
+    clinic = get_object_or_404(Clinic, main_doctor=request.user, is_active=True)
+    settings = get_clinic_compliance_settings(clinic)
+    return render(request, "clinics/compliance_settings.html", {
+        "clinic": clinic,
+        "settings": settings,
+    })
+
+
+@login_required
+def compliance_settings_update_view(request):
+    """Update compliance settings (POST only)."""
+    clinic = get_object_or_404(Clinic, main_doctor=request.user, is_active=True)
+
+    if request.method == "POST":
+        try:
+            max_no_show_count = int(request.POST.get("max_no_show_count", 3))
+            forgiveness_enabled = request.POST.get("forgiveness_enabled") == "on"
+            forgiveness_days_raw = request.POST.get("forgiveness_days")
+            forgiveness_days = int(forgiveness_days_raw) if forgiveness_days_raw and forgiveness_enabled else None
+
+            update_clinic_compliance_settings(
+                clinic=clinic,
+                max_no_show_count=max_no_show_count,
+                forgiveness_enabled=forgiveness_enabled,
+                forgiveness_days=forgiveness_days,
+            )
+            messages.success(request, "تم تحديث إعدادات الامتثال بنجاح.")
+        except Exception as e:
+            err_msg = str(e)
+            if hasattr(e, 'message_dict'):
+                err_msg = " ".join([f"{k}: {', '.join(v)}" for k, v in e.message_dict.items()])
+            elif hasattr(e, 'messages'):
+                err_msg = " ".join(e.messages)
+            messages.error(request, f"خطأ: {err_msg}")
+
+    return redirect("clinics:compliance_settings")
