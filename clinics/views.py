@@ -68,8 +68,97 @@ def remove_staff(request, clinic_id, staff_id):
 
 
 # ============================================
+# CLINIC INVITATIONS FLOW
+# ============================================
+
+from .models import ClinicInvitation
+from .forms import ClinicInvitationForm, SecretaryInvitationForm
+from .services import create_invitation, cancel_invitation
+
+@login_required
+def invitations_list(request, clinic_id):
+    clinic = get_owner_clinic_or_404(request, clinic_id)
+    invitations = ClinicInvitation.objects.filter(clinic=clinic).select_related('invited_by').prefetch_related('specialties').order_by('-created_at')
+    
+    return render(request, "clinics/invitations_list.html", {
+        "clinic": clinic,
+        "invitations": invitations,
+    })
+
+
+@login_required
+def create_invitation_view(request, clinic_id):
+    clinic = get_owner_clinic_or_404(request, clinic_id)
+    
+    if request.method == "POST":
+        form = ClinicInvitationForm(request.POST)
+        if form.is_valid():
+            try:
+                create_invitation(clinic, request.user, form.cleaned_data)
+                messages.success(request, "تم إرسال الدعوة بنجاح.")
+                return redirect(reverse("clinics:invitations_list", kwargs={"clinic_id": clinic_id}))
+            except Exception as e:
+                err_msg = str(e)
+                if hasattr(e, 'messages'):
+                    err_msg = " ".join(e.messages)
+                messages.error(request, f"خطأ: {err_msg}")
+    else:
+        form = ClinicInvitationForm()
+
+    return render(request, "clinics/create_invitation.html", {
+        "clinic": clinic,
+        "form": form,
+    })
+
+
+@login_required
+def create_secretary_invitation_view(request, clinic_id):
+    clinic = get_owner_clinic_or_404(request, clinic_id)
+    
+    if request.method == "POST":
+        form = SecretaryInvitationForm(request.POST)
+        if form.is_valid():
+            try:
+                create_invitation(clinic, request.user, form.cleaned_data, role="SECRETARY")
+                messages.success(request, "تم إرسال دعوة السكرتير/ة بنجاح.")
+                return redirect(reverse("clinics:invitations_list", kwargs={"clinic_id": clinic_id}))
+            except Exception as e:
+                err_msg = str(e)
+                if hasattr(e, 'messages'):
+                    err_msg = " ".join(e.messages)
+                messages.error(request, f"خطأ: {err_msg}")
+    else:
+        form = SecretaryInvitationForm()
+
+    return render(request, "clinics/create_secretary_invitation.html", {
+        "clinic": clinic,
+        "form": form,
+    })
+
+
+@login_required
+def cancel_invitation_view(request, clinic_id, invitation_id):
+    clinic = get_owner_clinic_or_404(request, clinic_id)
+    invitation = get_object_or_404(ClinicInvitation, id=invitation_id, clinic=clinic)
+    
+    if request.method == "POST":
+        try:
+            cancel_invitation(invitation, request.user)
+            messages.success(request, "تم إلغاء الدعوة بنجاح.")
+        except Exception as e:
+            err_msg = str(e)
+            if hasattr(e, 'messages'):
+                err_msg = " ".join(e.messages)
+            messages.error(request, f"خطأ: {err_msg}")
+
+    # Redirecting back to invitations list since this might be an HTMX call or normal POST
+    return redirect(reverse("clinics:invitations_list", kwargs={"clinic_id": clinic_id}))
+
+
+# ============================================
 # CLINIC CHANNEL VERIFICATION FLOW
 # ============================================
+
 
 def _activate_clinic_if_ready(clinic, verification):
     """Set clinic status to ACTIVE when all required channels are verified."""

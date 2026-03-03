@@ -246,3 +246,212 @@ def apply_auto_forgiveness(clinic):
                 score_change=-old_score,
                 appointment=None,
             )
+
+# === Clinic Invitation Services ===
+
+from accounts.backends import PhoneNumberAuthBackend
+from accounts.models import CustomUser
+from doctors.models import DoctorProfile, DoctorSpecialty
+from accounts.services.tweetsms import send_sms
+from .models import ClinicInvitation
+
+def _normalize_phone_for_invite(phone_str):
+    phone = PhoneNumberAuthBackend.normalize_phone_number(phone_str)
+    if not PhoneNumberAuthBackend.is_valid_phone_number(phone):
+        raise ValidationError("رقم الهاتف غير صحيح. يجب أن يتكون من 10 أرقام ويبدأ بـ 059 أو 056.")
+    return phone
+
+
+def create_invitation(clinic, owner, data, role="DOCTOR"):
+    """
+    Creates a ClinicInvitation for a doctor or secretary.
+    Sends SMS if the user does not exist in the system yet.
+    """
+    if owner != clinic.main_doctor:
+        raise ValidationError("Only the main doctor can invite other staff.")
+
+    # 1. Enforce max doctors subscription limit if role is DOCTOR
+    if role == "DOCTOR":
+        current_doctors_count = ClinicStaff.objects.filter(
+            clinic=clinic, role__in=["MAIN_DOCTOR", "DOCTOR"]
+        ).count()
+    
+        subscription = clinic.subscription
+        if not subscription:
+            raise ValidationError("العيادة ليس لديها اشتراك نشط.")
+    
+        if current_doctors_count >= subscription.max_doctors:
+            raise ValidationError(f"لقد وصلت للحد الأقصى لعدد الأطباء ({subscription.max_doctors}) حسب اشتراكك.")
+
+    # Determine data keys conditionally
+    name_key = "secretary_name" if role == "SECRETARY" else "doctor_name"
+    phone_key = "secretary_phone" if role == "SECRETARY" else "doctor_phone"
+    email_key = "secretary_email" if role == "SECRETARY" else "doctor_email"
+
+    # 2. Normalize phone
+    raw_phone = data.get(phone_key, "")
+    normalized_phone = _normalize_phone_for_invite(raw_phone)
+
+    # 3. Check for existing pending invites for this exact phone
+    existing_invite = ClinicInvitation.objects.filter(
+        clinic=clinic, doctor_phone=normalized_phone, status="PENDING"
+    ).first()
+    if existing_invite:
+        if not existing_invite.is_expired:
+            raise ValidationError("يوجد دعوة معلقة بالفعل لهذا الرقم.")
+        else:
+            # Mark it expired so constraint isn't violated
+            existing_invite.status = "EXPIRED"
+            existing_invite.save()
+
+    # 4. Check if user is already staff
+    user_exists = CustomUser.objects.filter(phone=normalized_phone).first()
+    if user_exists and ClinicStaff.objects.filter(clinic=clinic, user=user_exists).exists():
+        if role == "SECRETARY":
+            raise ValidationError("هذا السكرتير/ة موجود بالفعل ضمن طاقم العيادة.")
+        else:
+            raise ValidationError("هذا الطبيب موجود بالفعل ضمن طاقم العيادة.")
+
+    # 5. Create Invitation
+    expires_at = timezone.now() + timezone.timedelta(hours=48)
+    invitation = ClinicInvitation.objects.create(
+        clinic=clinic,
+        invited_by=owner,
+        doctor_name=data.get(name_key, ""),
+        doctor_phone=normalized_phone,
+        doctor_email=data.get(email_key, ""),
+        role=role,
+        expires_at=expires_at,
+    )
+    # Set specialties only for doctors
+    if role == "DOCTOR":
+        specialties = data.get("specialties", [])
+        if specialties:
+            invitation.specialties.set(specialties)
+
+    # 6. Send SMS if user doesn't exist
+    if not user_exists:
+        try:
+            # We must use the specific TweetsMS normalization logic since it requires 970 prefix.
+            from accounts.otp_utils import _normalize_phone
+            sms_phone = _normalize_phone(normalized_phone)
+
+            # Build URL. In a real app we'd construct absolute uri. 
+            # We assume front-end handles the domain part or we do relative path messaging.
+            if role == "SECRETARY":
+                message = f"مرحباً {invitation.doctor_name}، تمت دعوتك للانضمام كـ سكرتير/ة في {clinic.name}. انقر هنا للقبول: clink.ps/invites/accept/{invitation.token}/"
+            else:
+                message = f"مرحباً د. {invitation.doctor_name}، تمت دعوتك للإنضمام إلى {clinic.name}. انقر هنا للقبول: clink.ps/invites/accept/{invitation.token}/"
+            
+            send_sms(sms_phone, message)
+        except Exception as e:
+            # Log it, but don't fail the whole transaction if SMS fails completely.
+            pass
+
+    return invitation
+
+@transaction.atomic
+def accept_invitation(invitation, user):
+    """
+    Accepts a pending invitation, linking the doctor to the clinic.
+    """
+    if invitation.status != "PENDING":
+        raise ValidationError("هذه الدعوة لم تعد صالحة.")
+    
+    if invitation.is_expired:
+        invitation.status = "EXPIRED"
+        invitation.save()
+        raise ValidationError("لقد انتهت صلاحية هذه الدعوة.")
+
+    normalized_user_phone = _normalize_phone_for_invite(user.phone)
+    if normalized_user_phone != invitation.doctor_phone:
+        raise ValidationError("لا تملك صلاحية قبول هذه الدعوة (رقم الهاتف غير متطابق).")
+
+    # Re-enforce subscription limit inside atomic transaction only for DOCTOR
+    if invitation.role == "DOCTOR":
+        subscription = invitation.clinic.subscription
+        current_doctors = ClinicStaff.objects.select_for_update().filter(
+            clinic=invitation.clinic, role__in=["MAIN_DOCTOR", "DOCTOR"]
+        ).count()
+    
+        if current_doctors >= subscription.max_doctors:
+            raise ValidationError(f"لقد وصلت العيادة للحد الأقصى لعدد الأطباء ({subscription.max_doctors}).")
+
+    # Ensure idempotency
+    staff, created = ClinicStaff.objects.get_or_create(
+        clinic=invitation.clinic,
+        user=user,
+        defaults={"role": invitation.role, "added_by": invitation.invited_by}
+    )
+
+    if not created and staff.role != invitation.role:
+        staff.role = invitation.role
+        staff.save()
+
+    # Handle DoctorProfile only if DOCTOR
+    if invitation.role == "DOCTOR":
+        profile, created_profile = DoctorProfile.objects.get_or_create(user=user)
+        
+        # Assign specialties if created profile or no primary specialty
+        invited_specialties = list(invitation.specialties.all())
+        if invited_specialties:
+            for i, specialty in enumerate(invited_specialties):
+                is_primary = (i == 0) # Make first one primary
+                
+                # Check if this specialty is already linked for this profile
+                existing_ds = DoctorSpecialty.objects.filter(
+                    doctor_profile=profile, specialty=specialty
+                ).first()
+    
+                if not existing_ds:
+                    # If creating a primary, but doctor already has a primary somewhere else, make it secondary.
+                    if is_primary:
+                        has_primary = DoctorSpecialty.objects.filter(
+                            doctor_profile=profile, is_primary=True
+                        ).exists()
+                        if has_primary:
+                            is_primary = False
+    
+                    DoctorSpecialty.objects.create(
+                        doctor_profile=profile,
+                        specialty=specialty,
+                        is_primary=is_primary
+                    )
+
+    # Update user roles if missing role
+    if invitation.role not in (user.roles or []):
+        roles = list(user.roles or [])
+        roles.append(invitation.role)
+        user.roles = roles
+        user.save(update_fields=["roles"])
+
+    invitation.status = "ACCEPTED"
+    invitation.save()
+
+    return staff
+
+
+def cancel_invitation(invitation, owner):
+    """Clinic owner cancels a pending invitation."""
+    if owner != invitation.clinic.main_doctor:
+        raise ValidationError("ليس لديك صلاحية لإلغاء هذه الدعوة.")
+    
+    if invitation.status != "PENDING":
+        raise ValidationError("لا يمكن إلغاء هذه الدعوة لأنها ليست معلقة.")
+        
+    invitation.status = "CANCELLED"
+    invitation.save()
+
+
+def reject_invitation(invitation, user):
+    """Invited user rejects a pending invitation."""
+    if invitation.status != "PENDING":
+        raise ValidationError("هذه الدعوة لم تعد صالحة.")
+        
+    normalized_user_phone = _normalize_phone_for_invite(user.phone)
+    if normalized_user_phone != invitation.doctor_phone:
+         raise ValidationError("لا تملك صلاحية لرفض هذه الدعوة.")
+         
+    invitation.status = "REJECTED"
+    invitation.save()
+

@@ -79,6 +79,77 @@ class ClinicStaff(models.Model):
         verbose_name_plural = "Clinic Staff"
 
 
+import uuid
+from django.utils import timezone
+
+class ClinicInvitation(models.Model):
+    """
+    Invitation for a doctor to join a clinic.
+    """
+    STATUS_CHOICES = [
+        ("PENDING", "Pending"),
+        ("ACCEPTED", "Accepted"),
+        ("REJECTED", "Rejected"),
+        ("EXPIRED", "Expired"),
+        ("CANCELLED", "Cancelled"),
+    ]
+
+    clinic = models.ForeignKey(
+        Clinic, on_delete=models.CASCADE, related_name="invitations"
+    )
+    invited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sent_invitations",
+    )
+    doctor_name = models.CharField(max_length=255)
+    doctor_phone = models.CharField(max_length=20, db_index=True)
+    doctor_email = models.EmailField()
+    specialties = models.ManyToManyField(
+        "doctors.Specialty",
+        blank=True,
+        related_name="invitations",
+    )
+    ROLE_CHOICES = [
+        ("DOCTOR", "Doctor"),
+        ("SECRETARY", "Secretary"),
+    ]
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="DOCTOR")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="PENDING")
+    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    expires_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Clinic Invitation"
+        verbose_name_plural = "Clinic Invitations"
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["clinic", "doctor_phone"],
+                condition=models.Q(status="PENDING"),
+                name="unique_pending_invitation",
+            )
+        ]
+
+    def __str__(self):
+        return f"Invite for {self.doctor_name} ({self.doctor_phone}) to {self.clinic.name} - {self.status}"
+
+    @property
+    def is_expired(self):
+        return timezone.now() > self.expires_at
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        super().clean()
+        if self.is_expired and self.status == "PENDING":
+             pass # Service logic should handle marking this EXPIRED
+
+
+
 class ClinicSubscription(models.Model):
     """Subscription plan bound to a clinic, seeded from the activation code."""
 

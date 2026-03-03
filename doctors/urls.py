@@ -24,6 +24,27 @@ urlpatterns = [
         views.doctor_appointment_types_view,
         name="doctor_appointment_types",
     ),
+    # --- Doctor Invitations Flow ---
+    path(
+        "invites/",
+        views.doctor_invitations_inbox,
+        name="doctor_invitations_inbox",
+    ),
+    path(
+        "invites/<int:invitation_id>/accept/",
+        views.accept_invitation_view,
+        name="accept_invitation",
+    ),
+    path(
+        "invites/<int:invitation_id>/reject/",
+        views.reject_invitation_view,
+        name="reject_invitation",
+    ),
+    path(
+        "invites/accept/<uuid:token>/",
+        views.guest_accept_invitation_view,
+        name="guest_accept_invitation",
+    ),
     # --- API Endpoints ---
     path(
         "api/specialties/",

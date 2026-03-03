@@ -80,3 +80,59 @@ class AddClinicDetailsForm(forms.Form):
         required=False,
         label="وصف العيادة",
     )
+
+from accounts.backends import PhoneNumberAuthBackend
+
+class ClinicInvitationForm(forms.Form):
+    doctor_name = forms.CharField(
+        max_length=255, 
+        label="اسم الطبيب",
+        widget=forms.TextInput(attrs={"placeholder": "ادخل اسم الطبيب", "class": "form-control"})
+    )
+    doctor_phone = forms.CharField(
+        max_length=20, 
+        label="رقم هاتف الطبيب",
+        widget=forms.TextInput(attrs={"placeholder": "059XXXXXXX", "class": "form-control"})
+    )
+    doctor_email = forms.EmailField(
+        label="البريد الإلكتروني للطبيب",
+        widget=forms.EmailInput(attrs={"placeholder": "doctor@example.com", "class": "form-control"})
+    )
+    specialties = forms.ModelMultipleChoiceField(
+        queryset=Specialty.objects.all(),
+        widget=forms.CheckboxSelectMultiple,
+        label="التخصصات الطبية",
+        required=False
+    )
+    
+    def clean_doctor_phone(self):
+        phone = self.cleaned_data.get("doctor_phone", "").strip()
+        phone = PhoneNumberAuthBackend.normalize_phone_number(phone)
+        if not PhoneNumberAuthBackend.is_valid_phone_number(phone):
+             raise forms.ValidationError("رقم الهاتف غير صحيح. يجب أن يتكون من 10 أرقام ويبدأ بـ 059 أو 056.")
+        return phone
+
+
+class SecretaryInvitationForm(forms.Form):
+    secretary_name = forms.CharField(
+        max_length=255, 
+        label="اسم السكرتير/ة",
+        widget=forms.TextInput(attrs={"placeholder": "ادخل اسم السكرتير أو الاستقبال", "class": "form-control"})
+    )
+    secretary_phone = forms.CharField(
+        max_length=20, 
+        label="رقم هاتف السكرتير/ة",
+        widget=forms.TextInput(attrs={"placeholder": "059XXXXXXX", "class": "form-control"})
+    )
+    secretary_email = forms.EmailField(
+        label="البريد الإلكتروني للسكرتير/ة",
+        widget=forms.EmailInput(attrs={"placeholder": "secretary@example.com", "class": "form-control"})
+    )
+    
+    def clean_secretary_phone(self):
+        phone = self.cleaned_data.get("secretary_phone", "").strip()
+        phone = PhoneNumberAuthBackend.normalize_phone_number(phone)
+        if not PhoneNumberAuthBackend.is_valid_phone_number(phone):
+             raise forms.ValidationError("رقم الهاتف غير صحيح. يجب أن يتكون من 10 أرقام ويبدأ بـ 059 أو 056.")
+        return phone
+

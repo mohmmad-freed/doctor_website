@@ -1,0 +1,87 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}دعوات الانضمام - الأطباء{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-10 offset-md-1">
+        <h2 class="mb-4">
+            <i class="fas fa-envelope-open-text me-2 text-primary"></i> دعوات الانضمام للعيادات
+        </h2>
+
+        <div class="card shadow-sm">
+            <div class="card-body p-0">
+                {% if invitations %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>العيادة</th>
+                                    <th>المرسل</th>
+                                    <th>التخصصات المطلوبة</th>
+                                    <th>تاريخ الدعوة</th>
+                                    <th class="text-center">الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for inv in invitations %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ inv.clinic.name }}</strong><br>
+                                        <small class="text-muted"><i class="fas fa-map-marker-alt"></i> {{ inv.clinic.city.name|default:"-" }}</small>
+                                    </td>
+                                    <td>
+                                        {{ inv.invited_by.name }}
+                                        {% if inv.invited_by.phone %}
+                                        <br><small class="text-muted" dir="ltr">{{ inv.invited_by.phone }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% for spec in inv.specialties.all %}
+                                            <span class="badge bg-secondary">{{ spec.name }}</span>
+                                        {% empty %}
+                                            <span class="text-muted">-</span>
+                                        {% endfor %}
+                                    </td>
+                                    <td>
+                                        <span title="{{ inv.created_at|date:'Y-m-d H:i' }}">
+                                            {{ inv.created_at|timesince }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if not inv.is_expired %}
+                                        <div class="d-flex justify-content-center gap-2">
+                                            <form method="post" action="{% url 'doctors:accept_invitation' inv.id %}">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-success" title="قبول والانضمام">
+                                                    <i class="fas fa-check"></i> قبول
+                                                </button>
+                                            </form>
+                                            <form method="post" action="{% url 'doctors:reject_invitation' inv.id %}" onsubmit="return confirm('هل أنت متأكد من الرفض؟');">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="رفض الدعوة">
+                                                    <i class="fas fa-times"></i> رفض
+                                                </button>
+                                            </form>
+                                        </div>
+                                        {% else %}
+                                            <span class="badge bg-danger">منتهية الصلاحية</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center p-5 text-muted">
+                        <i class="fas fa-inbox fa-3x mb-3 text-light"></i>
+                        <h5>لا توجد دعوات معلقة</h5>
+                        <p>ليس لديك أي دعوات جديدة للانضمام للعيادات حالياً.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

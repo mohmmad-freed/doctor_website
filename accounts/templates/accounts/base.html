@@ -130,6 +130,12 @@
             <i class="fa-solid fa-cubes"></i>
             <span class="text">لوحة التحكم</span>
         </a>
+        {% if "DOCTOR" in user.roles or "MAIN_DOCTOR" in user.roles %}
+        <a href="{% url 'doctors:doctor_invitations_inbox' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'doctor_invitations_inbox' %}active{% endif %}">
+            <i class="fa-solid fa-envelope-open-text"></i>
+            <span class="text">الدعوات</span>
+        </a>
+        {% endif %}
         {% else %}
         <a href="{% url 'accounts:login' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'login' %}active{% endif %}">
             <i class="fa-solid fa-right-to-bracket"></i>

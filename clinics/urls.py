@@ -20,7 +20,14 @@ urlpatterns = [
     path('<int:clinic_id>/staff/add/', views.add_staff, name='add_staff'),
     path('<int:clinic_id>/staff/<int:staff_id>/remove/', views.remove_staff, name='remove_staff'),
 
+    # Clinic Invitations
+    path('<int:clinic_id>/invitations/', views.invitations_list, name='invitations_list'),
+    path('<int:clinic_id>/invitations/create/', views.create_invitation_view, name='create_invitation'),
+    path('<int:clinic_id>/invitations/create-secretary/', views.create_secretary_invitation_view, name='create_secretary_invitation'),
+    path('<int:clinic_id>/invitations/<int:invitation_id>/cancel/', views.cancel_invitation_view, name='cancel_invitation'),
+
     # 4-step post-signup verification flow
+
     path('<int:clinic_id>/verify/owner-phone/', views.verify_owner_phone, name='verify_owner_phone'),
     path('<int:clinic_id>/verify/owner-email/', views.verify_owner_email, name='verify_owner_email'),
     path('<int:clinic_id>/verify/clinic-phone/', views.verify_clinic_phone, name='verify_clinic_phone'),

@@ -1,0 +1,38 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}دعوة غير صالحة - السكرتارية{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 offset-md-3 text-center mt-5">
+        <div class="card shadow-sm border-0 bg-light">
+            <div class="card-body p-5">
+                <i class="fas fa-exclamation-triangle fa-5x text-warning mb-4"></i>
+                <h3 class="mb-3">عذراً، هذه الدعوة غير صالحة</h3>
+                
+                <p class="lead text-muted mb-4">
+                    {{ error|default:"رابط الدعوة غير صالح أو انتهت صلاحيته." }}
+                </p>
+                
+                <hr class="mb-4">
+                
+                <p class="text-muted">
+                    إذا كنت تعتقد أن هذا خطأ، يرجى التواصل مع مالك العيادة لإرسال دعوة جديدة.
+                </p>
+                
+                <div class="mt-4">
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'accounts:home' %}" class="btn btn-primary">
+                            <i class="fas fa-home me-2"></i> العودة للرئيسية
+                        </a>
+                    {% else %}
+                        <a href="{% url 'accounts:login' %}" class="btn btn-primary">
+                            <i class="fas fa-sign-in-alt me-2"></i> تسجيل الدخول
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,85 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}صندوق دعوات الانضمام - السكرتارية{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-10 offset-md-1">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="mb-0">دعوات الانضمام الواردة</h2>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body p-0">
+                {% if invitations %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>العيادة</th>
+                                    <th>المرسل</th>
+                                    <th>تاريخ الدعوة</th>
+                                    <th>الدور</th>
+                                    <th class="text-end">الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for inv in invitations %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-3">
+                                                    <i class="fas fa-clinic-medical text-primary"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="fw-bold">{{ inv.clinic.name }}</div>
+                                                    {% if inv.clinic.city %}
+                                                        <small class="text-muted">{{ inv.clinic.city.name }}</small>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>{{ inv.invited_by.name }}</td>
+                                        <td>
+                                            <span title="{{ inv.created_at|date:'Y-m-d H:i' }}">
+                                                {{ inv.created_at|timesince }} مضت
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info text-dark">سكرتير/ة</span>
+                                        </td>
+                                        <td class="text-end">
+                                            <div class="d-flex justify-content-end gap-2">
+                                                <form action="{% url 'secretary:accept_invitation' inv.id %}" method="post" class="d-inline">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-success">
+                                                        <i class="fas fa-check me-1"></i> قبول
+                                                    </button>
+                                                </form>
+                                                <form action="{% url 'secretary:reject_invitation' inv.id %}" method="post" class="d-inline" onsubmit="return confirm('هل أنت متأكد من رفض هذه الدعوة؟');">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                        <i class="fas fa-times me-1"></i> رفض
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <div class="text-muted mb-3">
+                            <i class="fas fa-envelope-open fa-3x"></i>
+                        </div>
+                        <h5 class="text-muted">لا توجد دعوات انضمام جديدة</h5>
+                        <p class="text-muted mb-0">عندما يتم دعوتك كـ سكرتير/ة لأي عيادة، ستظهر الدعوة هنا.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
