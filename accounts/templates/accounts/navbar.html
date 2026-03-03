@@ -1,4 +1,85 @@
 {% load static %}
+<style>
+    .clinic-switcher {
+        position: relative;
+    }
+    .clinic-switcher-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: var(--color-surface-card, #fff);
+        border: 1.5px solid var(--color-surface-border, #e5e7eb);
+        border-radius: 8px;
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: var(--color-text-main, #111827);
+        cursor: pointer;
+        transition: border-color 0.15s;
+        white-space: nowrap;
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-family: inherit;
+    }
+    .clinic-switcher-btn:hover,
+    .clinic-switcher.open .clinic-switcher-btn {
+        border-color: var(--color-primary-500, #2563eb);
+        color: var(--color-primary-500, #2563eb);
+    }
+    .clinic-switcher-btn .chevron {
+        font-size: 0.7rem;
+        transition: transform 0.2s;
+        flex-shrink: 0;
+    }
+    .clinic-switcher.open .clinic-switcher-btn .chevron {
+        transform: rotate(180deg);
+    }
+    .clinic-switcher-dropdown {
+        display: none;
+        position: absolute;
+        top: calc(100% + 6px);
+        right: 0;
+        min-width: 220px;
+        background: var(--color-surface-card, #fff);
+        border: 1px solid var(--color-surface-border, #e5e7eb);
+        border-radius: 10px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+        z-index: 500;
+        overflow: hidden;
+    }
+    .clinic-switcher.open .clinic-switcher-dropdown {
+        display: block;
+    }
+    .clinic-switcher-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        text-decoration: none;
+        color: var(--color-text-body, #374151);
+        font-size: 0.88rem;
+        font-weight: 500;
+        transition: background 0.1s;
+    }
+    .clinic-switcher-item:hover {
+        background: var(--color-surface-ground, #f9fafb);
+        color: var(--color-text-main, #111827);
+    }
+    .clinic-switcher-item.current {
+        color: var(--color-primary-500, #2563eb);
+        font-weight: 700;
+        background: rgba(37, 99, 235, 0.06);
+    }
+    .clinic-switcher-item .check-icon {
+        margin-right: auto;
+        font-size: 0.8rem;
+    }
+    [data-theme="dark"] .clinic-switcher-item.current {
+        background: rgba(59, 143, 217, 0.12);
+    }
+</style>
+
 <nav class="navbar">
     <div class="container navbar-container">
         <a href="{% url 'accounts:landing' %}" class="navbar-brand">
@@ -34,6 +115,33 @@
             </button>
 
             {% if user.is_authenticated %}
+
+            {# Clinic switcher — only shown when owner has 2+ clinics #}
+            {% if request.resolver_match.namespace == 'clinics' and owned_clinics|length > 1 %}
+            <div class="clinic-switcher" id="clinicSwitcher">
+                <button class="clinic-switcher-btn"
+                        onclick="document.getElementById('clinicSwitcher').classList.toggle('open')">
+                    <i class="fa-solid fa-hospital" style="font-size:0.85rem;flex-shrink:0;"></i>
+                    <span style="overflow:hidden;text-overflow:ellipsis;">
+                        {{ selected_clinic.name|default:"اختر العيادة" }}
+                    </span>
+                    <i class="fa-solid fa-chevron-down chevron"></i>
+                </button>
+                <div class="clinic-switcher-dropdown">
+                    {% for c in owned_clinics %}
+                    <a href="{% url 'clinics:switch_clinic' clinic_id=c.id %}"
+                       class="clinic-switcher-item {% if selected_clinic.id == c.id %}current{% endif %}">
+                        <i class="fa-solid fa-hospital-user" style="font-size:0.85rem;flex-shrink:0;"></i>
+                        {{ c.name }}
+                        {% if selected_clinic.id == c.id %}
+                        <i class="fa-solid fa-check check-icon"></i>
+                        {% endif %}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             {% if request.resolver_match.namespace != 'clinics' %}
             <a href="{% url 'accounts:home' %}" class="btn btn-primary">
                 لوحة التحكم
@@ -50,3 +158,13 @@
         </div>
     </div>
 </nav>
+
+<script>
+// Close clinic switcher dropdown when clicking outside
+document.addEventListener('click', function (e) {
+    var sw = document.getElementById('clinicSwitcher');
+    if (sw && !sw.contains(e.target)) {
+        sw.classList.remove('open');
+    }
+});
+</script>

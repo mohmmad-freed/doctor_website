@@ -5,77 +5,128 @@
 
 {% block extra_css %}
 <style>
-    .bg-white { background-color: white; }
-    .shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
-    .rounded-lg { border-radius: 0.5rem; }
-    .p-6 { padding: 1.5rem; }
-    .mb-6 { margin-bottom: 1.5rem; }
-    .flex { display: flex; }
-    .justify-between { justify-content: space-between; }
-    .items-center { align-items: center; }
-    .text-2xl { font-size: 1.5rem; }
-    .font-bold { font-weight: 700; }
-    .text-gray-800 { color: #1f2937; }
-    .text-gray-500 { color: #6b7280; }
-    .mt-1 { margin-top: 0.25rem; }
-    .ml-2 { margin-left: 0.5rem; }
-    .btn-primary {
-        background-color: #2563eb;
-        color: white;
-        padding: 0.5rem 1.5rem;
-        border-radius: 0.375rem;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        border: none;
-        cursor: pointer;
-        font-size: 1rem;
+    .page-wrapper {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
     }
-    .btn-primary:hover { background-color: #1d4ed8; }
+
+    .page-card {
+        background: var(--color-surface-card);
+        border: 1px solid var(--color-surface-border);
+        border-radius: 10px;
+        padding: 1.4rem 1.6rem;
+        margin-bottom: 1.25rem;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+
+    .page-card h1 {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--color-text-main);
+        margin: 0 0 0.2rem;
+    }
+
+    .page-card > p {
+        color: var(--color-text-muted);
+        font-size: 0.9rem;
+        margin: 0;
+    }
+
+    .settings-card {
+        max-width: 600px;
+    }
 
     .form-group { margin-bottom: 1.25rem; }
-    .form-label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; }
+
+    .form-label {
+        display: block;
+        margin-bottom: 0.45rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--color-text-main);
+    }
+
     .form-control {
         width: 100%;
-        padding: 0.5rem;
-        border: 1px solid #d1d5db;
-        border-radius: 0.375rem;
+        padding: 0.6rem 0.85rem;
+        border: 1.5px solid var(--color-surface-border);
+        border-radius: 8px;
+        font-size: 0.95rem;
+        font-family: inherit;
+        background: var(--color-surface-ground);
+        color: var(--color-text-main);
         box-sizing: border-box;
-        font-size: 1rem;
+        transition: border-color 0.15s;
     }
-    .form-hint { font-size: 0.85rem; color: #6b7280; margin-top: 0.25rem; }
-    .checkbox-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; margin-bottom: 1.25rem; }
-    .settings-card { max-width: 600px; }
+    .form-control:focus {
+        outline: none;
+        border-color: var(--color-primary-500);
+        box-shadow: 0 0 0 3px rgba(0,120,212,0.12);
+    }
+
+    .form-hint {
+        font-size: 0.82rem;
+        color: var(--color-text-muted);
+        margin-top: 0.3rem;
+    }
+
+    .checkbox-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0.75rem 0 1.25rem;
+    }
+    .checkbox-row label {
+        font-weight: 500;
+        color: var(--color-text-main);
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
+    .checkbox-row input { accent-color: var(--color-primary-500); cursor: pointer; }
+
+    .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: var(--color-primary-500);
+        color: #fff;
+        padding: 0.65rem 1.4rem;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        font-weight: 700;
+        border: none;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+    .btn-primary:hover { background: var(--color-primary-600); }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container" style="max-width: 1200px; margin: 0 auto; padding: 2rem 1rem;">
+<div class="page-wrapper">
+
     <!-- Header -->
-    <div class="bg-white shadow-sm rounded-lg p-6 mb-6">
-        <h1 class="text-2xl font-bold text-gray-800">
-            <i class="fa-solid fa-shield-halved text-blue-600 ml-2"></i>إعدادات الامتثال
+    <div class="page-card">
+        <h1>
+            <i class="fa-solid fa-shield-halved" style="color:var(--color-primary-500);margin-left:0.4rem;"></i>إعدادات الامتثال
         </h1>
-        <p class="text-gray-500 mt-1">تحكم في عدد حالات عدم الحضور المسموحة وإعدادات المسامحة التلقائية.</p>
+        <p>تحكم في عدد حالات عدم الحضور المسموحة وإعدادات المسامحة التلقائية.</p>
+        <a href="{% url 'clinics:my_clinic' clinic_id=clinic.id %}"
+           style="font-size:0.82rem;color:var(--color-text-muted);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-top:6px;">
+            <i class="fa-solid fa-arrow-right"></i> العودة إلى لوحة التحكم
+        </a>
     </div>
 
-    <!-- Messages -->
-    {% if messages %}
-        {% for message in messages %}
-            <div class="p-4 mb-4 rounded-lg" style="padding: 1rem; margin-bottom: 1rem; border-radius: 0.5rem; {% if message.tags == 'error' %}background-color: #fee2e2; color: #b91c1c;{% else %}background-color: #dcfce7; color: #15803d;{% endif %}">
-                {{ message }}
-            </div>
-        {% endfor %}
-    {% endif %}
-
     <!-- Settings Form -->
-    <div class="bg-white shadow-sm rounded-lg p-6 settings-card">
+    <div class="page-card settings-card">
         <form method="post" action="{% url 'clinics:compliance_settings_update' clinic_id=clinic.id %}">
             {% csrf_token %}
 
             <div class="form-group">
-                <label class="form-label" for="id_max_no_show_count">الحد الأقصى لعدد مرات عدم الحضور قبل الحظر</label>
+                <label class="form-label" for="id_max_no_show_count">
+                    الحد الأقصى لعدد مرات عدم الحضور قبل الحظر
+                </label>
                 <input type="number"
                        name="max_no_show_count"
                        id="id_max_no_show_count"
@@ -92,10 +143,10 @@
                        id="id_forgiveness_enabled"
                        {% if settings.auto_forgive_enabled %}checked{% endif %}
                        onchange="toggleForgivenessFields()">
-                <label for="id_forgiveness_enabled" style="font-weight: 500; cursor: pointer;">تفعيل المسامحة التلقائية</label>
+                <label for="id_forgiveness_enabled">تفعيل المسامحة التلقائية</label>
             </div>
 
-            <div id="forgiveness_fields" style="{% if not settings.auto_forgive_enabled %}display: none;{% endif %}">
+            <div id="forgiveness_fields" style="{% if not settings.auto_forgive_enabled %}display:none;{% endif %}">
                 <div class="form-group">
                     <label class="form-label" for="id_forgiveness_days">مدة المسامحة (بالأيام)</label>
                     <input type="number"
@@ -110,7 +161,7 @@
 
             <div style="margin-top: 1.5rem;">
                 <button type="submit" class="btn-primary">
-                    <i class="fa-solid fa-save"></i> حفظ الإعدادات
+                    <i class="fa-solid fa-floppy-disk"></i> حفظ الإعدادات
                 </button>
             </div>
         </form>

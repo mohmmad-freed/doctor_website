@@ -11,6 +11,9 @@ urlpatterns = [
     path('add/', views.add_clinic_code_view, name='add_clinic_code'),
     path('add/details/', views.add_clinic_details_view, name='add_clinic_details'),
 
+    # Clinic switching — sets selected clinic in session, redirects to its dashboard
+    path('switch/<int:clinic_id>/', views.switch_clinic, name='switch_clinic'),
+
     # Per-clinic dashboard and management (all require clinic_id)
     path('<int:clinic_id>/', views.my_clinic, name='my_clinic'),
     path('<int:clinic_id>/staff/', views.manage_staff, name='manage_staff'),

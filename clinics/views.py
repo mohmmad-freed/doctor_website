@@ -33,11 +33,20 @@ def my_clinics(request):
 @login_required
 def my_clinic(request, clinic_id):
     clinic = get_owner_clinic_or_404(request, clinic_id)
+    request.session["selected_clinic_id"] = clinic.id
     subscription = getattr(clinic, "subscription", None)
     return render(request, "clinics/my_clinic.html", {
         "clinic": clinic,
         "subscription": subscription,
     })
+
+
+@login_required
+def switch_clinic(request, clinic_id):
+    """Set the active clinic in session and redirect to its dashboard."""
+    clinic = get_owner_clinic_or_404(request, clinic_id)
+    request.session["selected_clinic_id"] = clinic.id
+    return redirect(reverse("clinics:my_clinic", kwargs={"clinic_id": clinic.id}))
 
 
 @login_required

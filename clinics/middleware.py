@@ -78,7 +78,25 @@ class ClinicIsolationMiddleware:
 
             try:
                 if role == "MAIN_DOCTOR":
-                    clinic = user.owned_clinic.first()
+                    from clinics.models import Clinic
+
+                    # Prefer the clinic explicitly in the URL, then session, then first owned
+                    url_clinic_id = (
+                        request.resolver_match.kwargs.get("clinic_id")
+                        if request.resolver_match else None
+                    )
+                    if url_clinic_id:
+                        clinic = Clinic.objects.filter(
+                            id=url_clinic_id, main_doctor=user, is_active=True
+                        ).first()
+                    if not clinic:
+                        session_clinic_id = request.session.get("selected_clinic_id")
+                        if session_clinic_id:
+                            clinic = Clinic.objects.filter(
+                                id=session_clinic_id, main_doctor=user, is_active=True
+                            ).first()
+                    if not clinic:
+                        clinic = user.owned_clinic.first()
 
                 elif role in ["DOCTOR", "SECRETARY"]:
                     from clinics.models import ClinicStaff

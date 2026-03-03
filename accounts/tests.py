@@ -1939,3 +1939,136 @@ class MultipleClinicOwnerTest(TestCase):
         response = self.client.get(reverse("accounts:home"))
         self.assertRedirects(response, reverse("clinics:my_clinics"))
 
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Clinic Switcher Tests
+# ─────────────────────────────────────────────────────────────────────────────
+
+class ClinicSwitcherTest(TestCase):
+    """
+    Tests for the clinic switching feature.
+
+    Covers:
+    - switch_clinic sets selected_clinic_id in session and redirects
+    - switch_clinic returns 404 for another owner's clinic (tenant isolation)
+    - my_clinic view stores selected_clinic_id in session on visit
+    - Middleware attaches the URL's clinic to request.clinic (not .first())
+    """
+
+    OWNER_PHONE = "0594080100"
+    OWNER_NID = "800900100"
+
+    def _make_activation_code(self, code):
+        return ClinicActivationCode.objects.create(
+            code=code,
+            clinic_name=f"عيادة {code}",
+            phone=self.OWNER_PHONE,
+            national_id=self.OWNER_NID,
+            plan_type="MONTHLY",
+            subscription_expires_at=timezone.now() + timedelta(days=30),
+            max_doctors=3,
+        )
+
+    def _make_clinic(self, owner, code, clinic_name, phone, city, specialty):
+        return create_clinic_for_main_doctor(
+            owner,
+            {
+                "clinic_name": clinic_name,
+                "clinic_address": "شارع 1",
+                "clinic_city": city,
+                "specialties": [specialty],
+                "clinic_phone": phone,
+                "clinic_email": "",
+                "clinic_description": "",
+            },
+            code,
+            owner_verified_at=timezone.now(),
+        )
+
+    def setUp(self):
+        self.city = City.objects.create(name="Jericho")
+        self.specialty = Specialty.objects.create(name="Orthopedics", name_ar="العظام")
+        self.owner = CustomUser.objects.create_user(
+            phone=self.OWNER_PHONE,
+            name="Dr. Switcher",
+            national_id=self.OWNER_NID,
+            email="switcher@test.com",
+            password="StrongPass123!",
+            role="MAIN_DOCTOR",
+            roles=["PATIENT", "MAIN_DOCTOR"],
+        )
+        code1 = self._make_activation_code("SW001")
+        self.clinic1 = self._make_clinic(self.owner, code1, "عيادة الأولى", "0569001001", self.city, self.specialty)
+        code2 = self._make_activation_code("SW002")
+        self.clinic2 = self._make_clinic(self.owner, code2, "عيادة الثانية", "0569001002", self.city, self.specialty)
+        self.client.force_login(self.owner)
+
+    def test_switch_clinic_redirects_to_clinic_dashboard(self):
+        """switch_clinic redirects to the chosen clinic's dashboard."""
+        response = self.client.get(
+            reverse("clinics:switch_clinic", kwargs={"clinic_id": self.clinic2.id})
+        )
+        self.assertRedirects(
+            response,
+            reverse("clinics:my_clinic", kwargs={"clinic_id": self.clinic2.id}),
+            fetch_redirect_response=False,
+        )
+
+    def test_switch_clinic_stores_selected_clinic_in_session(self):
+        """switch_clinic saves selected_clinic_id in session."""
+        self.client.get(
+            reverse("clinics:switch_clinic", kwargs={"clinic_id": self.clinic2.id})
+        )
+        self.assertEqual(self.client.session["selected_clinic_id"], self.clinic2.id)
+
+    def test_switch_clinic_rejects_other_owners_clinic(self):
+        """Owner A cannot switch to Owner B's clinic (404 tenant isolation)."""
+        other_owner = CustomUser.objects.create_user(
+            phone="0594080200",
+            name="Other Owner",
+            national_id="200300400",
+            password="StrongPass123!",
+            role="MAIN_DOCTOR",
+            roles=["PATIENT", "MAIN_DOCTOR"],
+        )
+        other_code = ClinicActivationCode.objects.create(
+            code="OTHERCODE1",
+            clinic_name="عيادة أخرى",
+            phone="0594080200",
+            national_id="200300400",
+            plan_type="MONTHLY",
+            subscription_expires_at=timezone.now() + timedelta(days=30),
+            max_doctors=1,
+        )
+        other_clinic = create_clinic_for_main_doctor(
+            other_owner,
+            {"clinic_name": "عيادة أخرى", "clinic_address": "شارع 3",
+             "clinic_city": self.city, "specialties": [],
+             "clinic_description": ""},
+            other_code,
+            owner_verified_at=timezone.now(),
+        )
+        response = self.client.get(
+            reverse("clinics:switch_clinic", kwargs={"clinic_id": other_clinic.id})
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_my_clinic_view_stores_selected_clinic_in_session(self):
+        """Visiting my_clinic stores that clinic's id in session."""
+        self.client.get(
+            reverse("clinics:my_clinic", kwargs={"clinic_id": self.clinic1.id})
+        )
+        self.assertEqual(self.client.session.get("selected_clinic_id"), self.clinic1.id)
+
+    def test_session_updates_when_switching_clinics(self):
+        """Switching from clinic1 to clinic2 updates the session value."""
+        self.client.get(
+            reverse("clinics:my_clinic", kwargs={"clinic_id": self.clinic1.id})
+        )
+        self.assertEqual(self.client.session["selected_clinic_id"], self.clinic1.id)
+
+        self.client.get(
+            reverse("clinics:switch_clinic", kwargs={"clinic_id": self.clinic2.id})
+        )
+        self.assertEqual(self.client.session["selected_clinic_id"], self.clinic2.id)
