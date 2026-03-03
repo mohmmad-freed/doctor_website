@@ -65,13 +65,14 @@ def home_redirect(request):
 
     # 1. Clinic owner — owns at least one clinic
     if Clinic.objects.filter(main_doctor=user).exists():
-        clinic = Clinic.objects.filter(main_doctor=user).first()
-        verification = getattr(clinic, "verification", None)
-        if verification:
-            next_step = verification.next_pending_step()
-            if next_step:
-                return redirect(next_step)
-        return redirect("clinics:my_clinic")
+        # If any clinic has pending verification, send there first
+        for clinic in Clinic.objects.filter(main_doctor=user, is_active=True):
+            verification = getattr(clinic, "verification", None)
+            if verification:
+                next_step = verification.next_pending_step(clinic.id)
+                if next_step:
+                    return redirect(next_step)
+        return redirect("clinics:my_clinics")
 
     # 2. Doctor — has a doctor profile
     if hasattr(user, "doctor_profile"):
@@ -464,7 +465,8 @@ def register_main_doctor(request):
                 # once with proper styling (avoids base.html's messages area)
                 request.session["clinic_welcome_name"] = user.name
 
-                return redirect("clinics:verify_owner_phone")
+                from django.urls import reverse
+                return redirect(reverse("clinics:verify_owner_phone", kwargs={"clinic_id": clinic.id}))
 
             except Exception as e:
                 messages.error(
@@ -789,7 +791,7 @@ def register_clinic_verify_email(request):
                 )
 
                 # 5. Create clinic + all related records (ACTIVE, both channels verified).
-                create_clinic_for_main_doctor(
+                clinic = create_clinic_for_main_doctor(
                     user=user,
                     cleaned_data={
                         "clinic_name": reg["clinic_name"],
@@ -797,6 +799,8 @@ def register_clinic_verify_email(request):
                         "clinic_city": city,
                         "specialties": specialties,
                         "clinic_description": reg.get("clinic_description", ""),
+                        "clinic_phone": reg.get("clinic_phone", ""),
+                        "clinic_email": reg.get("clinic_email", ""),
                     },
                     activation_code_obj=activation_code_obj,
                     owner_verified_at=now,
@@ -807,7 +811,7 @@ def register_clinic_verify_email(request):
 
             login(request, user, backend="accounts.backends.PhoneNumberAuthBackend")
             messages.success(request, f"مرحباً {user.name}! تم إنشاء عيادتك بنجاح.")
-            return redirect("clinics:my_clinic")
+            return redirect("clinics:my_clinics")
 
         except ClinicActivationCode.DoesNotExist:
             messages.error(

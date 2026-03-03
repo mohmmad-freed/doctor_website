@@ -23,6 +23,10 @@ def create_clinic_for_main_doctor(user, cleaned_data, activation_code_obj, owner
 
     Returns the newly created Clinic instance.
     """
+    if activation_code_obj.is_used:
+        from django.core.exceptions import ValidationError
+        raise ValidationError("This activation code has already been used and cannot be reused.")
+
     status = "ACTIVE" if owner_verified_at else "PENDING"
     clinic = Clinic.objects.create(
         name=cleaned_data["clinic_name"],

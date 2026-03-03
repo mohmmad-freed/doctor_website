@@ -7,10 +7,16 @@
         </a>
 
         <ul class="navbar-menu">
+            {% if request.resolver_match.namespace == 'clinics' %}
+            {# Clinic owner navigation #}
+            <li><a href="{% url 'clinics:my_clinics' %}" class="navbar-link">عياداتي</a></li>
+            {% else %}
+            {# Landing page navigation #}
             <li><a href="{% url 'accounts:landing' %}" class="navbar-link">الرئيسية</a></li>
             <li><a href="{% url 'accounts:landing' %}#features" class="navbar-link">الميزات</a></li>
             <li><a href="{% url 'accounts:landing' %}#how-it-works" class="navbar-link">كيف يعمل</a></li>
             <li><a href="{% url 'accounts:landing' %}#contact" class="navbar-link">اتصل بنا</a></li>
+            {% endif %}
         </ul>
 
         <div class="navbar-actions">
@@ -28,9 +34,14 @@
             </button>
 
             {% if user.is_authenticated %}
+            {% if request.resolver_match.namespace != 'clinics' %}
             <a href="{% url 'accounts:home' %}" class="btn btn-primary">
                 لوحة التحكم
                 <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            {% endif %}
+            <a href="{% url 'accounts:logout' %}" class="btn btn-secondary" title="تسجيل الخروج" style="padding: 0.5rem 0.75rem;">
+                <i class="fa-solid fa-right-from-bracket"></i>
             </a>
             {% else %}
             <a href="{% url 'accounts:login' %}" class="btn btn-secondary">تسجيل الدخول</a>

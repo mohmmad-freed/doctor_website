@@ -192,12 +192,13 @@ class ClinicVerification(models.Model):
         """True when all required channels are verified."""
         return bool(self.owner_phone_verified_at and self.owner_email_verified_at)
 
-    def next_pending_step(self):
-        """Return URL name of the next unverified step, or None if all done."""
+    def next_pending_step(self, clinic_id):
+        """Return the resolved URL of the next unverified step, or None if all done."""
+        from django.urls import reverse
         if not self.owner_phone_verified_at:
-            return "clinics:verify_owner_phone"
+            return reverse("clinics:verify_owner_phone", kwargs={"clinic_id": clinic_id})
         if not self.owner_email_verified_at:
-            return "clinics:verify_owner_email"
+            return reverse("clinics:verify_owner_email", kwargs={"clinic_id": clinic_id})
         return None
 
     def __str__(self):

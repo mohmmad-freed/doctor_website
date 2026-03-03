@@ -1,151 +1,191 @@
-{% load mask_filters %}
-<!DOCTYPE html>
-<html lang="en">
+{% extends 'accounts/base.html' %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Clinic Dashboard</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            padding: 20px;
-        }
+{% block title %}{{ clinic.name }} — لوحة التحكم{% endblock %}
 
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #ccc;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-        }
+{% block extra_css %}
+<style>
+    .clinic-dashboard {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
 
-        .logout-btn {
-            background-color: #dc3545;
-            color: white;
-            padding: 8px 16px;
-            text-decoration: none;
-            border-radius: 4px;
-        }
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.75rem;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
 
-        .logout-btn:hover {
-            background-color: #c82333;
-        }
+    .dashboard-header h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--color-text-main);
+        margin: 0;
+    }
 
-        .card {
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            padding: 16px 20px;
-            margin-bottom: 20px;
-            max-width: 480px;
-        }
+    .btn-back {
+        color: var(--color-text-muted);
+        text-decoration: none;
+        font-size: 0.88rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.45rem 0.9rem;
+        border: 1px solid var(--color-surface-border);
+        border-radius: 6px;
+        transition: color 0.15s, border-color 0.15s;
+    }
+    .btn-back:hover {
+        color: var(--color-primary-500);
+        border-color: var(--color-primary-500);
+    }
 
-        .card h2 {
-            margin-top: 0;
-            font-size: 1.1rem;
-            color: #333;
-        }
+    .card {
+        background: var(--color-surface-card);
+        border: 1px solid var(--color-surface-border);
+        border-radius: 10px;
+        padding: 1.4rem 1.6rem;
+        margin-bottom: 1.25rem;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
 
-        .card dl {
-            margin: 0;
-        }
+    .card h2 {
+        margin: 0 0 1rem;
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--color-text-main);
+        padding-bottom: 0.6rem;
+        border-bottom: 1px solid var(--color-surface-border);
+    }
 
-        .card dt {
-            font-weight: bold;
-            color: #555;
-            margin-top: 8px;
-        }
+    .card dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 1.25rem; align-items: center; }
+    .card dt { font-weight: 600; color: var(--color-text-muted); font-size: 0.88rem; white-space: nowrap; }
+    .card dd { margin: 0; color: var(--color-text-body); font-size: 0.9rem; }
 
-        .card dd {
-            margin: 0 0 0 0;
-            color: #222;
-        }
+    .badge {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 700;
+    }
+    .badge-active   { background: #d1fae5; color: #065f46; }
+    .badge-expired  { background: #fee2e2; color: #991b1b; }
+    .badge-suspended{ background: #fef3c7; color: #92400e; }
+    .badge-pending  { background: #dbeafe; color: #1e40af; }
 
-        .badge {
-            display: inline-block;
-            padding: 2px 10px;
-            border-radius: 12px;
-            font-size: 0.85rem;
-            font-weight: bold;
-        }
+    [data-theme="dark"] .badge-active   { background: #064e3b; color: #6ee7b7; }
+    [data-theme="dark"] .badge-expired  { background: #450a0a; color: #fca5a5; }
+    [data-theme="dark"] .badge-suspended{ background: #451a03; color: #fcd34d; }
+    [data-theme="dark"] .badge-pending  { background: #1e3a5f; color: #93c5fd; }
 
-        .badge-active   { background: #d4edda; color: #155724; }
-        .badge-expired  { background: #f8d7da; color: #721c24; }
-        .badge-suspended{ background: #fff3cd; color: #856404; }
-        .badge-pending  { background: #d1ecf1; color: #0c5460; }
+    /* Quick links grid */
+    .quick-links {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 1rem;
+    }
 
-        .alert {
-            padding: 12px 16px;
-            border-radius: 6px;
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.95rem;
-        }
-        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .alert-error   { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-    </style>
-</head>
+    .quick-link {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 1.1rem 0.75rem;
+        background: var(--color-surface-ground);
+        border: 1px solid var(--color-surface-border);
+        border-radius: 8px;
+        text-decoration: none;
+        color: var(--color-text-body);
+        font-size: 0.88rem;
+        font-weight: 600;
+        text-align: center;
+        transition: border-color 0.15s, color 0.15s;
+    }
+    .quick-link i { font-size: 1.4rem; color: var(--color-primary-500); }
+    .quick-link:hover {
+        border-color: var(--color-primary-500);
+        color: var(--color-primary-500);
+    }
+</style>
+{% endblock %}
 
-<body>
-    <header>
-        <h1>My Clinic Dashboard</h1>
-        <a href="{% url 'accounts:logout' %}" class="logout-btn">Logout</a>
-    </header>
+{% block content %}
+<div class="clinic-dashboard">
 
-    <main>
-        {% if messages %}
-            {% for message in messages %}
-            <div class="alert {% if message.tags == 'success' %}alert-success{% else %}alert-error{% endif %}">
-                {{ message }}
-            </div>
-            {% endfor %}
-        {% endif %}
+    <div class="dashboard-header">
+        <h1>
+            <i class="fa-solid fa-hospital" style="color:var(--color-primary-500);margin-left:0.5rem;"></i>
+            {{ clinic.name }}
+        </h1>
+        <a href="{% url 'clinics:my_clinics' %}" class="btn-back">
+            <i class="fa-solid fa-arrow-right"></i> عياداتي
+        </a>
+    </div>
 
-        <div class="card">
-            <h2>Clinic Info</h2>
-            <dl>
-                <dt>Name</dt><dd>{{ clinic.name }}</dd>
-                <dt>Phone</dt><dd>{{ clinic.phone|mask_phone }}</dd>
-                <dt>Address</dt><dd>{{ clinic.address }}</dd>
-                <dt>Status</dt>
-                <dd>
-                    {% if clinic.status == "ACTIVE" %}
-                        <span class="badge badge-active">Active</span>
-                    {% elif clinic.status == "PENDING" %}
-                        <span class="badge badge-pending">Pending Review</span>
-                    {% else %}
-                        <span class="badge badge-suspended">{{ clinic.get_status_display }}</span>
-                    {% endif %}
-                </dd>
-            </dl>
+    <!-- Clinic Info Card -->
+    <div class="card">
+        <h2>معلومات العيادة</h2>
+        <dl>
+            <dt>الاسم</dt><dd>{{ clinic.name }}</dd>
+            <dt>الهاتف</dt><dd>{{ clinic.phone|default:"—" }}</dd>
+            <dt>العنوان</dt><dd>{{ clinic.address }}</dd>
+            <dt>الحالة</dt>
+            <dd>
+                {% if clinic.status == "ACTIVE" %}
+                    <span class="badge badge-active">نشطة</span>
+                {% elif clinic.status == "PENDING" %}
+                    <span class="badge badge-pending">قيد المراجعة</span>
+                {% else %}
+                    <span class="badge badge-suspended">{{ clinic.get_status_display }}</span>
+                {% endif %}
+            </dd>
+        </dl>
+    </div>
+
+    <!-- Subscription Card -->
+    {% if subscription %}
+    <div class="card">
+        <h2>الاشتراك</h2>
+        <dl>
+            <dt>الخطة</dt><dd>{{ subscription.get_plan_type_display }}</dd>
+            <dt>ينتهي في</dt><dd>{{ subscription.expires_at|date:"Y-m-d" }}</dd>
+            <dt>الحد الأقصى للأطباء</dt><dd>{{ subscription.max_doctors }}</dd>
+            <dt>الحالة</dt>
+            <dd>
+                {% if subscription.status == "ACTIVE" %}
+                    <span class="badge badge-active">نشط</span>
+                {% elif subscription.status == "EXPIRED" %}
+                    <span class="badge badge-expired">منتهي</span>
+                {% else %}
+                    <span class="badge badge-suspended">موقوف</span>
+                {% endif %}
+            </dd>
+        </dl>
+    </div>
+    {% endif %}
+
+    <!-- Quick Links -->
+    <div class="card">
+        <h2>الإعدادات والإدارة</h2>
+        <div class="quick-links">
+            <a href="{% url 'clinics:working_hours_list' clinic_id=clinic.id %}" class="quick-link">
+                <i class="fa-solid fa-clock"></i>
+                ساعات العمل
+            </a>
+            <a href="{% url 'clinics:compliance_settings' clinic_id=clinic.id %}" class="quick-link">
+                <i class="fa-solid fa-shield-halved"></i>
+                إعدادات الامتثال
+            </a>
+            <a href="{% url 'clinics:appointment_types_list' clinic_id=clinic.id %}" class="quick-link">
+                <i class="fa-solid fa-calendar-check"></i>
+                أنواع المواعيد
+            </a>
         </div>
+    </div>
 
-        {% if subscription %}
-        <div class="card">
-            <h2>Subscription</h2>
-            <dl>
-                <dt>Plan</dt><dd>{{ subscription.get_plan_type_display }}</dd>
-                <dt>Expires</dt><dd>{{ subscription.expires_at|date:"Y-m-d" }}</dd>
-                <dt>Max Doctors</dt><dd>{{ subscription.max_doctors }}</dd>
-                <dt>Status</dt>
-                <dd>
-                    {% if subscription.status == "ACTIVE" %}
-                        <span class="badge badge-active">Active</span>
-                    {% elif subscription.status == "EXPIRED" %}
-                        <span class="badge badge-expired">Expired</span>
-                    {% else %}
-                        <span class="badge badge-suspended">Suspended</span>
-                    {% endif %}
-                </dd>
-            </dl>
-        </div>
-        {% else %}
-        <p><em>No subscription found for this clinic.</em></p>
-        {% endif %}
-    </main>
-</body>
-
-</html>
+</div>
+{% endblock %}

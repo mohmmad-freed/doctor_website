@@ -4,29 +4,38 @@ from . import views, appointment_types_views
 app_name = 'clinics'
 
 urlpatterns = [
-    path('', views.my_clinic, name='my_clinic'),  # For main doctors
-    path('staff/', views.manage_staff, name='manage_staff'),
-    path('staff/add/', views.add_staff, name='add_staff'),
-    path('staff/<int:staff_id>/remove/', views.remove_staff, name='remove_staff'),
-    # 4-step verification flow after clinic owner signup
-    path('verify/owner-phone/', views.verify_owner_phone, name='verify_owner_phone'),
-    path('verify/owner-email/', views.verify_owner_email, name='verify_owner_email'),
-    path('verify/clinic-phone/', views.verify_clinic_phone, name='verify_clinic_phone'),
-    path('verify/clinic-email/', views.verify_clinic_email, name='verify_clinic_email'),
-    
+    # Clinic owner landing — list all owned clinics
+    path('', views.my_clinics, name='my_clinics'),
+
+    # Add a new clinic (for already-authenticated clinic owners)
+    path('add/', views.add_clinic_code_view, name='add_clinic_code'),
+    path('add/details/', views.add_clinic_details_view, name='add_clinic_details'),
+
+    # Per-clinic dashboard and management (all require clinic_id)
+    path('<int:clinic_id>/', views.my_clinic, name='my_clinic'),
+    path('<int:clinic_id>/staff/', views.manage_staff, name='manage_staff'),
+    path('<int:clinic_id>/staff/add/', views.add_staff, name='add_staff'),
+    path('<int:clinic_id>/staff/<int:staff_id>/remove/', views.remove_staff, name='remove_staff'),
+
+    # 4-step post-signup verification flow
+    path('<int:clinic_id>/verify/owner-phone/', views.verify_owner_phone, name='verify_owner_phone'),
+    path('<int:clinic_id>/verify/owner-email/', views.verify_owner_email, name='verify_owner_email'),
+    path('<int:clinic_id>/verify/clinic-phone/', views.verify_clinic_phone, name='verify_clinic_phone'),
+    path('<int:clinic_id>/verify/clinic-email/', views.verify_clinic_email, name='verify_clinic_email'),
+
     # Appointment Types Management
-    path('appointment-types/', appointment_types_views.appointment_types_list, name='appointment_types_list'),
-    path('appointment-types/create/', appointment_types_views.appointment_type_create, name='appointment_type_create'),
-    path('appointment-types/<int:type_id>/edit/', appointment_types_views.appointment_type_update, name='appointment_type_update'),
-    path('appointment-types/<int:type_id>/toggle/', appointment_types_views.appointment_type_toggle, name='appointment_type_toggle'),
-    
+    path('<int:clinic_id>/appointment-types/', appointment_types_views.appointment_types_list, name='appointment_types_list'),
+    path('<int:clinic_id>/appointment-types/create/', appointment_types_views.appointment_type_create, name='appointment_type_create'),
+    path('<int:clinic_id>/appointment-types/<int:type_id>/edit/', appointment_types_views.appointment_type_update, name='appointment_type_update'),
+    path('<int:clinic_id>/appointment-types/<int:type_id>/toggle/', appointment_types_views.appointment_type_toggle, name='appointment_type_toggle'),
+
     # Clinic Working Hours
-    path('settings/working-hours/', views.clinic_working_hours_list_view, name='working_hours_list'),
-    path('settings/working-hours/create/', views.clinic_working_hours_create_view, name='working_hours_create'),
-    path('settings/working-hours/<int:id>/update/', views.clinic_working_hours_update_view, name='working_hours_update'),
-    path('settings/working-hours/<int:id>/delete/', views.clinic_working_hours_delete_view, name='working_hours_delete'),
+    path('<int:clinic_id>/settings/working-hours/', views.clinic_working_hours_list_view, name='working_hours_list'),
+    path('<int:clinic_id>/settings/working-hours/create/', views.clinic_working_hours_create_view, name='working_hours_create'),
+    path('<int:clinic_id>/settings/working-hours/<int:id>/update/', views.clinic_working_hours_update_view, name='working_hours_update'),
+    path('<int:clinic_id>/settings/working-hours/<int:id>/delete/', views.clinic_working_hours_delete_view, name='working_hours_delete'),
 
     # Compliance Settings
-    path('settings/compliance/', views.compliance_settings_view, name='compliance_settings'),
-    path('settings/compliance/update/', views.compliance_settings_update_view, name='compliance_settings_update'),
+    path('<int:clinic_id>/settings/compliance/', views.compliance_settings_view, name='compliance_settings'),
+    path('<int:clinic_id>/settings/compliance/update/', views.compliance_settings_update_view, name='compliance_settings_update'),
 ]

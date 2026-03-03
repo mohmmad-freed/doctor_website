@@ -1,0 +1,436 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}إضافة عيادة جديدة — تفاصيل العيادة{% endblock %}
+
+{% block extra_css %}
+<style>
+    .add-clinic-wrapper {
+        max-width: 640px;
+        margin: 3rem auto;
+        padding: 0 1rem;
+    }
+
+    .add-clinic-card {
+        background: var(--color-surface-card);
+        border: 1px solid var(--color-surface-border);
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    .add-clinic-card h1 {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--color-text-main);
+        margin: 0 0 0.4rem;
+    }
+
+    .add-clinic-card .subtitle {
+        color: var(--color-text-muted);
+        font-size: 0.9rem;
+        margin-bottom: 1.75rem;
+    }
+
+    .form-group { margin-bottom: 1.25rem; }
+
+    .form-label {
+        display: block;
+        margin-bottom: 0.45rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--color-text-main);
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.6rem 0.85rem;
+        border: 1.5px solid var(--color-surface-border);
+        border-radius: 8px;
+        font-size: 0.95rem;
+        background: var(--color-surface-ground);
+        color: var(--color-text-main);
+        box-sizing: border-box;
+        transition: border-color 0.15s;
+    }
+    .form-control:focus {
+        outline: none;
+        border-color: var(--color-primary-500);
+        box-shadow: 0 0 0 3px rgba(0,120,212,0.12);
+    }
+    .form-control.error { border-color: #ef4444; }
+
+    .error-msg {
+        color: #ef4444;
+        font-size: 0.82rem;
+        margin-top: 0.3rem;
+    }
+
+    .btn-row {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 1.25rem;
+    }
+
+    .btn-primary {
+        flex: 1;
+        padding: 0.7rem 1rem;
+        background: var(--color-primary-500);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .btn-primary:hover { background: var(--color-primary-600); }
+
+    .btn-back {
+        padding: 0.7rem 1.2rem;
+        background: transparent;
+        color: var(--color-text-muted);
+        border: 1.5px solid var(--color-surface-border);
+        border-radius: 8px;
+        font-size: 0.95rem;
+        cursor: pointer;
+    }
+    .btn-back:hover {
+        border-color: var(--color-text-muted);
+        color: var(--color-text-main);
+    }
+
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        color: var(--color-text-muted);
+        text-decoration: none;
+        font-size: 0.88rem;
+        margin-bottom: 1.25rem;
+    }
+    .back-link:hover { color: var(--color-primary-500); }
+
+    .step-indicator {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        font-size: 0.82rem;
+        color: var(--color-text-muted);
+    }
+    .step-dot {
+        width: 8px; height: 8px;
+        border-radius: 50%;
+        background: var(--color-surface-border);
+    }
+    .step-dot.active { background: var(--color-primary-500); }
+    .step-dot.done { background: var(--color-secondary-500, #48bb78); }
+
+    /* ── Specialty Card Picker ── */
+    :root {
+        --sp-selected-bg  : rgba(0, 120, 212, 0.08);
+        --sp-hover-bg     : rgba(0, 120, 212, 0.04);
+        --sp-shadow-sel   : 0 4px 18px rgba(0, 120, 212, 0.18);
+        --sp-shadow-hover : 0 4px 12px rgba(0, 120, 212, 0.10);
+    }
+    [data-theme="dark"] {
+        --sp-selected-bg  : rgba(59, 143, 217, 0.15);
+        --sp-hover-bg     : rgba(59, 143, 217, 0.07);
+        --sp-shadow-sel   : 0 4px 18px rgba(59, 143, 217, 0.22);
+        --sp-shadow-hover : 0 4px 12px rgba(59, 143, 217, 0.14);
+    }
+
+    .specialty-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .spec-chip {
+        position: relative;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 16px 10px 14px;
+        border: 2px solid var(--color-surface-border);
+        border-radius: 16px;
+        background: var(--color-surface-ground);
+        transition: border-color .2s, background .2s, box-shadow .2s, transform .18s;
+        user-select: none;
+        text-align: center;
+    }
+
+    .spec-chip:hover {
+        border-color: var(--color-primary-500);
+        background: var(--sp-hover-bg);
+        transform: translateY(-3px);
+        box-shadow: var(--sp-shadow-hover);
+    }
+
+    .spec-chip input[type="checkbox"] {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+        pointer-events: none;
+    }
+
+    .spec-badge {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--color-primary-500);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.55rem;
+        opacity: 0;
+        transform: scale(0.3);
+        transition: opacity .2s, transform .25s cubic-bezier(.34,1.56,.64,1);
+        pointer-events: none;
+    }
+
+    .spec-icon {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        background: var(--color-surface-card);
+        border: 2px solid var(--color-surface-border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        color: var(--color-text-muted);
+        transition: background .2s, color .2s, border-color .2s, box-shadow .2s;
+        flex-shrink: 0;
+    }
+
+    .spec-name {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--color-text-main);
+        line-height: 1.35;
+        transition: color .2s;
+    }
+
+    .spec-chip:has(input:checked),
+    .spec-chip.selected {
+        border-color: var(--color-primary-500);
+        background: var(--sp-selected-bg);
+        box-shadow: var(--sp-shadow-sel);
+        transform: translateY(-3px);
+    }
+
+    .spec-chip:has(input:checked) .spec-badge,
+    .spec-chip.selected .spec-badge {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    .spec-chip:has(input:checked) .spec-icon,
+    .spec-chip.selected .spec-icon {
+        background: var(--color-primary-500);
+        border-color: var(--color-primary-500);
+        color: #fff;
+        box-shadow: 0 4px 14px rgba(0,120,212,.35);
+    }
+
+    [data-theme="dark"] .spec-chip:has(input:checked) .spec-icon,
+    [data-theme="dark"] .spec-chip.selected .spec-icon {
+        box-shadow: 0 4px 14px rgba(59,143,217,.35);
+    }
+
+    .spec-chip:has(input:checked) .spec-name,
+    .spec-chip.selected .spec-name {
+        color: var(--color-primary-500);
+        font-weight: 700;
+    }
+
+    .spec-counter {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 10px;
+        border-radius: 999px;
+        background: var(--color-surface-card);
+        border: 1px solid var(--color-surface-border);
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--color-text-muted);
+        transition: color .2s, border-color .2s, background .2s;
+    }
+
+    .spec-counter.has-selection {
+        border-color: var(--color-primary-500);
+        color: var(--color-primary-500);
+        background: var(--sp-selected-bg);
+    }
+
+    .spec-counter-num { font-weight: 800; }
+
+    .spec-label-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 4px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="add-clinic-wrapper">
+    <a href="{% url 'clinics:my_clinics' %}" class="back-link">
+        <i class="fa-solid fa-arrow-right"></i> عياداتي
+    </a>
+
+    <div class="add-clinic-card">
+        <div class="step-indicator">
+            <div class="step-dot done"></div>
+            <div class="step-dot active"></div>
+            <span>الخطوة 2 من 2</span>
+        </div>
+
+        <h1>تفاصيل العيادة الجديدة</h1>
+        <p class="subtitle">أكمل معلومات العيادة ثم اضغط "إنشاء العيادة".</p>
+
+        <form method="post">
+            {% csrf_token %}
+
+            <!-- Clinic Name -->
+            <div class="form-group">
+                <label class="form-label" for="id_clinic_name">{{ form.clinic_name.label }}</label>
+                <input type="text" name="clinic_name" id="id_clinic_name"
+                    class="form-control {% if form.clinic_name.errors %}error{% endif %}"
+                    value="{{ form.clinic_name.value|default:'' }}" required>
+                {% for error in form.clinic_name.errors %}<div class="error-msg">{{ error }}</div>{% endfor %}
+            </div>
+
+            <!-- Address -->
+            <div class="form-group">
+                <label class="form-label" for="id_clinic_address">{{ form.clinic_address.label }}</label>
+                <textarea name="clinic_address" id="id_clinic_address" rows="2"
+                    class="form-control {% if form.clinic_address.errors %}error{% endif %}"
+                    required>{{ form.clinic_address.value|default:'' }}</textarea>
+                {% for error in form.clinic_address.errors %}<div class="error-msg">{{ error }}</div>{% endfor %}
+            </div>
+
+            <!-- City -->
+            <div class="form-group">
+                <label class="form-label" for="id_clinic_city">{{ form.clinic_city.label }}</label>
+                <select name="clinic_city" id="id_clinic_city"
+                    class="form-control {% if form.clinic_city.errors %}error{% endif %}">
+                    <option value="">اختر المدينة</option>
+                    {% for city in form.clinic_city.field.queryset %}
+                    <option value="{{ city.pk }}" {% if form.clinic_city.value == city.pk|stringformat:"s" %}selected{% endif %}>
+                        {{ city.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+                {% for error in form.clinic_city.errors %}<div class="error-msg">{{ error }}</div>{% endfor %}
+            </div>
+
+            <!-- Specialties — card picker -->
+            <div class="form-group">
+                <div class="spec-label-row">
+                    <label class="form-label" style="margin:0;">{{ form.specialties.label }}</label>
+                    <span class="spec-counter" id="specCounter">
+                        <i class="fa-solid fa-circle-check" style="font-size:0.85rem;"></i>
+                        <span>تم اختيار <span class="spec-counter-num" id="specCount">0</span></span>
+                    </span>
+                </div>
+                {% for error in form.specialties.errors %}<div class="error-msg">{{ error }}</div>{% endfor %}
+
+                {% if form.specialties.field.queryset.exists %}
+                <div class="specialty-grid" id="specialtyGrid">
+                    {% for choice in form.specialties %}
+                    <label class="spec-chip">
+                        {{ choice.tag }}
+                        <div class="spec-badge"><i class="fa-solid fa-check"></i></div>
+                        <div class="spec-icon"><i class="fa-solid fa-stethoscope"></i></div>
+                        <span class="spec-name">{{ choice.choice_label }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p style="color:var(--color-text-muted);font-size:0.88rem;margin-top:0.5rem;">لا توجد تخصصات متاحة حالياً.</p>
+                {% endif %}
+            </div>
+
+            <!-- Phone -->
+            <div class="form-group">
+                <label class="form-label" for="id_clinic_phone">{{ form.clinic_phone.label }}</label>
+                <input type="text" name="clinic_phone" id="id_clinic_phone"
+                    class="form-control {% if form.clinic_phone.errors %}error{% endif %}"
+                    value="{{ form.clinic_phone.value|default:'' }}"
+                    placeholder="059XXXXXXX">
+                {% for error in form.clinic_phone.errors %}<div class="error-msg">{{ error }}</div>{% endfor %}
+            </div>
+
+            <!-- Email -->
+            <div class="form-group">
+                <label class="form-label" for="id_clinic_email">{{ form.clinic_email.label }}</label>
+                <input type="email" name="clinic_email" id="id_clinic_email"
+                    class="form-control {% if form.clinic_email.errors %}error{% endif %}"
+                    value="{{ form.clinic_email.value|default:'' }}"
+                    placeholder="clinic@example.com">
+                {% for error in form.clinic_email.errors %}<div class="error-msg">{{ error }}</div>{% endfor %}
+            </div>
+
+            <!-- Description -->
+            <div class="form-group">
+                <label class="form-label" for="id_clinic_description">{{ form.clinic_description.label }}</label>
+                <textarea name="clinic_description" id="id_clinic_description" rows="3"
+                    class="form-control {% if form.clinic_description.errors %}error{% endif %}">{{ form.clinic_description.value|default:'' }}</textarea>
+                {% for error in form.clinic_description.errors %}<div class="error-msg">{{ error }}</div>{% endfor %}
+            </div>
+
+            <div class="btn-row">
+                <button type="submit" name="action" value="back" class="btn-back">
+                    <i class="fa-solid fa-arrow-right"></i> رجوع
+                </button>
+                <button type="submit" class="btn-primary">
+                    <i class="fa-solid fa-hospital"></i> إنشاء العيادة
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    var grid    = document.getElementById('specialtyGrid');
+    var countEl = document.getElementById('specCount');
+    var counter = document.getElementById('specCounter');
+    if (!grid) return;
+
+    function syncChips() {
+        var total = 0;
+        grid.querySelectorAll('.spec-chip').forEach(function (chip) {
+            var cb = chip.querySelector('input[type="checkbox"]');
+            var checked = cb && cb.checked;
+            chip.classList.toggle('selected', checked);
+            if (checked) total++;
+        });
+        countEl.textContent = total;
+        counter.classList.toggle('has-selection', total > 0);
+    }
+
+    grid.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+        cb.addEventListener('change', syncChips);
+    });
+
+    syncChips();
+}());
+</script>
+{% endblock %}

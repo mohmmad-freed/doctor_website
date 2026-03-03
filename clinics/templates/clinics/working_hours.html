@@ -141,7 +141,7 @@
                                     <button class="add-range-btn" style="border: 1px solid #d1d5db;" onclick="openUpdateModal({{ hour.id }}, {{ hour.weekday }}, '{{ hour.start_time|time:"H:i" }}', '{{ hour.end_time|time:"H:i" }}', {% if hour.is_closed %}true{% else %}false{% endif %})">
                                         <i class="fa-solid fa-pen"></i> تعديل
                                     </button>
-                                    <form method="post" action="{% url 'clinics:working_hours_delete' hour.id %}" style="margin: 0;" onsubmit="return confirm('هل أنت متأكد من حذف هذه الفترة؟');">
+                                    <form method="post" action="{% url 'clinics:working_hours_delete' clinic_id=clinic.id id=hour.id %}" style="margin: 0;" onsubmit="return confirm('هل أنت متأكد من حذف هذه الفترة؟');">
                                         {% csrf_token %}
                                         <button type="submit" class="btn-danger" title="حذف">
                                             <i class="fa-solid fa-trash"></i>
@@ -174,7 +174,7 @@
             <button type="button" onclick="closeModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280;">&times;</button>
         </div>
         
-        <form id="workingHoursForm" method="post" action="{% url 'clinics:working_hours_create' %}">
+        <form id="workingHoursForm" method="post" action="{% url 'clinics:working_hours_create' clinic_id=clinic.id %}">
             {% csrf_token %}
             
             <div class="form-group" id="weekdayGroup">
@@ -219,7 +219,7 @@
     const isClosedCheckbox = document.getElementById('id_is_closed');
     const startTimeInput = document.getElementById('id_start_time');
     const endTimeInput = document.getElementById('id_end_time');
-    const createUrl = "{% url 'clinics:working_hours_create' %}";
+    const createUrl = "{% url 'clinics:working_hours_create' clinic_id=clinic.id %}";
     const weekdayGroup = document.getElementById('weekdayGroup');
     
     function toggleTimeFields() {
@@ -250,8 +250,10 @@
         document.getElementById('id_weekday').value = dayVal;
     }
 
+    const clinicId = {{ clinic.id }};
+
     function openUpdateModal(id, weekday, startTime, endTime, isClosed) {
-        form.action = "/clinics/settings/working-hours/" + id + "/update/";
+        form.action = "/clinics/" + clinicId + "/settings/working-hours/" + id + "/update/";
         title.innerText = 'تعديل فترة عمل';
         
         document.getElementById('id_weekday').value = weekday;

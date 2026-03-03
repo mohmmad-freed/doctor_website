@@ -7,157 +7,213 @@
 
 {% block extra_css %}
 <style>
-    .bg-white { background-color: white; }
-    .shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
-    .rounded-lg { border-radius: 0.5rem; }
-    .p-6 { padding: 1.5rem; }
-    .p-8 { padding: 2rem; }
-    .mb-6 { margin-bottom: 1.5rem; }
-    .text-2xl { font-size: 1.5rem; }
-    .font-bold { font-weight: 700; }
-    .text-gray-800 { color: #1f2937; }
-    .text-gray-500 { color: #6b7280; }
-    
+    .form-wrapper {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+
+    .form-header {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-header h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--color-text-main);
+        margin: 0 0 0.25rem;
+    }
+
+    .form-header p {
+        color: var(--color-text-muted);
+        font-size: 0.9rem;
+        margin: 0;
+    }
+
+    .form-card {
+        background: var(--color-surface-card);
+        border: 1px solid var(--color-surface-border);
+        border-radius: 10px;
+        padding: 2rem;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+
     .form-group { margin-bottom: 1.5rem; }
-    .form-label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; }
-    .form-control { 
-        width: 100%; 
-        padding: 0.625rem 0.75rem; 
-        border: 1px solid #d1d5db; 
-        border-radius: 0.375rem; 
+
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--color-text-main);
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.6rem 0.85rem;
+        border: 1.5px solid var(--color-surface-border);
+        border-radius: 8px;
+        font-size: 0.95rem;
         font-family: inherit;
-        font-size: 1rem;
-        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        background: var(--color-surface-ground);
+        color: var(--color-text-main);
+        box-sizing: border-box;
+        transition: border-color 0.15s, box-shadow 0.15s;
     }
+
     .form-control:focus {
-        border-color: #3b82f6;
-        outline: 0;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+        outline: none;
+        border-color: var(--color-primary-500);
+        box-shadow: 0 0 0 3px rgba(0,120,212,0.12);
     }
-    textarea.form-control { min-height: 100px; resize: vertical; }
-    
-    .checkbox-container {
+
+    textarea.form-control {
+        min-height: 100px;
+        resize: vertical;
+    }
+
+    .two-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+    @media (max-width: 640px) {
+        .two-col { grid-template-columns: 1fr; }
+    }
+
+    .checkbox-row {
         display: flex;
         align-items: center;
         gap: 0.5rem;
         cursor: pointer;
         user-select: none;
     }
-    .checkbox-container input {
-        width: 1.25rem;
-        height: 1.25rem;
+
+    .checkbox-row input {
+        width: 1.15rem;
+        height: 1.15rem;
         cursor: pointer;
+        accent-color: var(--color-primary-500);
     }
-    
-    .btn-primary { 
-        background-color: #2563eb; 
-        color: white; 
-        padding: 0.625rem 1.5rem; 
-        border-radius: 0.375rem; 
-        border: none;
+
+    .checkbox-row span {
         font-weight: 500;
-        font-size: 1rem;
-        cursor: pointer;
-        transition: background-color 0.15s;
+        color: var(--color-text-main);
     }
-    .btn-primary:hover { background-color: #1d4ed8; }
-    .btn-secondary {
-        background-color: white;
-        color: #374151;
-        border: 1px solid #d1d5db;
-        padding: 0.625rem 1.5rem;
-        border-radius: 0.375rem;
-        font-weight: 500;
-        font-size: 1rem;
-        text-decoration: none;
-        transition: background-color 0.15s;
-        display: inline-block;
-        text-align: center;
-    }
-    .btn-secondary:hover { background-color: #f9fafb; }
-    
+
+    .required-star { color: #ef4444; }
+
     .form-actions {
         display: flex;
         justify-content: flex-end;
         gap: 1rem;
         margin-top: 2rem;
         padding-top: 1.5rem;
-        border-top: 1px solid #e5e7eb;
+        border-top: 1px solid var(--color-surface-border);
     }
-    
-    .grid { display: grid; gap: 1.5rem; }
-    .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    @media (max-width: 768px) {
-        .grid-cols-2 { grid-template-columns: 1fr; }
+
+    .btn-cancel {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.6rem 1.4rem;
+        background: transparent;
+        color: var(--color-text-muted);
+        border: 1.5px solid var(--color-surface-border);
+        border-radius: 8px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: border-color 0.15s, color 0.15s;
     }
+    .btn-cancel:hover {
+        border-color: var(--color-text-muted);
+        color: var(--color-text-main);
+    }
+
+    .btn-save {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.6rem 1.6rem;
+        background: var(--color-primary-500);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+    .btn-save:hover { background: var(--color-primary-600); }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container" style="max-width: 800px; margin: 0 auto; padding: 2rem 1rem;">
-    <!-- Header -->
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold text-gray-800">
+<div class="form-wrapper">
+    <div class="form-header">
+        <h1>
             {% if appointment_type %}
                 تعديل نوع الموعد: {{ appointment_type.name }}
             {% else %}
                 إضافة نوع موعد جديد
             {% endif %}
         </h1>
-        <p class="text-gray-500 mt-1">تحديد تفاصيل نوع الموعد الجديد للعيادة.</p>
+        <p>تحديد تفاصيل نوع الموعد للعيادة.</p>
     </div>
 
-    <!-- Form -->
-    <div class="bg-white shadow-sm rounded-lg p-8">
+    <div class="form-card">
         <form method="post">
             {% csrf_token %}
-            
-            <div class="grid grid-cols-2">
+
+            <div class="two-col">
                 <div class="form-group">
-                    <label for="name" class="form-label">الاسم (إنجليزي/أساسي) <span class="text-red-500">*</span></label>
+                    <label for="name" class="form-label">الاسم (إنجليزي/أساسي) <span class="required-star">*</span></label>
                     <input type="text" id="name" name="name" class="form-control" required
                            value="{{ appointment_type.name|default:'' }}"
                            placeholder="مثال: General Checkup">
                 </div>
-                
+
                 <div class="form-group">
                     <label for="name_ar" class="form-label">الاسم (عربي)</label>
                     <input type="text" id="name_ar" name="name_ar" class="form-control"
                            value="{{ appointment_type.name_ar|default:'' }}"
                            placeholder="مثال: فحص عام">
                 </div>
-                
+
                 <div class="form-group">
-                    <label for="duration_minutes" class="form-label">المدة بالدقائق <span class="text-red-500">*</span></label>
+                    <label for="duration_minutes" class="form-label">المدة بالدقائق <span class="required-star">*</span></label>
                     <input type="number" id="duration_minutes" name="duration_minutes" class="form-control" required min="1"
                            value="{{ appointment_type.duration_minutes|default:'30' }}">
                 </div>
-                
+
                 <div class="form-group">
-                    <label for="price" class="form-label">السعر (₪) <span class="text-red-500">*</span></label>
+                    <label for="price" class="form-label">السعر (₪) <span class="required-star">*</span></label>
                     <input type="number" id="price" name="price" class="form-control" required min="0" step="0.01"
                            value="{{ appointment_type.price|default:'0' }}">
                 </div>
             </div>
-            
+
             <div class="form-group">
                 <label for="description" class="form-label">وصف (اختياري)</label>
                 <textarea id="description" name="description" class="form-control" rows="3"
                           placeholder="وصف تفصيلي لنوع الموعد ومحتواه">{{ appointment_type.description|default:'' }}</textarea>
             </div>
-            
+
             <div class="form-group">
-                <label class="checkbox-container">
-                    <input type="checkbox" name="is_active" id="is_active" 
+                <label class="checkbox-row">
+                    <input type="checkbox" name="is_active" id="is_active"
                            {% if appointment_type is None or appointment_type.is_active %}checked{% endif %}>
-                    <span style="font-weight: 500;">نوع الموعد نشط ومتاح للحجز</span>
+                    <span>نوع الموعد نشط ومتاح للحجز</span>
                 </label>
             </div>
-            
+
             <div class="form-actions">
-                <a href="{% url 'clinics:appointment_types_list' %}" class="btn-secondary">إلغاء</a>
-                <button type="submit" class="btn-primary">
-                    <i class="fa-solid fa-save ml-2"></i> حفظ
+                <a href="{% url 'clinics:appointment_types_list' clinic_id=clinic.id %}" class="btn-cancel">
+                    <i class="fa-solid fa-xmark"></i> إلغاء
+                </a>
+                <button type="submit" class="btn-save">
+                    <i class="fa-solid fa-floppy-disk"></i> حفظ
                 </button>
             </div>
         </form>

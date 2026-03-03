@@ -66,8 +66,11 @@
                 <i class="fa-solid fa-calendar-check text-blue-600 ml-2"></i>أنواع المواعيد
             </h1>
             <p class="text-gray-500 mt-1">إدارة أنواع المواعيد ومدة كل منها وسعرها للعيادة.</p>
+            <a href="{% url 'clinics:my_clinic' clinic_id=clinic.id %}" style="font-size:0.85rem;color:#6b7280;text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-top:4px;">
+                <i class="fa-solid fa-arrow-right"></i> العودة إلى لوحة التحكم
+            </a>
         </div>
-        <a href="{% url 'clinics:appointment_type_create' %}" class="btn-primary">
+        <a href="{% url 'clinics:appointment_type_create' clinic_id=clinic.id %}" class="btn-primary">
             <i class="fa-solid fa-plus"></i> إضافة نوع موعد
         </a>
     </div>
@@ -107,10 +110,10 @@
                         </td>
                         <td>
                             <div class="actions">
-                                <a href="{% url 'clinics:appointment_type_update' type.id %}" class="btn-edit" title="تعديل">
+                                <a href="{% url 'clinics:appointment_type_update' clinic_id=clinic.id type_id=type.id %}" class="btn-edit" title="تعديل">
                                     <i class="fa-solid fa-pen-to-square"></i>
                                 </a>
-                                <form method="post" action="{% url 'clinics:appointment_type_toggle' type.id %}" style="margin: 0;">
+                                <form method="post" action="{% url 'clinics:appointment_type_toggle' clinic_id=clinic.id type_id=type.id %}" style="margin: 0;">
                                     {% csrf_token %}
                                     <button type="submit" class="btn-toggle" title="تغيير الحالة">
                                         {% if type.is_active %}
@@ -132,7 +135,7 @@
                 <h3 class="text-lg font-medium text-gray-900 mt-2">لا توجد أنواع مواعيد</h3>
                 <p class="mt-1">لم تقم بإضافة أي أنواع مواعيد لهذه العيادة بعد.</p>
                 <div class="mt-6">
-                    <a href="{% url 'clinics:appointment_type_create' %}" class="btn-primary">
+                    <a href="{% url 'clinics:appointment_type_create' clinic_id=clinic.id %}" class="btn-primary">
                         <i class="fa-solid fa-plus"></i> إضافة نوع موعد
                     </a>
                 </div>

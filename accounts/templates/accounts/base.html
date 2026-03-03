@@ -105,6 +105,22 @@
 
     <!-- Mobile Glass Navigation (Hidden on desktop) -->
     <nav class="mobile-nav-glass md:hidden">
+        {% if request.resolver_match.namespace == 'clinics' %}
+        {# Clinic owner mobile nav #}
+        <a href="{% url 'clinics:my_clinics' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'my_clinics' %}active{% endif %}">
+            <i class="fa-solid fa-hospital-user"></i>
+            <span class="text">عياداتي</span>
+        </a>
+        <a href="{% url 'clinics:add_clinic_code' %}" class="mobile-nav-item">
+            <i class="fa-solid fa-plus"></i>
+            <span class="text">عيادة جديدة</span>
+        </a>
+        <a href="{% url 'accounts:logout' %}" class="mobile-nav-item">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span class="text">خروج</span>
+        </a>
+        {% else %}
+        {# Landing / auth mobile nav #}
         <a href="{% url 'accounts:landing' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'landing' %}active{% endif %}">
             <i class="fa-solid fa-house"></i>
             <span class="text">الرئيسية</span>
@@ -123,6 +139,7 @@
             <i class="fa-solid fa-user-plus"></i>
             <span class="text">حساب جديد</span>
         </a>
+        {% endif %}
         {% endif %}
     </nav>
 

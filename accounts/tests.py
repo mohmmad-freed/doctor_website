@@ -978,7 +978,7 @@ class ClinicSubscriptionTest(TestCase):
         )
         client = TestClient()
         client.force_login(self.user)
-        response = client.get(reverse("clinics:my_clinic"))
+        response = client.get(reverse("clinics:my_clinic", kwargs={"clinic_id": clinic.id}))
         self.assertEqual(response.status_code, 200)
         self.assertIn("subscription", response.context)
         self.assertEqual(response.context["subscription"], clinic.subscription)
@@ -991,7 +991,7 @@ class ClinicSubscriptionTest(TestCase):
         )
         client = TestClient()
         client.force_login(self.user)
-        response = client.get(reverse("clinics:my_clinic"))
+        response = client.get(reverse("clinics:my_clinic", kwargs={"clinic_id": clinic.id}))
         self.assertEqual(response.context["clinic"], clinic)
 
 
@@ -1061,10 +1061,10 @@ class ClinicVerificationTest(TestCase):
     @patch("clinics.views.send_email_otp", return_value=(True, "sent"))
     def test_verify_owner_phone_success(self, mock_send_email, mock_verify_otp):
         response = self.client.post(
-            reverse("clinics:verify_owner_phone"),
+            reverse("clinics:verify_owner_phone", kwargs={"clinic_id": self.clinic.id}),
             {"otp": "123456"},
         )
-        self.assertRedirects(response, reverse("clinics:verify_owner_email"))
+        self.assertRedirects(response, reverse("clinics:verify_owner_email", kwargs={"clinic_id": self.clinic.id}))
         self.clinic.verification.refresh_from_db()
         self.assertIsNotNone(self.clinic.verification.owner_phone_verified_at)
         # Next step pre-send was called
@@ -1076,7 +1076,7 @@ class ClinicVerificationTest(TestCase):
     def test_verify_owner_phone_expired_otp(self):
         """With no OTP in cache, submission stays on the page with an error."""
         response = self.client.post(
-            reverse("clinics:verify_owner_phone"),
+            reverse("clinics:verify_owner_phone", kwargs={"clinic_id": self.clinic.id}),
             {"otp": "000000"},
         )
         # Re-renders with 200 (errors shown via messages)
@@ -1090,7 +1090,7 @@ class ClinicVerificationTest(TestCase):
     @patch("clinics.views.verify_otp", return_value=(False, "Too many incorrect attempts. Please request a new OTP."))
     def test_verify_owner_phone_max_attempts(self, mock_verify_otp):
         response = self.client.post(
-            reverse("clinics:verify_owner_phone"),
+            reverse("clinics:verify_owner_phone", kwargs={"clinic_id": self.clinic.id}),
             {"otp": "000000"},
         )
         self.assertEqual(response.status_code, 200)
@@ -1108,10 +1108,10 @@ class ClinicVerificationTest(TestCase):
         v.save()
 
         response = self.client.post(
-            reverse("clinics:verify_owner_email"),
+            reverse("clinics:verify_owner_email", kwargs={"clinic_id": self.clinic.id}),
             {"otp": "123456"},
         )
-        self.assertRedirects(response, reverse("clinics:verify_clinic_phone"))
+        self.assertRedirects(response, reverse("clinics:verify_clinic_phone", kwargs={"clinic_id": self.clinic.id}))
         v.refresh_from_db()
         self.assertIsNotNone(v.owner_email_verified_at)
         # Clinic phone OTP pre-send was called
@@ -1138,11 +1138,11 @@ class ClinicVerificationTest(TestCase):
         v.save()
 
         response = self.client.post(
-            reverse("clinics:verify_clinic_phone"),
+            reverse("clinics:verify_clinic_phone", kwargs={"clinic_id": self.clinic.id}),
             {"otp": "123456"},
         )
         # Clinic has email → redirect to step 4
-        self.assertRedirects(response, reverse("clinics:verify_clinic_email"))
+        self.assertRedirects(response, reverse("clinics:verify_clinic_email", kwargs={"clinic_id": self.clinic.id}))
         v.refresh_from_db()
         self.assertIsNotNone(v.clinic_phone_verified_at)
 
@@ -1158,10 +1158,10 @@ class ClinicVerificationTest(TestCase):
         v.save()
 
         response = self.client.post(
-            reverse("clinics:verify_clinic_email"),
+            reverse("clinics:verify_clinic_email", kwargs={"clinic_id": self.clinic.id}),
             {"otp": "123456"},
         )
-        self.assertRedirects(response, reverse("clinics:my_clinic"))
+        self.assertRedirects(response, reverse("clinics:my_clinic", kwargs={"clinic_id": self.clinic.id}))
         v.refresh_from_db()
         self.assertIsNotNone(v.clinic_email_verified_at)
         self.clinic.refresh_from_db()
@@ -1195,10 +1195,10 @@ class ClinicVerificationTest(TestCase):
         client2 = Client()
         client2.force_login(user2)
         response = client2.post(
-            reverse("clinics:verify_clinic_phone"),
+            reverse("clinics:verify_clinic_phone", kwargs={"clinic_id": clinic2.id}),
             {"otp": "123456"},
         )
-        self.assertRedirects(response, reverse("clinics:my_clinic"))
+        self.assertRedirects(response, reverse("clinics:my_clinic", kwargs={"clinic_id": clinic2.id}))
         clinic2.refresh_from_db()
         self.assertEqual(clinic2.status, "ACTIVE")
 
@@ -1207,8 +1207,8 @@ class ClinicVerificationTest(TestCase):
     # ------------------------------------------------------------------
     def test_sequential_guard_redirects_to_pending_step(self):
         """Visiting verify_owner_email before step 1 is done → redirect to step 1."""
-        response = self.client.get(reverse("clinics:verify_owner_email"))
-        self.assertRedirects(response, reverse("clinics:verify_owner_phone"))
+        response = self.client.get(reverse("clinics:verify_owner_email", kwargs={"clinic_id": self.clinic.id}))
+        self.assertRedirects(response, reverse("clinics:verify_owner_phone", kwargs={"clinic_id": self.clinic.id}))
 
     # ------------------------------------------------------------------
     # 11. home_redirect routes PENDING clinic owner to first pending step
@@ -1216,7 +1216,7 @@ class ClinicVerificationTest(TestCase):
     def test_home_redirect_routes_owner_to_first_pending_step(self):
         """A clinic owner with unverified channels is routed to verify_owner_phone."""
         response = self.client.get(reverse("accounts:home"))
-        self.assertRedirects(response, reverse("clinics:verify_owner_phone"))
+        self.assertRedirects(response, reverse("clinics:verify_owner_phone", kwargs={"clinic_id": self.clinic.id}))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1456,8 +1456,8 @@ class ClinicRegWizardTest(TestCase):
         # Verify email → creation happens here
         response = self.client.post(self.verify_email_url, {"otp": "654321"})
 
-        # Should redirect to clinic dashboard
-        self.assertRedirects(response, reverse("clinics:my_clinic"), fetch_redirect_response=False)
+        # Should redirect to the clinic list
+        self.assertRedirects(response, reverse("clinics:my_clinics"), fetch_redirect_response=False)
 
         # User created correctly
         user = CustomUser.objects.get(phone=self.OWNER_PHONE)
@@ -1512,7 +1512,7 @@ class ClinicRegWizardTest(TestCase):
         self.client.post(self.verify_phone_url, {"otp": "111111"})
         response = self.client.post(self.verify_email_url, {"otp": "222222"})
 
-        self.assertRedirects(response, reverse("clinics:my_clinic"), fetch_redirect_response=False)
+        self.assertRedirects(response, reverse("clinics:my_clinics"), fetch_redirect_response=False)
 
         existing.refresh_from_db()
         self.assertEqual(existing.role, "MAIN_DOCTOR")
@@ -1564,7 +1564,7 @@ class ClinicRegWizardTest(TestCase):
         self.client.post(self.verify_phone_url, {"otp": "111111"})
         response = self.client.post(self.verify_email_url, {"otp": "222222"})
 
-        self.assertRedirects(response, reverse("clinics:my_clinic"), fetch_redirect_response=False)
+        self.assertRedirects(response, reverse("clinics:my_clinics"), fetch_redirect_response=False)
 
         existing.refresh_from_db()
         self.assertEqual(existing.role, "MAIN_DOCTOR")
@@ -1713,12 +1713,229 @@ class ClinicRegWizardTest(TestCase):
             ac,
         )
         v = clinic.verification
-        self.assertEqual(v.next_pending_step(), "clinics:verify_owner_phone")
+        self.assertIn(
+            reverse("clinics:verify_owner_phone", kwargs={"clinic_id": clinic.id}),
+            v.next_pending_step(clinic.id),
+        )
 
         v.owner_phone_verified_at = timezone.now()
         v.save()
-        self.assertEqual(v.next_pending_step(), "clinics:verify_owner_email")
+        self.assertIn(
+            reverse("clinics:verify_owner_email", kwargs={"clinic_id": clinic.id}),
+            v.next_pending_step(clinic.id),
+        )
 
         v.owner_email_verified_at = timezone.now()
         v.save()
-        self.assertIsNone(v.next_pending_step())
+        self.assertIsNone(v.next_pending_step(clinic.id))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Multiple Clinics Per Owner Tests
+# ─────────────────────────────────────────────────────────────────────────────
+
+class MultipleClinicOwnerTest(TestCase):
+    """
+    Tests for the "create another clinic" feature.
+
+    Covers:
+    - Owner can create a second clinic via the 3-stage wizard
+    - Each clinic requires its own activation code
+    - Second clinic gets its own ClinicStaff + ClinicSubscription
+    - Used activation code cannot be reused for a second clinic
+    - clinic views require ownership (other owner's clinic_id → 404)
+    - my_clinics lists all owned clinics
+    - home_redirect goes to my_clinics when user has multiple clinics
+    - my_clinics auto-redirects to my_clinic when only one clinic
+    """
+
+    OWNER_PHONE = "0594070100"
+    OWNER_NID = "100200300"
+
+    def _make_activation_code(self, code, plan_type="MONTHLY", max_doctors=3):
+        return ClinicActivationCode.objects.create(
+            code=code,
+            clinic_name=f"عيادة {code}",
+            phone=self.OWNER_PHONE,
+            national_id=self.OWNER_NID,
+            plan_type=plan_type,
+            subscription_expires_at=timezone.now() + timedelta(days=30),
+            max_doctors=max_doctors,
+        )
+
+    def _make_city_and_specialty(self):
+        city = City.objects.create(name="Hebron")
+        specialty = Specialty.objects.create(name="General Practice", name_ar="الممارسة العامة")
+        return city, specialty
+
+    def _make_clinic_data(self, city, specialty, phone="0569001001", email=""):
+        return {
+            "clinic_name": "عيادة الاختبار",
+            "clinic_address": "شارع الاختبار",
+            "clinic_city": city,
+            "clinic_phone": phone,
+            "clinic_email": email,
+            "clinic_description": "",
+            "specialties": [specialty],
+        }
+
+    def setUp(self):
+        self.city, self.specialty = self._make_city_and_specialty()
+        self.owner = CustomUser.objects.create_user(
+            phone=self.OWNER_PHONE,
+            name="Dr. Multi",
+            national_id=self.OWNER_NID,
+            email="multi.owner@test.com",
+            password="StrongPass123!",
+            role="MAIN_DOCTOR",
+            roles=["PATIENT", "MAIN_DOCTOR"],
+        )
+        self.code1 = self._make_activation_code("MULTI001", max_doctors=5)
+        self.clinic1 = create_clinic_for_main_doctor(
+            self.owner,
+            self._make_clinic_data(self.city, self.specialty, phone="0569001001"),
+            self.code1,
+            owner_verified_at=timezone.now(),
+        )
+        self.code2 = self._make_activation_code("MULTI002", plan_type="YEARLY", max_doctors=10)
+        self.client = Client()
+        self.client.force_login(self.owner)
+
+    # ── 1. Owner can create second clinic via the service directly ────────
+
+    def test_owner_can_create_second_clinic(self):
+        """A second call to create_clinic_for_main_doctor creates a new Clinic for the same owner."""
+        clinic2 = create_clinic_for_main_doctor(
+            self.owner,
+            self._make_clinic_data(self.city, self.specialty, phone="0569002002"),
+            self.code2,
+            owner_verified_at=timezone.now(),
+        )
+        self.assertNotEqual(self.clinic1.id, clinic2.id)
+        self.assertEqual(clinic2.main_doctor, self.owner)
+        self.assertEqual(Clinic.objects.filter(main_doctor=self.owner).count(), 2)
+
+    def test_second_clinic_gets_own_subscription(self):
+        """Second clinic has a ClinicSubscription seeded from its own activation code."""
+        clinic2 = create_clinic_for_main_doctor(
+            self.owner,
+            self._make_clinic_data(self.city, self.specialty, phone="0569002002"),
+            self.code2,
+            owner_verified_at=timezone.now(),
+        )
+        sub2 = clinic2.subscription
+        self.assertIsNotNone(sub2)
+        self.assertEqual(sub2.plan_type, "YEARLY")
+        self.assertEqual(sub2.max_doctors, 10)
+        self.assertEqual(sub2.status, "ACTIVE")
+        # Distinct from first clinic's subscription
+        self.assertNotEqual(self.clinic1.subscription.id, sub2.id)
+
+    def test_second_clinic_gets_own_staff_record(self):
+        """ClinicStaff(role=MAIN_DOCTOR) is created for the second clinic."""
+        clinic2 = create_clinic_for_main_doctor(
+            self.owner,
+            self._make_clinic_data(self.city, self.specialty, phone="0569002002"),
+            self.code2,
+            owner_verified_at=timezone.now(),
+        )
+        self.assertTrue(
+            ClinicStaff.objects.filter(
+                clinic=clinic2, user=self.owner, role="MAIN_DOCTOR"
+            ).exists()
+        )
+
+    # ── 2. Activation code must not be reused ────────────────────────────
+
+    def test_used_activation_code_rejected_by_wizard_step1(self):
+        """Step 1 of the wizard rejects an already-used activation code."""
+        # code1 was already used for clinic1; use anonymous client (wizard redirects authenticated users)
+        anon_client = Client()
+        response = anon_client.post(
+            reverse("accounts:register_clinic_step1"),
+            {
+                "activation_code": self.code1.code,
+                "phone": self.OWNER_PHONE,
+                "national_id": self.OWNER_NID,
+            },
+        )
+        # Should stay on step 1 with form error (not redirect to step 2)
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        self.assertIn("activation_code", form.errors)
+
+    def test_two_clinics_cannot_share_activation_code(self):
+        """Creating a second clinic with a used code raises an exception (code is locked)."""
+        # code1 is already used — trying to create another clinic with it should fail
+        from django.db import IntegrityError
+        from django.core.exceptions import ValidationError
+        with self.assertRaises(Exception):
+            create_clinic_for_main_doctor(
+                self.owner,
+                self._make_clinic_data(self.city, self.specialty, phone="0569003003"),
+                self.code1,  # already used
+                owner_verified_at=timezone.now(),
+            )
+
+    # ── 3. Ownership enforcement ─────────────────────────────────────────
+
+    def test_clinic_view_rejects_other_owners_clinic_id(self):
+        """GET my_clinic with another user's clinic_id returns 404."""
+        other_owner = CustomUser.objects.create_user(
+            phone="0594099099",
+            name="Other Owner",
+            national_id="999888777",
+            password="OtherPass1!",
+        )
+        other_code = ClinicActivationCode.objects.create(
+            code="OTHER001",
+            clinic_name="عيادة أخرى",
+            phone="0594099099",
+            national_id="999888777",
+            plan_type="MONTHLY",
+            subscription_expires_at=timezone.now() + timedelta(days=30),
+            max_doctors=2,
+        )
+        other_clinic = create_clinic_for_main_doctor(
+            other_owner,
+            self._make_clinic_data(self.city, self.specialty, phone="0569005005"),
+            other_code,
+            owner_verified_at=timezone.now(),
+        )
+        # self.owner tries to access other_clinic
+        response = self.client.get(
+            reverse("clinics:my_clinic", kwargs={"clinic_id": other_clinic.id})
+        )
+        self.assertEqual(response.status_code, 404)
+
+    # ── 4. my_clinics view ───────────────────────────────────────────────
+
+    def test_my_clinics_lists_all_owned_clinics(self):
+        """GET my_clinics shows all clinics owned by the current user."""
+        clinic2 = create_clinic_for_main_doctor(
+            self.owner,
+            self._make_clinic_data(self.city, self.specialty, phone="0569002002"),
+            self.code2,
+            owner_verified_at=timezone.now(),
+        )
+        response = self.client.get(reverse("clinics:my_clinics"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.clinic1.name)
+        self.assertContains(response, clinic2.name)
+
+    def test_home_redirect_goes_to_my_clinics_with_multiple_clinics(self):
+        """home_redirect → my_clinics when owner has more than one clinic."""
+        create_clinic_for_main_doctor(
+            self.owner,
+            self._make_clinic_data(self.city, self.specialty, phone="0569002002"),
+            self.code2,
+            owner_verified_at=timezone.now(),
+        )
+        response = self.client.get(reverse("accounts:home"))
+        self.assertRedirects(response, reverse("clinics:my_clinics"))
+
+    def test_home_redirect_goes_to_my_clinics_with_single_active_clinic(self):
+        """home_redirect → my_clinics even when owner has exactly one active clinic."""
+        response = self.client.get(reverse("accounts:home"))
+        self.assertRedirects(response, reverse("clinics:my_clinics"))
+

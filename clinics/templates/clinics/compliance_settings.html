@@ -71,7 +71,7 @@
 
     <!-- Settings Form -->
     <div class="bg-white shadow-sm rounded-lg p-6 settings-card">
-        <form method="post" action="{% url 'clinics:compliance_settings_update' %}">
+        <form method="post" action="{% url 'clinics:compliance_settings_update' clinic_id=clinic.id %}">
             {% csrf_token %}
 
             <div class="form-group">
