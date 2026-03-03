@@ -58,6 +58,25 @@
     }
     .btn-primary:hover { background: var(--color-primary-600); color: #fff; }
 
+    .btn-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.4rem 0.9rem;
+        border: 1.5px solid var(--color-surface-border);
+        border-radius: 7px;
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: var(--color-text-muted);
+        text-decoration: none;
+        transition: color 0.15s, border-color 0.15s;
+        margin-top: 0.5rem;
+    }
+    .btn-back:hover {
+        color: var(--color-primary-500);
+        border-color: var(--color-primary-500);
+    }
+
     /* ── Table ── */
     .table-container { overflow-x: auto; }
 
@@ -162,9 +181,8 @@
                 <i class="fa-solid fa-calendar-check" style="color:var(--color-primary-500);margin-left:0.4rem;"></i>أنواع المواعيد
             </h1>
             <p>إدارة أنواع المواعيد ومدة كل منها وسعرها للعيادة.</p>
-            <a href="{% url 'clinics:my_clinic' clinic_id=clinic.id %}"
-               style="font-size:0.82rem;color:var(--color-text-muted);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-top:4px;">
-                <i class="fa-solid fa-arrow-right"></i> العودة إلى لوحة التحكم
+            <a href="{% url 'clinics:my_clinic' clinic_id=clinic.id %}" class="btn-back">
+                <i class="fa-solid fa-arrow-right"></i> {{ clinic.name }}
             </a>
         </div>
         <a href="{% url 'clinics:appointment_type_create' clinic_id=clinic.id %}" class="btn-primary">
