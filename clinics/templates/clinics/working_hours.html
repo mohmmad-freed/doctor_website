@@ -328,7 +328,13 @@
                             {% if day.hours %}
                                 {% for hour in day.hours %}
                                 <div style="display:flex;gap:0.4rem;align-items:center;margin-bottom:0.4rem;">
-                                    <button class="btn-action" onclick="openUpdateModal({{ hour.id }}, {{ hour.weekday }}, '{{ hour.start_time|time:"H:i" }}', '{{ hour.end_time|time:"H:i" }}', {% if hour.is_closed %}true{% else %}false{% endif %})">
+                                    <button class="btn-action" 
+                                            data-id="{{ hour.id }}" 
+                                            data-weekday="{{ hour.weekday }}" 
+                                            data-start="{{ hour.start_time|time:'H:i' }}" 
+                                            data-end="{{ hour.end_time|time:'H:i' }}" 
+                                            data-closed="{{ hour.is_closed|yesno:'true,false' }}"
+                                            onclick="openUpdateModal(this)">
                                         <i class="fa-solid fa-pen"></i> تعديل
                                     </button>
                                     <form method="post" action="{% url 'clinics:working_hours_delete' clinic_id=clinic.id id=hour.id %}" style="margin:0;" onsubmit="return confirm('هل أنت متأكد من حذف هذه الفترة؟');">
@@ -341,7 +347,7 @@
                                 {% endfor %}
                             {% endif %}
                             {% if not day.is_closed %}
-                            <button type="button" class="btn-action" onclick="openCreateModalDay({{ day.day_val }})">
+                            <button type="button" class="btn-action" onclick="openCreateModalDay('{{ day.day_val }}')">
                                 <i class="fa-solid fa-plus"></i> إضافة فترة
                             </button>
                             {% endif %}
@@ -437,16 +443,22 @@
         document.getElementById('id_weekday').value = dayVal;
     }
 
-    const clinicId = {{ clinic.id }};
+    const clinicId = "{{ clinic.id }}";
 
-    function openUpdateModal(id, weekday, startTime, endTime, isClosed) {
+    function openUpdateModal(btn) {
+        const id = btn.dataset.id;
+        const weekday = btn.dataset.weekday;
+        const startTime = btn.dataset.start;
+        const endTime = btn.dataset.end;
+        const isClosed = btn.dataset.closed === 'true';
+
         form.action = "/clinics/" + clinicId + "/settings/working-hours/" + id + "/update/";
         title.innerText = 'تعديل فترة عمل';
         document.getElementById('id_weekday').value = weekday;
         weekdayGroup.style.display = 'none';
         isClosedCheckbox.checked = isClosed;
-        startTimeInput.value = (startTime && startTime !== 'None.None') ? startTime : '';
-        endTimeInput.value = (endTime && endTime !== 'None.None') ? endTime : '';
+        startTimeInput.value = (startTime && startTime !== 'None.None' && startTime !== 'None') ? startTime : '';
+        endTimeInput.value = (endTime && endTime !== 'None.None' && endTime !== 'None') ? endTime : '';
         toggleTimeFields();
         modal.classList.add('active');
     }
