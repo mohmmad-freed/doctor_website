@@ -237,8 +237,15 @@ def guest_accept_invitation_view(request, token):
                 "error": "لا تملك الصلاحية للوصول إلى هذه الدعوة. يرجى تسجيل الدخول بالحساب الصحيح."
             })
             
-    # Unauthenticated but token is valid: store generic next url and redirect to login
-    # For now, just send to home, they can login normally and go to inbox.
+    # Unauthenticated but token is valid: store generic next url and redirect to registration
     request.session["next_after_login"] = reverse("doctors:doctor_invitations_inbox")
-    messages.info(request, "يرجى تسجيل الدخول أو إنشاء حساب جديد لقبول دعوة الانضمام للعيادة.")
-    return redirect(reverse("accounts:login"))
+    
+    # Pre-fill phone if we want to (optional, but good UX)
+    request.session["registration_phone"] = invitation.doctor_phone
+    
+    if invitation.role == "SECRETARY":
+        messages.info(request, f"مرحباً {invitation.doctor_name}، أنت مدعو للانضمام كـ سكرتير/ة في {invitation.clinic.name}. يرجى إدخال رقم هاتفك لإنشاء حسابك أو تسجيل الدخول.")
+    else:
+        messages.info(request, f"مرحباً د. {invitation.doctor_name}، أنت مدعو للانضمام إلى {invitation.clinic.name}. يرجى إدخال رقم هاتفك لإنشاء حسابك أو تسجيل الدخول.")
+        
+    return redirect(reverse("accounts:register_patient_phone"))

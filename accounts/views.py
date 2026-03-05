@@ -150,6 +150,9 @@ def register_patient_phone(request):
     if request.user.is_authenticated:
         return redirect("accounts:home")
 
+    # Support pre-filling phone number from invitation flow
+    initial_phone = request.session.get("registration_phone", "")
+
     if request.method == "POST":
         phone = request.POST.get("phone", "").strip()
 
@@ -177,7 +180,9 @@ def register_patient_phone(request):
         else:
             messages.error(request, message)
 
-    return render(request, "accounts/register_patient_phone.html")
+    return render(request, "accounts/register_patient_phone.html", {
+        "initial_phone": initial_phone
+    })
 
 
 # ============================================

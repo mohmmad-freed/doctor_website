@@ -298,7 +298,7 @@ def _check_invitation_rate_limits(clinic, normalized_phone):
         )
 
 
-def create_invitation(clinic, owner, data, role="DOCTOR"):
+def create_invitation(clinic, owner, data, role="DOCTOR", request=None):
     """
     Creates a ClinicInvitation for a doctor or secretary.
     Sends SMS if the user does not exist in the system yet.
@@ -345,13 +345,15 @@ def create_invitation(clinic, owner, data, role="DOCTOR"):
             existing_invite.save()
             _log_invitation_action(existing_invite, "EXPIRED")
 
-    # 5. Check if user is already staff
+    # 5. Check if user already has this exact role at the clinic
     user_exists = CustomUser.objects.filter(phone=normalized_phone).first()
-    if user_exists and ClinicStaff.objects.filter(clinic=clinic, user=user_exists).exists():
-        if role == "SECRETARY":
-            raise ValidationError("هذا السكرتير/ة موجود بالفعل ضمن طاقم العيادة.")
-        else:
-            raise ValidationError("هذا الطبيب موجود بالفعل ضمن طاقم العيادة.")
+    if user_exists:
+        existing_staff = ClinicStaff.objects.filter(clinic=clinic, user=user_exists).first()
+        if existing_staff and role in (user_exists.roles or []):
+            if role == "SECRETARY":
+                raise ValidationError("هذا السكرتير/ة موجود بالفعل ضمن طاقم العيادة.")
+            else:
+                raise ValidationError("هذا الطبيب موجود بالفعل ضمن طاقم العيادة.")
 
     # 6. Strict validation against existing user data
     if user_exists:
@@ -387,23 +389,34 @@ def create_invitation(clinic, owner, data, role="DOCTOR"):
     # 8. Audit log
     _log_invitation_action(invitation, "CREATED", performed_by=owner)
 
-    # 9. Send SMS if user doesn't exist
+    # 9. Send SMS if user doesn't exist (synchronous, same as OTP flow)
     if not user_exists:
         try:
-            # We must use the specific TweetsMS normalization logic since it requires 970 prefix.
             from accounts.otp_utils import _normalize_phone
             sms_phone = _normalize_phone(normalized_phone)
 
-            # Build URL. In a real app we'd construct absolute uri. 
-            # We assume front-end handles the domain part or we do relative path messaging.
-            if role == "SECRETARY":
-                message = f"مرحباً {invitation.doctor_name}، تمت دعوتك للانضمام كـ سكرتير/ة في {clinic.name}. انقر هنا للقبول: clink.ps/invites/accept/{invitation.token}/"
+            # Build accept URL using request.build_absolute_uri()
+            from django.urls import reverse
+            import logging
+            _sms_logger = logging.getLogger("clinics.services")
+
+            accept_path = reverse("doctors:guest_accept_invitation", kwargs={"token": invitation.token})
+            if request:
+                accept_url = request.build_absolute_uri(accept_path)
             else:
-                message = f"مرحباً د. {invitation.doctor_name}، تمت دعوتك للإنضمام إلى {clinic.name}. انقر هنا للقبول: clink.ps/invites/accept/{invitation.token}/"
-            
+                accept_url = accept_path
+
+            if role == "SECRETARY":
+                message = f"مرحباً {invitation.doctor_name}، تمت دعوتك للانضمام كـ سكرتير/ة في {clinic.name}. انقر هنا للقبول: {accept_url}"
+            else:
+                message = f"مرحباً د. {invitation.doctor_name}، تمت دعوتك للإنضمام إلى {clinic.name}. انقر هنا للقبول: {accept_url}"
+
             send_sms(sms_phone, message)
+            _sms_logger.info("[INVITATION SMS] Sent to %s", sms_phone)
         except Exception as e:
-            # Log it, but don't fail the whole transaction if SMS fails completely.
+            import logging
+            logging.getLogger("clinics.services").error("[INVITATION SMS] Failed to send to %s: %s", normalized_phone, e)
+            # Don't fail the invitation creation if SMS fails
             pass
 
     return invitation
@@ -435,16 +448,15 @@ def accept_invitation(invitation, user):
         if current_doctors >= subscription.max_doctors:
             raise ValidationError(f"لقد وصلت العيادة للحد الأقصى لعدد الأطباء ({subscription.max_doctors}).")
 
-    # Ensure idempotency
+    # Ensure idempotency — don't overwrite existing higher-privilege roles
     staff, created = ClinicStaff.objects.get_or_create(
         clinic=invitation.clinic,
         user=user,
         defaults={"role": invitation.role, "added_by": invitation.invited_by}
     )
 
-    if not created and staff.role != invitation.role:
-        staff.role = invitation.role
-        staff.save()
+    # If staff record already exists, keep existing role (e.g. MAIN_DOCTOR)
+    # The new role will be added to user.roles below
 
     # Handle DoctorProfile only if DOCTOR
     if invitation.role == "DOCTOR":

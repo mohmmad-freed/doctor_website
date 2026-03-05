@@ -332,7 +332,7 @@
             {% csrf_token %}
 
             <div class="input-group">
-                <input type="tel" id="phone" name="phone" class="form-control" placeholder=" " maxlength="10" required>
+                <input type="tel" id="phone" name="phone" class="form-control" placeholder=" " maxlength="10" required value="{{ initial_phone|default:'' }}">
                 <label class="floating-label" for="phone">رقم الهاتف (05xxxxxxxx)</label>
                 <i class="fa-solid fa-mobile-screen input-icon"></i>
 
