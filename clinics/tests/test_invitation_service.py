@@ -257,3 +257,179 @@ class ClinicInvitationServiceTests(TestCase):
         # Check Roles
         user.refresh_from_db()
         self.assertIn("SECRETARY", user.roles)
+
+    # ==========================================
+    # NEW TESTS: Rate Limiting
+    # ==========================================
+
+    @patch('clinics.services.send_sms')
+    def test_rate_limit_per_phone_exceeded(self, mock_send_sms):
+        """Creating more than 3 invitations for the same phone within an hour should fail."""
+        for i in range(3):
+            # Use different clinics or different clinic contexts? No, the per-phone limit is global.
+            # We need to use different clinics or the same clinic but clear the pending constraint.
+            # Actually, the unique constraint is per (clinic, doctor_phone) where status=PENDING.
+            # So we can create 3 invites for different phones per clinic, but the rate limit is per-phone.
+            # Let's create 3 invitations from different clinics for the same phone.
+            clinic_i = Clinic.objects.create(
+                name=f"Clinic {i}", main_doctor=self.owner, status="ACTIVE"
+            )
+            ClinicSubscription.objects.create(
+                clinic=clinic_i, plan_type="MONTHLY",
+                expires_at=timezone.now() + timedelta(days=30),
+                max_doctors=5, status="ACTIVE"
+            )
+            data = {
+                "doctor_name": f"Doc {i}",
+                "doctor_phone": "0561111111",
+                "doctor_email": f"doc{i}@test.com",
+            }
+            create_invitation(clinic_i, self.owner, data)
+
+        # 4th should fail
+        clinic_extra = Clinic.objects.create(
+            name="Clinic Extra", main_doctor=self.owner, status="ACTIVE"
+        )
+        ClinicSubscription.objects.create(
+            clinic=clinic_extra, plan_type="MONTHLY",
+            expires_at=timezone.now() + timedelta(days=30),
+            max_doctors=5, status="ACTIVE"
+        )
+        data = {
+            "doctor_name": "Doc 4",
+            "doctor_phone": "0561111111",
+            "doctor_email": "doc4@test.com",
+        }
+        with self.assertRaises(ValidationError) as ctx:
+            create_invitation(clinic_extra, self.owner, data)
+        self.assertIn("الحد الأقصى لعدد الدعوات لهذا الرقم", str(ctx.exception))
+
+    @patch('clinics.services.send_sms')
+    def test_rate_limit_per_clinic_exceeded(self, mock_send_sms):
+        """Creating more than 10 invitations from the same clinic within an hour should fail."""
+        self.subscription.max_doctors = 20
+        self.subscription.save()
+
+        for i in range(10):
+            phone = f"056200{i:04d}"
+            data = {
+                "doctor_name": f"Doc {i}",
+                "doctor_phone": phone,
+                "doctor_email": f"doc{i}@test.com",
+            }
+            create_invitation(self.clinic, self.owner, data)
+
+        # 11th should fail
+        data = {
+            "doctor_name": "Doc Extra",
+            "doctor_phone": "0562999999",
+            "doctor_email": "extra@test.com",
+        }
+        with self.assertRaises(ValidationError) as ctx:
+            create_invitation(self.clinic, self.owner, data)
+        self.assertIn("الحد الأقصى لعدد الدعوات من هذه العيادة", str(ctx.exception))
+
+    # ==========================================
+    # NEW TESTS: Audit Logging
+    # ==========================================
+
+    @patch('clinics.services.send_sms')
+    def test_audit_log_on_create(self, mock_send_sms):
+        from clinics.models import InvitationAuditLog
+        data = {
+            "doctor_name": "Audit Doc",
+            "doctor_phone": "0563333333",
+            "doctor_email": "audit@test.com",
+        }
+        invitation = create_invitation(self.clinic, self.owner, data)
+
+        log = InvitationAuditLog.objects.get(invitation=invitation)
+        self.assertEqual(log.action, "CREATED")
+        self.assertEqual(log.performed_by, self.owner)
+        self.assertEqual(log.clinic, self.clinic)
+
+    def test_audit_log_on_cancel(self):
+        from clinics.models import InvitationAuditLog
+        invitation = ClinicInvitation.objects.create(
+            clinic=self.clinic, doctor_phone="0564444444",
+            expires_at=timezone.now() + timedelta(days=2), status="PENDING"
+        )
+        cancel_invitation(invitation, self.owner)
+
+        log = InvitationAuditLog.objects.get(invitation=invitation, action="CANCELLED")
+        self.assertEqual(log.performed_by, self.owner)
+
+    def test_audit_log_on_accept(self):
+        from clinics.models import InvitationAuditLog
+        invitation = ClinicInvitation.objects.create(
+            clinic=self.clinic, doctor_phone="0565555555",
+            expires_at=timezone.now() + timedelta(days=2), status="PENDING"
+        )
+        user = CustomUser.objects.create(phone="0565555555", name="Accepting")
+        accept_invitation(invitation, user)
+
+        log = InvitationAuditLog.objects.get(invitation=invitation, action="ACCEPTED")
+        self.assertEqual(log.performed_by, user)
+
+    def test_audit_log_on_reject(self):
+        from clinics.models import InvitationAuditLog
+        invitation = ClinicInvitation.objects.create(
+            clinic=self.clinic, doctor_phone="0566666666",
+            expires_at=timezone.now() + timedelta(days=2), status="PENDING"
+        )
+        user = CustomUser.objects.create(phone="0566666666", name="Rejecting")
+        reject_invitation(invitation, user)
+
+        log = InvitationAuditLog.objects.get(invitation=invitation, action="REJECTED")
+        self.assertEqual(log.performed_by, user)
+
+    # ==========================================
+    # NEW TESTS: Strict Existing User Validation
+    # ==========================================
+
+    @patch('clinics.services.send_sms')
+    def test_strict_validation_email_mismatch(self, mock_send_sms):
+        """Inviting with wrong email for an existing user should fail."""
+        CustomUser.objects.create(
+            phone="0567777777", name="Existing", email="real@example.com"
+        )
+        data = {
+            "doctor_name": "Existing",
+            "doctor_phone": "0567777777",
+            "doctor_email": "wrong@example.com",
+        }
+        with self.assertRaises(ValidationError) as ctx:
+            create_invitation(self.clinic, self.owner, data)
+        self.assertIn("البريد الإلكتروني المدخل لا يتطابق", str(ctx.exception))
+
+    @patch('clinics.services.send_sms')
+    def test_strict_validation_national_id_mismatch(self, mock_send_sms):
+        """Inviting with wrong national_id for an existing user should fail."""
+        CustomUser.objects.create(
+            phone="0568888888", name="Existing", national_id="111111111"
+        )
+        data = {
+            "doctor_name": "Existing",
+            "doctor_phone": "0568888888",
+            "doctor_email": "doc@example.com",
+            "doctor_national_id": "999999999",
+        }
+        with self.assertRaises(ValidationError) as ctx:
+            create_invitation(self.clinic, self.owner, data)
+        self.assertIn("رقم الهوية الوطنية المدخل لا يتطابق", str(ctx.exception))
+
+    @patch('clinics.services.send_sms')
+    def test_strict_validation_matching_data_passes(self, mock_send_sms):
+        """Inviting with correct data for an existing user should succeed."""
+        CustomUser.objects.create(
+            phone="0569999999", name="Existing",
+            email="correct@example.com", national_id="222222222"
+        )
+        data = {
+            "doctor_name": "Existing",
+            "doctor_phone": "0569999999",
+            "doctor_email": "correct@example.com",
+            "doctor_national_id": "222222222",
+        }
+        invitation = create_invitation(self.clinic, self.owner, data)
+        self.assertEqual(invitation.status, "PENDING")

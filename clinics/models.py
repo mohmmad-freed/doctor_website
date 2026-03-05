@@ -107,6 +107,7 @@ class ClinicInvitation(models.Model):
     doctor_name = models.CharField(max_length=255)
     doctor_phone = models.CharField(max_length=20, db_index=True)
     doctor_email = models.EmailField()
+    doctor_national_id = models.CharField(max_length=20, blank=True, default="")
     specialties = models.ManyToManyField(
         "doctors.Specialty",
         blank=True,
@@ -148,6 +149,41 @@ class ClinicInvitation(models.Model):
         if self.is_expired and self.status == "PENDING":
              pass # Service logic should handle marking this EXPIRED
 
+
+
+class InvitationAuditLog(models.Model):
+    """Lightweight audit trail for invitation lifecycle events."""
+
+    ACTION_CHOICES = [
+        ("CREATED", "Created"),
+        ("CANCELLED", "Cancelled"),
+        ("ACCEPTED", "Accepted"),
+        ("REJECTED", "Rejected"),
+        ("EXPIRED", "Expired"),
+    ]
+
+    clinic = models.ForeignKey(
+        Clinic, on_delete=models.CASCADE, related_name="invitation_audit_logs"
+    )
+    invitation = models.ForeignKey(
+        ClinicInvitation, on_delete=models.CASCADE, related_name="audit_logs"
+    )
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    performed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-timestamp"]
+        verbose_name = "Invitation Audit Log"
+        verbose_name_plural = "Invitation Audit Logs"
+
+    def __str__(self):
+        return f"{self.action} - {self.invitation.doctor_name} @ {self.clinic.name}"
 
 
 class ClinicSubscription(models.Model):

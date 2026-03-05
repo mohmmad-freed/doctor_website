@@ -98,6 +98,12 @@ class ClinicInvitationForm(forms.Form):
         label="البريد الإلكتروني للطبيب",
         widget=forms.EmailInput(attrs={"placeholder": "doctor@example.com", "class": "form-control"})
     )
+    doctor_national_id = forms.CharField(
+        max_length=20,
+        label="رقم الهوية الوطنية",
+        required=False,
+        widget=forms.TextInput(attrs={"placeholder": "أدخل رقم الهوية الوطنية", "class": "form-control"})
+    )
     specialties = forms.ModelMultipleChoiceField(
         queryset=Specialty.objects.all(),
         widget=forms.CheckboxSelectMultiple,
@@ -127,6 +133,12 @@ class SecretaryInvitationForm(forms.Form):
     secretary_email = forms.EmailField(
         label="البريد الإلكتروني للسكرتير/ة",
         widget=forms.EmailInput(attrs={"placeholder": "secretary@example.com", "class": "form-control"})
+    )
+    secretary_national_id = forms.CharField(
+        max_length=20,
+        label="رقم الهوية الوطنية",
+        required=False,
+        widget=forms.TextInput(attrs={"placeholder": "أدخل رقم الهوية الوطنية", "class": "form-control"})
     )
     
     def clean_secretary_phone(self):

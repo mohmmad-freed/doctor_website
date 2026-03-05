@@ -253,13 +253,49 @@ from accounts.backends import PhoneNumberAuthBackend
 from accounts.models import CustomUser
 from doctors.models import DoctorProfile, DoctorSpecialty
 from accounts.services.tweetsms import send_sms
-from .models import ClinicInvitation
+from .models import ClinicInvitation, InvitationAuditLog
+
 
 def _normalize_phone_for_invite(phone_str):
     phone = PhoneNumberAuthBackend.normalize_phone_number(phone_str)
     if not PhoneNumberAuthBackend.is_valid_phone_number(phone):
         raise ValidationError("رقم الهاتف غير صحيح. يجب أن يتكون من 10 أرقام ويبدأ بـ 059 أو 056.")
     return phone
+
+
+def _log_invitation_action(invitation, action, performed_by=None):
+    """Create an audit log entry for an invitation lifecycle event."""
+    InvitationAuditLog.objects.create(
+        clinic=invitation.clinic,
+        invitation=invitation,
+        action=action,
+        performed_by=performed_by,
+    )
+
+
+def _check_invitation_rate_limits(clinic, normalized_phone):
+    """Enforce rate limits: max 3/phone/hour and max 10/clinic/hour."""
+    one_hour_ago = timezone.now() - timezone.timedelta(hours=1)
+
+    # Per-phone limit (across all clinics)
+    phone_count = ClinicInvitation.objects.filter(
+        doctor_phone=normalized_phone,
+        created_at__gte=one_hour_ago,
+    ).count()
+    if phone_count >= 3:
+        raise ValidationError(
+            "تم تجاوز الحد الأقصى لعدد الدعوات لهذا الرقم. يرجى المحاولة لاحقاً."
+        )
+
+    # Per-clinic limit
+    clinic_count = ClinicInvitation.objects.filter(
+        clinic=clinic,
+        created_at__gte=one_hour_ago,
+    ).count()
+    if clinic_count >= 10:
+        raise ValidationError(
+            "تم تجاوز الحد الأقصى لعدد الدعوات من هذه العيادة. يرجى المحاولة لاحقاً."
+        )
 
 
 def create_invitation(clinic, owner, data, role="DOCTOR"):
@@ -287,12 +323,16 @@ def create_invitation(clinic, owner, data, role="DOCTOR"):
     name_key = "secretary_name" if role == "SECRETARY" else "doctor_name"
     phone_key = "secretary_phone" if role == "SECRETARY" else "doctor_phone"
     email_key = "secretary_email" if role == "SECRETARY" else "doctor_email"
+    national_id_key = "secretary_national_id" if role == "SECRETARY" else "doctor_national_id"
 
     # 2. Normalize phone
     raw_phone = data.get(phone_key, "")
     normalized_phone = _normalize_phone_for_invite(raw_phone)
 
-    # 3. Check for existing pending invites for this exact phone
+    # 3. Rate limiting
+    _check_invitation_rate_limits(clinic, normalized_phone)
+
+    # 4. Check for existing pending invites for this exact phone
     existing_invite = ClinicInvitation.objects.filter(
         clinic=clinic, doctor_phone=normalized_phone, status="PENDING"
     ).first()
@@ -303,8 +343,9 @@ def create_invitation(clinic, owner, data, role="DOCTOR"):
             # Mark it expired so constraint isn't violated
             existing_invite.status = "EXPIRED"
             existing_invite.save()
+            _log_invitation_action(existing_invite, "EXPIRED")
 
-    # 4. Check if user is already staff
+    # 5. Check if user is already staff
     user_exists = CustomUser.objects.filter(phone=normalized_phone).first()
     if user_exists and ClinicStaff.objects.filter(clinic=clinic, user=user_exists).exists():
         if role == "SECRETARY":
@@ -312,7 +353,20 @@ def create_invitation(clinic, owner, data, role="DOCTOR"):
         else:
             raise ValidationError("هذا الطبيب موجود بالفعل ضمن طاقم العيادة.")
 
-    # 5. Create Invitation
+    # 6. Strict validation against existing user data
+    if user_exists:
+        entered_email = data.get(email_key, "")
+        if entered_email and user_exists.email and entered_email.lower() != user_exists.email.lower():
+            raise ValidationError(
+                "البريد الإلكتروني المدخل لا يتطابق مع بيانات المستخدم المسجل. يرجى التأكد من البيانات."
+            )
+        entered_nid = data.get(national_id_key, "")
+        if entered_nid and user_exists.national_id and entered_nid != user_exists.national_id:
+            raise ValidationError(
+                "رقم الهوية الوطنية المدخل لا يتطابق مع بيانات المستخدم المسجل. يرجى التأكد من البيانات."
+            )
+
+    # 7. Create Invitation
     expires_at = timezone.now() + timezone.timedelta(hours=48)
     invitation = ClinicInvitation.objects.create(
         clinic=clinic,
@@ -320,6 +374,7 @@ def create_invitation(clinic, owner, data, role="DOCTOR"):
         doctor_name=data.get(name_key, ""),
         doctor_phone=normalized_phone,
         doctor_email=data.get(email_key, ""),
+        doctor_national_id=data.get(national_id_key, ""),
         role=role,
         expires_at=expires_at,
     )
@@ -329,7 +384,10 @@ def create_invitation(clinic, owner, data, role="DOCTOR"):
         if specialties:
             invitation.specialties.set(specialties)
 
-    # 6. Send SMS if user doesn't exist
+    # 8. Audit log
+    _log_invitation_action(invitation, "CREATED", performed_by=owner)
+
+    # 9. Send SMS if user doesn't exist
     if not user_exists:
         try:
             # We must use the specific TweetsMS normalization logic since it requires 970 prefix.
@@ -418,6 +476,11 @@ def accept_invitation(invitation, user):
                         is_primary=is_primary
                     )
 
+    # Update user national_id if provided in invitation and user doesn't have one
+    if invitation.doctor_national_id and not user.national_id:
+        user.national_id = invitation.doctor_national_id
+        user.save(update_fields=["national_id"])
+
     # Update user roles if missing role
     if invitation.role not in (user.roles or []):
         roles = list(user.roles or [])
@@ -427,6 +490,8 @@ def accept_invitation(invitation, user):
 
     invitation.status = "ACCEPTED"
     invitation.save()
+
+    _log_invitation_action(invitation, "ACCEPTED", performed_by=user)
 
     return staff
 
@@ -442,6 +507,8 @@ def cancel_invitation(invitation, owner):
     invitation.status = "CANCELLED"
     invitation.save()
 
+    _log_invitation_action(invitation, "CANCELLED", performed_by=owner)
+
 
 def reject_invitation(invitation, user):
     """Invited user rejects a pending invitation."""
@@ -455,3 +522,4 @@ def reject_invitation(invitation, user):
     invitation.status = "REJECTED"
     invitation.save()
 
+    _log_invitation_action(invitation, "REJECTED", performed_by=user)

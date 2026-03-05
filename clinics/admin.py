@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Clinic, ClinicStaff, ClinicActivationCode, ClinicSubscription, ClinicVerification
+from .models import Clinic, ClinicStaff, ClinicActivationCode, ClinicSubscription, ClinicVerification, InvitationAuditLog
 
 
 @admin.register(Clinic)
@@ -117,3 +117,20 @@ class ClinicSubscriptionAdmin(admin.ModelAdmin):
             'fields': ('created_at',)
         }),
     )
+
+
+@admin.register(InvitationAuditLog)
+class InvitationAuditLogAdmin(admin.ModelAdmin):
+    list_display = ['invitation', 'clinic', 'action', 'performed_by', 'timestamp']
+    list_filter = ['action', 'clinic', 'timestamp']
+    search_fields = ['invitation__doctor_name', 'invitation__doctor_phone', 'clinic__name']
+    readonly_fields = ['clinic', 'invitation', 'action', 'performed_by', 'timestamp']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
