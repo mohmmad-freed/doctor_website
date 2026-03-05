@@ -387,24 +387,19 @@ class ClinicInvitationServiceTests(TestCase):
     # NEW TESTS: Strict Existing User Validation
     # ==========================================
 
-    @patch('clinics.services.send_sms')
-    def test_strict_validation_email_mismatch(self, mock_send_sms):
-        """Inviting with wrong email for an existing user should fail."""
-        CustomUser.objects.create(
-            phone="0567777777", name="Existing", email="real@example.com"
-        )
-        data = {
-            "doctor_name": "Existing",
-            "doctor_phone": "0567777777",
-            "doctor_email": "wrong@example.com",
-        }
-        with self.assertRaises(ValidationError) as ctx:
-            create_invitation(self.clinic, self.owner, data)
-        self.assertIn("البريد الإلكتروني المدخل لا يتطابق", str(ctx.exception))
+    # ==========================================
+    # IDENTITY CROSS-REFERENCE VALIDATION
+    # ==========================================
+
+    # -- Case 2 (registered phone + wrong national ID) --
 
     @patch('clinics.services.send_sms')
-    def test_strict_validation_national_id_mismatch(self, mock_send_sms):
-        """Inviting with wrong national_id for an existing user should fail."""
+    def test_registered_phone_mismatched_national_id_fails(self, mock_send_sms):
+        """
+        Case 2: Inviting with a registered phone but a national ID that doesn't match
+        what the account already has on file should fail with a generic error.
+        The message must NOT reveal that the phone is registered.
+        """
         CustomUser.objects.create(
             phone="0568888888", name="Existing", national_id="111111111"
         )
@@ -412,15 +407,144 @@ class ClinicInvitationServiceTests(TestCase):
             "doctor_name": "Existing",
             "doctor_phone": "0568888888",
             "doctor_email": "doc@example.com",
-            "doctor_national_id": "999999999",
+            "doctor_national_id": "999999999",  # wrong — account has 111111111
         }
         with self.assertRaises(ValidationError) as ctx:
             create_invitation(self.clinic, self.owner, data)
-        self.assertIn("رقم الهوية الوطنية المدخل لا يتطابق", str(ctx.exception))
+        err = str(ctx.exception)
+        self.assertIn("تعذر إرسال الدعوة", err)
+        # Must not leak that the phone is registered or what the real NID is
+        self.assertNotIn("يتطابق", err)
+        self.assertNotIn("مسجل", err)
+
+    @patch('clinics.services.send_sms')
+    def test_registered_phone_mismatched_email_fails(self, mock_send_sms):
+        """
+        Inviting with a registered phone but a different email should fail
+        with a generic error — not one that reveals the phone is registered.
+        """
+        CustomUser.objects.create(
+            phone="0567777777", name="Existing", email="real@example.com"
+        )
+        data = {
+            "doctor_name": "Existing",
+            "doctor_phone": "0567777777",
+            "doctor_email": "wrong@example.com",  # mismatch
+        }
+        with self.assertRaises(ValidationError) as ctx:
+            create_invitation(self.clinic, self.owner, data)
+        err = str(ctx.exception)
+        self.assertIn("تعذر إرسال الدعوة", err)
+        self.assertNotIn("يتطابق", err)
+        self.assertNotIn("مسجل", err)
+
+    # -- Case 1 (unregistered phone + NID belonging to another user) --
+
+    @patch('clinics.services.send_sms')
+    def test_unregistered_phone_national_id_belongs_to_another_user_fails(self, mock_send_sms):
+        """
+        Case 1: The entered phone is NOT registered in the system, but the entered
+        national ID already belongs to a DIFFERENT registered user.
+        This is a cross-reference attack and must be rejected with a generic error.
+        """
+        # Another user owns this national ID under a different phone
+        CustomUser.objects.create(
+            phone="0591111111", name="Real Owner", national_id="555555555"
+        )
+        data = {
+            "doctor_name": "Fake Invite",
+            "doctor_phone": "0590000099",   # not in DB
+            "doctor_email": "fake@example.com",
+            "doctor_national_id": "555555555",  # belongs to 0591111111, not 0590000099
+        }
+        with self.assertRaises(ValidationError) as ctx:
+            create_invitation(self.clinic, self.owner, data)
+        err = str(ctx.exception)
+        self.assertIn("تعذر إرسال الدعوة", err)
+        # Must not say "this NID is in use by another phone" or similar
+        self.assertNotIn("يتطابق", err)
+        self.assertNotIn("مسجل", err)
+        mock_send_sms.assert_not_called()
+
+    @patch('clinics.services.send_sms')
+    def test_registered_phone_national_id_belongs_to_third_user_fails(self, mock_send_sms):
+        """
+        The entered phone IS registered (and has no national ID set), but the entered
+        national ID belongs to a completely different third user. Must fail.
+        """
+        # User being invited — no national_id set
+        CustomUser.objects.create(
+            phone="0592222222", name="Invitee", national_id=""
+        )
+        # A third user who owns the NID
+        CustomUser.objects.create(
+            phone="0593333333", name="Third Party", national_id="444444444"
+        )
+        data = {
+            "doctor_name": "Invitee",
+            "doctor_phone": "0592222222",
+            "doctor_email": "inv@example.com",
+            "doctor_national_id": "444444444",  # belongs to 0593333333
+        }
+        with self.assertRaises(ValidationError) as ctx:
+            create_invitation(self.clinic, self.owner, data)
+        self.assertIn("تعذر إرسال الدعوة", str(ctx.exception))
+        mock_send_sms.assert_not_called()
+
+    # -- Self-invite --
+
+    @patch('clinics.services.send_sms')
+    def test_owner_cannot_invite_themselves_as_doctor(self, mock_send_sms):
+        """The clinic owner must not be able to invite their own phone number."""
+        # Use a normalized-format phone so the DB lookup finds the owner
+        owner2 = CustomUser.objects.create(
+            phone="0591230001", name="Self Owner", roles=["MAIN_DOCTOR"]
+        )
+        clinic2 = Clinic.objects.create(name="Self Clinic", main_doctor=owner2, status="ACTIVE")
+        ClinicStaff.objects.create(clinic=clinic2, user=owner2, role="MAIN_DOCTOR")
+        ClinicSubscription.objects.create(
+            clinic=clinic2, plan_type="MONTHLY",
+            expires_at=timezone.now() + timedelta(days=30),
+            max_doctors=5, status="ACTIVE"
+        )
+        data = {
+            "doctor_name": owner2.name,
+            "doctor_phone": owner2.phone,   # "0591230001" — normalizes and finds owner2
+            "doctor_email": "self@example.com",
+        }
+        with self.assertRaises(ValidationError) as ctx:
+            create_invitation(clinic2, owner2, data)
+        self.assertIn("لا يمكنك إرسال دعوة لنفسك", str(ctx.exception))
+        mock_send_sms.assert_not_called()
+
+    @patch('clinics.services.send_sms')
+    def test_owner_cannot_invite_themselves_as_secretary(self, mock_send_sms):
+        """Same self-invite guard applies when the role is SECRETARY."""
+        owner2 = CustomUser.objects.create(
+            phone="0591230002", name="Self Owner 2", roles=["MAIN_DOCTOR"]
+        )
+        clinic2 = Clinic.objects.create(name="Self Clinic 2", main_doctor=owner2, status="ACTIVE")
+        ClinicStaff.objects.create(clinic=clinic2, user=owner2, role="MAIN_DOCTOR")
+        ClinicSubscription.objects.create(
+            clinic=clinic2, plan_type="MONTHLY",
+            expires_at=timezone.now() + timedelta(days=30),
+            max_doctors=5, status="ACTIVE"
+        )
+        data = {
+            "secretary_name": owner2.name,
+            "secretary_phone": owner2.phone,
+            "secretary_email": "self2@example.com",
+        }
+        with self.assertRaises(ValidationError) as ctx:
+            create_invitation(clinic2, owner2, data, role="SECRETARY")
+        self.assertIn("لا يمكنك إرسال دعوة لنفسك", str(ctx.exception))
+        mock_send_sms.assert_not_called()
+
+    # -- Valid data should still pass --
 
     @patch('clinics.services.send_sms')
     def test_strict_validation_matching_data_passes(self, mock_send_sms):
-        """Inviting with correct data for an existing user should succeed."""
+        """Inviting with correct matching data for an existing user should succeed."""
         CustomUser.objects.create(
             phone="0569999999", name="Existing",
             email="correct@example.com", national_id="222222222"
@@ -433,3 +557,19 @@ class ClinicInvitationServiceTests(TestCase):
         }
         invitation = create_invitation(self.clinic, self.owner, data)
         self.assertEqual(invitation.status, "PENDING")
+
+    @patch('clinics.services.send_sms')
+    def test_unregistered_phone_no_national_id_passes(self, mock_send_sms):
+        """
+        Unregistered phone with no national ID entered is valid —
+        no cross-reference check needed.
+        """
+        data = {
+            "doctor_name": "Brand New",
+            "doctor_phone": "0560000088",
+            "doctor_email": "new@example.com",
+            # no doctor_national_id
+        }
+        invitation = create_invitation(self.clinic, self.owner, data)
+        self.assertEqual(invitation.status, "PENDING")
+        mock_send_sms.assert_called_once()

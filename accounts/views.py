@@ -339,11 +339,21 @@ def register_patient_details(request):
         messages.error(request, "Please verify your phone number first.")
         return redirect("accounts:register_patient_phone")
 
+    # Check if this registration was triggered by a clinic invitation.
+    from clinics.models import ClinicInvitation
+    pending_invitation = ClinicInvitation.objects.filter(
+        doctor_phone=phone, status="PENDING"
+    ).order_by("-created_at").first()
+
     if request.method == "POST":
         form = PatientRegistrationForm(request.POST)
         form.data = form.data.copy()
         form.data["phone"] = phone
         form._phone_pre_verified = True
+
+        # Supply invitation NID so clean_national_id validates against it.
+        if pending_invitation and pending_invitation.doctor_national_id:
+            form._invitation_national_id = pending_invitation.doctor_national_id
 
         if form.is_valid():
             try:
@@ -365,7 +375,11 @@ def register_patient_details(request):
                 login(request, user, backend="accounts.backends.PhoneNumberAuthBackend")
                 request.session["just_registered"] = True
 
-                # Redirect to optional email step
+                # If triggered by invitation, go directly to invitations inbox
+                # so the user can accept; otherwise proceed to optional email step.
+                next_url = request.session.pop("next_after_login", None)
+                if next_url:
+                    return redirect(next_url)
                 return redirect("accounts:register_patient_email")
 
             except Exception as e:

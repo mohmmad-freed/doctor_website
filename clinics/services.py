@@ -345,9 +345,13 @@ def create_invitation(clinic, owner, data, role="DOCTOR", request=None):
             existing_invite.save()
             _log_invitation_action(existing_invite, "EXPIRED")
 
-    # 5. Check if user already has this exact role at the clinic
+    # 5. Check if user already has this exact role at the clinic + self-invite guard
     user_exists = CustomUser.objects.filter(phone=normalized_phone).first()
     if user_exists:
+        # Prevent the clinic owner from inviting themselves
+        if user_exists == owner:
+            raise ValidationError("لا يمكنك إرسال دعوة لنفسك.")
+
         existing_staff = ClinicStaff.objects.filter(clinic=clinic, user=user_exists).first()
         if existing_staff and role in (user_exists.roles or []):
             if role == "SECRETARY":
@@ -355,18 +359,35 @@ def create_invitation(clinic, owner, data, role="DOCTOR", request=None):
             else:
                 raise ValidationError("هذا الطبيب موجود بالفعل ضمن طاقم العيادة.")
 
-    # 6. Strict validation against existing user data
+    # 6. Cross-reference identity validation — generic message to avoid leaking user existence.
+    #    Case A: registered phone → entered email/NID must match what is on file.
+    #    Case B: unregistered phone → entered NID must not belong to a different account.
+    #    Case C: entered NID (regardless of phone) must not belong to a third user.
+    _IDENTITY_ERROR = "تعذر إرسال الدعوة. يرجى التحقق من صحة البيانات المُدخلة."
+
+    entered_email = data.get(email_key, "")
+    entered_nid = data.get(national_id_key, "")
+
     if user_exists:
-        entered_email = data.get(email_key, "")
+        # Entered email must not contradict what is stored
         if entered_email and user_exists.email and entered_email.lower() != user_exists.email.lower():
-            raise ValidationError(
-                "البريد الإلكتروني المدخل لا يتطابق مع بيانات المستخدم المسجل. يرجى التأكد من البيانات."
-            )
-        entered_nid = data.get(national_id_key, "")
+            raise ValidationError(_IDENTITY_ERROR)
+
+        # Entered NID must not contradict what is stored
         if entered_nid and user_exists.national_id and entered_nid != user_exists.national_id:
-            raise ValidationError(
-                "رقم الهوية الوطنية المدخل لا يتطابق مع بيانات المستخدم المسجل. يرجى التأكد من البيانات."
-            )
+            raise ValidationError(_IDENTITY_ERROR)
+
+        # Entered NID must not belong to a completely different user
+        if entered_nid:
+            nid_owner = CustomUser.objects.filter(national_id=entered_nid).exclude(pk=user_exists.pk).first()
+            if nid_owner:
+                raise ValidationError(_IDENTITY_ERROR)
+    else:
+        # Phone not in the system: the entered NID must not be claimed by someone else
+        if entered_nid:
+            nid_owner = CustomUser.objects.filter(national_id=entered_nid).first()
+            if nid_owner:
+                raise ValidationError(_IDENTITY_ERROR)
 
     # 7. Create Invitation
     expires_at = timezone.now() + timezone.timedelta(hours=48)

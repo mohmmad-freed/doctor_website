@@ -1,111 +1,761 @@
-{% extends "accounts/base.html" %}
+{% extends 'accounts/base.html' %}
+{% load static %}
 
-{% block title %}الدعوات - {{ clinic.name }}{% endblock %}
+{% block title %}إدارة الكوادر الطبية — {{ clinic.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── Layout ── */
+    .staff-page {
+        max-width: 1050px;
+        margin: 0 auto;
+        padding: 2rem 1rem 4rem;
+    }
+
+    /* ── Base card ── */
+    .s-card {
+        background: var(--color-surface-card);
+        border: 1px solid var(--color-surface-border);
+        border-radius: 12px;
+        padding: 1.5rem 1.75rem;
+        margin-bottom: 1.25rem;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+
+    /* ── Header ── */
+    .header-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .header-title h1 {
+        font-size: 1.45rem;
+        font-weight: 700;
+        color: var(--color-text-main);
+        margin: 0 0 0.2rem;
+    }
+
+    .header-title p {
+        color: var(--color-text-muted);
+        font-size: 0.88rem;
+        margin: 0;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+    }
+
+    /* ── Stats row ── */
+    .stats-row {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        padding-top: 1.1rem;
+        border-top: 1px solid var(--color-surface-border);
+        margin-top: 1rem;
+    }
+
+    .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.88rem;
+        color: var(--color-text-muted);
+    }
+
+    .stat-item strong {
+        color: var(--color-text-main);
+        font-size: 1rem;
+        font-weight: 700;
+    }
+
+    .stat-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+    .dot-pending  { background: #f59e0b; }
+    .dot-accepted { background: #10b981; }
+    .dot-total    { background: var(--color-primary-500); }
+
+    /* ── Filter bar ── */
+    .filter-bar {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        padding: 1rem 1.75rem;
+        background: var(--color-surface-card);
+        border: 1px solid var(--color-surface-border);
+        border-radius: 12px;
+        margin-bottom: 1.25rem;
+    }
+
+    .filter-group {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+    }
+
+    .filter-label {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--color-text-muted);
+        white-space: nowrap;
+    }
+
+    .filter-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.3rem 0.8rem;
+        border-radius: 9999px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        cursor: pointer;
+        border: 1.5px solid var(--color-surface-border);
+        background: transparent;
+        color: var(--color-text-muted);
+        font-family: inherit;
+        transition: all 0.15s;
+        user-select: none;
+    }
+
+    .filter-pill:hover {
+        border-color: var(--color-primary-500);
+        color: var(--color-primary-500);
+    }
+
+    .filter-pill.active {
+        background: var(--color-primary-500);
+        border-color: var(--color-primary-500);
+        color: #fff;
+    }
+
+    .filter-divider {
+        width: 1px;
+        height: 22px;
+        background: var(--color-surface-border);
+        flex-shrink: 0;
+    }
+
+    /* ── Invitation cards list ── */
+    .inv-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .inv-card {
+        background: var(--color-surface-card);
+        border: 1px solid var(--color-surface-border);
+        border-radius: 10px;
+        padding: 1.1rem 1.4rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transition: border-color 0.15s, box-shadow 0.15s;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        flex-wrap: wrap;
+    }
+
+    .inv-card:hover {
+        border-color: var(--color-primary-500);
+        box-shadow: 0 2px 8px rgba(0,120,212,0.08);
+    }
+
+    .inv-card.is-cancelled,
+    .inv-card.is-expired {
+        opacity: 0.62;
+    }
+
+    /* Avatar */
+    .inv-avatar {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+
+    .avatar-doctor    { background: #dbeafe; color: #1d4ed8; }
+    .avatar-secretary { background: #e0f2fe; color: #0369a1; }
+
+    [data-theme="dark"] .avatar-doctor    { background: #1e3a5f; color: #93c5fd; }
+    [data-theme="dark"] .avatar-secretary { background: #0c3052; color: #7dd3fc; }
+
+    /* Info */
+    .inv-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .inv-name {
+        font-weight: 700;
+        font-size: 0.97rem;
+        color: var(--color-text-main);
+        margin-bottom: 0.2rem;
+    }
+
+    .inv-meta {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        font-size: 0.82rem;
+        color: var(--color-text-muted);
+    }
+
+    /* Specialty chips */
+    .spec-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        margin-top: 0.4rem;
+    }
+
+    .spec-chip {
+        display: inline-block;
+        padding: 0.15rem 0.55rem;
+        border-radius: 9999px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        background: var(--color-surface-ground);
+        border: 1px solid var(--color-surface-border);
+        color: var(--color-text-muted);
+    }
+
+    /* Right side */
+    .inv-right {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.45rem;
+        flex-shrink: 0;
+    }
+
+    /* Role badge */
+    .role-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.2rem 0.7rem;
+        border-radius: 9999px;
+        font-size: 0.79rem;
+        font-weight: 700;
+    }
+
+    .role-doctor    { background: #dbeafe; color: #1d4ed8; }
+    .role-secretary { background: #e0f2fe; color: #0369a1; }
+
+    [data-theme="dark"] .role-doctor    { background: #1e3a5f; color: #93c5fd; }
+    [data-theme="dark"] .role-secretary { background: #0c3052; color: #7dd3fc; }
+
+    /* Status badge */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.2rem 0.7rem;
+        border-radius: 9999px;
+        font-size: 0.79rem;
+        font-weight: 700;
+    }
+
+    .status-pending   { background: #fef3c7; color: #92400e; }
+    .status-accepted  { background: #d1fae5; color: #065f46; }
+    .status-rejected  { background: #fee2e2; color: #991b1b; }
+    .status-expired   { background: #f1f5f9; color: #64748b; border: 1px solid var(--color-surface-border); }
+    .status-cancelled { background: #f1f5f9; color: #64748b; border: 1px solid var(--color-surface-border); }
+
+    [data-theme="dark"] .status-pending   { background: #451a03; color: #fcd34d; }
+    [data-theme="dark"] .status-accepted  { background: #064e3b; color: #6ee7b7; }
+    [data-theme="dark"] .status-rejected  { background: #450a0a; color: #fca5a5; }
+    [data-theme="dark"] .status-expired   { background: #1e293b; color: #64748b; border-color: #2d3a54; }
+    [data-theme="dark"] .status-cancelled { background: #1e293b; color: #64748b; border-color: #2d3a54; }
+
+    /* Date */
+    .inv-date {
+        font-size: 0.79rem;
+        color: var(--color-text-muted);
+    }
+
+    /* Cancel button */
+    .btn-cancel-inv {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        background: transparent;
+        color: #ef4444;
+        border: 1.5px solid #ef4444;
+        border-radius: 7px;
+        padding: 0.28rem 0.7rem;
+        font-size: 0.82rem;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+        transition: background 0.15s, color 0.15s;
+    }
+
+    .btn-cancel-inv:hover {
+        background: #ef4444;
+        color: #fff;
+    }
+
+    /* Inline confirm */
+    .cancel-confirm {
+        display: none;
+        align-items: center;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+    }
+
+    .cancel-confirm.show { display: flex; }
+
+    .cancel-confirm span {
+        font-size: 0.82rem;
+        color: var(--color-text-body);
+        font-weight: 500;
+    }
+
+    .btn-confirm-yes {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+        background: #ef4444;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 0.28rem 0.65rem;
+        font-size: 0.82rem;
+        font-weight: 700;
+        cursor: pointer;
+        font-family: inherit;
+        transition: background 0.15s;
+    }
+    .btn-confirm-yes:hover { background: #dc2626; }
+
+    .btn-confirm-no {
+        display: inline-flex;
+        align-items: center;
+        background: transparent;
+        color: var(--color-text-muted);
+        border: 1.5px solid var(--color-surface-border);
+        border-radius: 6px;
+        padding: 0.28rem 0.65rem;
+        font-size: 0.82rem;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+        transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-confirm-no:hover {
+        color: var(--color-text-main);
+        border-color: var(--color-text-muted);
+    }
+
+    /* CTA Buttons */
+    .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: var(--color-primary-500);
+        color: #fff;
+        padding: 0.55rem 1.1rem;
+        border-radius: 8px;
+        font-size: 0.88rem;
+        font-weight: 700;
+        border: none;
+        cursor: pointer;
+        text-decoration: none;
+        transition: background 0.15s;
+    }
+    .btn-primary:hover { background: var(--color-primary-600); color: #fff; }
+
+    .btn-outline {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: transparent;
+        color: var(--color-primary-500);
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-size: 0.88rem;
+        font-weight: 700;
+        border: 1.5px solid var(--color-primary-500);
+        text-decoration: none;
+        transition: background 0.15s, color 0.15s;
+    }
+    .btn-outline:hover {
+        background: var(--color-primary-500);
+        color: #fff;
+    }
+
+    .btn-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.38rem 0.85rem;
+        border: 1.5px solid var(--color-surface-border);
+        border-radius: 7px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--color-text-muted);
+        text-decoration: none;
+        transition: color 0.15s, border-color 0.15s;
+        margin-top: 0.5rem;
+        display: inline-flex;
+    }
+    .btn-back:hover {
+        color: var(--color-primary-500);
+        border-color: var(--color-primary-500);
+    }
+
+    /* Empty state */
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+    }
+
+    .empty-icon {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        background: var(--color-surface-ground);
+        border: 2px solid var(--color-surface-border);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+        color: var(--color-text-muted);
+        margin-bottom: 1.25rem;
+    }
+
+    .empty-state h3 {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--color-text-main);
+        margin-bottom: 0.4rem;
+    }
+
+    .empty-state p {
+        color: var(--color-text-muted);
+        font-size: 0.9rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .empty-actions {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    /* JS filtering */
+    .inv-card.hidden { display: none; }
+
+    .no-results-msg {
+        display: none;
+        text-align: center;
+        padding: 2.5rem 1rem;
+        color: var(--color-text-muted);
+        font-size: 0.9rem;
+    }
+
+    @media (max-width: 600px) {
+        .inv-card { flex-direction: column; align-items: flex-start; }
+        .inv-right { align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-10 offset-md-1">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="mb-0">سجل الدعوات</h2>
-            <div>
-                <a href="{% url 'clinics:create_invitation' clinic.id %}" class="btn btn-primary me-2">
-                    <i class="fas fa-user-md me-1"></i> دعوة طبيب
+<div class="staff-page">
+
+    <!-- ── Header Card ── -->
+    <div class="s-card">
+        <div class="header-top">
+            <div class="header-title">
+                <h1>
+                    <i class="fa-solid fa-user-group" style="color:var(--color-primary-500);margin-left:0.45rem;"></i>
+                    إدارة الكوادر الطبية
+                </h1>
+                <p>{{ clinic.name }} — دعوة أطباء وسكرتارية للانضمام إلى عيادتك</p>
+                <a href="{% url 'clinics:my_clinic' clinic.id %}" class="btn-back">
+                    <i class="fa-solid fa-arrow-right"></i> {{ clinic.name }}
                 </a>
-                <a href="{% url 'clinics:create_secretary_invitation' clinic.id %}" class="btn btn-outline-primary">
-                    <i class="fas fa-headset me-1"></i> دعوة سكرتير/ة
+            </div>
+            <div class="header-actions">
+                <a href="{% url 'clinics:create_invitation' clinic.id %}" class="btn-primary">
+                    <i class="fa-solid fa-user-doctor"></i> دعوة طبيب
+                </a>
+                <a href="{% url 'clinics:create_secretary_invitation' clinic.id %}" class="btn-outline">
+                    <i class="fa-solid fa-headset"></i> دعوة سكرتير/ة
                 </a>
             </div>
         </div>
 
-        <div class="card shadow-sm">
-            <div class="card-body p-0">
-                {% if invitations %}
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0 align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>الاسم/رقم الهاتف</th>
-                                    <th>الدور</th>
-                                    <th>التخصصات</th>
-                                    <th>تاريخ الدعوة</th>
-                                    <th>الحالة</th>
-                                    <th>الإجراءات</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for inv in invitations %}
-                                <tr>
-                                    <td>
-                                        <strong>{{ inv.doctor_name }}</strong><br>
-                                        <small class="text-muted" dir="ltr">{{ inv.doctor_phone }}</small>
-                                    </td>
-                                    <td>
-                                        {% if inv.role == 'SECRETARY' %}
-                                            <span class="badge bg-info text-dark">سكرتير/ة</span>
-                                        {% else %}
-                                            <span class="badge bg-primary">طبيب</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if inv.role == 'SECRETARY' %}
-                                            <span class="text-muted">-</span>
-                                        {% else %}
-                                            {% for spec in inv.specialties.all %}
-                                                <span class="badge bg-secondary">{{ spec.name }}</span>
-                                            {% empty %}
-                                                <span class="text-muted">-</span>
-                                            {% endfor %}
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <span title="{{ inv.created_at|date:'Y-m-d H:i' }}">
-                                            {{ inv.created_at|timesince }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        {% if inv.status == 'PENDING' %}
-                                            {% if inv.is_expired %}
-                                                <span class="badge bg-danger">منتهية</span>
-                                                <small class="text-muted d-block mt-1">
-                                                {% else %}
-                                                <span class="badge bg-warning text-dark">بانتظار القبول</span>
-                                            {% endif %}
-                                        {% elif inv.status == 'ACCEPTED' %}
-                                            <span class="badge bg-success">تم القبول</span>
-                                        {% elif inv.status == 'REJECTED' %}
-                                            <span class="badge bg-danger">مرفوضة</span>
-                                        {% elif inv.status == 'EXPIRED' %}
-                                            <span class="badge bg-danger">منتهية</span>
-                                        {% elif inv.status == 'CANCELLED' %}
-                                            <span class="badge bg-secondary">ملغاة</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">{{ inv.get_status_display }}</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if inv.status == 'PENDING' and not inv.is_expired %}
-                                            <form method="post" action="{% url 'clinics:cancel_invitation' clinic.id inv.id %}" class="d-inline" onsubmit="return confirm('هل أنت متأكد أنك تريد إلغاء هذه الدعوة؟');">
-                                                {% csrf_token %}
-                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="إلغاء الدعوة">
-                                                    إلغاء
-                                                </button>
-                                            </form>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+        <!-- Stats (JS-populated) -->
+        {% if invitations %}
+        <div class="stats-row" id="statsRow" style="display:none;">
+            <div class="stat-item">
+                <span class="stat-dot dot-total"></span>
+                <span>الإجمالي: <strong id="stat-total">—</strong></span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-dot dot-pending"></span>
+                <span>بانتظار القبول: <strong id="stat-pending">—</strong></span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-dot dot-accepted"></span>
+                <span>تم القبول: <strong id="stat-accepted">—</strong></span>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if invitations %}
+    <!-- ── Filter Bar ── -->
+    <div class="filter-bar">
+        <div class="filter-group">
+            <span class="filter-label">عرض:</span>
+            <button class="filter-pill active" data-role="all">الكل</button>
+            <button class="filter-pill" data-role="DOCTOR">
+                <i class="fa-solid fa-user-doctor"></i> أطباء
+            </button>
+            <button class="filter-pill" data-role="SECRETARY">
+                <i class="fa-solid fa-headset"></i> سكرتارية
+            </button>
+        </div>
+
+        <div class="filter-divider"></div>
+
+        <div class="filter-group">
+            <span class="filter-label">الحالة:</span>
+            <button class="filter-pill active" data-status="all">الكل</button>
+            <button class="filter-pill" data-status="PENDING">
+                <i class="fa-solid fa-clock"></i> بانتظار القبول
+            </button>
+            <button class="filter-pill" data-status="ACCEPTED">
+                <i class="fa-solid fa-check"></i> مقبولة
+            </button>
+            <button class="filter-pill" data-status="REJECTED">مرفوضة</button>
+            <button class="filter-pill" data-status="CANCELLED">ملغاة</button>
+            <button class="filter-pill" data-status="EXPIRED">منتهية</button>
+        </div>
+    </div>
+
+    <!-- ── Invitation Cards ── -->
+    <div class="inv-list" id="invList">
+        {% for inv in invitations %}
+        <div class="inv-card{% if inv.status == 'CANCELLED' %} is-cancelled{% elif inv.status == 'EXPIRED' or inv.is_expired %} is-expired{% endif %}"
+             data-role="{{ inv.role }}"
+             data-status="{% if inv.status == 'PENDING' and inv.is_expired %}EXPIRED{% else %}{{ inv.status }}{% endif %}">
+
+            <!-- Avatar (first 2 chars of name) -->
+            <div class="inv-avatar {% if inv.role == 'SECRETARY' %}avatar-secretary{% else %}avatar-doctor{% endif %}">
+                {{ inv.doctor_name|slice:":2" }}
+            </div>
+
+            <!-- Info -->
+            <div class="inv-info">
+                <div class="inv-name">{{ inv.doctor_name }}</div>
+                <div class="inv-meta">
+                    <span dir="ltr">{{ inv.doctor_phone }}</span>
+                    {% if inv.doctor_email %}
+                    <span style="color:var(--color-surface-border);">·</span>
+                    <span>{{ inv.doctor_email }}</span>
+                    {% endif %}
+                </div>
+                {% if inv.role == 'DOCTOR' %}
+                    {% with specs=inv.specialties.all %}
+                    {% if specs %}
+                    <div class="spec-chips">
+                        {% for spec in specs %}
+                        <span class="spec-chip">{{ spec.name }}</span>
+                        {% endfor %}
                     </div>
-                {% else %}
-                    <div class="text-center p-5 text-muted">
-                        <i class="fas fa-envelope-open-text fa-3x mb-3 text-light"></i>
-                        <h5>لا توجد دعوات مسجلة</h5>
-                        <p>لم تقم بإرسال دعوات لأطباء بعد.</p>
+                    {% endif %}
+                    {% endwith %}
+                {% endif %}
+            </div>
+
+            <!-- Right: badges + date + action -->
+            <div class="inv-right">
+                <div style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+                    {% if inv.role == 'SECRETARY' %}
+                    <span class="role-badge role-secretary">
+                        <i class="fa-solid fa-headset"></i> سكرتير/ة
+                    </span>
+                    {% else %}
+                    <span class="role-badge role-doctor">
+                        <i class="fa-solid fa-user-doctor"></i> طبيب
+                    </span>
+                    {% endif %}
+
+                    {% if inv.status == 'PENDING' and inv.is_expired %}
+                        <span class="status-badge status-expired">
+                            <i class="fa-solid fa-hourglass-end"></i> منتهية
+                        </span>
+                    {% elif inv.status == 'PENDING' %}
+                        <span class="status-badge status-pending">
+                            <i class="fa-solid fa-clock"></i> بانتظار القبول
+                        </span>
+                    {% elif inv.status == 'ACCEPTED' %}
+                        <span class="status-badge status-accepted">
+                            <i class="fa-solid fa-check-circle"></i> تم القبول
+                        </span>
+                    {% elif inv.status == 'REJECTED' %}
+                        <span class="status-badge status-rejected">
+                            <i class="fa-solid fa-times-circle"></i> مرفوضة
+                        </span>
+                    {% elif inv.status == 'EXPIRED' %}
+                        <span class="status-badge status-expired">
+                            <i class="fa-solid fa-hourglass-end"></i> منتهية
+                        </span>
+                    {% elif inv.status == 'CANCELLED' %}
+                        <span class="status-badge status-cancelled">
+                            <i class="fa-solid fa-ban"></i> ملغاة
+                        </span>
+                    {% endif %}
+                </div>
+
+                <div class="inv-date" title="{{ inv.created_at|date:'Y-m-d H:i' }}">
+                    <i class="fa-regular fa-calendar" style="margin-left:0.25rem;"></i>
+                    {{ inv.created_at|timesince }} مضت
+                </div>
+
+                <!-- Cancel action with inline confirm -->
+                {% if inv.status == 'PENDING' and not inv.is_expired %}
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.3rem;">
+                    <button
+                        class="btn-cancel-inv"
+                        id="cancelBtn-{{ inv.id }}"
+                        onclick="showCancelConfirm('{{ inv.id }}')"
+                    >
+                        <i class="fa-solid fa-xmark"></i> إلغاء الدعوة
+                    </button>
+                    <div class="cancel-confirm" id="cancelConfirm-{{ inv.id }}">
+                        <span>هل أنت متأكد؟</span>
+                        <form method="post" action="{% url 'clinics:cancel_invitation' clinic.id inv.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-confirm-yes">
+                                <i class="fa-solid fa-check"></i> نعم
+                            </button>
+                        </form>
+                        <button class="btn-confirm-no" onclick="hideCancelConfirm('{{ inv.id }}')">
+                            تراجع
+                        </button>
                     </div>
+                </div>
                 {% endif %}
             </div>
         </div>
+        {% endfor %}
     </div>
+
+    <!-- No results after filter -->
+    <div class="no-results-msg" id="noResultsMsg">
+        <i class="fa-solid fa-filter-circle-xmark" style="font-size:1.8rem;margin-bottom:0.5rem;display:block;"></i>
+        لا توجد دعوات تطابق التصفية المختارة
+    </div>
+
+    {% else %}
+    <!-- ── Empty State ── -->
+    <div class="s-card">
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fa-solid fa-user-group"></i>
+            </div>
+            <h3>لم تقم بإرسال أي دعوة بعد</h3>
+            <p>ابدأ ببناء فريقك الطبي عن طريق دعوة أطباء وسكرتارية للانضمام إلى عيادتك.</p>
+            <div class="empty-actions">
+                <a href="{% url 'clinics:create_invitation' clinic.id %}" class="btn-primary">
+                    <i class="fa-solid fa-user-doctor"></i> دعوة طبيب
+                </a>
+                <a href="{% url 'clinics:create_secretary_invitation' clinic.id %}" class="btn-outline">
+                    <i class="fa-solid fa-headset"></i> دعوة سكرتير/ة
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
 </div>
+
+<script>
+    // ── Stats ──
+    (function() {
+        var cards = document.querySelectorAll('.inv-card');
+        if (!cards.length) return;
+        var total = cards.length, pending = 0, accepted = 0;
+        cards.forEach(function(c) {
+            if (c.dataset.status === 'PENDING')  pending++;
+            if (c.dataset.status === 'ACCEPTED') accepted++;
+        });
+        var row = document.getElementById('statsRow');
+        if (row) {
+            row.style.display = '';
+            document.getElementById('stat-total').textContent    = total;
+            document.getElementById('stat-pending').textContent  = pending;
+            document.getElementById('stat-accepted').textContent = accepted;
+        }
+    })();
+
+    // ── Inline cancel confirm ──
+    function showCancelConfirm(id) {
+        document.getElementById('cancelBtn-' + id).style.display = 'none';
+        document.getElementById('cancelConfirm-' + id).classList.add('show');
+    }
+    function hideCancelConfirm(id) {
+        document.getElementById('cancelBtn-' + id).style.display = '';
+        document.getElementById('cancelConfirm-' + id).classList.remove('show');
+    }
+
+    // ── Filter ──
+    var activeRole = 'all', activeStatus = 'all';
+
+    function applyFilters() {
+        var cards = document.querySelectorAll('.inv-card');
+        var visible = 0;
+        cards.forEach(function(card) {
+            var ok = (activeRole === 'all' || card.dataset.role === activeRole) &&
+                     (activeStatus === 'all' || card.dataset.status === activeStatus);
+            card.classList.toggle('hidden', !ok);
+            if (ok) visible++;
+        });
+        var noMsg = document.getElementById('noResultsMsg');
+        if (noMsg) noMsg.style.display = visible === 0 ? 'block' : 'none';
+    }
+
+    document.querySelectorAll('[data-role]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('[data-role]').forEach(function(b) { b.classList.remove('active'); });
+            this.classList.add('active');
+            activeRole = this.dataset.role;
+            applyFilters();
+        });
+    });
+
+    document.querySelectorAll('[data-status]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('[data-status]').forEach(function(b) { b.classList.remove('active'); });
+            this.classList.add('active');
+            activeStatus = this.dataset.status;
+            applyFilters();
+        });
+    });
+</script>
 {% endblock %}

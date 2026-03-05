@@ -270,10 +270,20 @@ class PatientRegistrationForm(forms.ModelForm):
         national_id = national_id.replace(" ", "").replace("-", "")
 
         if national_id and not re.match(r"^\d{9}$", national_id):
-            raise ValidationError("National ID must be exactly 9 digits.")
+            raise ValidationError("رقم الهوية يجب أن يتكون من 9 أرقام فقط.")
+
+        # Invitation context: validate against the NID stored on the invitation.
+        invitation_nid = getattr(self, "_invitation_national_id", None)
+        if invitation_nid:
+            if not national_id:
+                raise ValidationError("يرجى إدخال رقم الهوية الوطنية للتحقق من هويتك.")
+            if national_id != invitation_nid:
+                raise ValidationError("رقم الهوية الوطنية غير صحيح.")
+            # Matches the invitation's NID — skip uniqueness check.
+            return national_id or None
 
         if national_id and CustomUser.objects.filter(national_id=national_id).exists():
-            raise ValidationError("This national ID is already registered.")
+            raise ValidationError("رقم الهوية الوطنية مسجل مسبقاً.")
 
         return national_id or None
 
