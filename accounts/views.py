@@ -59,7 +59,7 @@ def home_redirect(request):
     if request.session.get("just_registered", False):
         messages.success(
             request,
-            f"Welcome, {user.name}! Your account has been successfully created.",
+            f"أهلاً {user.name}! تم إنشاء حسابك بنجاح.",
         )
         del request.session["just_registered"]
 
@@ -105,29 +105,29 @@ def login_view(request):
                 if settings.ENFORCE_PHONE_VERIFICATION and not user_obj.is_verified:
                     messages.error(
                         request,
-                        "Your phone number is not verified. Please contact support.",
+                        "رقم هاتفك غير موثق. يرجى التواصل مع الدعم الفني.",
                     )
                     return render(request, "accounts/login.html", {"form": form})
 
                 if not user_obj.check_password(password):
-                    messages.error(request, "Incorrect phone number or password.")
+                    messages.error(request, "رقم الهاتف أو كلمة المرور غير صحيحة.")
                     return render(request, "accounts/login.html", {"form": form})
 
             except User.DoesNotExist:
-                messages.error(request, "Incorrect phone number or password.")
+                messages.error(request, "رقم الهاتف أو كلمة المرور غير صحيحة.")
                 return render(request, "accounts/login.html", {"form": form})
 
             user = authenticate(request, username=phone, password=password)
 
             if user is not None:
                 login(request, user)
-                messages.success(request, f"Welcome back, {user.name}!")
+                messages.success(request, f"أهلاً بعودتك، {user.name}!")
                 next_url = request.GET.get("next") or "accounts:home"
                 return redirect(next_url)
             else:
-                messages.error(request, "Authentication failed.")
+                messages.error(request, "رقم الهاتف أو كلمة المرور غير صحيحة.")
         else:
-            messages.error(request, "Please correct the errors below.")
+            messages.error(request, "يرجى تصحيح الأخطاء أدناه.")
     else:
         form = LoginForm()
 
@@ -301,7 +301,7 @@ def verify_email(request, token):
 
     # CASE 3: User NOT authenticated
     if not request.user.is_authenticated:
-        messages.info(request, "Please log in to verify your email.")
+        messages.info(request, "يرجى تسجيل الدخول للتحقق من بريدك الإلكتروني.")
         # Redirect to login with next=current_url to return after login
         return redirect(f"{reverse('accounts:login')}?next={request.path}")
 
@@ -317,7 +317,7 @@ def verify_email(request, token):
         request.user.pending_email = None  # Clear pending email
         request.user.save()
 
-        messages.success(request, f"Email successfully verified: {new_email}")
+        messages.success(request, f"تم التحقق من البريد الإلكتروني بنجاح: {new_email}")
         return redirect("patients:profile")
 
     # Show confirmation page (GET)
@@ -336,7 +336,7 @@ def register_patient_details(request):
     phone_verified = request.session.get("phone_verified", False)
 
     if not phone or not phone_verified:
-        messages.error(request, "Please verify your phone number first.")
+        messages.error(request, "يرجى التحقق من رقم هاتفك أولاً.")
         return redirect("accounts:register_patient_phone")
 
     # Check if this registration was triggered by a clinic invitation.
@@ -384,10 +384,10 @@ def register_patient_details(request):
 
             except Exception as e:
                 messages.error(
-                    request, f"An error occurred during registration: {str(e)}"
+                    request, f"حدث خطأ أثناء التسجيل: {str(e)}"
                 )
         else:
-            messages.error(request, "Please correct the errors below.")
+            messages.error(request, "يرجى تصحيح الأخطاء أدناه.")
     else:
         form = PatientRegistrationForm(initial={"phone": phone})
 
@@ -857,10 +857,10 @@ def logout_view(request):
 
     if user_name:
         messages.info(
-            request, f"Goodbye, {user_name}! You have been logged out successfully."
+            request, f"إلى اللقاء، {user_name}! تم تسجيل خروجك بنجاح."
         )
     else:
-        messages.info(request, "You have been logged out successfully.")
+        messages.info(request, "تم تسجيل خروجك بنجاح.")
 
     return redirect("accounts:login")
 
