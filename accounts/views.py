@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.conf import settings
 from django.http import JsonResponse
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.utils import timezone
 import re
 
@@ -357,14 +357,15 @@ def register_patient_details(request):
 
         if form.is_valid():
             try:
-                user = form.save(commit=False)
+                with transaction.atomic():
+                    user = form.save(commit=False)
 
-                # Email is optional and will be verified later from profile settings
-                user.email_verified = False
-                user.is_verified = True  # Phone is verified
-                user.save()
+                    # Email is optional and will be verified later from profile settings
+                    user.email_verified = False
+                    user.is_verified = True  # Phone is verified
+                    user.save()
 
-                PatientProfile.objects.create(user=user)
+                    PatientProfile.objects.create(user=user)
 
                 # Clear registration session data
                 if "registration_phone" in request.session:
@@ -382,6 +383,10 @@ def register_patient_details(request):
                     return redirect(next_url)
                 return redirect("accounts:register_patient_email")
 
+            except IntegrityError:
+                messages.error(
+                    request, "This phone number is already registered. Please log in instead."
+                )
             except Exception as e:
                 messages.error(
                     request, f"حدث خطأ أثناء التسجيل: {str(e)}"
