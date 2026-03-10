@@ -514,12 +514,27 @@ def accept_invitation(invitation, user):
         user.national_id = invitation.doctor_national_id
         user.save(update_fields=["national_id"])
 
-    # Update user roles if missing role
+    # Role hierarchy — higher index = higher privilege.
+    _ROLE_RANK = {"PATIENT": 0, "SECRETARY": 1, "DOCTOR": 2, "MAIN_DOCTOR": 3}
+
+    update_fields = []
+
+    # Add to roles array if missing
     if invitation.role not in (user.roles or []):
         roles = list(user.roles or [])
         roles.append(invitation.role)
         user.roles = roles
-        user.save(update_fields=["roles"])
+        update_fields.append("roles")
+
+    # Promote primary role if invitation role is higher in the hierarchy
+    current_rank = _ROLE_RANK.get(user.role, 0)
+    invited_rank = _ROLE_RANK.get(invitation.role, 0)
+    if invited_rank > current_rank:
+        user.role = invitation.role
+        update_fields.append("role")
+
+    if update_fields:
+        user.save(update_fields=update_fields)
 
     invitation.status = "ACCEPTED"
     invitation.save()

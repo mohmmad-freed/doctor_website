@@ -376,8 +376,22 @@ def register_patient_details(request):
                 login(request, user, backend="accounts.backends.PhoneNumberAuthBackend")
                 request.session["just_registered"] = True
 
-                # If triggered by invitation, go directly to invitations inbox
-                # so the user can accept; otherwise proceed to optional email step.
+                # Auto-accept invitation if registration was triggered by an invite link.
+                if pending_invitation:
+                    try:
+                        from clinics.services import accept_invitation as _accept_invitation
+                        _accept_invitation(pending_invitation, user)
+                        messages.success(
+                            request,
+                            f"تم إنشاء حسابك بنجاح وانضمامك إلى عيادة {pending_invitation.clinic.name}."
+                        )
+                    except Exception as e:
+                        err_msg = " ".join(e.messages) if hasattr(e, "messages") else str(e)
+                        messages.error(request, f"تم إنشاء الحساب، لكن حدث خطأ عند قبول الدعوة: {err_msg}")
+                    request.session.pop("next_after_login", None)
+                    return redirect(reverse("doctors:doctor_invitations_inbox"))
+
+                # Otherwise go to next_after_login or optional email step.
                 next_url = request.session.pop("next_after_login", None)
                 if next_url:
                     return redirect(next_url)

@@ -237,15 +237,35 @@ def guest_accept_invitation_view(request, token):
                 "error": "لا تملك الصلاحية للوصول إلى هذه الدعوة. يرجى تسجيل الدخول بالحساب الصحيح."
             })
             
-    # Unauthenticated but token is valid: store generic next url and redirect to registration
-    request.session["next_after_login"] = reverse("doctors:doctor_invitations_inbox")
-    
-    # Pre-fill phone if we want to (optional, but good UX)
+    # Check if the invited phone belongs to an existing user.
+    # If so, send them to login (not registration) — they'd hit "already registered" otherwise.
+    from django.contrib.auth import get_user_model as _get_user_model
+    _User = _get_user_model()
+    existing_user = _User.objects.filter(phone=invitation.doctor_phone).first()
+
+    inbox_url = reverse("doctors:doctor_invitations_inbox")
+
+    if existing_user:
+        login_url = reverse("accounts:login") + f"?next={inbox_url}"
+        if invitation.role == "SECRETARY":
+            messages.info(
+                request,
+                f"مرحباً {invitation.doctor_name}، لديك حساب بالفعل. يرجى تسجيل الدخول لقبول الدعوة."
+            )
+        else:
+            messages.info(
+                request,
+                f"مرحباً د. {invitation.doctor_name}، لديك حساب بالفعل. يرجى تسجيل الدخول لقبول الدعوة."
+            )
+        return redirect(login_url)
+
+    # No account yet: store next url and pre-fill phone, then send to registration.
+    request.session["next_after_login"] = inbox_url
     request.session["registration_phone"] = invitation.doctor_phone
-    
+
     if invitation.role == "SECRETARY":
         messages.info(request, f"مرحباً {invitation.doctor_name}، أنت مدعو للانضمام كـ سكرتير/ة في {invitation.clinic.name}. يرجى إدخال رقم هاتفك لإنشاء حسابك أو تسجيل الدخول.")
     else:
         messages.info(request, f"مرحباً د. {invitation.doctor_name}، أنت مدعو للانضمام إلى {invitation.clinic.name}. يرجى إدخال رقم هاتفك لإنشاء حسابك أو تسجيل الدخول.")
-        
+
     return redirect(reverse("accounts:register_patient_phone"))
