@@ -1,3 +1,5 @@
+from datetime import date as _date
+
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -7,7 +9,56 @@ from django.utils import timezone
 
 from accounts.otp_utils import request_otp, verify_otp, is_in_cooldown, get_remaining_resends
 from accounts.email_utils import send_email_otp, verify_email_otp, is_email_otp_in_cooldown
-from .models import Clinic, ClinicSubscription, ClinicVerification
+from .models import Clinic, ClinicSubscription, ClinicVerification, ClinicStaff
+
+
+_ARABIC_MONTHS = [
+    "", "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+    "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر",
+]
+
+
+def _get_appointments_context(clinic, month, year):
+    from appointments.models import Appointment
+
+    month = max(1, min(12, int(month)))
+    year = int(year)
+
+    appointments = (
+        Appointment.objects.filter(
+            clinic=clinic,
+            appointment_date__year=year,
+            appointment_date__month=month,
+        )
+        .select_related("patient", "doctor", "appointment_type")
+        .order_by("appointment_date", "appointment_time")
+    )
+
+    total = appointments.count()
+    stats = {
+        "total": total,
+        "completed": appointments.filter(status="COMPLETED").count(),
+        "cancelled": appointments.filter(status="CANCELLED").count(),
+        "no_shows": appointments.filter(status="NO_SHOW").count(),
+        "pending": appointments.filter(status__in=["PENDING", "CONFIRMED"]).count(),
+    }
+
+    prev_month = month - 1 if month > 1 else 12
+    prev_year = year if month > 1 else year - 1
+    next_month = month + 1 if month < 12 else 1
+    next_year = year if month < 12 else year + 1
+
+    return {
+        "appointments": appointments,
+        "appt_month": month,
+        "appt_year": year,
+        "appt_month_name": _ARABIC_MONTHS[month],
+        "prev_month": prev_month,
+        "prev_year": prev_year,
+        "next_month": next_month,
+        "next_year": next_year,
+        "appt_stats": stats,
+    }
 
 
 # ============================================
@@ -35,9 +86,43 @@ def my_clinic(request, clinic_id):
     clinic = get_owner_clinic_or_404(request, clinic_id)
     request.session["selected_clinic_id"] = clinic.id
     subscription = getattr(clinic, "subscription", None)
+
+    # Staff — all active members, doctors first
+    staff_qs = (
+        ClinicStaff.objects.filter(clinic=clinic, is_active=True)
+        .select_related("user", "user__doctor_profile")
+        .prefetch_related("user__doctor_profile__doctor_specialties__specialty")
+        .order_by("added_at")
+    )
+    doctors = [s for s in staff_qs if s.role in ("MAIN_DOCTOR", "DOCTOR")]
+    secretaries = [s for s in staff_qs if s.role == "SECRETARY"]
+
+    # Appointments — default to current month
+    today = _date.today()
+    month = request.GET.get("month", today.month)
+    year = request.GET.get("year", today.year)
+    appt_ctx = _get_appointments_context(clinic, month, year)
+
     return render(request, "clinics/my_clinic.html", {
         "clinic": clinic,
         "subscription": subscription,
+        "doctors": doctors,
+        "secretaries": secretaries,
+        **appt_ctx,
+    })
+
+
+@login_required
+def appointments_panel_view(request, clinic_id):
+    """HTMX endpoint: return the appointments panel partial for a given month/year."""
+    clinic = get_owner_clinic_or_404(request, clinic_id)
+    today = _date.today()
+    month = request.GET.get("month", today.month)
+    year = request.GET.get("year", today.year)
+    appt_ctx = _get_appointments_context(clinic, month, year)
+    return render(request, "clinics/partials/appointments_panel.html", {
+        "clinic": clinic,
+        **appt_ctx,
     })
 
 

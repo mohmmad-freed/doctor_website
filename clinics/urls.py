@@ -16,6 +16,7 @@ urlpatterns = [
 
     # Per-clinic dashboard and management (all require clinic_id)
     path('<int:clinic_id>/', views.my_clinic, name='my_clinic'),
+    path('<int:clinic_id>/appointments/', views.appointments_panel_view, name='appointments_panel'),
     path('<int:clinic_id>/staff/', views.manage_staff, name='manage_staff'),
     path('<int:clinic_id>/staff/add/', views.add_staff, name='add_staff'),
     path('<int:clinic_id>/staff/<int:staff_id>/remove/', views.remove_staff, name='remove_staff'),

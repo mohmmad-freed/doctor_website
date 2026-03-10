@@ -4,118 +4,360 @@
 
 {% block extra_css %}
 <style>
-    .clinic-dashboard {
-        max-width: 900px;
-        margin: 0 auto;
-        padding: 2rem 1rem;
-    }
+/* ─── Layout ─────────────────────────────────────────────────────── */
+.clinic-dashboard {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
 
-    .dashboard-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.75rem;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-    }
+/* ─── Page header ─────────────────────────────────────────────────── */
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.75rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+.dashboard-header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    margin: 0;
+}
+.btn-back {
+    color: var(--color-text-muted);
+    text-decoration: none;
+    font-size: 0.88rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.9rem;
+    border: 1px solid var(--color-surface-border);
+    border-radius: 6px;
+    transition: color 0.15s, border-color 0.15s;
+}
+.btn-back:hover { color: var(--color-primary-500); border-color: var(--color-primary-500); }
 
-    .dashboard-header h1 {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: var(--color-text-main);
-        margin: 0;
-    }
+/* ─── Cards ────────────────────────────────────────────────────────── */
+.card {
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-surface-border);
+    border-radius: 12px;
+    padding: 1.4rem 1.6rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.card h2 {
+    margin: 0 0 1rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--color-surface-border);
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+.card dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 1.25rem; align-items: center; }
+.card dt { font-weight: 600; color: var(--color-text-muted); font-size: 0.88rem; white-space: nowrap; }
+.card dd { margin: 0; color: var(--color-text-body); font-size: 0.9rem; }
 
-    .btn-back {
-        color: var(--color-text-muted);
-        text-decoration: none;
-        font-size: 0.88rem;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        padding: 0.45rem 0.9rem;
-        border: 1px solid var(--color-surface-border);
-        border-radius: 6px;
-        transition: color 0.15s, border-color 0.15s;
-    }
-    .btn-back:hover {
-        color: var(--color-primary-500);
-        border-color: var(--color-primary-500);
-    }
+/* top 2 info cards side by side on wider screens */
+.info-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+}
+@media (max-width: 600px) { .info-row { grid-template-columns: 1fr; } }
+.info-row .card { margin-bottom: 0; }
 
-    .card {
-        background: var(--color-surface-card);
-        border: 1px solid var(--color-surface-border);
-        border-radius: 10px;
-        padding: 1.4rem 1.6rem;
-        margin-bottom: 1.25rem;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-    }
+/* ─── Badges ────────────────────────────────────────────────────────── */
+.badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+.badge-active    { background: #d1fae5; color: #065f46; }
+.badge-expired   { background: #fee2e2; color: #991b1b; }
+.badge-suspended { background: #fef3c7; color: #92400e; }
+.badge-pending   { background: #dbeafe; color: #1e40af; }
 
-    .card h2 {
-        margin: 0 0 1rem;
-        font-size: 1rem;
-        font-weight: 700;
-        color: var(--color-text-main);
-        padding-bottom: 0.6rem;
-        border-bottom: 1px solid var(--color-surface-border);
-    }
+[data-theme="dark"] .badge-active    { background: #064e3b; color: #6ee7b7; }
+[data-theme="dark"] .badge-expired   { background: #450a0a; color: #fca5a5; }
+[data-theme="dark"] .badge-suspended { background: #451a03; color: #fcd34d; }
+[data-theme="dark"] .badge-pending   { background: #1e3a5f; color: #93c5fd; }
 
-    .card dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 1.25rem; align-items: center; }
-    .card dt { font-weight: 600; color: var(--color-text-muted); font-size: 0.88rem; white-space: nowrap; }
-    .card dd { margin: 0; color: var(--color-text-body); font-size: 0.9rem; }
+/* ─── Quick links ───────────────────────────────────────────────────── */
+.quick-links {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+    gap: 0.9rem;
+}
+.quick-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 1.1rem 0.75rem;
+    background: var(--color-surface-ground);
+    border: 1px solid var(--color-surface-border);
+    border-radius: 10px;
+    text-decoration: none;
+    color: var(--color-text-body);
+    font-size: 0.87rem;
+    font-weight: 600;
+    text-align: center;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.quick-link i { font-size: 1.4rem; color: var(--color-primary-500); }
+.quick-link:hover {
+    border-color: var(--color-primary-400);
+    color: var(--color-primary-500);
+    background: var(--color-surface-card);
+}
 
-    .badge {
-        display: inline-block;
-        padding: 2px 10px;
-        border-radius: 12px;
-        font-size: 0.8rem;
-        font-weight: 700;
-    }
-    .badge-active   { background: #d1fae5; color: #065f46; }
-    .badge-expired  { background: #fee2e2; color: #991b1b; }
-    .badge-suspended{ background: #fef3c7; color: #92400e; }
-    .badge-pending  { background: #dbeafe; color: #1e40af; }
+/* ─── Staff section ─────────────────────────────────────────────────── */
+.staff-group-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted);
+    margin: 0 0 0.65rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.staff-group-label i { font-size: 0.85rem; }
 
-    [data-theme="dark"] .badge-active   { background: #064e3b; color: #6ee7b7; }
-    [data-theme="dark"] .badge-expired  { background: #450a0a; color: #fca5a5; }
-    [data-theme="dark"] .badge-suspended{ background: #451a03; color: #fcd34d; }
-    [data-theme="dark"] .badge-pending  { background: #1e3a5f; color: #93c5fd; }
+.staff-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 0.85rem;
+    margin-bottom: 1.1rem;
+}
+.staff-grid:last-child { margin-bottom: 0; }
 
-    /* Quick links grid */
-    .quick-links {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-        gap: 1rem;
-    }
+.staff-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 1rem 0.75rem 0.85rem;
+    background: var(--color-surface-ground);
+    border: 1px solid var(--color-surface-border);
+    border-radius: 10px;
+    text-align: center;
+    transition: border-color 0.15s;
+}
+.staff-card:hover { border-color: var(--color-primary-400); }
 
-    .quick-link {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 0.6rem;
-        padding: 1.1rem 0.75rem;
-        background: var(--color-surface-ground);
-        border: 1px solid var(--color-surface-border);
-        border-radius: 8px;
-        text-decoration: none;
-        color: var(--color-text-body);
-        font-size: 0.88rem;
-        font-weight: 600;
-        text-align: center;
-        transition: border-color 0.15s, color 0.15s;
-    }
-    .quick-link i { font-size: 1.4rem; color: var(--color-primary-500); }
-    .quick-link:hover {
-        border-color: var(--color-primary-500);
-        color: var(--color-primary-500);
-    }
+.avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+.avatar-doctor    { background: #dbeafe; color: #1e40af; }
+.avatar-secretary { background: #ede9fe; color: #5b21b6; }
+[data-theme="dark"] .avatar-doctor    { background: #1e3a5f; color: #93c5fd; }
+[data-theme="dark"] .avatar-secretary { background: #2e1065; color: #c4b5fd; }
+
+.staff-name {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    line-height: 1.3;
+}
+.staff-role-badge {
+    font-size: 0.73rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+.role-main-doctor { background: #dbeafe; color: #1e40af; }
+.role-doctor      { background: #e0f2fe; color: #075985; }
+.role-secretary   { background: #f3e8ff; color: #6b21a8; }
+[data-theme="dark"] .role-main-doctor { background: #1e3a5f; color: #93c5fd; }
+[data-theme="dark"] .role-doctor      { background: #0c4a6e; color: #7dd3fc; }
+[data-theme="dark"] .role-secretary   { background: #3b0764; color: #d8b4fe; }
+
+.staff-specialty {
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+    line-height: 1.3;
+}
+
+.staff-empty {
+    color: var(--color-text-muted);
+    font-size: 0.86rem;
+    padding: 0.5rem 0;
+}
+
+/* ─── Appointments panel ─────────────────────────────────────────────── */
+.appt-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding-bottom: 0.7rem;
+    border-bottom: 1px solid var(--color-surface-border);
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+.appt-header h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    margin: 0;
+    border: none;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.month-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.month-label {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    min-width: 110px;
+    text-align: center;
+}
+.month-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    border: 1px solid var(--color-surface-border);
+    background: var(--color-surface-ground);
+    color: var(--color-text-muted);
+    text-decoration: none;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: border-color 0.15s, color 0.15s;
+}
+.month-btn:hover { border-color: var(--color-primary-500); color: var(--color-primary-500); }
+
+.appt-spinner { display: none; color: var(--color-primary-500); font-size: 1rem; }
+.htmx-request .appt-spinner { display: inline; }
+
+/* Stats row */
+.appt-stats {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1.1rem;
+    flex-wrap: wrap;
+}
+.stat-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.1rem;
+    padding: 0.55rem 1rem;
+    border-radius: 10px;
+    min-width: 68px;
+    flex: 1;
+}
+.stat-num { font-size: 1.35rem; font-weight: 800; line-height: 1; }
+.stat-lbl { font-size: 0.72rem; font-weight: 600; opacity: 0.8; }
+
+.stat-total     { background: var(--color-surface-ground); color: var(--color-text-main); border: 1px solid var(--color-surface-border); }
+.stat-completed { background: #d1fae5; color: #065f46; }
+.stat-pending   { background: #dbeafe; color: #1e40af; }
+.stat-cancelled { background: #fee2e2; color: #991b1b; }
+.stat-noshow    { background: #f3f4f6; color: #374151; }
+
+[data-theme="dark"] .stat-completed { background: #064e3b; color: #6ee7b7; }
+[data-theme="dark"] .stat-pending   { background: #1e3a5f; color: #93c5fd; }
+[data-theme="dark"] .stat-cancelled { background: #450a0a; color: #fca5a5; }
+[data-theme="dark"] .stat-noshow    { background: #1f2937; color: #9ca3af; }
+
+/* Table */
+.appt-table-wrap { overflow-x: auto; }
+.appt-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.87rem;
+}
+.appt-table th {
+    text-align: right;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    border-bottom: 2px solid var(--color-surface-border);
+    white-space: nowrap;
+}
+.appt-table td {
+    padding: 0.65rem 0.75rem;
+    border-bottom: 1px solid var(--color-surface-border);
+    color: var(--color-text-body);
+    vertical-align: middle;
+    white-space: nowrap;
+}
+.appt-table tbody tr:last-child td { border-bottom: none; }
+.appt-table tbody tr:hover { background: var(--color-surface-ground); }
+.appt-patient { font-weight: 600; color: var(--color-text-main) !important; }
+.appt-doctor  { color: var(--color-text-muted) !important; font-size: 0.84rem; }
+.appt-time    { font-variant-numeric: tabular-nums; color: var(--color-text-muted) !important; }
+
+/* Appointment status badges */
+.abadge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+.abadge-pending    { background: #dbeafe; color: #1e40af; }
+.abadge-confirmed  { background: #ede9fe; color: #5b21b6; }
+.abadge-checked-in { background: #ccfbf1; color: #134e4a; }
+.abadge-in-progress{ background: #fed7aa; color: #9a3412; }
+.abadge-completed  { background: #d1fae5; color: #065f46; }
+.abadge-cancelled  { background: #fee2e2; color: #991b1b; }
+.abadge-no-show    { background: #f3f4f6; color: #374151; }
+
+[data-theme="dark"] .abadge-pending    { background: #1e3a5f; color: #93c5fd; }
+[data-theme="dark"] .abadge-confirmed  { background: #2e1065; color: #c4b5fd; }
+[data-theme="dark"] .abadge-checked-in { background: #022c22; color: #5eead4; }
+[data-theme="dark"] .abadge-in-progress{ background: #431407; color: #fdba74; }
+[data-theme="dark"] .abadge-completed  { background: #064e3b; color: #6ee7b7; }
+[data-theme="dark"] .abadge-cancelled  { background: #450a0a; color: #fca5a5; }
+[data-theme="dark"] .abadge-no-show    { background: #1f2937; color: #9ca3af; }
+
+/* Empty state */
+.appt-empty {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: var(--color-text-muted);
+}
+.appt-empty i { font-size: 2.5rem; margin-bottom: 0.75rem; display: block; opacity: 0.4; }
+.appt-empty p { margin: 0; font-size: 0.9rem; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="clinic-dashboard">
 
+    <!-- Page Header -->
     <div class="dashboard-header">
         <h1>
             <i class="fa-solid fa-hospital" style="color:var(--color-primary-500);margin-left:0.5rem;"></i>
@@ -126,51 +368,151 @@
         </a>
     </div>
 
-    <!-- Clinic Info Card -->
-    <div class="card">
-        <h2>معلومات العيادة</h2>
-        <dl>
-            <dt>الاسم</dt><dd>{{ clinic.name }}</dd>
-            <dt>الهاتف</dt><dd>{{ clinic.phone|default:"—" }}</dd>
-            <dt>العنوان</dt><dd>{{ clinic.address }}</dd>
-            <dt>الحالة</dt>
-            <dd>
-                {% if clinic.status == "ACTIVE" %}
-                    <span class="badge badge-active">نشطة</span>
-                {% elif clinic.status == "PENDING" %}
-                    <span class="badge badge-pending">قيد المراجعة</span>
-                {% else %}
-                    <span class="badge badge-suspended">{{ clinic.get_status_display }}</span>
-                {% endif %}
-            </dd>
-        </dl>
+    <!-- Info + Subscription side by side -->
+    <div class="info-row">
+
+        <!-- Clinic Info Card -->
+        <div class="card" style="margin-bottom:0;">
+            <h2>
+                <i class="fa-solid fa-circle-info" style="color:var(--color-primary-500);font-size:0.9rem;"></i>
+                معلومات العيادة
+            </h2>
+            <dl>
+                <dt>الاسم</dt><dd>{{ clinic.name }}</dd>
+                <dt>الهاتف</dt><dd>{{ clinic.phone|default:"—" }}</dd>
+                <dt>العنوان</dt><dd>{{ clinic.address }}</dd>
+                <dt>الحالة</dt>
+                <dd>
+                    {% if clinic.status == "ACTIVE" %}
+                        <span class="badge badge-active">نشطة</span>
+                    {% elif clinic.status == "PENDING" %}
+                        <span class="badge badge-pending">قيد المراجعة</span>
+                    {% else %}
+                        <span class="badge badge-suspended">{{ clinic.get_status_display }}</span>
+                    {% endif %}
+                </dd>
+            </dl>
+        </div>
+
+        <!-- Subscription Card -->
+        {% if subscription %}
+        <div class="card" style="margin-bottom:0;">
+            <h2>
+                <i class="fa-solid fa-credit-card" style="color:var(--color-primary-500);font-size:0.9rem;"></i>
+                الاشتراك
+            </h2>
+            <dl>
+                <dt>الخطة</dt><dd>{{ subscription.get_plan_type_display }}</dd>
+                <dt>ينتهي في</dt><dd>{{ subscription.expires_at|date:"Y-m-d" }}</dd>
+                <dt>الحد الأقصى للأطباء</dt><dd>{{ subscription.max_doctors }}</dd>
+                <dt>الحالة</dt>
+                <dd>
+                    {% if subscription.status == "ACTIVE" %}
+                        <span class="badge badge-active">نشط</span>
+                    {% elif subscription.status == "EXPIRED" %}
+                        <span class="badge badge-expired">منتهي</span>
+                    {% else %}
+                        <span class="badge badge-suspended">موقوف</span>
+                    {% endif %}
+                </dd>
+            </dl>
+        </div>
+        {% else %}
+        <div class="card" style="margin-bottom:0;display:flex;align-items:center;justify-content:center;min-height:120px;">
+            <p style="color:var(--color-text-muted);font-size:0.88rem;margin:0;">
+                <i class="fa-solid fa-circle-exclamation" style="margin-left:0.4rem;"></i>
+                لا يوجد اشتراك مرتبط بهذه العيادة
+            </p>
+        </div>
+        {% endif %}
+
     </div>
 
-    <!-- Subscription Card -->
-    {% if subscription %}
+    <!-- ── Staff Section ─────────────────────────────────────────────── -->
     <div class="card">
-        <h2>الاشتراك</h2>
-        <dl>
-            <dt>الخطة</dt><dd>{{ subscription.get_plan_type_display }}</dd>
-            <dt>ينتهي في</dt><dd>{{ subscription.expires_at|date:"Y-m-d" }}</dd>
-            <dt>الحد الأقصى للأطباء</dt><dd>{{ subscription.max_doctors }}</dd>
-            <dt>الحالة</dt>
-            <dd>
-                {% if subscription.status == "ACTIVE" %}
-                    <span class="badge badge-active">نشط</span>
-                {% elif subscription.status == "EXPIRED" %}
-                    <span class="badge badge-expired">منتهي</span>
-                {% else %}
-                    <span class="badge badge-suspended">موقوف</span>
-                {% endif %}
-            </dd>
-        </dl>
-    </div>
-    {% endif %}
+        <h2>
+            <i class="fa-solid fa-user-group" style="color:var(--color-primary-500);font-size:0.9rem;"></i>
+            الكادر الطبي والإداري
+        </h2>
 
-    <!-- Quick Links -->
+        <!-- Doctors -->
+        <p class="staff-group-label">
+            <i class="fa-solid fa-stethoscope"></i>
+            الأطباء
+            {% if doctors %}<span style="background:var(--color-surface-ground);border:1px solid var(--color-surface-border);border-radius:8px;padding:1px 7px;font-size:0.72rem;">{{ doctors|length }}</span>{% endif %}
+        </p>
+        {% if doctors %}
+        <div class="staff-grid">
+            {% for staff_member in doctors %}
+            <div class="staff-card">
+                <div class="avatar avatar-doctor">{{ staff_member.user.name|first }}</div>
+                <span class="staff-name">{{ staff_member.user.name }}</span>
+                {% if staff_member.role == "MAIN_DOCTOR" %}
+                    <span class="staff-role-badge role-main-doctor">رئيس الأطباء</span>
+                {% else %}
+                    <span class="staff-role-badge role-doctor">طبيب</span>
+                {% endif %}
+                {% with profile=staff_member.user.doctor_profile %}
+                    {% if profile %}
+                        {% with primary=profile.primary_specialty %}
+                            {% if primary %}
+                                <span class="staff-specialty">{{ primary.name_ar }}</span>
+                            {% endif %}
+                        {% endwith %}
+                        {% if profile.years_of_experience %}
+                            <span class="staff-specialty">{{ profile.years_of_experience }} سنوات خبرة</span>
+                        {% endif %}
+                    {% endif %}
+                {% endwith %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="staff-empty">
+            <i class="fa-regular fa-face-meh" style="margin-left:0.35rem;"></i>
+            لا يوجد أطباء مسجلون بعد —
+            <a href="{% url 'clinics:create_invitation' clinic_id=clinic.id %}" style="color:var(--color-primary-500);text-decoration:none;">دعوة طبيب</a>
+        </p>
+        {% endif %}
+
+        <!-- Secretaries -->
+        <p class="staff-group-label" style="margin-top:1rem;">
+            <i class="fa-solid fa-user-tie"></i>
+            السكرتارية
+            {% if secretaries %}<span style="background:var(--color-surface-ground);border:1px solid var(--color-surface-border);border-radius:8px;padding:1px 7px;font-size:0.72rem;">{{ secretaries|length }}</span>{% endif %}
+        </p>
+        {% if secretaries %}
+        <div class="staff-grid">
+            {% for staff_member in secretaries %}
+            <div class="staff-card">
+                <div class="avatar avatar-secretary">{{ staff_member.user.name|first }}</div>
+                <span class="staff-name">{{ staff_member.user.name }}</span>
+                <span class="staff-role-badge role-secretary">سكرتير/ة</span>
+                {% if staff_member.user.phone %}
+                    <span class="staff-specialty">{{ staff_member.user.phone }}</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="staff-empty">
+            <i class="fa-regular fa-face-meh" style="margin-left:0.35rem;"></i>
+            لا يوجد سكرتارية مسجلون بعد —
+            <a href="{% url 'clinics:create_secretary_invitation' clinic_id=clinic.id %}" style="color:var(--color-primary-500);text-decoration:none;">دعوة سكرتير/ة</a>
+        </p>
+        {% endif %}
+
+    </div>
+
+    <!-- ── Appointments Section (HTMX panel) ─────────────────────────── -->
+    {% include "clinics/partials/appointments_panel.html" %}
+
+    <!-- ── Settings & Management Quick Links ─────────────────────────── -->
     <div class="card">
-        <h2>الإعدادات والإدارة</h2>
+        <h2>
+            <i class="fa-solid fa-sliders" style="color:var(--color-primary-500);font-size:0.9rem;"></i>
+            الإعدادات والإدارة
+        </h2>
         <div class="quick-links">
             <a href="{% url 'clinics:working_hours_list' clinic_id=clinic.id %}" class="quick-link">
                 <i class="fa-solid fa-clock"></i>
@@ -192,4 +534,8 @@
     </div>
 
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/htmx.org@1.9.12"></script>
 {% endblock %}

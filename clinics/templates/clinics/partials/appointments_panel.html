@@ -1,0 +1,123 @@
+{% load i18n %}
+{# HTMX partial — rendered standalone by appointments_panel_view OR included in my_clinic.html #}
+
+<div class="card" id="appointments-panel">
+
+    {# ── Header: title + month navigation ── #}
+    <div class="appt-header">
+        <h2 style="margin:0;border:none;padding:0;">
+            <i class="fa-solid fa-calendar-days" style="color:var(--color-primary-500);margin-left:0.4rem;font-size:0.95rem;"></i>
+            سجل المواعيد
+        </h2>
+        <div class="month-nav">
+            <a class="month-btn"
+               hx-get="{% url 'clinics:appointments_panel' clinic_id=clinic.id %}?month={{ prev_month }}&year={{ prev_year }}"
+               hx-target="#appointments-panel"
+               hx-swap="outerHTML"
+               hx-indicator="#appt-spinner"
+               title="الشهر السابق">
+                <i class="fa-solid fa-chevron-right"></i>
+            </a>
+            <span class="month-label">{{ appt_month_name }} {{ appt_year }}</span>
+            <a class="month-btn"
+               hx-get="{% url 'clinics:appointments_panel' clinic_id=clinic.id %}?month={{ next_month }}&year={{ next_year }}"
+               hx-target="#appointments-panel"
+               hx-swap="outerHTML"
+               hx-indicator="#appt-spinner"
+               title="الشهر التالي">
+                <i class="fa-solid fa-chevron-left"></i>
+            </a>
+            <span id="appt-spinner" class="htmx-indicator appt-spinner">
+                <i class="fa-solid fa-circle-notch fa-spin"></i>
+            </span>
+        </div>
+    </div>
+
+    {# ── Stats row ── #}
+    <div class="appt-stats">
+        <div class="stat-chip stat-total">
+            <span class="stat-num">{{ appt_stats.total }}</span>
+            <span class="stat-lbl">إجمالي</span>
+        </div>
+        <div class="stat-chip stat-completed">
+            <span class="stat-num">{{ appt_stats.completed }}</span>
+            <span class="stat-lbl">مكتمل</span>
+        </div>
+        <div class="stat-chip stat-pending">
+            <span class="stat-num">{{ appt_stats.pending }}</span>
+            <span class="stat-lbl">قادم</span>
+        </div>
+        <div class="stat-chip stat-cancelled">
+            <span class="stat-num">{{ appt_stats.cancelled }}</span>
+            <span class="stat-lbl">ملغي</span>
+        </div>
+        <div class="stat-chip stat-noshow">
+            <span class="stat-num">{{ appt_stats.no_shows }}</span>
+            <span class="stat-lbl">لم يحضر</span>
+        </div>
+    </div>
+
+    {# ── Table ── #}
+    {% if appointments %}
+    <div class="appt-table-wrap">
+        <table class="appt-table">
+            <thead>
+                <tr>
+                    <th>التاريخ</th>
+                    <th>الوقت</th>
+                    <th>المريض</th>
+                    <th>الطبيب</th>
+                    <th>نوع الموعد</th>
+                    <th>الحالة</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for appt in appointments %}
+                <tr>
+                    <td>{{ appt.appointment_date|date:"d/m/Y" }}</td>
+                    <td class="appt-time">{{ appt.appointment_time|time:"H:i" }}</td>
+                    <td class="appt-patient">{{ appt.patient.name }}</td>
+                    <td class="appt-doctor">
+                        {% if appt.doctor %}
+                            د. {{ appt.doctor.name }}
+                        {% else %}
+                            <span style="color:var(--color-text-muted);">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if appt.appointment_type %}
+                            {{ appt.appointment_type.display_name }}
+                        {% else %}
+                            <span style="color:var(--color-text-muted);">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if appt.status == "PENDING" %}
+                            <span class="abadge abadge-pending">قيد الانتظار</span>
+                        {% elif appt.status == "CONFIRMED" %}
+                            <span class="abadge abadge-confirmed">مؤكد</span>
+                        {% elif appt.status == "CHECKED_IN" %}
+                            <span class="abadge abadge-checked-in">وصل</span>
+                        {% elif appt.status == "IN_PROGRESS" %}
+                            <span class="abadge abadge-in-progress">جارٍ</span>
+                        {% elif appt.status == "COMPLETED" %}
+                            <span class="abadge abadge-completed">مكتمل</span>
+                        {% elif appt.status == "CANCELLED" %}
+                            <span class="abadge abadge-cancelled">ملغي</span>
+                        {% elif appt.status == "NO_SHOW" %}
+                            <span class="abadge abadge-no-show">لم يحضر</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="appt-empty">
+        <i class="fa-regular fa-calendar-xmark"></i>
+        <p>لا توجد مواعيد في {{ appt_month_name }} {{ appt_year }}</p>
+    </div>
+    {% endif %}
+
+</div>
