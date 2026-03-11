@@ -78,6 +78,26 @@ DOCTOR_INPUT_VALIDATION.md
 
 ---
 
+## Email Handling During Invitation
+
+The email provided by the clinic owner during invitation is treated as a **delivery destination** for the invitation notification, NOT as a strict identity matching key.
+
+### Core Rules:
+
+1. **Phone Exists — Email Provided Matches Stored Email:**
+   Standard case. The invitation proceeds normally to the existing user.
+
+2. **Phone Exists — Email Provided Differs from Stored Email:**
+   The invitation is **NOT blocked**. The system must deliver the invitation to the **stored email** on the doctor's existing account (the one the system trusts), NOT the email provided by the clinic owner. The clinic owner receives a message: "Invitation sent. The doctor will receive it at their registered email address."
+
+3. **Phone Does Not Exist — Email Belongs to Another Account:**
+   If the Phone Number is entirely new (no account exists), but the provided email is already registered to a completely different user, the system must **reject the invitation** with a clear validation error: "This email is already registered to another account. Please verify the information with the doctor."
+
+4. **Phone Exists as Patient — Upgrade to Doctor:**
+   If the Phone Number exists as a `PATIENT`, the invitation proceeds. Upon accepting, the system attaches the `DOCTOR` role to their existing `PATIENT` account. No new account is created.
+
+---
+
 # National ID
 
 The national ID is used as part of **doctor verification and credential validation**.
@@ -101,13 +121,14 @@ DOCTOR_CREDENTIAL_VERIFICATION.md
 
 When a clinic invites a doctor, the system performs the following checks:
 
-1. standardize the phone number
-2. search for an existing doctor account with the same phone number
-3. if a match is found:
-   - the doctor is treated as an existing doctor
-   - the system follows the existing doctor invitation flow
-4. if no match is found:
-   - a new doctor onboarding process is initiated
+1. Standardize the phone number.
+2. Search for an existing doctor account with the same phone number.
+3. **If a match is found:**
+   - The doctor is treated as an existing doctor.
+   - The system follows `EXISTING_DOCTOR_INVITATION_FLOW.md`.
+4. **If no match is found, check for a Pending Identity Lock:**
+   - **If a Pending Identity Lock exists for this phone:** Another clinic has already initiated onboarding. The system creates the invitation linked to the pending identity. When the doctor completes onboarding, they will see all pending invitations.
+   - **If no Pending Identity Lock exists:** The system creates the lock atomically and initiates the NEW_DOCTOR onboarding flow.
 
 ---
 
@@ -120,6 +141,39 @@ This ensures:
 - consistent doctor identity across clinics
 - reliable invitation matching
 - simplified account management
+
+---
+
+# Identity Creation Lock (Concurrency Protection)
+
+To prevent race conditions when multiple clinics invite the same unregistered phone number simultaneously, the system must implement an **Identity Creation Lock**.
+
+### Problem
+If two clinics invite the same new phone number at the exact same time, both may trigger the NEW_DOCTOR onboarding flow. When the first doctor completes registration, the second flow will fail because the account already exists.
+
+### Solution: Atomic Pending Identity Lock
+
+When the system creates a `NEW_DOCTOR` invitation for a phone number that does not yet exist:
+
+1. The system must atomically create a **Pending Identity Lock** record for that standardized phone number.
+2. This lock indicates that a new doctor onboarding is in progress for this phone number.
+3. The lock is automatically released when:
+   - The doctor completes onboarding (account is created), OR
+   - All associated `PENDING` invitations for that phone are resolved (expired, rejected, or cancelled).
+
+### Behavior While Lock Is Active
+
+If another clinic invites the same phone number while the Pending Identity Lock exists:
+
+- The system must **NOT** initiate a second NEW_DOCTOR flow.
+- Instead, the system must create the invitation linked to the **pending identity**.
+- Once the doctor completes onboarding via any clinic's invitation link, the system converts all other pending invitations for that phone into EXISTING_DOCTOR invitations.
+- The newly created doctor is then notified of the remaining pending invitations via email and in-app notifications.
+
+### Implementation Guidance
+
+- The lock should be implemented as a database-level record (e.g., a `PendingDoctorIdentity` table) with a `UNIQUE` constraint on the standardized phone number. This provides atomicity via the database engine.
+- Do NOT use Redis or cache for this lock, as it must survive server restarts and cache evictions.
 
 ---
 
@@ -153,6 +207,24 @@ EXISTING_DOCTOR_INVITATION_FLOW.md
 If the phone number does not exist in the system:
 
 the system initiates the **new doctor onboarding process**.
+
+---
+
+# Architectural Separation: Platform Identity vs. Clinic Membership
+
+A critical architectural principle in the system is the distinct separation between a doctor's platform-level identity and their clinic-level relationships.
+
+### A) Platform Doctor Identity
+This represents the doctor as a user of the entire platform.
+- **Attributes:** Phone number, email address, national ID, platform suspension status, and global credential verification status.
+- **Scope:** Exists independently of any specific clinic.
+
+### B) Clinic Doctor Membership
+This represents the relationship between a doctor and a specific clinic.
+- **Attributes:** `clinic_id`, `doctor_id`, invitation status, membership status, `invited_by`, `joined_at`, `revoked_at`, and clinic-specific permissions.
+- **Scope:** Strictly bound to the clinic.
+
+**Important Rule:** A doctor's status, permissions, or rejection inside one clinic must **never** affect their relationship or status with other clinics.
 
 ---
 

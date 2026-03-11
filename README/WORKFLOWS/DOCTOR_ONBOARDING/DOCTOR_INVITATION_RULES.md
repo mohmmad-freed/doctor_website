@@ -213,13 +213,21 @@ Resend operations must follow rules defined in:
 
 # Already Active Doctor Rule
 
-A clinic must not send an invitation to a doctor who is already an active member of that clinic.
+A clinic must not send an invitation to a doctor who is already an **active** member of that clinic.
 
-If the doctor is already associated with the clinic:
+If the doctor is already associated with the clinic **and** their membership is active (`revoked_at IS NULL`):
 
 - invitation creation must be rejected.
 
 The system should inform the inviter that the doctor already belongs to the clinic.
+
+### Membership Re-Activation Rule
+
+If a doctor was previously a member of a clinic but their membership was **revoked** (`revoked_at IS NOT NULL`):
+
+- The doctor is **eligible** for a new invitation to the same clinic.
+- Membership validation must only consider active memberships (`revoked_at IS NULL`) when checking for existing relationships.
+- The revoked membership record remains in the database for audit purposes but does not block the new invitation.
 
 ---
 
@@ -327,33 +335,44 @@ After cancellation:
 
 Resending invitations is allowed but controlled.
 
-Resend may be allowed when:
+Resend may be allowed **ONLY** when:
 
 - invitation status is `PENDING`
 - resend cooldown rules are satisfied
 - rate limits are not exceeded
 
+**Resend is strictly prohibited for invitations in any non-PENDING state** (`EXPIRED`, `REJECTED`, `CANCELLED`, `ACCEPTED`).
+
 Resend must NOT create a new invitation record.
 
 Instead the system must:
 
-- reuse the existing invitation
-- send a new notification (SMS or email)
+- reuse the existing PENDING invitation
+- send a new notification (email or in-app)
+
+---
+
+# Expired Invitation Immutability Rule
+
+Once an invitation reaches the `EXPIRED` state, it is **immutable and permanently dead**.
+
+**Rules:**
+
+- An expired invitation MUST NOT be resent, reactivated, or reused in any way.
+- If the clinic wishes to re-invite the same doctor after expiration, the system MUST require a **brand new invitation** to be created.
+- The new invitation triggers a **fresh identity resolution scan**, which ensures the system correctly detects whether the doctor's account state has changed since the original invitation (e.g., the doctor may have registered as a Patient in the interim).
+
+This prevents poisoned invitation records from being resent after the doctor's identity state has changed.
 
 ---
 
 # Identity Conflict Handling
 
-If identity data conflicts with existing records:
+All identity conflict handling is strictly governed by the canonical rules in `DOCTOR_IDENTITY_RESOLUTION.md`.
 
-the system must reject the invitation.
+The system must use the phone number as the sole primary identity key for detecting duplicates. Email mismatches are handled according to the Email Handling rules defined in `DOCTOR_IDENTITY_RESOLUTION.md` and must not block invitations when the phone number matches.
 
-Example:
-
-- phone number belongs to one doctor
-- email belongs to another
-
-In such cases the system must fail safely and request corrected information.
+In cases of genuine conflict (e.g., the provided email is already assigned to a completely different user account), the system must fail safely and request corrected information.
 
 ---
 

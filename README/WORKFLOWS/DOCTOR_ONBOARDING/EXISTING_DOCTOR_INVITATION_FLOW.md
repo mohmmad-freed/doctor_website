@@ -19,7 +19,7 @@ This document focuses on the **workflow and decision logic**, not UI implementat
 This workflow applies when:
 
 - a clinic sends an invitation
-- the doctor identity (phone/email) matches an existing doctor account in the system
+- the doctor identity (phone number) matches an existing doctor account in the system
 
 This document explains:
 
@@ -56,7 +56,7 @@ Required input includes:
 
 ### Important Notes
 
-- **Phone number and email** are the primary identity attributes used to detect existing doctors.
+- **Phone number** is the sole primary identity attribute used to detect existing doctors. Email is used only as a delivery destination. Identity matching rules are defined in `DOCTOR_IDENTITY_RESOLUTION.md`.
 - **Doctor name is not used for identity matching** and may contain mistakes without affecting the system logic.
 - The inviting `MAIN_DOCTOR` must select **at least one specialty** relevant to the clinic.
 - The system must reject the invitation if no specialty is selected.
@@ -67,21 +67,20 @@ Before creating the invitation, the system must perform validation checks.
 
 # Step 2 — Doctor Identity Detection
 
-The system attempts to determine whether the invited doctor already exists.
+The system attempts to determine whether the invited doctor already exists. This matching MUST follow the strict rules defined in `DOCTOR_IDENTITY_RESOLUTION.md`.
 
-Matching may be performed using:
+Matching MUST be performed using ONLY:
 
-- phone number
-- email address
+- phone number (Primary Identity Key)
 
 ### Possible outcomes
 
-1. The doctor already exists in the system.
+1. The doctor already exists in the system (phone number match).
 2. The doctor does not exist.
 
 If the doctor does not exist, the system must follow the **new doctor onboarding flow**.
 
-If the doctor exists, the system continues with this workflow.
+If the doctor exists based on the phone number, the system continues with this workflow.
 
 ---
 
@@ -202,11 +201,15 @@ The invitation status is updated to:
 
 Accepting a clinic invitation **does not automatically mean the doctor is verified**.
 
-If the doctor is not verified, the system may require the doctor to upload verification documents such as:
+Doctor verification follows a **dual-layer model** as defined in `DOCTOR_CREDENTIAL_VERIFICATION.md`:
 
-- medical license
-- identity documents
-- additional professional information
+### A) Identity Verification (Platform Level)
+- If the doctor has never been identity-verified, they must upload identity documents and a medical license.
+- If the doctor is already `IDENTITY_VERIFIED` from a previous clinic, this step is skipped.
+
+### B) Clinical Credential Verification (Clinic / Specialty Level)
+- The doctor's specialty qualifications must be independently verified for this specific clinic.
+- A doctor verified at Clinic A does NOT automatically become verified at Clinic B.
 
 After the documents are submitted:
 
@@ -214,7 +217,7 @@ the review is performed by **platform administrators (system owners)**, not by t
 
 Based on the review outcome:
 
-- the doctor may be approved
+- the doctor may be approved (at the relevant verification layer)
 - the verification may be rejected
 - additional documents may be requested
 
@@ -293,14 +296,10 @@ If a pending invitation already exists for the same doctor and clinic:
 
 ### Identity Conflict
 
-If identity data conflicts with existing records, the system must reject the invitation.
+Since the phone number is the primary identity key, if the provided email does not match the account's existing email, the system delegates the resolution to the strict logic in the Identity Resolution documentation.
+(e.g., rejecting if the email belongs to another completely different user).
 
-Example:
-
-- phone number matches one doctor
-- email matches another doctor
-
-The system must fail safely.
+All identity conflict handling is strictly governed by `DOCTOR_IDENTITY_RESOLUTION.md`. The system must rely on those definitions to fail safely.
 
 ---
 

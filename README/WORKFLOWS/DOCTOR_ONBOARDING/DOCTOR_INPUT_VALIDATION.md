@@ -242,7 +242,7 @@ Recommended processing order:
 1. receive raw input
 2. standardize input
 3. validate input
-4. detect existing doctor
+4. detect existing doctor (Strictly governed by `DOCTOR_IDENTITY_RESOLUTION.md`)
 5. apply invitation rules
 6. create invitation
 7. send notifications
@@ -257,7 +257,7 @@ Supported notification channels:
 
 ## Email Notification
 
-The **primary notification channel** used for doctor invitations.
+The **primary and default notification channel** used for doctor invitations.
 
 An email is sent to the doctor's registered email address.
 
@@ -277,7 +277,7 @@ These are used mainly for important in-system events such as a **new doctor invi
 
 ## SMS Notifications
 
-SMS is technically supported by the system but **should be avoided unless necessary** due to higher cost.
+SMS is strictly an **optional fallback that is not active by default**. While technically supported by the system, it should only be enabled if explicitly required later.
 
 ---
 

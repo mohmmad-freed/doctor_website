@@ -116,6 +116,39 @@ The Phone Verification flow is a critical security and identity validation mecha
 - **Merge Email/Phone OTP Utilities:** `otp_utils.py` (Phone) and `_email_otp_*` functions in `email_utils.py` perform identical Redis operations (generate, store, increment attempts, cooldowns). These could be extracted into a generic `cache_otp_service.py` that takes a `channel` identifier.
 - **Normalization Consistency:** Normalization occurs in views, forms, and utils. Encapsulating phone string cleaning centrally in a custom Model Field or strict form mixin could reduce code duplication.
 
+## Phone Number Recycling Security Protection
+
+Because telecom providers may reassign phone numbers to new individuals, SMS OTP alone is insufficient for securing high-privilege accounts (Doctors and Clinic Owners).
+
+### Risk
+If a verified doctor's phone number is reassigned by their carrier, any person who acquires that SIM card could potentially gain access to the doctor's verified medical account by simply completing the SMS OTP flow.
+
+### Required Security Rule
+
+Access to an existing verified Doctor or Clinic Owner account must **never** rely solely on SMS OTP.
+
+For high-privilege account access, at least **one additional verification factor** must be present:
+
+| Factor | Description |
+|--------|-------------|
+| **Email Verification** | The user must also verify access to the email address registered on the account. |
+| **Password Authentication** | Standard password login alongside SMS serves as the second factor. |
+| **Admin-Assisted Recovery** | If the phone number has changed, the account owner must contact Platform Administration to verify identity and update their phone number manually. |
+
+### Enforcement Scope
+
+This rule applies to:
+- Doctor account login after phone number change
+- Clinic Owner account login after phone number change
+- Password recovery for Doctor and Clinic Owner accounts
+- Any phone number update request on a verified account
+
+This rule does NOT apply to:
+- Patient accounts (lower privilege, standard SMS OTP is acceptable)
+- New account registration (no existing account to protect)
+
+---
+
 ## Related Files/Modules
 - `accounts/otp_utils.py` (Core logic)
 - `accounts/services/tweetsms.py` (External provider integration)

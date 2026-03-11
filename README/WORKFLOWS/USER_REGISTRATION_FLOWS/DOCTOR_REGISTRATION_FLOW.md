@@ -60,10 +60,8 @@ The system evaluates:
 The system performs additional limit checks based on the rules defined in `DOCTOR_INVITATION_LIMITS.md`.
 
 *Intended Workflow Dependencies (Note: These limits may not be fully implemented in code yet but are enforced as system policy):*
-- **Daily Limit:** Limit sending based on plan capacity (e.g., `(plan limit * 2) + 2`).
-- **Doctor Phone Limits:** 
-  - Max 4 SMS allowed to the same Doctor phone number in a week.
-  - Max 7 SMS allowed to the same Doctor phone number in a month.
+- All invitation limits (e.g., daily limits, resend limits, cooldowns) are strictly governed by the rules defined in `DOCTOR_INVITATION_LIMITS.md`.
+- No limits are hardcoded in this workflow; the system must dynamically enforce the constraints from the limits specification.
 
 ### Validation Outcomes
 
@@ -109,17 +107,22 @@ Upon submission, the system performs a final round of strict data processing:
 - **Stop this workflow.**
 - Instead, the system must trigger the existing doctor flow as documented in `EXISTING_DOCTOR_INVITATION_FLOW.md`.
 
-#### If the invited person is NOT a Doctor:
+#### If the invited person is NOT a Doctor but a Pending Identity Lock exists:
+- **Stop this workflow.**
+- Another clinic has already initiated onboarding for this phone number. The system creates the invitation linked to the pending identity. The doctor will see this invitation once they complete onboarding via any clinic. *(Reference: Identity Creation Lock in `DOCTOR_IDENTITY_RESOLUTION.md`)*
+
+#### If the invited person is NOT a Doctor and NO Pending Identity Lock exists:
 - **Continue this workflow.**
+- The system atomically creates a Pending Identity Lock for this phone number.
 - *Note: The person may already have an account as a Patient, a Main Doctor, or both. They are considered "not a Doctor" for this flow as long as they lack the regular DOCTOR role.*
 
 ---
 
 ## Step 5 — Invitation Dispatch
 
-The system creates the pending invitation and sends an SMS invitation to the Doctor's phone number.
+The system creates the pending invitation and sends an **Email invitation** to the Doctor's email address as the primary notification mechanism. (An SMS invitation is strictly an optional fallback that is not active by default).
 
-The SMS contains:
+The Email contains:
 - a welcome message
 - a secure Doctor onboarding / account creation link
 - **Expiration Warning:** The invitation link must expire after a maximum of **2 days**.
@@ -172,7 +175,19 @@ After successful submission of the required documents, the system updates or cre
 
 ## Step 9 — Unverified State & Admin Review
 
-After account creation/upgrade, the Doctor enters the **UNVERIFIED Doctor state**.
+After account creation/upgrade, the Doctor enters the **UNVERIFIED** state. The Pending Identity Lock for this phone number (if one exists) is now released.
+
+Doctor verification follows a **dual-layer model** as defined in `DOCTOR_CREDENTIAL_VERIFICATION.md`:
+
+### A) Identity Verification (Platform Level)
+- Confirms the doctor is a legitimate medical professional.
+- Must be completed once; applies globally across all clinics.
+- States: `IDENTITY_UNVERIFIED` → `IDENTITY_PENDING_REVIEW` → `IDENTITY_VERIFIED` or `IDENTITY_REJECTED`
+
+### B) Clinical Credential Verification (Clinic / Specialty Level)
+- Confirms the doctor's specialty qualifications for the specific clinic.
+- Required independently for each clinic-specialty assignment.
+- States: `CREDENTIALS_PENDING` → `CREDENTIALS_VERIFIED` or `CREDENTIALS_REJECTED`
 
 ### Unverified State Constraints
 During this state, the Doctor:
@@ -183,11 +198,13 @@ During this state, the Doctor:
 - **must NOT:** appear publicly to patients
 - **must NOT:** be bookable by patients
 
+A doctor becomes visible and bookable ONLY when **both** `IDENTITY_VERIFIED` and `CREDENTIALS_VERIFIED` are satisfied for a given clinic-specialty combination.
+
 ### Platform Administration Review
 Doctor verification is strictly a manual administrative process. Platform admin reviews the uploaded identity and medical documents and makes a decision. *(Reference: `DOCTOR_CREDENTIAL_VERIFICATION.md`)*
 
 #### If Approved:
-- the Doctor's status is updated to verified.
+- the Doctor's status is updated to verified (at the appropriate layer).
 - the Doctor becomes visible and bookable by patients according to the clinic's settings and system rules.
 
 #### If Rejected:
@@ -227,7 +244,9 @@ This workflow strictly relies on rules defined in the following supporting docum
 ## Postconditions
 
 If registration and admin review succeed:
-- The doctor-clinic relationship becomes active only after the doctor completes onboarding and administrative approval.
+- The Pending Identity Lock for this phone number is released.
+- The doctor-clinic relationship becomes active only after the doctor completes onboarding and administrative approval (both Identity Verification and Clinical Credential Verification).
 - The Doctor has an active account containing both `PATIENT` and `DOCTOR` roles.
 - The Doctor is linked to the inviting clinic with the accepted specialties.
-- The Doctor is fully verified, public-facing, and allows patient bookings.
+- The Doctor is fully verified (`IDENTITY_VERIFIED` + `CREDENTIALS_VERIFIED`), public-facing, and allows patient bookings.
+- Any other pending invitations from other clinics (created while the Identity Lock was active) are now presented to the doctor as EXISTING_DOCTOR invitations.
