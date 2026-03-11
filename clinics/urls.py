@@ -49,4 +49,9 @@ urlpatterns = [
     # Compliance Settings
     path('<int:clinic_id>/settings/compliance/', views.compliance_settings_view, name='compliance_settings'),
     path('<int:clinic_id>/settings/compliance/update/', views.compliance_settings_update_view, name='compliance_settings_update'),
+
+    # Doctor Credential Review (clinic owner)
+    path('<int:clinic_id>/credentials/', views.clinic_credentials_list, name='credentials_list'),
+    path('<int:clinic_id>/credentials/<int:credential_id>/approve/', views.clinic_credential_approve, name='credential_approve'),
+    path('<int:clinic_id>/credentials/<int:credential_id>/reject/', views.clinic_credential_reject, name='credential_reject'),
 ]

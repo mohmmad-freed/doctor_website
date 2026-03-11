@@ -685,3 +685,110 @@ def add_clinic_details_view(request):
         form = AddClinicDetailsForm()
 
     return render(request, "clinics/add_clinic_details.html", {"form": form})
+
+
+# ============================================
+# CLINIC DOCTOR CREDENTIAL REVIEW
+# ============================================
+
+from doctors.models import ClinicDoctorCredential
+
+
+@login_required
+def clinic_credentials_list(request, clinic_id):
+    """
+    Clinic owner page: list all doctor credentials for this clinic
+    with ability to approve or reject each one.
+    """
+    clinic = get_owner_clinic_or_404(request, clinic_id)
+
+    credentials = (
+        ClinicDoctorCredential.objects.filter(clinic=clinic)
+        .select_related("doctor", "specialty", "reviewed_by")
+        .order_by("-updated_at")
+    )
+
+    return render(request, "clinics/credentials_review.html", {
+        "clinic": clinic,
+        "credentials": credentials,
+    })
+
+
+@login_required
+def clinic_credential_approve(request, clinic_id, credential_id):
+    """Clinic owner approves a doctor credential."""
+    clinic = get_owner_clinic_or_404(request, clinic_id)
+    credential = get_object_or_404(
+        ClinicDoctorCredential, id=credential_id, clinic=clinic
+    )
+
+    if request.method == "POST":
+        from django.utils import timezone as _tz
+        credential.credential_status = "CREDENTIALS_VERIFIED"
+        credential.reviewed_by = request.user
+        credential.reviewed_at = _tz.now()
+        credential.rejection_reason = ""
+        credential.save()
+
+        # Notify doctor via email
+        try:
+            from accounts.email_utils import send_verification_approved_email
+            if credential.doctor.email:
+                spec_name = credential.specialty.name_ar if credential.specialty else "عام"
+                send_verification_approved_email(
+                    credential.doctor.email,
+                    credential.doctor.name,
+                    f"اعتماد مؤهلات ({spec_name}) في {clinic.name}",
+                )
+        except Exception:
+            pass  # Email failure shouldn't block approval
+
+        messages.success(
+            request,
+            f"تم اعتماد مؤهلات د. {credential.doctor.name} بنجاح."
+        )
+
+    return redirect(reverse("clinics:credentials_list", kwargs={"clinic_id": clinic_id}))
+
+
+@login_required
+def clinic_credential_reject(request, clinic_id, credential_id):
+    """Clinic owner rejects a doctor credential with a reason."""
+    clinic = get_owner_clinic_or_404(request, clinic_id)
+    credential = get_object_or_404(
+        ClinicDoctorCredential, id=credential_id, clinic=clinic
+    )
+
+    if request.method == "POST":
+        from django.utils import timezone as _tz
+        reason = request.POST.get("rejection_reason", "").strip()
+        if not reason:
+            messages.error(request, "يجب إدخال سبب الرفض.")
+            return redirect(reverse("clinics:credentials_list", kwargs={"clinic_id": clinic_id}))
+
+        credential.credential_status = "CREDENTIALS_REJECTED"
+        credential.reviewed_by = request.user
+        credential.reviewed_at = _tz.now()
+        credential.rejection_reason = reason
+        credential.save()
+
+        # Notify doctor via email
+        try:
+            from accounts.email_utils import send_verification_rejected_email
+            if credential.doctor.email:
+                spec_name = credential.specialty.name_ar if credential.specialty else "عام"
+                send_verification_rejected_email(
+                    credential.doctor.email,
+                    credential.doctor.name,
+                    f"مؤهلات ({spec_name}) في {clinic.name}",
+                    reason,
+                )
+        except Exception:
+            pass  # Email failure shouldn't block rejection
+
+        messages.success(
+            request,
+            f"تم رفض مؤهلات د. {credential.doctor.name}."
+        )
+
+    return redirect(reverse("clinics:credentials_list", kwargs={"clinic_id": clinic_id}))

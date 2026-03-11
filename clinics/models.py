@@ -69,12 +69,23 @@ class ClinicStaff(models.Model):
     )
     added_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
+    revoked_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="When set, indicates this membership was revoked. "
+                  "Revoked memberships do not block re-invitation.",
+    )
 
     def __str__(self):
         return f"{self.user.name} - {self.role} at {self.clinic.name}"
 
     class Meta:
-        unique_together = ["clinic", "user"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["clinic", "user"],
+                condition=models.Q(revoked_at__isnull=True),
+                name="unique_active_staff_per_clinic",
+            )
+        ]
         verbose_name = "Clinic Staff"
         verbose_name_plural = "Clinic Staff"
 
@@ -149,6 +160,31 @@ class ClinicInvitation(models.Model):
         if self.is_expired and self.status == "PENDING":
              pass # Service logic should handle marking this EXPIRED
 
+
+class PendingDoctorIdentity(models.Model):
+    """
+    Atomic identity creation lock.
+    Prevents race conditions when multiple clinics invite the same
+    unregistered phone number simultaneously.
+    """
+    phone = models.CharField(
+        max_length=20, unique=True, db_index=True,
+        help_text="Standardized phone number being onboarded.",
+    )
+    created_by_invitation = models.ForeignKey(
+        ClinicInvitation,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="pending_identity_lock",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Pending Doctor Identity"
+        verbose_name_plural = "Pending Doctor Identities"
+
+    def __str__(self):
+        return f"PendingIdentity({self.phone})"
 
 
 class InvitationAuditLog(models.Model):

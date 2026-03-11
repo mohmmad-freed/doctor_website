@@ -45,6 +45,28 @@ urlpatterns = [
         views.guest_accept_invitation_view,
         name="guest_accept_invitation",
     ),
+    # --- Doctor Verification Flow ---
+    path(
+        "verification/status/",
+        views.doctor_verification_status,
+        name="verification_status",
+    ),
+    path(
+        "verification/upload/",
+        views.doctor_upload_credentials,
+        name="upload_credentials",
+    ),
+    path(
+        "verification/credential/<int:credential_id>/upload/",
+        views.doctor_upload_clinic_credential,
+        name="upload_clinic_credential",
+    ),
+    # --- Doctor Profile ---
+    path(
+        "profile/",
+        views.doctor_profile_view,
+        name="doctor_profile",
+    ),
     # --- API Endpoints ---
     path(
         "api/specialties/",

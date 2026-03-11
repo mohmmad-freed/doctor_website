@@ -71,6 +71,134 @@ class DoctorSpecialty(models.Model):
         return f"{self.doctor_profile.user.name} → {self.specialty.name_ar} ({label})"
 
 
+def _doctor_id_upload_path(instance, filename):
+    return f"doctor_verification/identity/{instance.user_id}/{filename}"
+
+def _doctor_license_upload_path(instance, filename):
+    return f"doctor_verification/license/{instance.user_id}/{filename}"
+
+
+class DoctorVerification(models.Model):
+    """
+    Platform-level identity verification for a doctor.
+    Verified once; applies globally across all clinics.
+    """
+
+    IDENTITY_STATUS_CHOICES = [
+        ("IDENTITY_UNVERIFIED", "Unverified"),
+        ("IDENTITY_PENDING_REVIEW", "Pending Review"),
+        ("IDENTITY_VERIFIED", "Verified"),
+        ("IDENTITY_REJECTED", "Rejected"),
+        ("IDENTITY_REVOKED", "Revoked"),
+    ]
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="doctor_verification",
+    )
+    identity_status = models.CharField(
+        max_length=30,
+        choices=IDENTITY_STATUS_CHOICES,
+        default="IDENTITY_UNVERIFIED",
+    )
+    identity_document = models.FileField(
+        upload_to=_doctor_id_upload_path,
+        blank=True, null=True,
+        help_text="Government-issued ID (National ID, Passport).",
+    )
+    medical_license = models.FileField(
+        upload_to=_doctor_license_upload_path,
+        blank=True, null=True,
+        help_text="Medical practice license / certificate.",
+    )
+    identity_reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="identity_reviews_performed",
+    )
+    identity_reviewed_at = models.DateTimeField(null=True, blank=True)
+    identity_rejection_reason = models.TextField(
+        blank=True, default="",
+        help_text="Admin-provided reason when identity is rejected.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Doctor Verification"
+        verbose_name_plural = "Doctor Verifications"
+
+    def __str__(self):
+        return f"{self.user.name} — {self.get_identity_status_display()}"
+
+
+def _credential_upload_path(instance, filename):
+    return f"doctor_credentials/clinic_{instance.clinic_id}/doctor_{instance.doctor_id}/{filename}"
+
+
+class ClinicDoctorCredential(models.Model):
+    """
+    Per clinic-specialty credential verification.
+    A doctor verified at Clinic A does NOT auto-verify at Clinic B.
+    """
+
+    CREDENTIAL_STATUS_CHOICES = [
+        ("CREDENTIALS_PENDING", "Pending"),
+        ("CREDENTIALS_VERIFIED", "Verified"),
+        ("CREDENTIALS_REJECTED", "Rejected"),
+        ("CREDENTIALS_REVOKED", "Revoked"),
+    ]
+
+    doctor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="clinic_credentials",
+    )
+    clinic = models.ForeignKey(
+        Clinic, on_delete=models.CASCADE, related_name="doctor_credentials",
+    )
+    specialty = models.ForeignKey(
+        Specialty, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="clinic_credentials",
+    )
+    credential_status = models.CharField(
+        max_length=30,
+        choices=CREDENTIAL_STATUS_CHOICES,
+        default="CREDENTIALS_PENDING",
+    )
+    specialty_certificate = models.FileField(
+        upload_to=_credential_upload_path,
+        blank=True, null=True,
+        help_text="Specialty certification document (if applicable).",
+    )
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="credential_reviews_performed",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Clinic Doctor Credential"
+        verbose_name_plural = "Clinic Doctor Credentials"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["doctor", "clinic", "specialty"],
+                name="unique_credential_per_doctor_clinic_specialty",
+            )
+        ]
+
+    def __str__(self):
+        spec = self.specialty.name_ar if self.specialty else "General"
+        return f"{self.doctor.name} @ {self.clinic.name} ({spec}) — {self.get_credential_status_display()}"
+
+
 class DoctorAvailability(models.Model):
     DAY_CHOICES = [
         (0, "الاثنين"), (1, "الثلاثاء"), (2, "الأربعاء"), (3, "الخميس"),

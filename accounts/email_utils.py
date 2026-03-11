@@ -308,3 +308,127 @@ def send_appointment_cancellation_email(user, appointment):
             e,
         )
 
+
+# ============================================
+# DOCTOR INVITATION EMAILS
+# ============================================
+
+
+def send_doctor_invitation_email(invitation, accept_url):
+    """
+    Send an invitation email to a doctor inviting them to join a clinic.
+    Primary invitation delivery channel (not SMS).
+    """
+    to_email = invitation.doctor_email
+    if not to_email:
+        logger.warning("[EMAIL] No email address for invitation %s", invitation.id)
+        return
+
+    clinic_name = invitation.clinic.name
+    doctor_name = invitation.doctor_name
+    is_secretary = invitation.role == "SECRETARY"
+
+    role_label = "سكرتير/ة" if is_secretary else "طبيب"
+    greeting = f"مرحباً {doctor_name}" if is_secretary else f"مرحباً د. {doctor_name}"
+
+    subject = f"دعوة للانضمام إلى {clinic_name} — كلينك"
+    text_content = (
+        "\u200f"
+        f"{greeting}،\n\n"
+        f"تمت دعوتك للانضمام إلى {clinic_name} كـ {role_label}.\n\n"
+        f"للقبول، يرجى الضغط على الرابط أدناه:\n\n"
+        f"{accept_url}\n\n"
+        f"هذا الرابط صالح لمدة 48 ساعة.\n\n"
+        f"إذا لم تكن تتوقع هذه الدعوة، يرجى تجاهل هذه الرسالة.\n\n"
+        f"مع تحيات،\nفريق كلينك"
+    )
+    html_content = (
+        f"<div dir='rtl' style='font-family:Cairo,sans-serif;'>"
+        f"<h2>{greeting}!</h2>"
+        f"<p>تمت دعوتك للانضمام إلى <strong>{clinic_name}</strong> كـ <strong>{role_label}</strong>.</p>"
+        f"<p style='margin:25px 0;'>"
+        f"<a href='{accept_url}' style='background:#2563EB;color:#fff;padding:12px 30px;border-radius:8px;"
+        f"text-decoration:none;font-weight:bold;font-size:1.1em;'>قبول الدعوة</a>"
+        f"</p>"
+        f"<p>هذا الرابط صالح لمدة <strong>48 ساعة</strong>.</p>"
+        f"<p>إذا لم تكن تتوقع هذه الدعوة، يرجى تجاهل هذه الرسالة.</p>"
+        f"<br><p>مع تحيات،<br>فريق كلينك</p>"
+        f"</div>"
+    )
+
+    try:
+        _send_email(to_email, subject, html_content, text_content)
+        logger.info("[EMAIL] Invitation email sent to %s for invitation %s", to_email, invitation.id)
+    except Exception as e:
+        logger.error("[EMAIL] Failed to send invitation email to %s: %r", to_email, e)
+        raise
+
+
+def send_verification_approved_email(user, layer="identity"):
+    """
+    Notify a doctor that their verification has been approved.
+    layer: 'identity' or 'credential'
+    """
+    if not user.email:
+        return
+
+    if layer == "identity":
+        subject = "تمت الموافقة على التحقق من هويتك — كلينك"
+        body = "تم التحقق من هويتك بنجاح على منصة كلينك."
+    else:
+        subject = "تمت الموافقة على مؤهلاتك الطبية — كلينك"
+        body = "تم التحقق من مؤهلاتك الطبية بنجاح."
+
+    text_content = f"\u200fمرحباً د. {user.name}،\n\n{body}\n\nمع تحيات،\nفريق كلينك"
+    html_content = (
+        f"<div dir='rtl'>"
+        f"<h2>مرحباً د. {user.name}!</h2>"
+        f"<p>{body}</p>"
+        f"<br><p>مع تحيات،<br>فريق كلينك</p>"
+        f"</div>"
+    )
+
+    try:
+        _send_email(user.email, subject, html_content, text_content)
+        logger.info("[EMAIL] Verification approved email sent to %s", user.email)
+    except Exception as e:
+        logger.error("[EMAIL] Failed to send approval email to %s: %r", user.email, e)
+
+
+def send_verification_rejected_email(user, reason="", layer="identity"):
+    """
+    Notify a doctor that their verification has been rejected.
+    """
+    if not user.email:
+        return
+
+    if layer == "identity":
+        subject = "مطلوب إجراء — التحقق من الهوية — كلينك"
+        body = "تم رفض التحقق من هويتك على منصة كلينك."
+    else:
+        subject = "مطلوب إجراء — المؤهلات الطبية — كلينك"
+        body = "تم رفض التحقق من مؤهلاتك الطبية."
+
+    reason_line = f"\n\nالسبب: {reason}" if reason else ""
+
+    text_content = (
+        f"\u200fمرحباً د. {user.name}،\n\n"
+        f"{body}{reason_line}\n\n"
+        f"يرجى تحديث مستنداتك وإعادة التقديم.\n\n"
+        f"مع تحيات،\nفريق كلينك"
+    )
+    html_content = (
+        f"<div dir='rtl'>"
+        f"<h2>مرحباً د. {user.name}،</h2>"
+        f"<p>{body}</p>"
+        f"{'<p><strong>السبب:</strong> ' + reason + '</p>' if reason else ''}"
+        f"<p>يرجى تحديث مستنداتك وإعادة التقديم.</p>"
+        f"<br><p>مع تحيات،<br>فريق كلينك</p>"
+        f"</div>"
+    )
+
+    try:
+        _send_email(user.email, subject, html_content, text_content)
+        logger.info("[EMAIL] Verification rejected email sent to %s", user.email)
+    except Exception as e:
+        logger.error("[EMAIL] Failed to send rejection email to %s: %r", user.email, e)

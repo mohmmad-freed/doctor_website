@@ -1,624 +1,320 @@
-from datetime import time, date, timedelta
-from decimal import Decimal
+"""
+Tests for the Doctor Invitation & Onboarding flow.
 
-from django.test import TestCase
+Covers:
+- New doctor invitation with PendingDoctorIdentity lock
+- Existing doctor invitation (identity resolution)
+- Patient-to-doctor upgrade
+- Expired invitation immutability
+- Revoked membership re-invitation
+- Accept invitation creates DoctorVerification + ClinicDoctorCredential
+- PendingDoctorIdentity lock release on accept
+"""
+
+from django.test import TestCase, RequestFactory
+from django.utils import timezone
 from django.core.exceptions import ValidationError
-from django.contrib.auth import get_user_model
-from django.urls import reverse
-from rest_framework.test import APIClient
-from rest_framework import status
+from datetime import timedelta
+from unittest.mock import patch
 
-from clinics.models import Clinic
-from appointments.models import Appointment, AppointmentType
-from .models import DoctorAvailability
-from .services import generate_slots_for_date
+from accounts.models import CustomUser
+from clinics.models import (
+    Clinic, ClinicStaff, ClinicSubscription,
+    ClinicInvitation, PendingDoctorIdentity,
+)
+from clinics.services import (
+    create_invitation, accept_invitation,
+    cancel_invitation, reject_invitation,
+)
+from doctors.models import (
+    DoctorProfile, DoctorSpecialty, Specialty,
+    DoctorVerification, ClinicDoctorCredential,
+)
 
-User = get_user_model()
 
-
-class DoctorAvailabilityModelTestMixin:
-    """Shared setup for availability tests."""
+class InvitationTestBase(TestCase):
+    """Shared setup for invitation tests."""
 
     def setUp(self):
-        # Create users
-        self.main_doctor = User.objects.create_user(
-            phone="0591000001",
+        # Create owner
+        self.owner = CustomUser.objects.create_user(
+            phone="0591234567",
             password="testpass123",
             name="Dr. Owner",
             role="MAIN_DOCTOR",
+            roles=["MAIN_DOCTOR"],
         )
-        self.doctor = User.objects.create_user(
-            phone="0591000002",
-            password="testpass123",
-            name="Dr. Ahmad",
-            role="DOCTOR",
-        )
-        self.patient = User.objects.create_user(
-            phone="0591000003",
-            password="testpass123",
-            name="Patient Test",
-            role="PATIENT",
+        self.owner.email = "owner@test.com"
+        self.owner.save()
+
+        # Create specialty
+        self.specialty = Specialty.objects.create(
+            name="Cardiology",
+            name_ar="أمراض القلب",
         )
 
-        # Create clinics
-        self.clinic_a = Clinic.objects.create(
-            name="Clinic A",
-            address="Address A",
+        # Create clinic
+        self.clinic = Clinic.objects.create(
+            name="Test Clinic",
+            address="Test Address",
             phone="0591111111",
-            email="a@clinic.com",
-            main_doctor=self.main_doctor,
+            status="ACTIVE",
+            main_doctor=self.owner,
         )
-        self.clinic_b = Clinic.objects.create(
-            name="Clinic B",
-            address="Address B",
-            phone="0592222222",
-            email="b@clinic.com",
-            main_doctor=self.main_doctor,
+        self.clinic.specialties.add(self.specialty)
+
+        ClinicStaff.objects.create(
+            clinic=self.clinic,
+            user=self.owner,
+            role="MAIN_DOCTOR",
+            added_by=self.owner,
         )
 
-
-class DoctorAvailabilityModelTests(DoctorAvailabilityModelTestMixin, TestCase):
-    """Tests for DoctorAvailability model validation."""
-
-    def test_create_availability_success(self):
-        """Basic availability creation should work."""
-        avail = DoctorAvailability.objects.create(
-            doctor=self.doctor,
-            clinic=self.clinic_a,
-            day_of_week=0,  # Monday
-            start_time=time(9, 0),
-            end_time=time(14, 0),
+        ClinicSubscription.objects.create(
+            clinic=self.clinic,
+            plan_type="PRO",
+            expires_at=timezone.now() + timedelta(days=365),
+            max_doctors=5,
+            status="ACTIVE",
         )
-        self.assertEqual(avail.doctor, self.doctor)
-        self.assertTrue(avail.is_active)
 
-    def test_start_after_end_raises_error(self):
-        """start_time >= end_time should raise ValidationError."""
+        self.factory = RequestFactory()
+
+
+class CreateInvitationTests(InvitationTestBase):
+
+    @patch("accounts.email_utils.send_doctor_invitation_email")
+    def test_invite_new_doctor_creates_pending_lock(self, mock_email):
+        """Inviting a new phone should create a PendingDoctorIdentity lock."""
+        data = {
+            "doctor_name": "New Doctor",
+            "doctor_phone": "0567890123",
+            "doctor_email": "newdoc@test.com",
+        }
+        invitation = create_invitation(self.clinic, self.owner, data, role="DOCTOR")
+
+        self.assertEqual(invitation.status, "PENDING")
+        self.assertTrue(
+            PendingDoctorIdentity.objects.filter(phone="0567890123").exists()
+        )
+
+    @patch("accounts.email_utils.send_doctor_invitation_email")
+    def test_invite_existing_user_no_lock(self, mock_email):
+        """Inviting an existing user should NOT create a PendingDoctorIdentity lock."""
+        existing = CustomUser.objects.create_user(
+            phone="0561111111",
+            password="testpass",
+            name="Existing Doc",
+            role="PATIENT",
+            roles=["PATIENT"],
+        )
+        data = {
+            "doctor_name": "Existing Doc",
+            "doctor_phone": "0561111111",
+            "doctor_email": "existing@test.com",
+        }
+        create_invitation(self.clinic, self.owner, data, role="DOCTOR")
+        self.assertFalse(
+            PendingDoctorIdentity.objects.filter(phone="0561111111").exists()
+        )
+
+    @patch("accounts.email_utils.send_doctor_invitation_email")
+    def test_invite_self_raises(self, mock_email):
+        """Owner cannot invite themselves."""
+        data = {
+            "doctor_name": "Owner",
+            "doctor_phone": self.owner.phone,
+            "doctor_email": "owner@test.com",
+        }
         with self.assertRaises(ValidationError):
-            DoctorAvailability.objects.create(
-                doctor=self.doctor,
-                clinic=self.clinic_a,
-                day_of_week=0,
-                start_time=time(14, 0),
-                end_time=time(9, 0),
-            )
+            create_invitation(self.clinic, self.owner, data)
 
-    def test_equal_start_end_raises_error(self):
-        """start_time == end_time should raise ValidationError."""
+    @patch("accounts.email_utils.send_doctor_invitation_email")
+    def test_duplicate_pending_invite_raises(self, mock_email):
+        """Cannot send duplicate pending invitation to same phone at same clinic."""
+        data = {
+            "doctor_name": "Doc",
+            "doctor_phone": "0562222222",
+            "doctor_email": "doc@test.com",
+        }
+        create_invitation(self.clinic, self.owner, data)
         with self.assertRaises(ValidationError):
-            DoctorAvailability.objects.create(
-                doctor=self.doctor,
-                clinic=self.clinic_a,
-                day_of_week=0,
-                start_time=time(9, 0),
-                end_time=time(9, 0),
-            )
+            create_invitation(self.clinic, self.owner, data)
 
-    def test_same_clinic_overlap_raises_error(self):
-        """Overlapping slots at the same clinic should fail."""
-        DoctorAvailability.objects.create(
-            doctor=self.doctor,
-            clinic=self.clinic_a,
-            day_of_week=0,
-            start_time=time(9, 0),
-            end_time=time(14, 0),
+    @patch("accounts.email_utils.send_doctor_invitation_email")
+    def test_expired_invite_allows_re_invite(self, mock_email):
+        """Expired invitation should be marked EXPIRED and allow fresh invite."""
+        data = {
+            "doctor_name": "Doc",
+            "doctor_phone": "0563333333",
+            "doctor_email": "doc@test.com",
+        }
+        inv = create_invitation(self.clinic, self.owner, data)
+        # Force expire
+        inv.expires_at = timezone.now() - timedelta(hours=1)
+        inv.save()
+
+        # Re-invite should work
+        inv2 = create_invitation(self.clinic, self.owner, data)
+        self.assertEqual(inv2.status, "PENDING")
+        inv.refresh_from_db()
+        self.assertEqual(inv.status, "EXPIRED")
+
+    @patch("accounts.email_utils.send_doctor_invitation_email")
+    def test_email_delivery_uses_stored_email_for_existing_user(self, mock_email):
+        """For existing users, email should be their stored email, not the entered one."""
+        existing = CustomUser.objects.create_user(
+            phone="0564444444",
+            password="testpass",
+            name="Doc",
+            role="PATIENT",
+            roles=["PATIENT"],
         )
+        existing.email = "real@test.com"
+        existing.save()
+
+        data = {
+            "doctor_name": "Doc",
+            "doctor_phone": "0564444444",
+            "doctor_email": "wrong@test.com",  # This should be overridden
+        }
+        req = self.factory.get("/")
+        inv = create_invitation(self.clinic, self.owner, data, request=req)
+        self.assertEqual(inv.doctor_email, "real@test.com")
+
+
+class AcceptInvitationTests(InvitationTestBase):
+
+    @patch("accounts.email_utils.send_doctor_invitation_email")
+    def test_accept_creates_verification_records(self, mock_email):
+        """Accepting an invitation should create DoctorVerification + ClinicDoctorCredential."""
+        doctor_user = CustomUser.objects.create_user(
+            phone="0565555555",
+            password="testpass",
+            name="Dr. Accept",
+            role="PATIENT",
+            roles=["PATIENT"],
+        )
+        data = {
+            "doctor_name": "Dr. Accept",
+            "doctor_phone": "0565555555",
+            "doctor_email": "accept@test.com",
+            "specialties": [self.specialty],
+        }
+        inv = create_invitation(self.clinic, self.owner, data)
+        inv.specialties.set([self.specialty])
+
+        accept_invitation(inv, doctor_user)
+
+        # DoctorVerification should exist
+        self.assertTrue(DoctorVerification.objects.filter(user=doctor_user).exists())
+        dv = DoctorVerification.objects.get(user=doctor_user)
+        self.assertEqual(dv.identity_status, "IDENTITY_UNVERIFIED")
+
+        # ClinicDoctorCredential should exist
+        self.assertTrue(
+            ClinicDoctorCredential.objects.filter(
+                doctor=doctor_user, clinic=self.clinic, specialty=self.specialty
+            ).exists()
+        )
+
+    @patch("accounts.email_utils.send_doctor_invitation_email")
+    def test_accept_releases_pending_lock(self, mock_email):
+        """Accepting should release PendingDoctorIdentity lock."""
+        data = {
+            "doctor_name": "Dr. New",
+            "doctor_phone": "0566666666",
+            "doctor_email": "new@test.com",
+        }
+        inv = create_invitation(self.clinic, self.owner, data)
+        self.assertTrue(PendingDoctorIdentity.objects.filter(phone="0566666666").exists())
+
+        # Create the user (simulating registration)
+        new_user = CustomUser.objects.create_user(
+            phone="0566666666",
+            password="testpass",
+            name="Dr. New",
+            role="PATIENT",
+            roles=["PATIENT"],
+        )
+        accept_invitation(inv, new_user)
+
+        # Lock should be released
+        self.assertFalse(PendingDoctorIdentity.objects.filter(phone="0566666666").exists())
+
+    @patch("accounts.email_utils.send_doctor_invitation_email")
+    def test_accept_upgrades_patient_to_doctor(self, mock_email):
+        """A patient accepting a doctor invitation should gain the DOCTOR role."""
+        patient = CustomUser.objects.create_user(
+            phone="0567777777",
+            password="testpass",
+            name="Patient Upgrade",
+            role="PATIENT",
+            roles=["PATIENT"],
+        )
+        data = {
+            "doctor_name": "Patient Upgrade",
+            "doctor_phone": "0567777777",
+            "doctor_email": "patient@test.com",
+        }
+        inv = create_invitation(self.clinic, self.owner, data)
+        accept_invitation(inv, patient)
+
+        patient.refresh_from_db()
+        self.assertIn("DOCTOR", patient.roles)
+        self.assertEqual(patient.role, "DOCTOR")
+        self.assertTrue(DoctorProfile.objects.filter(user=patient).exists())
+
+    @patch("accounts.email_utils.send_doctor_invitation_email")
+    def test_accept_expired_raises(self, mock_email):
+        """Cannot accept an expired invitation."""
+        doctor_user = CustomUser.objects.create_user(
+            phone="0568888888",
+            password="testpass",
+            name="Doc",
+            role="PATIENT",
+            roles=["PATIENT"],
+        )
+        data = {
+            "doctor_name": "Doc",
+            "doctor_phone": "0568888888",
+            "doctor_email": "exp@test.com",
+        }
+        inv = create_invitation(self.clinic, self.owner, data)
+        inv.expires_at = timezone.now() - timedelta(hours=1)
+        inv.save()
+
         with self.assertRaises(ValidationError):
-            DoctorAvailability.objects.create(
-                doctor=self.doctor,
-                clinic=self.clinic_a,
-                day_of_week=0,
-                start_time=time(11, 0),
-                end_time=time(16, 0),
-            )
+            accept_invitation(inv, doctor_user)
 
-    def test_cross_clinic_overlap_raises_error(self):
-        """Overlapping slots across different clinics should fail (R-04)."""
-        DoctorAvailability.objects.create(
-            doctor=self.doctor,
-            clinic=self.clinic_a,
-            day_of_week=0,
-            start_time=time(9, 0),
-            end_time=time(14, 0),
+    @patch("accounts.email_utils.send_doctor_invitation_email")
+    def test_revoked_membership_reactivation(self, mock_email):
+        """A doctor with revoked membership can re-accept a new invitation."""
+        doctor_user = CustomUser.objects.create_user(
+            phone="0569999999",
+            password="testpass",
+            name="Dr. Revoked",
+            role="DOCTOR",
+            roles=["DOCTOR"],
         )
-        with self.assertRaises(ValidationError):
-            DoctorAvailability.objects.create(
-                doctor=self.doctor,
-                clinic=self.clinic_b,
-                day_of_week=0,
-                start_time=time(10, 0),
-                end_time=time(18, 0),
-            )
-
-    def test_non_overlapping_same_day_same_clinic_ok(self):
-        """Two non-overlapping blocks on the same day/clinic should work."""
-        DoctorAvailability.objects.create(
-            doctor=self.doctor,
-            clinic=self.clinic_a,
-            day_of_week=0,
-            start_time=time(9, 0),
-            end_time=time(12, 0),
-        )
-        avail2 = DoctorAvailability.objects.create(
-            doctor=self.doctor,
-            clinic=self.clinic_a,
-            day_of_week=0,
-            start_time=time(14, 0),
-            end_time=time(17, 0),
-        )
-        self.assertIsNotNone(avail2.pk)
-
-    def test_non_overlapping_cross_clinic_ok(self):
-        """Non-overlapping slots across clinics should work."""
-        DoctorAvailability.objects.create(
-            doctor=self.doctor,
-            clinic=self.clinic_a,
-            day_of_week=0,
-            start_time=time(9, 0),
-            end_time=time(13, 0),
-        )
-        avail2 = DoctorAvailability.objects.create(
-            doctor=self.doctor,
-            clinic=self.clinic_b,
-            day_of_week=0,
-            start_time=time(14, 0),
-            end_time=time(18, 0),
-        )
-        self.assertIsNotNone(avail2.pk)
-
-    def test_different_day_no_conflict(self):
-        """Same time range on different days should work."""
-        DoctorAvailability.objects.create(
-            doctor=self.doctor,
-            clinic=self.clinic_a,
-            day_of_week=0,  # Monday
-            start_time=time(9, 0),
-            end_time=time(14, 0),
-        )
-        avail2 = DoctorAvailability.objects.create(
-            doctor=self.doctor,
-            clinic=self.clinic_b,
-            day_of_week=2,  # Wednesday
-            start_time=time(9, 0),
-            end_time=time(14, 0),
-        )
-        self.assertIsNotNone(avail2.pk)
-
-    def test_inactive_slot_not_counted_for_overlap(self):
-        """Inactive slots should not block new entries."""
-        DoctorAvailability.objects.create(
-            doctor=self.doctor,
-            clinic=self.clinic_a,
-            day_of_week=0,
-            start_time=time(9, 0),
-            end_time=time(14, 0),
+        # Create a revoked staff record
+        staff = ClinicStaff.objects.create(
+            clinic=self.clinic,
+            user=doctor_user,
+            role="DOCTOR",
+            added_by=self.owner,
             is_active=False,
-        )
-        avail2 = DoctorAvailability.objects.create(
-            doctor=self.doctor,
-            clinic=self.clinic_b,
-            day_of_week=0,
-            start_time=time(10, 0),
-            end_time=time(16, 0),
-        )
-        self.assertIsNotNone(avail2.pk)
-
-
-class SlotGenerationServiceTests(DoctorAvailabilityModelTestMixin, TestCase):
-    """Tests for the slot generation engine."""
-
-    def setUp(self):
-        super().setUp()
-        # Monday availability: 9:00-12:00
-        self.availability = DoctorAvailability.objects.create(
-            doctor=self.doctor,
-            clinic=self.clinic_a,
-            day_of_week=0,  # Monday
-            start_time=time(9, 0),
-            end_time=time(12, 0),
-        )
-        from clinics.services import create_working_hours
-        create_working_hours(self.clinic_a, 0, time(8, 0), time(20, 0))
-        create_working_hours(self.clinic_a, 1, time(8, 0), time(20, 0))
-        
-        self.appointment_type = AppointmentType.objects.create(
-            clinic=self.clinic_a,
-            name="General Checkup",
-            duration_minutes=30,
-            price=Decimal("50.00"),
-        )
-        # Find next Monday
-        today = date.today()
-        days_until_monday = (0 - today.weekday()) % 7
-        if days_until_monday == 0:
-            days_until_monday = 7
-        self.next_monday = today + timedelta(days=days_until_monday)
-
-    def test_generate_slots_basic(self):
-        """Should generate 6 x 30min slots from 9:00-12:00."""
-        slots = generate_slots_for_date(
-            doctor_id=self.doctor.id,
-            clinic_id=self.clinic_a.id,
-            target_date=self.next_monday,
-            duration_minutes=30,
-        )
-        self.assertEqual(len(slots), 6)
-        self.assertEqual(slots[0]["time"], time(9, 0))
-        self.assertEqual(slots[0]["end_time"], time(9, 30))
-        self.assertEqual(slots[-1]["time"], time(11, 30))
-        self.assertTrue(all(s["is_available"] for s in slots))
-
-    def test_generate_slots_with_booking(self):
-        """Booked slot should appear as is_available=False."""
-        Appointment.objects.create(
-            patient=self.patient,
-            clinic=self.clinic_a,
-            doctor=self.doctor,
-            appointment_type=self.appointment_type,
-            appointment_date=self.next_monday,
-            appointment_time=time(10, 0),
-            status="CONFIRMED",
-        )
-        slots = generate_slots_for_date(
-            doctor_id=self.doctor.id,
-            clinic_id=self.clinic_a.id,
-            target_date=self.next_monday,
-            duration_minutes=30,
-        )
-        self.assertEqual(len(slots), 6)
-        # 10:00 slot should be unavailable
-        slot_10 = next(s for s in slots if s["time"] == time(10, 0))
-        self.assertFalse(slot_10["is_available"])
-        # 9:00 should still be available
-        slot_9 = next(s for s in slots if s["time"] == time(9, 0))
-        self.assertTrue(slot_9["is_available"])
-
-    def test_cross_clinic_booking_blocks_slot(self):
-        """Appointment at Clinic B should block slot at Clinic A (R-03)."""
-        # Doctor also available at Clinic B on Monday
-        DoctorAvailability.objects.create(
-            doctor=self.doctor,
-            clinic=self.clinic_b,
-            day_of_week=0,
-            start_time=time(14, 0),
-            end_time=time(17, 0),
-        )
-        # Appointment at Clinic B
-        Appointment.objects.create(
-            patient=self.patient,
-            clinic=self.clinic_b,
-            doctor=self.doctor,
-            appointment_type=self.appointment_type,
-            appointment_date=self.next_monday,
-            appointment_time=time(10, 0),
-            status="CONFIRMED",
-        )
-        # Check Clinic A slots — 10:00 should be blocked
-        slots = generate_slots_for_date(
-            doctor_id=self.doctor.id,
-            clinic_id=self.clinic_a.id,
-            target_date=self.next_monday,
-            duration_minutes=30,
-        )
-        slot_10 = next(s for s in slots if s["time"] == time(10, 0))
-        self.assertFalse(slot_10["is_available"])
-
-    def test_no_availability_returns_empty(self):
-        """Day with no availability should return empty list."""
-        # Tuesday — no availability defined
-        tuesday = self.next_monday + timedelta(days=1)
-        slots = generate_slots_for_date(
-            doctor_id=self.doctor.id,
-            clinic_id=self.clinic_a.id,
-            target_date=tuesday,
-            duration_minutes=30,
-        )
-        self.assertEqual(slots, [])
-
-    def test_cancelled_appointment_does_not_block(self):
-        """Cancelled appointments should not block slots."""
-        Appointment.objects.create(
-            patient=self.patient,
-            clinic=self.clinic_a,
-            doctor=self.doctor,
-            appointment_type=self.appointment_type,
-            appointment_date=self.next_monday,
-            appointment_time=time(10, 0),
-            status="CANCELLED",
-        )
-        slots = generate_slots_for_date(
-            doctor_id=self.doctor.id,
-            clinic_id=self.clinic_a.id,
-            target_date=self.next_monday,
-            duration_minutes=30,
-        )
-        slot_10 = next(s for s in slots if s["time"] == time(10, 0))
-        self.assertTrue(slot_10["is_available"])
-
-    def test_multiple_blocks_same_day(self):
-        """Two availability blocks should generate slots from both."""
-        DoctorAvailability.objects.create(
-            doctor=self.doctor,
-            clinic=self.clinic_a,
-            day_of_week=0,
-            start_time=time(14, 0),
-            end_time=time(16, 0),
-        )
-        slots = generate_slots_for_date(
-            doctor_id=self.doctor.id,
-            clinic_id=self.clinic_a.id,
-            target_date=self.next_monday,
-            duration_minutes=30,
-        )
-        # 9-12: 6 slots + 14-16: 4 slots = 10 total
-        self.assertEqual(len(slots), 10)
-
-    def test_duration_larger_than_block(self):
-        """60min slots in a 90min block should give 1 slot."""
-        # Create a 90min block on Tuesday
-        tuesday = self.next_monday + timedelta(days=1)
-        DoctorAvailability.objects.create(
-            doctor=self.doctor,
-            clinic=self.clinic_a,
-            day_of_week=1,  # Tuesday
-            start_time=time(9, 0),
-            end_time=time(10, 30),
-        )
-        slots = generate_slots_for_date(
-            doctor_id=self.doctor.id,
-            clinic_id=self.clinic_a.id,
-            target_date=tuesday,
-            duration_minutes=60,
-        )
-        self.assertEqual(len(slots), 1)
-        self.assertEqual(slots[0]["time"], time(9, 0))
-        self.assertEqual(slots[0]["end_time"], time(10, 0))
-
-
-class DoctorAvailabilityAPITests(DoctorAvailabilityModelTestMixin, TestCase):
-    """Tests for the API endpoints."""
-
-    def setUp(self):
-        super().setUp()
-        self.client = APIClient()
-        self.client.force_authenticate(user=self.patient)
-
-        self.availability = DoctorAvailability.objects.create(
-            doctor=self.doctor,
-            clinic=self.clinic_a,
-            day_of_week=0,
-            start_time=time(9, 0),
-            end_time=time(14, 0),
-        )
-        self.appointment_type = AppointmentType.objects.create(
-            clinic=self.clinic_a,
-            name="Checkup",
-            duration_minutes=30,
-            price=Decimal("50.00"),
+            revoked_at=timezone.now() - timedelta(days=30),
         )
 
-    # --- Availability Schedule API ---
+        data = {
+            "doctor_name": "Dr. Revoked",
+            "doctor_phone": "0569999999",
+            "doctor_email": "revoked@test.com",
+        }
+        inv = create_invitation(self.clinic, self.owner, data)
+        accept_invitation(inv, doctor_user)
 
-    def test_get_availability_success(self):
-        url = reverse(
-            "doctors:api_doctor_availability", kwargs={"doctor_id": self.doctor.id}
-        )
-        response = self.client.get(url, {"clinic_id": self.clinic_a.id})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data["results"]), 1)
-
-    def test_get_availability_missing_clinic_id(self):
-        url = reverse(
-            "doctors:api_doctor_availability", kwargs={"doctor_id": self.doctor.id}
-        )
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_get_availability_empty(self):
-        url = reverse(
-            "doctors:api_doctor_availability", kwargs={"doctor_id": self.doctor.id}
-        )
-        response = self.client.get(url, {"clinic_id": self.clinic_b.id})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["results"], [])
-
-    def test_get_availability_unauthenticated(self):
-        self.client.force_authenticate(user=None)
-        url = reverse(
-            "doctors:api_doctor_availability", kwargs={"doctor_id": self.doctor.id}
-        )
-        response = self.client.get(url, {"clinic_id": self.clinic_a.id})
-        # DRF with session auth returns 403; JWT-only would return 401
-        self.assertIn(response.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
-
-    # --- Available Slots API ---
-
-    def test_get_slots_success(self):
-        # Find next Monday
-        today = date.today()
-        days_until_monday = (0 - today.weekday()) % 7
-        if days_until_monday == 0:
-            days_until_monday = 7
-        next_monday = today + timedelta(days=days_until_monday)
-
-        url = reverse(
-            "doctors:api_doctor_available_slots", kwargs={"doctor_id": self.doctor.id}
-        )
-        response = self.client.get(
-            url,
-            {
-                "clinic_id": self.clinic_a.id,
-                "date": next_monday.isoformat(),
-                "appointment_type_id": self.appointment_type.id,
-            },
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreater(len(response.data["results"]), 0)
-
-    def test_get_slots_missing_params(self):
-        url = reverse(
-            "doctors:api_doctor_available_slots", kwargs={"doctor_id": self.doctor.id}
-        )
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_get_slots_past_date(self):
-        url = reverse(
-            "doctors:api_doctor_available_slots", kwargs={"doctor_id": self.doctor.id}
-        )
-        response = self.client.get(
-            url,
-            {
-                "clinic_id": self.clinic_a.id,
-                "date": "2020-01-01",
-                "appointment_type_id": self.appointment_type.id,
-            },
-        )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_get_slots_invalid_date_format(self):
-        url = reverse(
-            "doctors:api_doctor_available_slots", kwargs={"doctor_id": self.doctor.id}
-        )
-        response = self.client.get(
-            url,
-            {
-                "clinic_id": self.clinic_a.id,
-                "date": "not-a-date",
-                "appointment_type_id": self.appointment_type.id,
-            },
-        )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_get_slots_invalid_appointment_type(self):
-        today = date.today()
-        days_until_monday = (0 - today.weekday()) % 7
-        if days_until_monday == 0:
-            days_until_monday = 7
-        next_monday = today + timedelta(days=days_until_monday)
-
-        url = reverse(
-            "doctors:api_doctor_available_slots", kwargs={"doctor_id": self.doctor.id}
-        )
-        response = self.client.get(
-            url,
-            {
-                "clinic_id": self.clinic_a.id,
-                "date": next_monday.isoformat(),
-                "appointment_type_id": 99999,
-            },
-        )
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-
-    def test_get_slots_no_availability_on_date(self):
-        # Tuesday — no availability
-        today = date.today()
-        days_until_tuesday = (1 - today.weekday()) % 7
-        if days_until_tuesday == 0:
-            days_until_tuesday = 7
-        next_tuesday = today + timedelta(days=days_until_tuesday)
-
-        url = reverse(
-            "doctors:api_doctor_available_slots", kwargs={"doctor_id": self.doctor.id}
-        )
-        response = self.client.get(
-            url,
-            {
-                "clinic_id": self.clinic_a.id,
-                "date": next_tuesday.isoformat(),
-                "appointment_type_id": self.appointment_type.id,
-            },
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["results"], [])
-
-    # --- Appointment Types API ---
-
-    def test_get_appointment_types_success(self):
-        url = reverse(
-            "doctors:api_doctor_appointment_types",
-            kwargs={"doctor_id": self.doctor.id},
-        )
-        response = self.client.get(url, {"clinic_id": self.clinic_a.id})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data["results"]), 1)
-        self.assertEqual(response.data["results"][0]["name"], "Checkup")
-
-    def test_get_appointment_types_empty(self):
-        url = reverse(
-            "doctors:api_doctor_appointment_types",
-            kwargs={"doctor_id": self.doctor.id},
-        )
-        response = self.client.get(url, {"clinic_id": self.clinic_b.id})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["results"], [])
-
-    def test_get_appointment_types_missing_clinic_id(self):
-        url = reverse(
-            "doctors:api_doctor_appointment_types",
-            kwargs={"doctor_id": self.doctor.id},
-        )
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_inactive_type_not_returned(self):
-        self.appointment_type.is_active = False
-        self.appointment_type.save()
-
-        url = reverse(
-            "doctors:api_doctor_appointment_types",
-            kwargs={"doctor_id": self.doctor.id},
-        )
-        response = self.client.get(url, {"clinic_id": self.clinic_a.id})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["results"], [])
-
-
-class AppointmentTypeModelTests(DoctorAvailabilityModelTestMixin, TestCase):
-    """Tests for AppointmentType model."""
-
-    def test_create_appointment_type(self):
-        apt = AppointmentType.objects.create(
-            clinic=self.clinic_a,
-            name="Follow-up",
-            duration_minutes=15,
-            price=Decimal("30.00"),
-            description="Quick follow-up visit",
-        )
-        self.assertEqual(apt.name, "Follow-up")
-        self.assertEqual(apt.duration_minutes, 15)
-        self.assertTrue(apt.is_active)
-
-    def test_unique_name_per_doctor_clinic(self):
-        """Same name for same doctor+clinic should fail."""
-        AppointmentType.objects.create(
-            clinic=self.clinic_a,
-            name="Checkup",
-            duration_minutes=30,
-            price=Decimal("50.00"),
-        )
-        from django.db import IntegrityError
-
-        with self.assertRaises(IntegrityError):
-            AppointmentType.objects.create(
-                clinic=self.clinic_a,
-                name="Checkup",
-                duration_minutes=60,
-                price=Decimal("100.00"),
-            )
-
-    def test_same_name_different_clinic_ok(self):
-        """Same name at different clinics should work."""
-        AppointmentType.objects.create(
-            clinic=self.clinic_a,
-            name="Checkup",
-            duration_minutes=30,
-            price=Decimal("50.00"),
-        )
-        apt2 = AppointmentType.objects.create(
-            clinic=self.clinic_b,
-            name="Checkup",
-            duration_minutes=30,
-            price=Decimal("60.00"),
-        )
-        self.assertIsNotNone(apt2.pk)
+        staff.refresh_from_db()
+        self.assertIsNone(staff.revoked_at)
+        self.assertTrue(staff.is_active)

@@ -1,0 +1,232 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}الملف الشخصي{% endblock %}
+
+{% block extra_css %}
+<style>
+.profile-page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+.profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.75rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+.profile-header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.btn-back {
+    color: var(--color-text-muted);
+    text-decoration: none;
+    font-size: 0.88rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.9rem;
+    border: 1px solid var(--color-surface-border);
+    border-radius: 6px;
+    transition: color 0.15s, border-color 0.15s;
+}
+.btn-back:hover { color: var(--color-primary-500); border-color: var(--color-primary-500); }
+
+.card {
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-surface-border);
+    border-radius: 12px;
+    padding: 1.4rem 1.6rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.card h2 {
+    margin: 0 0 1rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--color-surface-border);
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+.card h2 i { color: var(--color-primary-500); font-size: 0.9rem; }
+
+.info-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.5rem 1.25rem;
+    align-items: center;
+}
+.info-grid dt { font-weight: 600; color: var(--color-text-muted); font-size: 0.88rem; white-space: nowrap; }
+.info-grid dd { margin: 0; color: var(--color-text-body); font-size: 0.9rem; }
+
+.form-group { margin-bottom: 1.15rem; }
+.form-group label {
+    display: block;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--color-text-main);
+    margin-bottom: 0.4rem;
+}
+.form-control {
+    width: 100%;
+    padding: 0.6rem 0.9rem;
+    border: 1px solid var(--color-surface-border);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    background: var(--color-surface-ground);
+    color: var(--color-text-main);
+    transition: border-color 0.15s;
+    box-sizing: border-box;
+}
+.form-control:focus {
+    outline: none;
+    border-color: var(--color-primary-500);
+    box-shadow: 0 0 0 3px rgba(0,120,212,0.12);
+}
+textarea.form-control { resize: vertical; }
+
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.65rem 1.5rem;
+    background: var(--color-primary-500);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.btn-primary:hover { background: var(--color-primary-600); }
+
+.specialty-tag {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    background: #e0f2fe;
+    color: #075985;
+    margin: 0.2rem;
+}
+[data-theme="dark"] .specialty-tag { background: #0c4a6e; color: #7dd3fc; }
+.membership-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    font-size: 0.88rem;
+    color: var(--color-text-body);
+}
+.membership-row:not(:last-child) { border-bottom: 1px dashed var(--color-surface-border); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-page">
+
+    <div class="profile-header">
+        <h1>
+            <i class="fa-solid fa-user-doctor" style="color:var(--color-primary-500);"></i>
+            الملف الشخصي
+        </h1>
+        <a href="{% url 'doctors:dashboard' %}" class="btn-back">
+            <i class="fa-solid fa-arrow-right"></i> لوحة التحكم
+        </a>
+    </div>
+
+    <!-- User Info Card (read-only) -->
+    <div class="card">
+        <h2><i class="fa-solid fa-id-card"></i> معلومات الحساب</h2>
+        <dl class="info-grid">
+            <dt>الاسم</dt><dd>{{ request.user.name }}</dd>
+            <dt>الهاتف</dt><dd style="direction:ltr;text-align:right;">{{ request.user.phone }}</dd>
+            <dt>البريد</dt><dd>{{ request.user.email|default:"غير محدد" }}</dd>
+            <dt>الحالة</dt>
+            <dd>
+                {% if request.user.is_verified %}
+                <span style="color:#065f46;font-weight:700;"><i class="fa-solid fa-circle-check" style="font-size:0.8rem;"></i> موثّق</span>
+                {% else %}
+                <span style="color:#92400e;font-weight:700;"><i class="fa-solid fa-clock" style="font-size:0.8rem;"></i> غير موثّق</span>
+                {% endif %}
+            </dd>
+        </dl>
+    </div>
+
+    <!-- Specialties Card (read-only) -->
+    <div class="card">
+        <h2><i class="fa-solid fa-briefcase-medical"></i> التخصصات</h2>
+        {% if specialties %}
+        <div>
+            {% for s in specialties %}
+            <span class="specialty-tag">{{ s.name_ar }}</span>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p style="color:var(--color-text-muted);font-size:0.88rem;margin:0;">
+            لم يتم تعيين تخصصات بعد. يتم ذلك تلقائياً عند قبول الدعوات.
+        </p>
+        {% endif %}
+    </div>
+
+    <!-- Clinic Memberships (read-only) -->
+    <div class="card">
+        <h2><i class="fa-solid fa-hospital"></i> العيادات</h2>
+        {% if memberships %}
+        <div>
+            {% for m in memberships %}
+            <div class="membership-row">
+                <span style="font-weight:600;">{{ m.clinic.name }}</span>
+                <span style="font-size:0.82rem;color:var(--color-text-muted);">
+                    {% if m.role == "MAIN_DOCTOR" %}رئيس الأطباء{% elif m.role == "DOCTOR" %}طبيب{% else %}{{ m.role }}{% endif %}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p style="color:var(--color-text-muted);font-size:0.88rem;margin:0;">لم تنضم إلى أي عيادة بعد.</p>
+        {% endif %}
+    </div>
+
+    <!-- Editable Profile Form -->
+    <div class="card">
+        <h2><i class="fa-solid fa-pen-to-square"></i> تعديل الملف الشخصي</h2>
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="id_bio">{{ form.bio.label }}</label>
+                {{ form.bio }}
+                {% if form.bio.errors %}
+                <div class="field-error"><i class="fa-solid fa-circle-exclamation"></i> {{ form.bio.errors.0 }}</div>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label for="id_years_of_experience">{{ form.years_of_experience.label }}</label>
+                {{ form.years_of_experience }}
+                {% if form.years_of_experience.errors %}
+                <div class="field-error"><i class="fa-solid fa-circle-exclamation"></i> {{ form.years_of_experience.errors.0 }}</div>
+                {% endif %}
+            </div>
+            <button type="submit" class="btn-primary">
+                <i class="fa-solid fa-floppy-disk"></i> حفظ التغييرات
+            </button>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

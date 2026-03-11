@@ -1,0 +1,338 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}حالة التحقق{% endblock %}
+
+{% block extra_css %}
+<style>
+.verify-page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+.verify-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.75rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+.verify-header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.btn-back {
+    color: var(--color-text-muted);
+    text-decoration: none;
+    font-size: 0.88rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.9rem;
+    border: 1px solid var(--color-surface-border);
+    border-radius: 6px;
+    transition: color 0.15s, border-color 0.15s;
+}
+.btn-back:hover { color: var(--color-primary-500); border-color: var(--color-primary-500); }
+
+.card {
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-surface-border);
+    border-radius: 12px;
+    padding: 1.4rem 1.6rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.card h2 {
+    margin: 0 0 1rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--color-surface-border);
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+.card h2 i { color: var(--color-primary-500); font-size: 0.9rem; }
+
+/* Status row */
+.status-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0;
+    font-size: 0.9rem;
+}
+.status-row:not(:last-child) { border-bottom: 1px dashed var(--color-surface-border); }
+.status-label { font-weight: 600; color: var(--color-text-muted); }
+.status-val { font-weight: 700; }
+.s-verified  { color: #065f46; }
+.s-pending   { color: #1e40af; }
+.s-rejected  { color: #991b1b; }
+.s-unverified{ color: #92400e; }
+[data-theme="dark"] .s-verified  { color: #6ee7b7; }
+[data-theme="dark"] .s-pending   { color: #93c5fd; }
+[data-theme="dark"] .s-rejected  { color: #fca5a5; }
+[data-theme="dark"] .s-unverified{ color: #fcd34d; }
+
+/* Rejection reason */
+.rejection-box {
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+    background: #fee2e2;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: #991b1b;
+}
+[data-theme="dark"] .rejection-box { background: #450a0a; color: #fca5a5; }
+
+/* CTA button */
+.btn-sm {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.35rem 0.85rem;
+    background: var(--color-primary-500);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.btn-sm:hover { background: var(--color-primary-600); }
+
+/* Credential table */
+.cred-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.87rem;
+}
+.cred-table th {
+    text-align: right;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    border-bottom: 2px solid var(--color-surface-border);
+    white-space: nowrap;
+}
+.cred-table td {
+    padding: 0.65rem 0.75rem;
+    border-bottom: 1px solid var(--color-surface-border);
+    color: var(--color-text-body);
+    vertical-align: middle;
+}
+.cred-table tbody tr:last-child td { border-bottom: none; }
+.cred-table tbody tr:hover { background: var(--color-surface-ground); }
+
+/* Visibility info */
+.vis-info {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.vis-ok { background: #d1fae5; color: #065f46; }
+.vis-no { background: #f3f4f6; color: #374151; }
+[data-theme="dark"] .vis-ok { background: #064e3b; color: #6ee7b7; }
+[data-theme="dark"] .vis-no { background: #1f2937; color: #9ca3af; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="verify-page">
+
+    <div class="verify-header">
+        <h1>
+            <i class="fa-solid fa-shield-check" style="color:var(--color-primary-500);"></i>
+            حالة التحقق
+        </h1>
+        <a href="{% url 'doctors:dashboard' %}" class="btn-back">
+            <i class="fa-solid fa-arrow-right"></i> لوحة التحكم
+        </a>
+    </div>
+
+    <!-- ── Layer 1: Identity Verification ────────────────────────── -->
+    <div class="card">
+        <h2><i class="fa-solid fa-id-card"></i> التحقق من الهوية (مستوى المنصة)</h2>
+
+        {% if verification %}
+        <div class="status-row">
+            <span class="status-label">الحالة</span>
+            {% if verification.identity_status == "IDENTITY_VERIFIED" %}
+            <span class="status-val s-verified"><i class="fa-solid fa-circle-check"></i> تم التحقق</span>
+            {% elif verification.identity_status == "IDENTITY_PENDING_REVIEW" %}
+            <span class="status-val s-pending"><i class="fa-solid fa-clock"></i> قيد المراجعة</span>
+            {% elif verification.identity_status == "IDENTITY_REJECTED" %}
+            <span class="status-val s-rejected"><i class="fa-solid fa-circle-xmark"></i> مرفوض</span>
+            {% else %}
+            <span class="status-val s-unverified"><i class="fa-solid fa-triangle-exclamation"></i> غير مُتحقق</span>
+            {% endif %}
+        </div>
+
+        <div class="status-row">
+            <span class="status-label">وثيقة الهوية</span>
+            {% if verification.identity_document %}
+            <span style="color:#065f46;font-weight:600;"><i class="fa-solid fa-check"></i> مرفوعة</span>
+            {% else %}
+            <span style="color:var(--color-text-muted);">غير مرفوعة</span>
+            {% endif %}
+        </div>
+        <div class="status-row">
+            <span class="status-label">رخصة المزاولة</span>
+            {% if verification.medical_license %}
+            <span style="color:#065f46;font-weight:600;"><i class="fa-solid fa-check"></i> مرفوعة</span>
+            {% else %}
+            <span style="color:var(--color-text-muted);">غير مرفوعة</span>
+            {% endif %}
+        </div>
+
+        {% if verification.identity_status == "IDENTITY_REJECTED" and verification.identity_rejection_reason %}
+        <div class="rejection-box">
+            <i class="fa-solid fa-triangle-exclamation" style="margin-left:0.35rem;"></i>
+            <strong>سبب الرفض:</strong> {{ verification.identity_rejection_reason }}
+        </div>
+        {% endif %}
+
+        {% if verification.identity_status != "IDENTITY_VERIFIED" and verification.identity_status != "IDENTITY_PENDING_REVIEW" %}
+        <div style="margin-top:0.75rem;">
+            <a href="{% url 'doctors:upload_credentials' %}" class="btn-sm">
+                <i class="fa-solid fa-file-arrow-up"></i> رفع المستندات
+            </a>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <p style="color:var(--color-text-muted);font-size:0.88rem;margin:0;">
+            لم تبدأ عملية التحقق بعد.
+            <a href="{% url 'doctors:upload_credentials' %}" style="color:var(--color-primary-500);text-decoration:none;font-weight:700;"> رفع المستندات</a>
+        </p>
+        {% endif %}
+    </div>
+
+    <!-- ── Layer 2: Per-Clinic Credentials ────────────────────────── -->
+    <div class="card">
+        <h2><i class="fa-solid fa-briefcase-medical"></i> المؤهلات السريرية (لكل عيادة / تخصص)</h2>
+
+        {% if credentials %}
+        <div style="overflow-x:auto;">
+            <table class="cred-table">
+                <thead>
+                <tr>
+                    <th>العيادة</th>
+                    <th>التخصص</th>
+                    <th>الحالة</th>
+                    <th>إجراء</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for cred in credentials %}
+                <tr>
+                    <td style="font-weight:600;color:var(--color-text-main);">{{ cred.clinic.name }}</td>
+                    <td>{{ cred.specialty.name_ar }}</td>
+                    <td>
+                        {% if cred.credential_status == "CREDENTIALS_VERIFIED" %}
+                        <span class="status-val s-verified"><i class="fa-solid fa-check" style="font-size:0.8rem;"></i> مُعتمد</span>
+                        {% elif cred.credential_status == "CREDENTIALS_PENDING" and cred.specialty_certificate %}
+                        <span class="status-val s-pending"><i class="fa-solid fa-clock" style="font-size:0.8rem;"></i> قيد المراجعة</span>
+                        {% elif cred.credential_status == "CREDENTIALS_PENDING" %}
+                        <span class="status-val s-unverified"><i class="fa-solid fa-triangle-exclamation" style="font-size:0.8rem;"></i> بانتظار الرفع</span>
+                        {% elif cred.credential_status == "CREDENTIALS_REJECTED" %}
+                        <span class="status-val s-rejected"><i class="fa-solid fa-times" style="font-size:0.8rem;"></i> مرفوض</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if cred.credential_status == "CREDENTIALS_REJECTED" %}
+                        <a href="{% url 'doctors:upload_clinic_credential' credential_id=cred.id %}" class="btn-sm">
+                            <i class="fa-solid fa-upload"></i> إعادة الرفع
+                        </a>
+                        {% elif cred.credential_status == "CREDENTIALS_PENDING" and not cred.specialty_certificate %}
+                        <a href="{% url 'doctors:upload_clinic_credential' credential_id=cred.id %}" class="btn-sm">
+                            <i class="fa-solid fa-upload"></i> رفع
+                        </a>
+                        {% elif cred.credential_status == "CREDENTIALS_VERIFIED" %}
+                        <span style="color:var(--color-text-muted);font-size:0.82rem;">—</span>
+                        {% else %}
+                        <span class="status-val s-pending" style="font-size:0.82rem;"><i class="fa-solid fa-clock" style="font-size:0.7rem;"></i> قيد المراجعة</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% if cred.credential_status == "CREDENTIALS_REJECTED" and cred.rejection_reason %}
+                <tr>
+                    <td colspan="4" style="padding:0 0.75rem 0.65rem;">
+                        <div class="rejection-box">
+                            <i class="fa-solid fa-triangle-exclamation" style="margin-left:0.35rem;"></i>
+                            <strong>سبب الرفض:</strong> {{ cred.rejection_reason }}
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p style="color:var(--color-text-muted);font-size:0.88rem;text-align:center;padding:1.5rem 0;margin:0;">
+            <i class="fa-regular fa-folder-open" style="font-size:2rem;display:block;margin-bottom:0.75rem;opacity:0.4;"></i>
+            لا توجد مؤهلات سريرية مسجلة بعد.<br>
+            ستظهر هنا بعد الانضمام إلى عيادة.
+        </p>
+        {% endif %}
+    </div>
+
+    <!-- ── Visibility Rules Info ──────────────────────────────────── -->
+    <div class="card">
+        <h2><i class="fa-solid fa-eye"></i> قواعد الظهور للمرضى</h2>
+        <p style="font-size:0.88rem;color:var(--color-text-body);margin:0 0 0.75rem;">
+            لكي تظهر للمرضى وتقبل الحجوزات في عيادة معيّنة، يجب أن يتحقق الشرطان معاً:
+        </p>
+        <div class="status-row">
+            <span>١. التحقق من الهوية</span>
+            {% if verification and verification.identity_status == "IDENTITY_VERIFIED" %}
+            <span class="status-val s-verified"><i class="fa-solid fa-check"></i> مُحقق</span>
+            {% elif verification and verification.identity_status == "IDENTITY_PENDING_REVIEW" %}
+            <span class="status-val s-pending"><i class="fa-solid fa-clock"></i> قيد المراجعة</span>
+            {% elif verification and verification.identity_status == "IDENTITY_REJECTED" %}
+            <span class="status-val s-rejected"><i class="fa-solid fa-times"></i> مرفوض</span>
+            {% else %}
+            <span class="status-val s-unverified"><i class="fa-solid fa-triangle-exclamation"></i> غير مُحقق</span>
+            {% endif %}
+        </div>
+        <div class="status-row">
+            <span>٢. اعتماد المؤهلات في العيادة</span>
+            <span style="color:var(--color-text-muted);font-size:0.82rem;">يُراجع لكل عيادة على حدة</span>
+        </div>
+
+        {% if verification and verification.identity_status == "IDENTITY_VERIFIED" %}
+        <div class="vis-info vis-ok">
+            <i class="fa-solid fa-circle-check"></i>
+            هويتك مُعتمدة. ستظهر للمرضى في أي عيادة تم اعتماد مؤهلاتك فيها.
+        </div>
+        {% elif verification and verification.identity_status == "IDENTITY_PENDING_REVIEW" %}
+        <div class="vis-info" style="background:#dbeafe;color:#1e40af;">
+            <i class="fa-solid fa-clock"></i>
+            مستنداتك قيد المراجعة. لن تظهر للمرضى حتى يتم اعتماد هويتك.
+        </div>
+        {% else %}
+        <div class="vis-info vis-no">
+            <i class="fa-solid fa-circle-info"></i>
+            لن تظهر للمرضى حتى يتم التحقق من هويتك واعتماد مؤهلاتك.
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

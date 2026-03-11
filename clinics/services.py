@@ -301,7 +301,14 @@ def _check_invitation_rate_limits(clinic, normalized_phone):
 def create_invitation(clinic, owner, data, role="DOCTOR", request=None):
     """
     Creates a ClinicInvitation for a doctor or secretary.
-    Sends SMS if the user does not exist in the system yet.
+
+    Architectural rules enforced:
+    - Phone = primary identity key
+    - Email = delivery destination (not identity key)
+    - Email is the primary invitation channel
+    - PendingDoctorIdentity lock for new phone numbers
+    - Expired invitations are immutable (fresh invitation required)
+    - Revoked memberships allow re-invitation
     """
     if owner != clinic.main_doctor:
         raise ValidationError("Only the main doctor can invite other staff.")
@@ -309,13 +316,15 @@ def create_invitation(clinic, owner, data, role="DOCTOR", request=None):
     # 1. Enforce max doctors subscription limit if role is DOCTOR
     if role == "DOCTOR":
         current_doctors_count = ClinicStaff.objects.filter(
-            clinic=clinic, role__in=["MAIN_DOCTOR", "DOCTOR"]
+            clinic=clinic, role__in=["MAIN_DOCTOR", "DOCTOR"],
+            revoked_at__isnull=True,  # Only count active memberships
         ).count()
-    
-        subscription = clinic.subscription
-        if not subscription:
+
+        try:
+            subscription = clinic.subscription
+        except ClinicSubscription.DoesNotExist:
             raise ValidationError("العيادة ليس لديها اشتراك نشط.")
-    
+
         if current_doctors_count >= subscription.max_doctors:
             raise ValidationError(f"لقد وصلت للحد الأقصى لعدد الأطباء ({subscription.max_doctors}) حسب اشتراكك.")
 
@@ -332,7 +341,7 @@ def create_invitation(clinic, owner, data, role="DOCTOR", request=None):
     # 3. Rate limiting
     _check_invitation_rate_limits(clinic, normalized_phone)
 
-    # 4. Check for existing pending invites for this exact phone
+    # 4. Handle existing PENDING invitations (expired immutability rule)
     existing_invite = ClinicInvitation.objects.filter(
         clinic=clinic, doctor_phone=normalized_phone, status="PENDING"
     ).first()
@@ -340,54 +349,68 @@ def create_invitation(clinic, owner, data, role="DOCTOR", request=None):
         if not existing_invite.is_expired:
             raise ValidationError("يوجد دعوة معلقة بالفعل لهذا الرقم.")
         else:
-            # Mark it expired so constraint isn't violated
+            # Mark it expired — expired invitations are immutable, cannot be reused
             existing_invite.status = "EXPIRED"
             existing_invite.save()
             _log_invitation_action(existing_invite, "EXPIRED")
 
-    # 5. Check if user already has this exact role at the clinic + self-invite guard
+    # 5. Identity resolution using phone as PRIMARY identity key
     user_exists = CustomUser.objects.filter(phone=normalized_phone).first()
+    entered_email = data.get(email_key, "")
+    entered_nid = data.get(national_id_key, "")
+
+    # Determine delivery email
+    delivery_email = entered_email  # Default: use what clinic owner entered
+
     if user_exists:
         # Prevent the clinic owner from inviting themselves
         if user_exists == owner:
             raise ValidationError("لا يمكنك إرسال دعوة لنفسك.")
 
-        existing_staff = ClinicStaff.objects.filter(clinic=clinic, user=user_exists).first()
+        # Check active membership (only non-revoked memberships block)
+        existing_staff = ClinicStaff.objects.filter(
+            clinic=clinic, user=user_exists, revoked_at__isnull=True
+        ).first()
         if existing_staff and role in (user_exists.roles or []):
             if role == "SECRETARY":
                 raise ValidationError("هذا السكرتير/ة موجود بالفعل ضمن طاقم العيادة.")
             else:
                 raise ValidationError("هذا الطبيب موجود بالفعل ضمن طاقم العيادة.")
 
-    # 6. Cross-reference identity validation — generic message to avoid leaking user existence.
-    #    Case A: registered phone → entered email/NID must match what is on file.
-    #    Case B: unregistered phone → entered NID must not belong to a different account.
-    #    Case C: entered NID (regardless of phone) must not belong to a third user.
-    _IDENTITY_ERROR = "تعذر إرسال الدعوة. يرجى التحقق من صحة البيانات المُدخلة."
+        # Email mismatch UX: email is delivery destination, NOT identity key.
+        # Use the stored email if it exists, regardless of what the clinic entered.
+        if user_exists.email:
+            delivery_email = user_exists.email
 
-    entered_email = data.get(email_key, "")
-    entered_nid = data.get(national_id_key, "")
-
-    if user_exists:
-        # Entered email must not contradict what is stored
-        if entered_email and user_exists.email and entered_email.lower() != user_exists.email.lower():
-            raise ValidationError(_IDENTITY_ERROR)
-
-        # Entered NID must not contradict what is stored
+        # NID validation — must not contradict stored NID
         if entered_nid and user_exists.national_id and entered_nid != user_exists.national_id:
-            raise ValidationError(_IDENTITY_ERROR)
-
-        # Entered NID must not belong to a completely different user
-        if entered_nid:
-            nid_owner = CustomUser.objects.filter(national_id=entered_nid).exclude(pk=user_exists.pk).first()
-            if nid_owner:
-                raise ValidationError(_IDENTITY_ERROR)
+            raise ValidationError("تعذر إرسال الدعوة. يرجى التحقق من صحة البيانات المُدخلة.")
     else:
-        # Phone not in the system: the entered NID must not be claimed by someone else
+        # Phone not in the system: NID must not be claimed by someone else
+        _IDENTITY_ERROR = "تعذر إرسال الدعوة. يرجى التحقق من صحة البيانات المُدخلة."
         if entered_nid:
             nid_owner = CustomUser.objects.filter(national_id=entered_nid).first()
             if nid_owner:
                 raise ValidationError(_IDENTITY_ERROR)
+
+        # Email must not belong to a different existing user
+        if entered_email:
+            email_owner = CustomUser.objects.filter(email__iexact=entered_email).first()
+            if email_owner:
+                raise ValidationError(_IDENTITY_ERROR)
+
+    # 6. PendingDoctorIdentity lock (only for new phones, DOCTOR role)
+    from .models import PendingDoctorIdentity
+    if not user_exists and role == "DOCTOR":
+        pending_lock = PendingDoctorIdentity.objects.filter(phone=normalized_phone).first()
+        if pending_lock:
+            # Another clinic already initiated onboarding — this is fine,
+            # create the invitation but it will be picked up after onboarding completes
+            pass  # Invitation will still be created and linked
+        else:
+            # No lock exists — we'll create one after the invitation is saved
+
+            pass
 
     # 7. Create Invitation
     expires_at = timezone.now() + timezone.timedelta(hours=48)
@@ -396,8 +419,8 @@ def create_invitation(clinic, owner, data, role="DOCTOR", request=None):
         invited_by=owner,
         doctor_name=data.get(name_key, ""),
         doctor_phone=normalized_phone,
-        doctor_email=data.get(email_key, ""),
-        doctor_national_id=data.get(national_id_key, ""),
+        doctor_email=delivery_email,
+        doctor_national_id=entered_nid,
         role=role,
         expires_at=expires_at,
     )
@@ -407,19 +430,26 @@ def create_invitation(clinic, owner, data, role="DOCTOR", request=None):
         if specialties:
             invitation.specialties.set(specialties)
 
-    # 8. Audit log
+    # 8. Create PendingDoctorIdentity lock for new unregistered phones
+    if not user_exists and role == "DOCTOR":
+        if not PendingDoctorIdentity.objects.filter(phone=normalized_phone).exists():
+            try:
+                PendingDoctorIdentity.objects.create(
+                    phone=normalized_phone,
+                    created_by_invitation=invitation,
+                )
+            except Exception:
+                pass  # Race condition — another process created it first; safe to ignore
+
+    # 9. Audit log
     _log_invitation_action(invitation, "CREATED", performed_by=owner)
 
-    # 9. Send SMS if user doesn't exist (synchronous, same as OTP flow)
-    if not user_exists:
+    # 10. Send invitation via EMAIL (primary channel)
+    if delivery_email:
         try:
-            from accounts.otp_utils import _normalize_phone
-            sms_phone = _normalize_phone(normalized_phone)
-
-            # Build accept URL using request.build_absolute_uri()
             from django.urls import reverse
             import logging
-            _sms_logger = logging.getLogger("clinics.services")
+            _email_logger = logging.getLogger("clinics.services")
 
             accept_path = reverse("doctors:guest_accept_invitation", kwargs={"token": invitation.token})
             if request:
@@ -427,18 +457,18 @@ def create_invitation(clinic, owner, data, role="DOCTOR", request=None):
             else:
                 accept_url = accept_path
 
-            if role == "SECRETARY":
-                message = f"مرحباً {invitation.doctor_name}، تمت دعوتك للانضمام كـ سكرتير/ة في {clinic.name}. انقر هنا للقبول: {accept_url}"
-            else:
-                message = f"مرحباً د. {invitation.doctor_name}، تمت دعوتك للإنضمام إلى {clinic.name}. انقر هنا للقبول: {accept_url}"
-
-            send_sms(sms_phone, message)
-            _sms_logger.info("[INVITATION SMS] Sent to %s", sms_phone)
+            from accounts.email_utils import send_doctor_invitation_email
+            send_doctor_invitation_email(
+                invitation=invitation,
+                accept_url=accept_url,
+            )
+            _email_logger.info("[INVITATION EMAIL] Sent to %s", delivery_email)
         except Exception as e:
             import logging
-            logging.getLogger("clinics.services").error("[INVITATION SMS] Failed to send to %s: %s", normalized_phone, e)
-            # Don't fail the invitation creation if SMS fails
-            pass
+            logging.getLogger("clinics.services").error(
+                "[INVITATION EMAIL] Failed to send to %s: %s", delivery_email, e
+            )
+            # Don't fail the invitation creation if email fails
 
     return invitation
 
@@ -446,10 +476,17 @@ def create_invitation(clinic, owner, data, role="DOCTOR", request=None):
 def accept_invitation(invitation, user):
     """
     Accepts a pending invitation, linking the doctor to the clinic.
+
+    Creates:
+    - ClinicStaff membership (or reactivates revoked one)
+    - DoctorProfile + DoctorSpecialty assignments
+    - DoctorVerification (platform identity, if not exists)
+    - ClinicDoctorCredential (per clinic-specialty)
+    - Releases PendingDoctorIdentity lock
     """
     if invitation.status != "PENDING":
         raise ValidationError("هذه الدعوة لم تعد صالحة.")
-    
+
     if invitation.is_expired:
         invitation.status = "EXPIRED"
         invitation.save()
@@ -461,53 +498,95 @@ def accept_invitation(invitation, user):
 
     # Re-enforce subscription limit inside atomic transaction only for DOCTOR
     if invitation.role == "DOCTOR":
-        subscription = invitation.clinic.subscription
+        try:
+            subscription = invitation.clinic.subscription
+        except ClinicSubscription.DoesNotExist:
+            raise ValidationError("العيادة ليس لديها اشتراك نشط.")
+
         current_doctors = ClinicStaff.objects.select_for_update().filter(
-            clinic=invitation.clinic, role__in=["MAIN_DOCTOR", "DOCTOR"]
+            clinic=invitation.clinic, role__in=["MAIN_DOCTOR", "DOCTOR"],
+            revoked_at__isnull=True,
         ).count()
-    
+
         if current_doctors >= subscription.max_doctors:
             raise ValidationError(f"لقد وصلت العيادة للحد الأقصى لعدد الأطباء ({subscription.max_doctors}).")
 
-    # Ensure idempotency — don't overwrite existing higher-privilege roles
-    staff, created = ClinicStaff.objects.get_or_create(
-        clinic=invitation.clinic,
-        user=user,
-        defaults={"role": invitation.role, "added_by": invitation.invited_by}
-    )
+    # Handle membership — check for revoked membership (re-activation)
+    existing_staff = ClinicStaff.objects.filter(
+        clinic=invitation.clinic, user=user,
+    ).first()
 
-    # If staff record already exists, keep existing role (e.g. MAIN_DOCTOR)
-    # The new role will be added to user.roles below
+    if existing_staff:
+        if existing_staff.revoked_at:
+            # Re-activate revoked membership
+            existing_staff.revoked_at = None
+            existing_staff.is_active = True
+            existing_staff.role = invitation.role
+            existing_staff.save()
+            staff = existing_staff
+        else:
+            # Already active — keep existing role
+            staff = existing_staff
+    else:
+        staff = ClinicStaff.objects.create(
+            clinic=invitation.clinic,
+            user=user,
+            role=invitation.role,
+            added_by=invitation.invited_by,
+        )
 
     # Handle DoctorProfile only if DOCTOR
     if invitation.role == "DOCTOR":
         profile, created_profile = DoctorProfile.objects.get_or_create(user=user)
-        
-        # Assign specialties if created profile or no primary specialty
+
+        # Assign specialties
         invited_specialties = list(invitation.specialties.all())
         if invited_specialties:
             for i, specialty in enumerate(invited_specialties):
-                is_primary = (i == 0) # Make first one primary
-                
-                # Check if this specialty is already linked for this profile
+                is_primary = (i == 0)  # Make first one primary
+
                 existing_ds = DoctorSpecialty.objects.filter(
                     doctor_profile=profile, specialty=specialty
                 ).first()
-    
+
                 if not existing_ds:
-                    # If creating a primary, but doctor already has a primary somewhere else, make it secondary.
                     if is_primary:
                         has_primary = DoctorSpecialty.objects.filter(
                             doctor_profile=profile, is_primary=True
                         ).exists()
                         if has_primary:
                             is_primary = False
-    
+
                     DoctorSpecialty.objects.create(
                         doctor_profile=profile,
                         specialty=specialty,
                         is_primary=is_primary
                     )
+
+        # --- Dual-layer verification ---
+        # A) DoctorVerification (platform identity) — created once per doctor
+        from doctors.models import DoctorVerification, ClinicDoctorCredential
+        DoctorVerification.objects.get_or_create(
+            user=user,
+            defaults={"identity_status": "IDENTITY_UNVERIFIED"},
+        )
+
+        # B) ClinicDoctorCredential — per clinic-specialty
+        for specialty in invited_specialties:
+            ClinicDoctorCredential.objects.get_or_create(
+                doctor=user,
+                clinic=invitation.clinic,
+                specialty=specialty,
+                defaults={"credential_status": "CREDENTIALS_PENDING"},
+            )
+        # Also create a general credential record if no specialties
+        if not invited_specialties:
+            ClinicDoctorCredential.objects.get_or_create(
+                doctor=user,
+                clinic=invitation.clinic,
+                specialty=None,
+                defaults={"credential_status": "CREDENTIALS_PENDING"},
+            )
 
     # Update user national_id if provided in invitation and user doesn't have one
     if invitation.doctor_national_id and not user.national_id:
@@ -518,6 +597,11 @@ def accept_invitation(invitation, user):
     _ROLE_RANK = {"PATIENT": 0, "SECRETARY": 1, "DOCTOR": 2, "MAIN_DOCTOR": 3}
 
     update_fields = []
+
+    # Set email from invitation if user doesn't have one
+    if invitation.doctor_email and not user.email:
+        user.email = invitation.doctor_email
+        update_fields.append("email")
 
     # Add to roles array if missing
     if invitation.role not in (user.roles or []):
@@ -540,6 +624,10 @@ def accept_invitation(invitation, user):
     invitation.save()
 
     _log_invitation_action(invitation, "ACCEPTED", performed_by=user)
+
+    # Release PendingDoctorIdentity lock
+    from .models import PendingDoctorIdentity
+    PendingDoctorIdentity.objects.filter(phone=normalized_user_phone).delete()
 
     return staff
 

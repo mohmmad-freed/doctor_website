@@ -114,3 +114,153 @@ class DoctorIntakeRuleAdmin(admin.ModelAdmin):
     list_display = ["__str__", "operator", "action"]
     list_filter = ["operator", "action"]
     raw_id_fields = ["source_question", "target_question"]
+
+
+# ─── Doctor Verification Admin (Dual-Layer) ──────────────────────────────
+
+from .models import DoctorVerification, ClinicDoctorCredential
+from django.utils import timezone
+
+
+@admin.register(DoctorVerification)
+class DoctorVerificationAdmin(admin.ModelAdmin):
+    list_display = [
+        "user",
+        "identity_status",
+        "has_id_doc",
+        "has_license",
+        "identity_reviewed_at",
+    ]
+    list_filter = ["identity_status"]
+    search_fields = ["user__name", "user__phone"]
+    readonly_fields = [
+        "user", "created_at", "updated_at",
+        "identity_reviewed_by", "identity_reviewed_at",
+    ]
+    actions = ["approve_identity", "reject_identity"]
+
+    fieldsets = (
+        ("Doctor", {"fields": ("user",)}),
+        ("Identity Verification", {
+            "fields": (
+                "identity_status",
+                "identity_document", "medical_license",
+                "identity_rejection_reason",
+            ),
+        }),
+        ("Review Metadata", {
+            "fields": ("identity_reviewed_by", "identity_reviewed_at", "created_at", "updated_at"),
+        }),
+    )
+
+    def has_id_doc(self, obj):
+        return bool(obj.identity_document)
+    has_id_doc.boolean = True
+    has_id_doc.short_description = "هوية"
+
+    def has_license(self, obj):
+        return bool(obj.medical_license)
+    has_license.boolean = True
+    has_license.short_description = "رخصة"
+
+    @admin.action(description="✅ Approve identity verification")
+    def approve_identity(self, request, queryset):
+        updated = 0
+        for obj in queryset.filter(identity_status__in=["IDENTITY_PENDING_REVIEW", "IDENTITY_UNVERIFIED"]):
+            obj.identity_status = "IDENTITY_VERIFIED"
+            obj.identity_reviewed_by = request.user
+            obj.identity_reviewed_at = timezone.now()
+            obj.identity_rejection_reason = ""
+            obj.save()
+            updated += 1
+            # Send email
+            try:
+                from accounts.email_utils import send_verification_approved_email
+                send_verification_approved_email(obj.user, layer="identity")
+            except Exception:
+                pass
+        self.message_user(request, f"Approved {updated} verification(s).")
+
+    @admin.action(description="❌ Reject identity verification")
+    def reject_identity(self, request, queryset):
+        updated = 0
+        for obj in queryset.filter(identity_status="IDENTITY_PENDING_REVIEW"):
+            obj.identity_status = "IDENTITY_REJECTED"
+            obj.identity_reviewed_by = request.user
+            obj.identity_reviewed_at = timezone.now()
+            obj.save()
+            updated += 1
+            try:
+                from accounts.email_utils import send_verification_rejected_email
+                send_verification_rejected_email(
+                    obj.user, reason=obj.identity_rejection_reason, layer="identity"
+                )
+            except Exception:
+                pass
+        self.message_user(request, f"Rejected {updated} verification(s).")
+
+
+@admin.register(ClinicDoctorCredential)
+class ClinicDoctorCredentialAdmin(admin.ModelAdmin):
+    list_display = [
+        "doctor",
+        "clinic",
+        "specialty",
+        "credential_status",
+        "reviewed_at",
+    ]
+    list_filter = ["credential_status", "clinic"]
+    search_fields = ["doctor__name", "doctor__phone", "clinic__name"]
+    readonly_fields = ["doctor", "clinic", "specialty", "created_at", "updated_at", "reviewed_by", "reviewed_at"]
+    actions = ["approve_credential", "reject_credential"]
+
+    fieldsets = (
+        ("Assignment", {
+            "fields": ("doctor", "clinic", "specialty"),
+        }),
+        ("Credential Verification", {
+            "fields": (
+                "credential_status",
+                "specialty_certificate",
+                "rejection_reason",
+            ),
+        }),
+        ("Review Metadata", {
+            "fields": ("reviewed_by", "reviewed_at", "created_at", "updated_at"),
+        }),
+    )
+
+    @admin.action(description="✅ Approve clinic credential")
+    def approve_credential(self, request, queryset):
+        updated = 0
+        for obj in queryset.filter(credential_status="CREDENTIALS_PENDING"):
+            obj.credential_status = "CREDENTIALS_VERIFIED"
+            obj.reviewed_by = request.user
+            obj.reviewed_at = timezone.now()
+            obj.rejection_reason = ""
+            obj.save()
+            updated += 1
+            try:
+                from accounts.email_utils import send_verification_approved_email
+                send_verification_approved_email(obj.doctor, layer="credential")
+            except Exception:
+                pass
+        self.message_user(request, f"Approved {updated} credential(s).")
+
+    @admin.action(description="❌ Reject clinic credential")
+    def reject_credential(self, request, queryset):
+        updated = 0
+        for obj in queryset.filter(credential_status="CREDENTIALS_PENDING"):
+            obj.credential_status = "CREDENTIALS_REJECTED"
+            obj.reviewed_by = request.user
+            obj.reviewed_at = timezone.now()
+            obj.save()
+            updated += 1
+            try:
+                from accounts.email_utils import send_verification_rejected_email
+                send_verification_rejected_email(
+                    obj.doctor, reason=obj.rejection_reason, layer="credential"
+                )
+            except Exception:
+                pass
+        self.message_user(request, f"Rejected {updated} credential(s).")
