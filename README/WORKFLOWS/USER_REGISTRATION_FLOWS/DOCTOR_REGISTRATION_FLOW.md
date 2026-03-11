@@ -198,6 +198,8 @@ Doctor verification is strictly a manual administrative process. Platform admin 
 ---
 
 ## Business Rules & Dependencies
+- If the invitation link expires (after 2 days), the doctor must request a new invitation from the clinic owner.
+- If the doctor rejects the invitation, the invitation status becomes `REJECTED` and cannot be reused.
 
 This workflow strictly relies on rules defined in the following supporting documents:
 - `DOCTOR_INVITATION_RULES.md`
@@ -225,6 +227,7 @@ This workflow strictly relies on rules defined in the following supporting docum
 ## Postconditions
 
 If registration and admin review succeed:
+- The doctor-clinic relationship becomes active only after the doctor completes onboarding and administrative approval.
 - The Doctor has an active account containing both `PATIENT` and `DOCTOR` roles.
 - The Doctor is linked to the inviting clinic with the accepted specialties.
 - The Doctor is fully verified, public-facing, and allows patient bookings.
