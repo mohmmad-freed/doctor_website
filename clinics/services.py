@@ -316,7 +316,7 @@ def create_invitation(clinic, owner, data, role="DOCTOR", request=None):
     # 1. Enforce max doctors subscription limit if role is DOCTOR
     if role == "DOCTOR":
         current_doctors_count = ClinicStaff.objects.filter(
-            clinic=clinic, role__in=["MAIN_DOCTOR", "DOCTOR"],
+            clinic=clinic, role="DOCTOR",
             revoked_at__isnull=True,  # Only count active memberships
         ).count()
 
@@ -504,7 +504,7 @@ def accept_invitation(invitation, user):
             raise ValidationError("العيادة ليس لديها اشتراك نشط.")
 
         current_doctors = ClinicStaff.objects.select_for_update().filter(
-            clinic=invitation.clinic, role__in=["MAIN_DOCTOR", "DOCTOR"],
+            clinic=invitation.clinic, role="DOCTOR",
             revoked_at__isnull=True,
         ).count()
 

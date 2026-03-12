@@ -94,7 +94,8 @@ def my_clinic(request, clinic_id):
         .prefetch_related("user__doctor_profile__doctor_specialties__specialty")
         .order_by("added_at")
     )
-    doctors = [s for s in staff_qs if s.role in ("MAIN_DOCTOR", "DOCTOR")]
+    clinic_owner = next((s for s in staff_qs if s.role == "MAIN_DOCTOR"), None)
+    doctors = [s for s in staff_qs if s.role == "DOCTOR"]
     secretaries = [s for s in staff_qs if s.role == "SECRETARY"]
 
     # Appointments — default to current month
@@ -106,6 +107,7 @@ def my_clinic(request, clinic_id):
     return render(request, "clinics/my_clinic.html", {
         "clinic": clinic,
         "subscription": subscription,
+        "clinic_owner": clinic_owner,
         "doctors": doctors,
         "secretaries": secretaries,
         **appt_ctx,

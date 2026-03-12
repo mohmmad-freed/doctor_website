@@ -168,8 +168,10 @@
     font-size: 1.1rem;
     flex-shrink: 0;
 }
+.avatar-owner     { background: #fef3c7; color: #92400e; }
 .avatar-doctor    { background: #dbeafe; color: #1e40af; }
 .avatar-secretary { background: #ede9fe; color: #5b21b6; }
+[data-theme="dark"] .avatar-owner     { background: #451a03; color: #fcd34d; }
 [data-theme="dark"] .avatar-doctor    { background: #1e3a5f; color: #93c5fd; }
 [data-theme="dark"] .avatar-secretary { background: #2e1065; color: #c4b5fd; }
 
@@ -185,9 +187,11 @@
     padding: 2px 8px;
     border-radius: 10px;
 }
+.role-owner       { background: #fef3c7; color: #92400e; }
 .role-main-doctor { background: #dbeafe; color: #1e40af; }
 .role-doctor      { background: #e0f2fe; color: #075985; }
 .role-secretary   { background: #f3e8ff; color: #6b21a8; }
+[data-theme="dark"] .role-owner       { background: #451a03; color: #fcd34d; }
 [data-theme="dark"] .role-main-doctor { background: #1e3a5f; color: #93c5fd; }
 [data-theme="dark"] .role-doctor      { background: #0c4a6e; color: #7dd3fc; }
 [data-theme="dark"] .role-secretary   { background: #3b0764; color: #d8b4fe; }
@@ -435,11 +439,30 @@
             الكادر الطبي والإداري
         </h2>
 
+        <!-- Clinic Owner -->
+        <p class="staff-group-label">
+            <i class="fa-solid fa-crown"></i>
+            مالك العيادة
+        </p>
+        {% if clinic_owner %}
+        <div class="staff-grid" style="margin-bottom:1.25rem;">
+            <div class="staff-card">
+                <div class="avatar avatar-owner">{{ clinic_owner.user.name|first }}</div>
+                <span class="staff-name">{{ clinic_owner.user.name }}</span>
+                <span class="staff-role-badge role-owner">مالك العيادة</span>
+                {% if clinic_owner.user.phone %}
+                    <span class="staff-specialty">{{ clinic_owner.user.phone }}</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Doctors -->
         <p class="staff-group-label">
             <i class="fa-solid fa-stethoscope"></i>
             الأطباء
             {% if doctors %}<span style="background:var(--color-surface-ground);border:1px solid var(--color-surface-border);border-radius:8px;padding:1px 7px;font-size:0.72rem;">{{ doctors|length }}</span>{% endif %}
+            {% if subscription %}<span style="background:var(--color-surface-ground);border:1px solid var(--color-surface-border);border-radius:8px;padding:1px 7px;font-size:0.72rem;color:var(--color-text-muted);">/ {{ subscription.max_doctors }}</span>{% endif %}
         </p>
         {% if doctors %}
         <div class="staff-grid">
@@ -447,11 +470,7 @@
             <div class="staff-card">
                 <div class="avatar avatar-doctor">{{ staff_member.user.name|first }}</div>
                 <span class="staff-name">{{ staff_member.user.name }}</span>
-                {% if staff_member.role == "MAIN_DOCTOR" %}
-                    <span class="staff-role-badge role-main-doctor">رئيس الأطباء</span>
-                {% else %}
-                    <span class="staff-role-badge role-doctor">طبيب</span>
-                {% endif %}
+                <span class="staff-role-badge role-doctor">طبيب</span>
                 {% with profile=staff_member.user.doctor_profile %}
                     {% if profile %}
                         {% with primary=profile.primary_specialty %}

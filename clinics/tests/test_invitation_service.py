@@ -88,20 +88,21 @@ class ClinicInvitationServiceTests(TestCase):
         mock_send_sms.assert_not_called()
 
     def test_create_invitation_exceeds_subscription_limit(self):
-        # We have max=2. Owner is 1. We invite one (staff not created yet though).
-        # Let's add another doctor to staff so we hit the limit (Owner + Doc = 2).
+        # max=2 doctors (owner excluded). Add 2 DOCTORs to fill the limit.
         doc2 = CustomUser.objects.create(phone="0592222222", name="Doc2")
         ClinicStaff.objects.create(clinic=self.clinic, user=doc2, role="DOCTOR")
-        
+        doc3 = CustomUser.objects.create(phone="0593333333", name="Doc3")
+        ClinicStaff.objects.create(clinic=self.clinic, user=doc3, role="DOCTOR")
+
         data = {
             "doctor_name": "Too Many",
-            "doctor_phone": "0593333333",
+            "doctor_phone": "0594444444",
             "doctor_email": "too@many.com"
         }
-        
+
         with self.assertRaises(ValidationError) as context:
             create_invitation(self.clinic, self.owner, data)
-            
+
         self.assertIn("لقد وصلت للحد الأقصى لعدد الأطباء", str(context.exception))
 
     def test_accept_invitation_creates_staff_and_profile(self):
