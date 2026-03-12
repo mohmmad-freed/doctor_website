@@ -108,7 +108,8 @@
                                    value="{{ form.phone.value|default:'' }}"
                                    placeholder="059XXXXXXX"
                                    dir="ltr"
-                                   autocomplete="tel">
+                                   autocomplete="tel"
+                                   data-phone-field>
                             {% if form.phone.errors %}
                             <span class="field-error">{{ form.phone.errors|first }}</span>
                             {% endif %}

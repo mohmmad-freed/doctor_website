@@ -49,6 +49,25 @@
             border-color: #DC2626 !important;
             box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12) !important;
         }
+        /* Phone field live indicator — shared across all pages */
+        .phone-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-top: 5px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--color-neutral-500, #6b7280);
+            transition: color 0.2s;
+        }
+        .phone-indicator.valid   { color: #10b981; }
+        .phone-indicator.invalid { color: #ef4444; }
+        .phone-indicator .dot {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: currentColor;
+            flex-shrink: 0;
+        }
     </style>
 </head>
 
@@ -207,6 +226,7 @@
         })();
     </script>
     <script src="{% static 'accounts/js/reveal.js' %}" defer></script>
+    <script src="{% static 'accounts/js/phone_validator.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 

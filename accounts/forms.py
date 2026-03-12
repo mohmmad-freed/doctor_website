@@ -7,6 +7,11 @@ from doctors.models import Specialty
 from .backends import PhoneNumberAuthBackend
 import re
 
+_CREDENTIAL_MISMATCH_MSG = (
+    "هنالك لبس بالمعلومات بحالة كنت متأكداً من معلوماتك يرجى مراجعة "
+    "خدمة العملاء لحل المشكلة باسرع وقت ممكن"
+)
+
 
 # ============================================================
 # 3-STAGE CLINIC OWNER REGISTRATION FORMS
@@ -82,9 +87,9 @@ class ClinicRegStep1Form(forms.Form):
 
         # Validate phone/NID match the activation code's assigned values.
         if ac and phone and ac.phone and ac.phone != phone:
-            self.add_error("activation_code", "رمز التفعيل غير صالح أو منتهي الصلاحية")
+            self.add_error("activation_code", "رمز التفعيل غير صالح أو منتهي الصلاحية او خطأ في البيانات المدخلة")
         if ac and nid and ac.national_id and ac.national_id != nid:
-            self.add_error("activation_code", "رمز التفعيل غير صالح أو منتهي الصلاحية")
+            self.add_error("activation_code", "رمز التفعيل غير صالح أو منتهي الصلاحية او خطأ في البيانات المدخلة")
 
         if self.errors:
             return cleaned_data
@@ -94,9 +99,8 @@ class ClinicRegStep1Form(forms.Form):
         if nid and phone:
             existing_by_nid = CustomUser.objects.filter(national_id=nid).first()
             if existing_by_nid and existing_by_nid.phone != phone:
-                _msg = "تأكد من صحة المعلومات المُدخلة"
-                self.add_error("phone", _msg)
-                self.add_error("national_id", _msg)
+                self.add_error("phone", _CREDENTIAL_MISMATCH_MSG)
+                self.add_error("national_id", _CREDENTIAL_MISMATCH_MSG)
 
         return cleaned_data
 
@@ -271,7 +275,7 @@ class PatientRegistrationForm(forms.ModelForm):
             if not national_id:
                 raise ValidationError("يرجى إدخال رقم الهوية الوطنية للتحقق من هويتك.")
             if national_id != invitation_nid:
-                raise ValidationError("رقم الهوية الوطنية غير صحيح.")
+                raise ValidationError(_CREDENTIAL_MISMATCH_MSG)
             # Matches the invitation's NID — skip uniqueness check.
             return national_id or None
 
@@ -453,12 +457,12 @@ class MainDoctorRegistrationForm(forms.ModelForm):
         # Validate phone matches (only if code has a phone assigned)
         phone = self.cleaned_data.get("phone")
         if phone and activation_code.phone and phone != activation_code.phone:
-            raise ValidationError("رقم الهاتف لا يتطابق مع كود التفعيل.")
+            raise ValidationError(_CREDENTIAL_MISMATCH_MSG)
 
         # Validate national_id matches (only if code has a national_id assigned)
         nid = self.cleaned_data.get("national_id")
         if nid and activation_code.national_id and nid != activation_code.national_id:
-            raise ValidationError("رقم الهوية لا يتطابق مع كود التفعيل.")
+            raise ValidationError(_CREDENTIAL_MISMATCH_MSG)
 
         self.cleaned_data["activation_code_obj"] = activation_code
         return code
@@ -486,9 +490,7 @@ class MainDoctorRegistrationForm(forms.ModelForm):
         if nid:
             if existing_user:
                 if existing_user.national_id and existing_user.national_id != nid:
-                    self.add_error(
-                        "national_id", "رقم الهوية لا يتطابق مع بيانات حسابك الحالي."
-                    )
+                    self.add_error("national_id", _CREDENTIAL_MISMATCH_MSG)
                 elif CustomUser.objects.filter(national_id=nid).exclude(
                     pk=existing_user.pk
                 ).exists():

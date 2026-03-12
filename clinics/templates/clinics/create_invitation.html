@@ -340,10 +340,11 @@
                         placeholder="059XXXXXXX"
                         value="{{ form.doctor_phone.value|default:'' }}"
                         dir="ltr"
-                        oninput="checkPhone(this, 'phoneIndicator')">
+                        data-phone-field
+                        data-phone-indicator="phoneIndicator">
                     <div class="phone-indicator" id="phoneIndicator">
                         <span class="dot"></span>
-                        <span class="msg">059 أو 056 ثم 7 أرقام</span>
+                        <span class="msg">059XXXXXXX أو 056XXXXXXX</span>
                     </div>
                     {% for err in form.doctor_phone.errors %}
                     <div class="form-error"><i class="fa-solid fa-triangle-exclamation"></i> {{ err }}</div>
@@ -441,26 +442,6 @@
 </div>
 
 <script>
-    function checkPhone(input, indicatorId) {
-        var val = input.value.replace(/\s/g, '');
-        var indicator = document.getElementById(indicatorId);
-        var msg = indicator.querySelector('.msg');
-        var norm = val;
-        if (norm.startsWith('+970')) norm = '0' + norm.slice(4);
-        else if (norm.startsWith('970')) norm = '0' + norm.slice(3);
-        var valid = /^(059|056)\d{7}$/.test(norm);
-        indicator.classList.remove('valid', 'invalid');
-        if (!val) {
-            msg.textContent = '059 أو 056 ثم 7 أرقام';
-        } else if (valid) {
-            indicator.classList.add('valid');
-            msg.textContent = 'صيغة صحيحة ✓';
-        } else {
-            indicator.classList.add('invalid');
-            msg.textContent = 'صيغة غير صحيحة — يجب أن يبدأ بـ 059 أو 056';
-        }
-    }
-
     function checkNID(input, indicatorId) {
         var val = input.value.replace(/\D/g, '');
         // strip any non-digits as user types
@@ -481,8 +462,6 @@
 
     // Run on load for pre-filled values
     (function() {
-        var inp = document.getElementById('{{ form.doctor_phone.id_for_label }}');
-        if (inp && inp.value) checkPhone(inp, 'phoneIndicator');
         var nid = document.getElementById('{{ form.doctor_national_id.id_for_label }}');
         if (nid && nid.value) checkNID(nid, 'nidIndicator');
     })();

@@ -368,10 +368,12 @@
             <!-- Phone -->
             <div class="form-group">
                 <label class="form-label" for="id_clinic_phone">{{ form.clinic_phone.label }}</label>
-                <input type="text" name="clinic_phone" id="id_clinic_phone"
+                <input type="tel" name="clinic_phone" id="id_clinic_phone"
                     class="form-control {% if form.clinic_phone.errors %}error{% endif %}"
                     value="{{ form.clinic_phone.value|default:'' }}"
-                    placeholder="059XXXXXXX">
+                    placeholder="059XXXXXXX"
+                    dir="ltr"
+                    data-phone-field>
                 {% for error in form.clinic_phone.errors %}<div class="error-msg">{{ error }}</div>{% endfor %}
             </div>
 

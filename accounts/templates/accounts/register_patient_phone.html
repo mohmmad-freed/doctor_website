@@ -334,6 +334,7 @@
             <div class="input-group">
                 <input type="tel" id="phone" name="phone" class="form-control" placeholder=" " maxlength="10" required
                     value="{{ initial_phone|default:'' }}"
+                    {% if not phone_locked %}data-phone-field{% endif %}
                     {% if phone_locked %}readonly style="border-color: var(--success); opacity: 0.85; cursor: not-allowed;"{% endif %}>
                 <label class="floating-label" for="phone">رقم الهاتف (05xxxxxxxx)</label>
                 {% if not phone_locked %}
@@ -410,49 +411,5 @@
             overlay.style.display = 'none';
         });
     })();
-</script>
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        {% if phone_locked %}return;{% endif %}
-        const phoneInput = document.getElementById('phone');
-        const validIcon = document.getElementById('valid-icon');
-        const invalidIcon = document.getElementById('invalid-icon');
-
-        phoneInput.addEventListener('input', function () {
-            // Allow only numbers
-            this.value = this.value.replace(/\D/g, '');
-            const val = this.value;
-
-            // Simple validation logic (Starts with 059/056 and length 10 is typical)
-            const isValidFormat = (val.startsWith('059') || val.startsWith('056')) && val.length === 10;
-
-            if (isValidFormat) {
-                this.style.borderColor = 'var(--success)';
-                validIcon.style.display = 'block';
-                invalidIcon.style.display = 'none';
-            } else if (val.length > 0) {
-                // Show invalid if they typed something but it's not complete/correct yet
-                if (val.length >= 3 && !val.startsWith('059') && !val.startsWith('056')) {
-                    this.style.borderColor = 'var(--danger)';
-                    validIcon.style.display = 'none';
-                    invalidIcon.style.display = 'block';
-                } else if (val.length === 10) {
-                    // Length is 10 but wrong prefix
-                    this.style.borderColor = 'var(--danger)';
-                    validIcon.style.display = 'none';
-                    invalidIcon.style.display = 'block';
-                } else {
-                    // Typing...
-                    this.style.borderColor = 'var(--border-default)';
-                    validIcon.style.display = 'none';
-                    invalidIcon.style.display = 'none';
-                }
-            } else {
-                this.style.borderColor = 'var(--border-default)';
-                validIcon.style.display = 'none';
-                invalidIcon.style.display = 'none';
-            }
-        });
-    });
 </script>
 {% endblock %}
