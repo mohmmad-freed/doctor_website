@@ -181,7 +181,8 @@ def register_patient_phone(request):
             messages.error(request, message)
 
     return render(request, "accounts/register_patient_phone.html", {
-        "initial_phone": initial_phone
+        "initial_phone": initial_phone,
+        "phone_locked": bool(initial_phone),
     })
 
 

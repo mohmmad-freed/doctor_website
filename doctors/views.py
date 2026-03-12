@@ -339,9 +339,9 @@ def guest_accept_invitation_view(request, token):
     request.session["registration_phone"] = invitation.doctor_phone
 
     if invitation.role == "SECRETARY":
-        messages.info(request, f"مرحباً {invitation.doctor_name}، أنت مدعو للانضمام كـ سكرتير/ة في {invitation.clinic.name}. يرجى إدخال رقم هاتفك لإنشاء حسابك أو تسجيل الدخول.")
+        messages.info(request, f"مرحباً {invitation.doctor_name}، تلقّيت دعوة للانضمام كسكرتير/ة في {invitation.clinic.name}. اضغط على الزر لإرسال رمز التحقق إلى رقمك.")
     else:
-        messages.info(request, f"مرحباً د. {invitation.doctor_name}، أنت مدعو للانضمام إلى {invitation.clinic.name}. يرجى إدخال رقم هاتفك لإنشاء حسابك أو تسجيل الدخول.")
+        messages.info(request, f"مرحباً د. {invitation.doctor_name}، تلقّيت دعوة للانضمام إلى {invitation.clinic.name}. اضغط على الزر لإرسال رمز التحقق إلى رقمك.")
 
     return redirect(reverse("accounts:register_patient_phone"))
 

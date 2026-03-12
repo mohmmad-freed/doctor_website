@@ -313,8 +313,8 @@
 <div class="registration-wrapper">
     <div class="registration-card">
         <div class="page-header">
-            <h1 class="page-title">رقم الهاتف</h1>
-            <p class="page-subtitle">أدخل رقم هاتفك لنرسل لك رمز التحقق</p>
+            <h1 class="page-title">{% if phone_locked %}تأكيد رقم الهاتف{% else %}رقم الهاتف{% endif %}</h1>
+            <p class="page-subtitle">{% if phone_locked %}سيتم إرسال رمز التحقق إلى الرقم المرتبط بدعوتك{% else %}أدخل رقم هاتفك لنرسل لك رمز التحقق{% endif %}</p>
         </div>
 
         <!-- Wizard Step 1 -->
@@ -332,13 +332,22 @@
             {% csrf_token %}
 
             <div class="input-group">
-                <input type="tel" id="phone" name="phone" class="form-control" placeholder=" " maxlength="10" required value="{{ initial_phone|default:'' }}">
+                <input type="tel" id="phone" name="phone" class="form-control" placeholder=" " maxlength="10" required
+                    value="{{ initial_phone|default:'' }}"
+                    {% if phone_locked %}readonly style="border-color: var(--success); opacity: 0.85; cursor: not-allowed;"{% endif %}>
                 <label class="floating-label" for="phone">رقم الهاتف (05xxxxxxxx)</label>
+                {% if not phone_locked %}
                 <i class="fa-solid fa-mobile-screen input-icon"></i>
+                {% endif %}
 
+                {% if phone_locked %}
+                <!-- Locked: show green check on the right in place of the phone icon -->
+                <i class="fa-solid fa-check-circle input-icon" style="color: var(--success);"></i>
+                {% else %}
                 <!-- Feedback Icons -->
                 <i class="fa-solid fa-check validation-feedback valid-icon" id="valid-icon"></i>
                 <i class="fa-solid fa-xmark validation-feedback invalid-icon" id="invalid-icon"></i>
+                {% endif %}
 
                 {% if form.phone.errors %}
                 <div class="error-msg">
@@ -347,6 +356,13 @@
                 </div>
                 {% endif %}
             </div>
+
+            {% if phone_locked %}
+            <p style="font-size: 0.85rem; color: var(--text-sub); text-align: center; margin: -12px 0 20px;">
+                <i class="fa-solid fa-lock" style="margin-left: 4px;"></i>
+                هذا الرقم مرتبط بدعوتك ولا يمكن تعديله
+            </p>
+            {% endif %}
 
             <!-- Global/Backend Messages -->
             {% if messages %}
@@ -397,6 +413,7 @@
 </script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        {% if phone_locked %}return;{% endif %}
         const phoneInput = document.getElementById('phone');
         const validIcon = document.getElementById('valid-icon');
         const invalidIcon = document.getElementById('invalid-icon');
