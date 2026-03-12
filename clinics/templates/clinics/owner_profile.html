@@ -1,0 +1,510 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}الملف الشخصي{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ─── Layout ────────────────────────────────────────────────────────── */
+.profile-page {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 2rem 1rem 4rem;
+}
+
+/* ─── Page header ───────────────────────────────────────────────────── */
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.75rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+.dashboard-header h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.btn-back {
+    color: var(--color-text-muted);
+    text-decoration: none;
+    font-size: 0.88rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.9rem;
+    border: 1px solid var(--color-surface-border);
+    border-radius: 6px;
+    transition: color 0.15s, border-color 0.15s;
+}
+.btn-back:hover { color: var(--color-primary-500); border-color: var(--color-primary-500); }
+
+/* ─── Hero card ─────────────────────────────────────────────────────── */
+.profile-hero {
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-surface-border);
+    border-radius: 14px;
+    padding: 1.75rem 1.75rem 1.5rem;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+@media (max-width: 500px) {
+    .profile-hero { flex-direction: column; text-align: center; }
+}
+.profile-avatar-xl {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: var(--color-primary-500, #2563eb);
+    color: #fff;
+    font-size: 2rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.profile-hero-info { flex: 1; min-width: 0; }
+.profile-hero-name {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--color-text-main);
+    margin: 0 0 0.3rem;
+}
+.profile-hero-phone {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    direction: ltr;
+    display: inline-block;
+}
+.profile-roles {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-top: 0.55rem;
+}
+.role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+.role-badge-owner     { background: #fef3c7; color: #92400e; }
+.role-badge-patient   { background: #d1fae5; color: #065f46; }
+.role-badge-doctor    { background: #dbeafe; color: #1e40af; }
+.role-badge-secretary { background: #ede9fe; color: #5b21b6; }
+[data-theme="dark"] .role-badge-owner     { background: #451a03; color: #fcd34d; }
+[data-theme="dark"] .role-badge-patient   { background: #064e3b; color: #6ee7b7; }
+[data-theme="dark"] .role-badge-doctor    { background: #1e3a5f; color: #93c5fd; }
+[data-theme="dark"] .role-badge-secretary { background: #2e1065; color: #c4b5fd; }
+
+/* ─── Section card ──────────────────────────────────────────────────── */
+.section-card {
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-surface-border);
+    border-radius: 12px;
+    padding: 1.4rem 1.6rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.section-card h2 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    margin: 0 0 1.1rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--color-surface-border);
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+.section-card h2 i { color: var(--color-primary-500); font-size: 0.88rem; }
+
+/* ─── Form ──────────────────────────────────────────────────────────── */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem 1.25rem;
+}
+@media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } }
+.form-grid .form-group-full { grid-column: 1 / -1; }
+
+.form-group { display: flex; flex-direction: column; gap: 0.35rem; }
+.form-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-text-body);
+}
+.form-group input,
+.form-group select {
+    padding: 0.55rem 0.75rem;
+    border: 1.5px solid var(--color-surface-border);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    background: var(--color-surface-ground);
+    color: var(--color-text-main);
+    transition: border-color 0.15s, box-shadow 0.15s;
+    outline: none;
+}
+.form-group input:focus,
+.form-group select:focus {
+    border-color: var(--color-primary-500);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+.form-group input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: var(--color-surface-card);
+}
+.field-hint {
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+.input-has-error {
+    border-color: #dc2626 !important;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1) !important;
+}
+.form-error-msg {
+    font-size: 0.8rem;
+    color: #dc2626;
+    font-weight: 500;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1.25rem;
+}
+.btn-save {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.6rem 1.4rem;
+    background: var(--color-primary-500, #2563eb);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s, transform 0.1s;
+}
+.btn-save:hover { background: var(--color-primary-600, #1d4ed8); }
+.btn-save:active { transform: scale(0.98); }
+
+/* ─── Verification badges ───────────────────────────────────────────── */
+.verify-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+.verify-badge-yes { background: #d1fae5; color: #065f46; }
+.verify-badge-no  { background: #fee2e2; color: #991b1b; }
+[data-theme="dark"] .verify-badge-yes { background: #064e3b; color: #6ee7b7; }
+[data-theme="dark"] .verify-badge-no  { background: #450a0a; color: #fca5a5; }
+
+/* ─── Info row (read-only field display) ────────────────────────────── */
+.info-dl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.6rem 1.25rem;
+    align-items: center;
+}
+.info-dl dt {
+    font-weight: 600;
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+.info-dl dd {
+    margin: 0;
+    color: var(--color-text-body);
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* ─── Owned clinics list ────────────────────────────────────────────── */
+.clinic-list { display: flex; flex-direction: column; gap: 0.65rem; }
+.clinic-list-item {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.85rem 1rem;
+    background: var(--color-surface-ground);
+    border: 1px solid var(--color-surface-border);
+    border-radius: 10px;
+    text-decoration: none;
+    color: var(--color-text-body);
+    transition: border-color 0.15s, background 0.15s;
+}
+.clinic-list-item:hover {
+    border-color: var(--color-primary-400);
+    background: var(--color-surface-card);
+    color: var(--color-text-main);
+}
+.clinic-list-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: #dbeafe;
+    color: #1e40af;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+[data-theme="dark"] .clinic-list-icon { background: #1e3a5f; color: #93c5fd; }
+.clinic-list-info { flex: 1; min-width: 0; }
+.clinic-list-name {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.clinic-list-address {
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ─── Badge ─────────────────────────────────────────────────────────── */
+.badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+.badge-active    { background: #d1fae5; color: #065f46; }
+.badge-pending   { background: #dbeafe; color: #1e40af; }
+.badge-suspended { background: #fef3c7; color: #92400e; }
+[data-theme="dark"] .badge-active    { background: #064e3b; color: #6ee7b7; }
+[data-theme="dark"] .badge-pending   { background: #1e3a5f; color: #93c5fd; }
+[data-theme="dark"] .badge-suspended { background: #451a03; color: #fcd34d; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-page">
+
+    <!-- Page Header -->
+    <div class="dashboard-header">
+        <h1>
+            <i class="fa-solid fa-user-circle" style="color:var(--color-primary-500);"></i>
+            الملف الشخصي
+        </h1>
+        <a href="{% url 'clinics:my_clinics' %}" class="btn-back">
+            <i class="fa-solid fa-arrow-right"></i> عياداتي
+        </a>
+    </div>
+
+    <!-- Hero card: avatar + name + phone + roles -->
+    <div class="profile-hero">
+        <div class="profile-avatar-xl">{{ user.name|first }}</div>
+        <div class="profile-hero-info">
+            <p class="profile-hero-name">{{ user.name }}</p>
+            <span class="profile-hero-phone">{{ user.phone }}</span>
+            <div class="profile-roles">
+                {% if "MAIN_DOCTOR" in user.roles %}
+                <span class="role-badge role-badge-owner">
+                    <i class="fa-solid fa-crown" style="font-size:0.7rem;"></i>
+                    صاحب عيادة
+                </span>
+                {% endif %}
+                {% if "PATIENT" in user.roles %}
+                <span class="role-badge role-badge-patient">
+                    <i class="fa-solid fa-user-injured" style="font-size:0.7rem;"></i>
+                    مريض
+                </span>
+                {% endif %}
+                {% if "DOCTOR" in user.roles %}
+                <span class="role-badge role-badge-doctor">
+                    <i class="fa-solid fa-stethoscope" style="font-size:0.7rem;"></i>
+                    طبيب
+                </span>
+                {% endif %}
+                {% if "SECRETARY" in user.roles %}
+                <span class="role-badge role-badge-secretary">
+                    <i class="fa-solid fa-user-tie" style="font-size:0.7rem;"></i>
+                    سكرتير/ة
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Read-only identity info -->
+    <div class="section-card">
+        <h2>
+            <i class="fa-solid fa-id-card"></i>
+            معلومات الهوية
+        </h2>
+        <dl class="info-dl">
+            <dt>رقم الهاتف</dt>
+            <dd>
+                <span style="direction:ltr;display:inline-block;">{{ user.phone }}</span>
+                {% if user.is_verified %}
+                    <span class="verify-badge verify-badge-yes"><i class="fa-solid fa-circle-check"></i> موثق</span>
+                {% else %}
+                    <span class="verify-badge verify-badge-no"><i class="fa-solid fa-circle-xmark"></i> غير موثق</span>
+                {% endif %}
+            </dd>
+            <dt>رقم الهوية</dt>
+            <dd>{{ user.national_id|default:"—" }}</dd>
+            <dt>البريد الإلكتروني</dt>
+            <dd>
+                {{ user.email|default:"—" }}
+                {% if user.email %}
+                    {% if user.email_verified %}
+                        <span class="verify-badge verify-badge-yes"><i class="fa-solid fa-circle-check"></i> موثق</span>
+                    {% else %}
+                        <span class="verify-badge verify-badge-no"><i class="fa-solid fa-circle-xmark"></i> غير موثق</span>
+                    {% endif %}
+                {% endif %}
+            </dd>
+            {% if user.city %}
+            <dt>المدينة</dt>
+            <dd>{{ user.city.name }}</dd>
+            {% endif %}
+        </dl>
+    </div>
+
+    <!-- Edit form -->
+    <div class="section-card">
+        <h2>
+            <i class="fa-solid fa-pen-to-square"></i>
+            تعديل المعلومات
+        </h2>
+        <form method="post" novalidate>
+            {% csrf_token %}
+            <div class="form-grid">
+
+                <!-- Name -->
+                <div class="form-group form-group-full">
+                    <label for="id_name">الاسم الكامل</label>
+                    <input type="text" id="id_name" name="name"
+                           value="{{ form_data.name|default:user.name }}"
+                           class="{% if errors.name %}input-has-error{% endif %}"
+                           autocomplete="name" required>
+                    {% if errors.name %}
+                    <span class="form-error-msg">{{ errors.name }}</span>
+                    {% endif %}
+                </div>
+
+                <!-- Email -->
+                <div class="form-group form-group-full">
+                    <label for="id_email">البريد الإلكتروني <span style="color:var(--color-text-muted);font-weight:400;">(اختياري)</span></label>
+                    <input type="email" id="id_email" name="email"
+                           value="{{ form_data.email|default:user.email|default:'' }}"
+                           class="{% if errors.email %}input-has-error{% endif %}"
+                           autocomplete="email" dir="ltr">
+                    {% if errors.email %}
+                    <span class="form-error-msg">{{ errors.email }}</span>
+                    {% else %}
+                    <span class="field-hint"><i class="fa-solid fa-circle-info"></i> تغيير البريد يتطلب إعادة التحقق.</span>
+                    {% endif %}
+                </div>
+
+                <!-- Phone (read-only) -->
+                <div class="form-group">
+                    <label>رقم الهاتف</label>
+                    <input type="text" value="{{ user.phone }}" disabled dir="ltr">
+                    <span class="field-hint"><i class="fa-solid fa-lock"></i> لا يمكن تغيير رقم الهاتف.</span>
+                </div>
+
+                <!-- National ID (read-only) -->
+                <div class="form-group">
+                    <label>رقم الهوية الوطنية</label>
+                    <input type="text" value="{{ user.national_id|default:'—' }}" disabled>
+                    <span class="field-hint"><i class="fa-solid fa-lock"></i> لا يمكن تغيير رقم الهوية.</span>
+                </div>
+
+                <!-- City -->
+                <div class="form-group form-group-full">
+                    <label for="id_city">المدينة <span style="color:var(--color-text-muted);font-weight:400;">(اختياري)</span></label>
+                    <select id="id_city" name="city">
+                        <option value="">— اختر المدينة —</option>
+                        {% for city in cities %}
+                        <option value="{{ city.id }}"
+                            {% if form_data.city %}
+                                {% if form_data.city == city.id|stringformat:"s" %}selected{% endif %}
+                            {% elif user.city_id == city.id %}selected{% endif %}>
+                            {{ city.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-save">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    حفظ التغييرات
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Owned clinics -->
+    {% if owned_clinics %}
+    <div class="section-card">
+        <h2>
+            <i class="fa-solid fa-hospital"></i>
+            عياداتي ({{ owned_clinics|length }})
+        </h2>
+        <div class="clinic-list">
+            {% for clinic in owned_clinics %}
+            <a href="{% url 'clinics:my_clinic' clinic_id=clinic.id %}" class="clinic-list-item">
+                <div class="clinic-list-icon">
+                    <i class="fa-solid fa-hospital-user"></i>
+                </div>
+                <div class="clinic-list-info">
+                    <div class="clinic-list-name">{{ clinic.name }}</div>
+                    {% if clinic.address %}
+                    <div class="clinic-list-address">{{ clinic.address }}</div>
+                    {% endif %}
+                </div>
+                {% if clinic.status == "ACTIVE" %}
+                    <span class="badge badge-active">نشطة</span>
+                {% elif clinic.status == "PENDING" %}
+                    <span class="badge badge-pending">قيد المراجعة</span>
+                {% else %}
+                    <span class="badge badge-suspended">{{ clinic.get_status_display }}</span>
+                {% endif %}
+                <i class="fa-solid fa-arrow-left" style="color:var(--color-text-muted);font-size:0.8rem;"></i>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

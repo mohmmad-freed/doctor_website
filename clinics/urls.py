@@ -7,6 +7,9 @@ urlpatterns = [
     # Clinic owner landing — list all owned clinics
     path('', views.my_clinics, name='my_clinics'),
 
+    # Clinic owner profile
+    path('profile/', views.owner_profile, name='owner_profile'),
+
     # Add a new clinic (for already-authenticated clinic owners)
     path('add/', views.add_clinic_code_view, name='add_clinic_code'),
     path('add/details/', views.add_clinic_details_view, name='add_clinic_details'),

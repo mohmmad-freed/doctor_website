@@ -78,6 +78,180 @@
     [data-theme="dark"] .clinic-switcher-item.current {
         background: rgba(59, 143, 217, 0.12);
     }
+
+    /* ── User menu dropdown ─────────────────────────────────────────── */
+    .user-menu {
+        position: relative;
+    }
+    .user-menu-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 8px 4px 6px;
+        background: var(--color-surface-card, #fff);
+        border: 1.5px solid var(--color-surface-border, #e5e7eb);
+        border-radius: 20px;
+        cursor: pointer;
+        transition: border-color 0.15s;
+        font-family: inherit;
+    }
+    .user-menu-btn:hover,
+    .user-menu.open .user-menu-btn {
+        border-color: var(--color-primary-500, #2563eb);
+    }
+    .user-menu-btn-name {
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: var(--color-text-main, #111827);
+        max-width: 120px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .user-menu-btn .chevron {
+        color: var(--color-text-muted, #9ca3af);
+        transition: transform 0.2s;
+    }
+    .user-menu.open .user-menu-btn .chevron {
+        transform: rotate(180deg);
+    }
+    .user-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--color-primary-500, #2563eb);
+        color: #fff;
+        font-size: 0.85rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .user-menu-dropdown {
+        display: none;
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        min-width: 230px;
+        background: var(--color-surface-card, #fff);
+        border: 1px solid var(--color-surface-border, #e5e7eb);
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.13);
+        z-index: 500;
+        overflow: hidden;
+    }
+    .user-menu.open .user-menu-dropdown {
+        display: block;
+    }
+    .user-menu-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 14px;
+        background: var(--color-surface-ground, #f9fafb);
+    }
+    .user-menu-avatar-lg {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: var(--color-primary-500, #2563eb);
+        color: #fff;
+        font-size: 1.1rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .user-menu-info {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        overflow: hidden;
+    }
+    .user-menu-name {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--color-text-main, #111827);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .user-menu-phone {
+        font-size: 0.78rem;
+        color: var(--color-text-muted, #9ca3af);
+        direction: ltr;
+        text-align: right;
+    }
+    .user-menu-divider {
+        height: 1px;
+        background: var(--color-surface-border, #e5e7eb);
+        margin: 2px 0;
+    }
+    .user-menu-section-label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--color-text-muted, #9ca3af);
+        padding: 6px 14px 2px;
+    }
+    .user-menu-item {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 9px 14px;
+        text-decoration: none;
+        color: var(--color-text-body, #374151);
+        font-size: 0.88rem;
+        font-weight: 500;
+        transition: background 0.1s;
+        cursor: pointer;
+    }
+    .user-menu-item i:first-child {
+        width: 16px;
+        text-align: center;
+        font-size: 0.85rem;
+        color: var(--color-text-muted, #9ca3af);
+        flex-shrink: 0;
+    }
+    .user-menu-item:hover {
+        background: var(--color-surface-ground, #f9fafb);
+        color: var(--color-text-main, #111827);
+    }
+    .user-menu-item:hover i:first-child {
+        color: var(--color-primary-500, #2563eb);
+    }
+    .user-menu-item-active {
+        color: var(--color-primary-500, #2563eb) !important;
+        background: rgba(37, 99, 235, 0.06);
+        font-weight: 700;
+    }
+    .user-menu-item-active i:first-child {
+        color: var(--color-primary-500, #2563eb) !important;
+    }
+    .user-menu-check {
+        margin-right: auto;
+        font-size: 0.78rem !important;
+        width: auto !important;
+        color: var(--color-primary-500, #2563eb) !important;
+    }
+    .user-menu-logout {
+        color: #dc2626 !important;
+    }
+    .user-menu-logout i:first-child {
+        color: #dc2626 !important;
+    }
+    .user-menu-logout:hover {
+        background: #fef2f2 !important;
+    }
+    [data-theme="dark"] .user-menu-logout:hover {
+        background: #450a0a !important;
+    }
+    [data-theme="dark"] .user-menu-item-active {
+        background: rgba(59, 143, 217, 0.12);
+    }
 </style>
 
 <nav class="navbar">
@@ -148,9 +322,77 @@
                 <i class="fa-solid fa-arrow-left"></i>
             </a>
             {% endif %}
-            <a href="{% url 'accounts:logout' %}" class="btn btn-secondary" title="تسجيل الخروج" style="padding: 0.5rem 0.75rem;">
-                <i class="fa-solid fa-right-from-bracket"></i>
-            </a>
+
+            {# User avatar dropdown #}
+            <div class="user-menu" id="userMenu">
+                <button class="user-menu-btn" onclick="document.getElementById('userMenu').classList.toggle('open')" aria-label="قائمة المستخدم">
+                    <span class="user-avatar">{{ user.name|first }}</span>
+                    <span class="user-menu-btn-name">{{ user.name }}</span>
+                    <i class="fa-solid fa-chevron-down chevron" style="font-size:0.65rem;"></i>
+                </button>
+                <div class="user-menu-dropdown">
+                    <div class="user-menu-header">
+                        <span class="user-menu-avatar-lg">{{ user.name|first }}</span>
+                        <div class="user-menu-info">
+                            <span class="user-menu-name">{{ user.name }}</span>
+                            <span class="user-menu-phone">{{ user.phone }}</span>
+                        </div>
+                    </div>
+                    <div class="user-menu-divider"></div>
+
+                    {# Profile link — only for clinic owners #}
+                    {% if "MAIN_DOCTOR" in user.roles %}
+                    <a href="{% url 'clinics:owner_profile' %}" class="user-menu-item">
+                        <i class="fa-solid fa-user-circle"></i>
+                        الملف الشخصي
+                    </a>
+                    {% endif %}
+
+                    {# Role switcher — only if user has more than one role #}
+                    {% if user.roles|length > 1 %}
+                    <div class="user-menu-section-label">تبديل الدور</div>
+                    {% if "MAIN_DOCTOR" in user.roles %}
+                    <a href="{% url 'clinics:my_clinics' %}"
+                       class="user-menu-item {% if request.resolver_match.namespace == 'clinics' %}user-menu-item-active{% endif %}">
+                        <i class="fa-solid fa-hospital-user"></i>
+                        صاحب عيادة
+                        {% if request.resolver_match.namespace == 'clinics' %}<i class="fa-solid fa-check user-menu-check"></i>{% endif %}
+                    </a>
+                    {% endif %}
+                    {% if "PATIENT" in user.roles %}
+                    <a href="{% url 'patients:dashboard' %}"
+                       class="user-menu-item {% if request.resolver_match.namespace == 'patients' %}user-menu-item-active{% endif %}">
+                        <i class="fa-solid fa-user-injured"></i>
+                        مريض
+                        {% if request.resolver_match.namespace == 'patients' %}<i class="fa-solid fa-check user-menu-check"></i>{% endif %}
+                    </a>
+                    {% endif %}
+                    {% if "DOCTOR" in user.roles %}
+                    <a href="{% url 'doctors:dashboard' %}"
+                       class="user-menu-item {% if request.resolver_match.namespace == 'doctors' %}user-menu-item-active{% endif %}">
+                        <i class="fa-solid fa-stethoscope"></i>
+                        طبيب
+                        {% if request.resolver_match.namespace == 'doctors' %}<i class="fa-solid fa-check user-menu-check"></i>{% endif %}
+                    </a>
+                    {% endif %}
+                    {% if "SECRETARY" in user.roles %}
+                    <a href="{% url 'secretary:dashboard' %}"
+                       class="user-menu-item {% if request.resolver_match.namespace == 'secretary' %}user-menu-item-active{% endif %}">
+                        <i class="fa-solid fa-user-tie"></i>
+                        سكرتير/ة
+                        {% if request.resolver_match.namespace == 'secretary' %}<i class="fa-solid fa-check user-menu-check"></i>{% endif %}
+                    </a>
+                    {% endif %}
+                    {% endif %}
+
+                    <div class="user-menu-divider"></div>
+                    <a href="{% url 'accounts:logout' %}" class="user-menu-item user-menu-logout">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        تسجيل الخروج
+                    </a>
+                </div>
+            </div>
+
             {% else %}
             <a href="{% url 'accounts:login' %}" class="btn btn-secondary">تسجيل الدخول</a>
             <a href="{% url 'accounts:register' %}" class="btn btn-primary">حساب جديد</a>
@@ -160,11 +402,15 @@
 </nav>
 
 <script>
-// Close clinic switcher dropdown when clicking outside
+// Close dropdowns when clicking outside
 document.addEventListener('click', function (e) {
     var sw = document.getElementById('clinicSwitcher');
     if (sw && !sw.contains(e.target)) {
         sw.classList.remove('open');
+    }
+    var um = document.getElementById('userMenu');
+    if (um && !um.contains(e.target)) {
+        um.classList.remove('open');
     }
 });
 </script>

@@ -129,6 +129,64 @@ def appointments_panel_view(request, clinic_id):
 
 
 @login_required
+def owner_profile(request):
+    """Clinic owner profile — view and edit personal info."""
+    user = request.user
+    from accounts.models import City
+    cities = City.objects.all().order_by("name")
+
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        email = request.POST.get("email", "").strip()
+        city_id = request.POST.get("city", "")
+
+        errors = {}
+        if not name:
+            errors["name"] = "الاسم مطلوب."
+
+        if not errors:
+            user.name = name
+            if email:
+                from django.core.validators import validate_email
+                from django.core.exceptions import ValidationError as DjangoValidationError
+                try:
+                    validate_email(email)
+                    if email != user.email:
+                        user.email = email
+                        user.email_verified = False
+                except DjangoValidationError:
+                    errors["email"] = "البريد الإلكتروني غير صحيح."
+            else:
+                user.email = None
+                user.email_verified = False
+
+            if not errors:
+                if city_id:
+                    from accounts.models import City as CityModel
+                    try:
+                        user.city = CityModel.objects.get(id=city_id)
+                    except CityModel.DoesNotExist:
+                        user.city = None
+                else:
+                    user.city = None
+                user.save(update_fields=["name", "email", "email_verified", "city"])
+                messages.success(request, "تم حفظ التغييرات بنجاح.")
+                return redirect("clinics:owner_profile")
+
+        return render(request, "clinics/owner_profile.html", {
+            "cities": cities,
+            "errors": errors,
+            "form_data": request.POST,
+        })
+
+    owned_clinics = Clinic.objects.filter(main_doctor=user, is_active=True).order_by("name")
+    return render(request, "clinics/owner_profile.html", {
+        "cities": cities,
+        "owned_clinics": owned_clinics,
+    })
+
+
+@login_required
 def switch_clinic(request, clinic_id):
     """Set the active clinic in session and redirect to its dashboard."""
     clinic = get_owner_clinic_or_404(request, clinic_id)

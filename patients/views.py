@@ -40,8 +40,7 @@ def browse_doctors(request):
         - Filter by specialty (?specialty_id=...)
         - Both combined
     """
-    role = getattr(request.user, "role", None)
-    if role != "PATIENT":
+    if not request.user.has_role("PATIENT"):
         return HttpResponseForbidden("Unauthorized: This page is for patients only.")
 
     # Get all specialties for the filter bar
@@ -221,8 +220,7 @@ def clinics_list(request):
         - @login_required: unauthenticated users redirected to login.
         - PATIENT role enforced: non-patients receive HTTP 403.
     """
-    role = getattr(request.user, "role", None)
-    if role != "PATIENT":
+    if not request.user.has_role("PATIENT"):
         return HttpResponseForbidden("Unauthorized: This page is for patients only.")
 
     from accounts.models import City
@@ -294,7 +292,7 @@ def my_appointments(request):
     - Patient role enforced: non-patients receive HTTP 403.
     - Data is scoped strictly to request.user — no cross-patient exposure.
     """
-    if getattr(request.user, "role", None) != "PATIENT":
+    if not request.user.has_role("PATIENT"):
         return HttpResponseForbidden("Unauthorized: This page is for patients only.")
 
     try:
@@ -328,7 +326,7 @@ def cancel_appointment_view(request, appointment_id):
     - Ownership enforced inside cancel_appointment() at ORM level.
     - Time-based policy enforced inside cancel_appointment() service.
     """
-    if getattr(request.user, "role", None) != "PATIENT":
+    if not request.user.has_role("PATIENT"):
         return HttpResponseForbidden("Unauthorized: This page is for patients only.")
 
     if request.method != "POST":
@@ -361,7 +359,7 @@ def edit_appointment_view(request, appointment_id):
     )
     from doctors.services import generate_slots_for_date
 
-    if getattr(request.user, "role", None) != "PATIENT":
+    if not request.user.has_role("PATIENT"):
         return HttpResponseForbidden("Unauthorized: This page is for patients only.")
 
     # Fetch appointment with ownership check
@@ -529,7 +527,7 @@ def load_edit_slots(request, appointment_id):
     from appointments.models import Appointment, AppointmentType
     from doctors.services import generate_slots_for_date
 
-    if getattr(request.user, "role", None) != "PATIENT":
+    if not request.user.has_role("PATIENT"):
         return HttpResponse("")
 
     try:
@@ -619,7 +617,7 @@ def load_edit_intake_form(request, appointment_id):
     from appointments.models import Appointment, AppointmentAnswer, AppointmentAttachment
     from appointments.views import get_active_intake_template, get_rules_for_template
 
-    if getattr(request.user, "role", None) != "PATIENT":
+    if not request.user.has_role("PATIENT"):
         return HttpResponse("")
 
     try:
@@ -703,8 +701,7 @@ def profile(request):
     Render patient profile page.
     Strictly restricted to PATIENT role.
     """
-    role = getattr(request.user, "role", None)
-    if role != "PATIENT":
+    if not request.user.has_role("PATIENT"):
         return HttpResponseForbidden("Unauthorized: This page is for patients only.")
 
     try:
@@ -725,8 +722,7 @@ def edit_profile(request):
     Render and handle patient profile edit form.
     Strictly restricted to PATIENT role.
     """
-    role = getattr(request.user, "role", None)
-    if role != "PATIENT":
+    if not request.user.has_role("PATIENT"):
         return HttpResponseForbidden("Unauthorized: This page is for patients only.")
 
     try:

@@ -134,6 +134,16 @@
             <i class="fa-solid fa-plus"></i>
             <span class="text">عيادة جديدة</span>
         </a>
+        <a href="{% url 'clinics:owner_profile' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'owner_profile' %}active{% endif %}">
+            <i class="fa-solid fa-user-circle"></i>
+            <span class="text">الملف</span>
+        </a>
+        {% if user.is_authenticated and "PATIENT" in user.roles %}
+        <a href="{% url 'patients:dashboard' %}" class="mobile-nav-item">
+            <i class="fa-solid fa-user-injured"></i>
+            <span class="text">مريض</span>
+        </a>
+        {% endif %}
         <a href="{% url 'accounts:logout' %}" class="mobile-nav-item">
             <i class="fa-solid fa-right-from-bracket"></i>
             <span class="text">خروج</span>
@@ -153,6 +163,12 @@
         <a href="{% url 'doctors:doctor_invitations_inbox' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'doctor_invitations_inbox' %}active{% endif %}">
             <i class="fa-solid fa-envelope-open-text"></i>
             <span class="text">الدعوات</span>
+        </a>
+        {% endif %}
+        {% if "MAIN_DOCTOR" in user.roles %}
+        <a href="{% url 'clinics:my_clinics' %}" class="mobile-nav-item">
+            <i class="fa-solid fa-hospital-user"></i>
+            <span class="text">عياداتي</span>
         </a>
         {% endif %}
         {% else %}
