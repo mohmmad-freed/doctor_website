@@ -112,7 +112,8 @@ def browse_doctors(request):
     if search_query or selected_specialty:
         relevant_clinic_ids = set()
         for clinic in clinics:
-            if clinic.main_doctor and clinic.main_doctor.id in filtered_doctor_ids:
+            c_main = clinic.main_doctor
+            if c_main and c_main.id in filtered_doctor_ids:
                 relevant_clinic_ids.add(clinic.id)
             staff = ClinicStaff.objects.filter(
                 clinic=clinic, role="DOCTOR", is_active=True
@@ -120,16 +121,17 @@ def browse_doctors(request):
             if set(staff) & filtered_doctor_ids:
                 relevant_clinic_ids.add(clinic.id)
         # Also include clinics matched by name
-        relevant_clinic_ids |= matching_clinic_ids
+        relevant_clinic_ids.update(matching_clinic_ids)
         clinics = clinics.filter(id__in=relevant_clinic_ids)
 
     doctors_by_clinic = []
     for clinic in clinics:
         doctors = []
+        main_doc = clinic.main_doctor
 
         # Main doctor
-        if clinic.main_doctor and clinic.main_doctor.id in filtered_doctor_ids:
-            doctors.append(clinic.main_doctor)
+        if main_doc and main_doc.id in filtered_doctor_ids:
+            doctors.append(main_doc)
 
         # Staff doctors
         staff_doctors = ClinicStaff.objects.filter(
@@ -146,8 +148,8 @@ def browse_doctors(request):
         # no doctors matched by name/specialty (they're still at that clinic)
         if not doctors and matching_clinic_ids and clinic.id in matching_clinic_ids:
             # Re-add all doctors of this clinic (unfiltered by name/specialty)
-            if clinic.main_doctor:
-                doctors.append(clinic.main_doctor)
+            if main_doc and main_doc not in doctors:
+                doctors.append(main_doc)
             for staff in staff_doctors:
                 if staff.user not in doctors:
                     doctors.append(staff.user)
@@ -165,9 +167,9 @@ def browse_doctors(request):
             doctors_with_profiles = []
             for doctor in doctors:
                 profile = profiles_map.get(doctor.id)
-                # Count active appointment types for this doctor at this clinic
+                # Count active appointment types for this clinic
                 type_count = AppointmentType.objects.filter(
-                    doctor=doctor, clinic=clinic, is_active=True
+                    clinic=clinic, is_active=True
                 ).count()
                 # Check if doctor has an active intake form
                 has_intake = DoctorIntakeFormTemplate.objects.filter(

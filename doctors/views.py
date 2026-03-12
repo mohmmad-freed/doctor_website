@@ -555,9 +555,10 @@ def doctor_upload_clinic_credential(request, credential_id):
             if credential.credential_status in ("CREDENTIALS_PENDING", "CREDENTIALS_REJECTED"):
                 credential.credential_status = "CREDENTIALS_PENDING"
             credential.save()
+            spec_name = credential.specialty.name_ar if credential.specialty else "العام"
             messages.success(
                 request,
-                f"تم رفع شهادة التخصص ({credential.specialty.name_ar}) بنجاح. سيتم مراجعتها."
+                f"تم رفع شهادة التخصص ({spec_name}) بنجاح. سيتم مراجعتها."
             )
             return redirect(reverse("doctors:verification_status"))
     else:
