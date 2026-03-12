@@ -18,7 +18,30 @@
                title="الشهر السابق">
                 <i class="fa-solid fa-chevron-right"></i>
             </a>
-            <span class="month-label">{{ appt_month_name }} {{ appt_year }}</span>
+
+            {# ── Month/year picker ── #}
+            <div class="month-picker-wrap" id="month-picker-wrap">
+                <button class="month-label" id="month-picker-btn" type="button"
+                        onclick="toggleApptPicker()" title="اختر شهراً وسنة">
+                    {{ appt_month_name }} {{ appt_year }}
+                    <i class="fa-solid fa-chevron-down picker-chevron"></i>
+                </button>
+                <div class="month-picker-dropdown" id="month-picker-dropdown">
+                    <div class="picker-year-nav">
+                        <button type="button" class="picker-year-btn" onclick="apptPickerChangeYear(-1)">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                        <span class="picker-year-label" id="picker-year-label">{{ appt_year }}</span>
+                        <button type="button" class="picker-year-btn" onclick="apptPickerChangeYear(1)">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+                    </div>
+                    <div class="picker-months-grid" id="picker-months-grid">
+                        {# Rendered by JS below #}
+                    </div>
+                </div>
+            </div>
+
             <a class="month-btn"
                hx-get="{% url 'clinics:appointments_panel' clinic_id=clinic.id %}?month={{ next_month }}&year={{ next_year }}"
                hx-target="#appointments-panel"
@@ -32,6 +55,76 @@
             </span>
         </div>
     </div>
+
+    <script>
+    (function () {
+        var APPT_PANEL_URL = "{% url 'clinics:appointments_panel' clinic_id=clinic.id %}";
+        var _pickerYear = {{ appt_year }};
+        var _currentMonth = {{ appt_month }};
+        var _currentYear = {{ appt_year }};
+        var ARABIC_MONTHS = [
+            'يناير','فبراير','مارس','أبريل','مايو','يونيو',
+            'يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'
+        ];
+
+        function renderPickerMonths() {
+            var grid = document.getElementById('picker-months-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            ARABIC_MONTHS.forEach(function (name, idx) {
+                var m = idx + 1;
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'picker-month-btn' +
+                    (m === _currentMonth && _pickerYear === _currentYear ? ' picker-month-active' : '');
+                btn.textContent = name;
+                btn.onclick = function () { apptPickerNavigate(m, _pickerYear); };
+                grid.appendChild(btn);
+            });
+            document.getElementById('picker-year-label').textContent = _pickerYear;
+        }
+
+        window.toggleApptPicker = function () {
+            var dropdown = document.getElementById('month-picker-dropdown');
+            var btn = document.getElementById('month-picker-btn');
+            var isVisible = dropdown.classList.contains('picker-visible');
+            if (isVisible) {
+                dropdown.classList.remove('picker-visible');
+                btn.classList.remove('picker-open');
+            } else {
+                _pickerYear = _currentYear;
+                renderPickerMonths();
+                dropdown.classList.add('picker-visible');
+                btn.classList.add('picker-open');
+            }
+        };
+
+        window.apptPickerChangeYear = function (delta) {
+            _pickerYear += delta;
+            renderPickerMonths();
+        };
+
+        window.apptPickerNavigate = function (month, year) {
+            document.getElementById('month-picker-dropdown').classList.remove('picker-visible');
+            document.getElementById('month-picker-btn').classList.remove('picker-open');
+            htmx.ajax('GET', APPT_PANEL_URL + '?month=' + month + '&year=' + year, {
+                target: '#appointments-panel',
+                swap: 'outerHTML'
+            });
+        };
+
+        // Close picker when clicking outside
+        document.addEventListener('click', function (e) {
+            var wrap = document.getElementById('month-picker-wrap');
+            if (wrap && !wrap.contains(e.target)) {
+                var dropdown = document.getElementById('month-picker-dropdown');
+                var btn = document.getElementById('month-picker-btn');
+                if (dropdown) dropdown.classList.remove('picker-visible');
+                if (btn) btn.classList.remove('picker-open');
+            }
+        }, true);
+    })();
+    </script>
 
     {# ── Stats row ── #}
     <div class="appt-stats">
