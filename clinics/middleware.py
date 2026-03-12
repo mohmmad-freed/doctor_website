@@ -12,6 +12,8 @@ PATIENT_ALLOWED_DOCTOR_PATHS = re.compile(
     r"|^/doctors/api/specialties/"
     r"|^/doctors/api/list/"
     r"|^/doctors/api/by-specialty/\d+/"
+    # Invitation inbox & actions: patients with pending invitations must be able to accept
+    r"|^/doctors/invites/"
 )
 
 
