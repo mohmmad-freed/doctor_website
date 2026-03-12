@@ -354,8 +354,7 @@ class MainDoctorSignupTest(TestCase):
     def _valid_data(self, **overrides):
         data = {
             "activation_code": self.CODE,
-            "first_name": "محمد",
-            "last_name": "أحمد",
+            "name": "محمد أحمد",
             "phone": self.OWNER_PHONE,
             "national_id": self.OWNER_NID,
             "email": "doctor@test.com",
@@ -831,8 +830,7 @@ class CreateClinicServiceTest(TestCase):
         )
         data = {
             "activation_code": "VIEW001",
-            "first_name": "سامي",
-            "last_name": "خالد",
+            "name": "سامي خالد",
             "phone": "0592222222",
             "national_id": "111222333",
             "email": "sami@test.com",
@@ -1265,8 +1263,7 @@ class ClinicRegWizardTest(TestCase):
 
     def _post_step2(self):
         return self.client.post(self.step2_url, {
-            "first_name": "محمد",
-            "last_name": "أحمد",
+            "name": "محمد أحمد",
             "email": "wizard@test.com",
             "password": "StrongPass123!",
             "confirm_password": "StrongPass123!",
@@ -1626,8 +1623,7 @@ class ClinicRegWizardTest(TestCase):
         )
         self._post_step1()
         response = self.client.post(self.step2_url, {
-            "first_name": "علي",
-            "last_name": "محمد",
+            "name": "علي محمد",
             "email": "taken@test.com",
             "password": "StrongPass123!",
             "confirm_password": "StrongPass123!",
@@ -1642,8 +1638,7 @@ class ClinicRegWizardTest(TestCase):
         """New user entering a weak password → password field error."""
         self._post_step1()
         response = self.client.post(self.step2_url, {
-            "first_name": "علي",
-            "last_name": "محمد",
+            "name": "علي محمد",
             "email": "newuser@test.com",
             "password": "weak",
             "confirm_password": "weak",

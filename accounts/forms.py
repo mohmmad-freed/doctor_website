@@ -104,8 +104,7 @@ class ClinicRegStep1Form(forms.Form):
 class ClinicRegStep2NewUserForm(forms.Form):
     """Stage 2 (new user path): personal info + password."""
 
-    first_name = forms.CharField(max_length=100, required=True, label="الاسم الأول")
-    last_name = forms.CharField(max_length=100, required=True, label="الاسم الأخير")
+    name = forms.CharField(max_length=150, required=True, label="الاسم الكامل")
     email = forms.EmailField(required=True, label="البريد الإلكتروني")
     password = forms.CharField(
         widget=forms.PasswordInput, required=True, label="كلمة المرور"
@@ -118,19 +117,13 @@ class ClinicRegStep2NewUserForm(forms.Form):
         super().__init__(*args, **kwargs)
         self._phone = phone  # used to exclude this phone's user from email uniqueness check
 
-    def _clean_name_field(self, value, label):
-        value = (value or "").strip()
+    def clean_name(self):
+        value = (self.cleaned_data.get("name") or "").strip()
         if len(value) < 2:
-            raise ValidationError(f"{label} يجب أن يكون حرفين على الأقل.")
+            raise ValidationError("الاسم الكامل يجب أن يكون حرفين على الأقل.")
         if not re.search(r"[a-zA-Z\u0600-\u06FF]", value):
-            raise ValidationError(f"{label} يجب أن يحتوي على حروف.")
+            raise ValidationError("الاسم الكامل يجب أن يحتوي على حروف.")
         return value
-
-    def clean_first_name(self):
-        return self._clean_name_field(self.cleaned_data.get("first_name"), "الاسم الأول")
-
-    def clean_last_name(self):
-        return self._clean_name_field(self.cleaned_data.get("last_name"), "الاسم الأخير")
 
     def clean_email(self):
         email = (self.cleaned_data.get("email") or "").strip()
@@ -327,8 +320,7 @@ class MainDoctorRegistrationForm(forms.ModelForm):
     activation_code = forms.CharField(max_length=20, required=True, label="كود التفعيل")
 
     # — Owner info —
-    first_name = forms.CharField(max_length=100, required=True, label="الاسم الأول")
-    last_name = forms.CharField(max_length=100, required=True, label="الاسم الأخير")
+    name = forms.CharField(max_length=150, required=True, label="الاسم الكامل")
     phone = forms.CharField(max_length=20, required=True, label="رقم الهاتف")
     national_id = forms.CharField(max_length=9, required=True, label="رقم الهوية الوطنية")
     email = forms.EmailField(required=True, label="البريد الإلكتروني")
@@ -367,8 +359,7 @@ class MainDoctorRegistrationForm(forms.ModelForm):
     class Meta:
         model = CustomUser
         fields = [
-            "first_name",
-            "last_name",
+            "name",
             "phone",
             "national_id",
             "email",
@@ -376,19 +367,13 @@ class MainDoctorRegistrationForm(forms.ModelForm):
             "confirm_password",
         ]
 
-    def clean_name_field(self, value, label):
-        value = (value or "").strip()
+    def clean_name(self):
+        value = (self.cleaned_data.get("name") or "").strip()
         if len(value) < 2:
-            raise ValidationError(f"{label} يجب أن يكون حرفين على الأقل.")
+            raise ValidationError("الاسم الكامل يجب أن يكون حرفين على الأقل.")
         if not re.search(r"[a-zA-Z\u0600-\u06FF]", value):
-            raise ValidationError(f"{label} يجب أن يحتوي على حروف.")
+            raise ValidationError("الاسم الكامل يجب أن يحتوي على حروف.")
         return value
-
-    def clean_first_name(self):
-        return self.clean_name_field(self.cleaned_data.get("first_name"), "الاسم الأول")
-
-    def clean_last_name(self):
-        return self.clean_name_field(self.cleaned_data.get("last_name"), "الاسم الأخير")
 
     def clean_phone(self):
         phone = self.cleaned_data.get("phone", "").strip()
@@ -586,14 +571,10 @@ class MainDoctorRegistrationForm(forms.ModelForm):
                 user.name = original["name"]          # keep existing name
             else:
                 # No name was ever set — fill it from the form
-                user.name = (
-                    f"{self.cleaned_data['first_name']} {self.cleaned_data['last_name']}".strip()
-                )
+                user.name = self.cleaned_data["name"]
         else:
             # ── New user: set all required fields ──────────────────────────────
-            user.name = (
-                f"{self.cleaned_data['first_name']} {self.cleaned_data['last_name']}".strip()
-            )
+            user.name = self.cleaned_data["name"]
             user.role = "MAIN_DOCTOR"
             user.is_verified = True
             user.set_password(password)

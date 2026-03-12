@@ -3,6 +3,29 @@
 
 {% block title %}تسجيل العيادة — الخطوة 1 من 3{% endblock %}
 
+{% block extra_css %}
+<style>
+.nid-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 5px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-neutral-500);
+    transition: color 0.2s;
+}
+.nid-indicator.valid   { color: #10b981; }
+.nid-indicator.invalid { color: #ef4444; }
+.nid-indicator .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <section class="auth-wrapper">
     <div class="container" style="display: flex; justify-content: center;">
@@ -96,9 +119,15 @@
                                    name="{{ form.national_id.name }}"
                                    id="{{ form.national_id.id_for_label }}"
                                    value="{{ form.national_id.value|default:'' }}"
-                                   placeholder="9 أرقام"
+                                   placeholder="000000000"
                                    inputmode="numeric"
-                                   maxlength="9">
+                                   maxlength="9"
+                                   dir="ltr"
+                                   oninput="checkNID(this, 'step1NidIndicator')">
+                            <div class="nid-indicator" id="step1NidIndicator">
+                                <span class="dot"></span>
+                                <span class="msg">9 أرقام</span>
+                            </div>
                             {% if form.national_id.errors %}
                             <span class="field-error">{{ form.national_id.errors|first }}</span>
                             {% endif %}
@@ -120,4 +149,29 @@
         </div>
     </div>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function checkNID(input, indicatorId) {
+    var val = input.value.replace(/\D/g, '');
+    if (input.value !== val) input.value = val;
+    var indicator = document.getElementById(indicatorId);
+    var msg = indicator.querySelector('.msg');
+    indicator.classList.remove('valid', 'invalid');
+    if (!val) {
+        msg.textContent = '9 أرقام';
+    } else if (val.length === 9) {
+        indicator.classList.add('valid');
+        msg.textContent = 'صيغة صحيحة ✓';
+    } else {
+        indicator.classList.add('invalid');
+        msg.textContent = val.length + ' / 9 أرقام';
+    }
+}
+(function () {
+    var nid = document.getElementById('{{ form.national_id.id_for_label }}');
+    if (nid && nid.value) checkNID(nid, 'step1NidIndicator');
+})();
+</script>
 {% endblock %}

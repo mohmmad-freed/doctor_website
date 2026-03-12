@@ -61,29 +61,17 @@
 
                     {% if not user_exists %}
                     <!-- New user: full personal info -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px;">
-                        <div class="form-group" style="margin-bottom:0;">
-                            <label for="{{ form.first_name.id_for_label }}">{{ form.first_name.label }} <span class="required-star">*</span></label>
-                            <input type="text"
-                                   name="{{ form.first_name.name }}"
-                                   id="{{ form.first_name.id_for_label }}"
-                                   value="{{ form.first_name.value|default:'' }}"
-                                   placeholder="محمد">
-                            {% if form.first_name.errors %}
-                            <span class="field-error">{{ form.first_name.errors|first }}</span>
-                            {% endif %}
-                        </div>
-                        <div class="form-group" style="margin-bottom:0;">
-                            <label for="{{ form.last_name.id_for_label }}">{{ form.last_name.label }} <span class="required-star">*</span></label>
-                            <input type="text"
-                                   name="{{ form.last_name.name }}"
-                                   id="{{ form.last_name.id_for_label }}"
-                                   value="{{ form.last_name.value|default:'' }}"
-                                   placeholder="أحمد">
-                            {% if form.last_name.errors %}
-                            <span class="field-error">{{ form.last_name.errors|first }}</span>
-                            {% endif %}
-                        </div>
+                    <div class="form-group" style="margin-bottom: 18px;">
+                        <label for="{{ form.name.id_for_label }}">{{ form.name.label }} <span class="required-star">*</span></label>
+                        <input type="text"
+                               name="{{ form.name.name }}"
+                               id="{{ form.name.id_for_label }}"
+                               value="{{ form.name.value|default:'' }}"
+                               placeholder="مثال: محمد أحمد"
+                               autocomplete="name">
+                        {% if form.name.errors %}
+                        <span class="field-error">{{ form.name.errors|first }}</span>
+                        {% endif %}
                     </div>
                     {% endif %}
 

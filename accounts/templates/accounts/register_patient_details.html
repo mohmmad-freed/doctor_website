@@ -164,134 +164,97 @@
         background: var(--success);
     }
 
-    /* Floating Labels Form */
+    /* Form grid */
     .form-grid {
         display: grid;
         grid-template-columns: 1fr;
-        gap: 24px;
+        gap: 20px;
     }
 
-    @media(min-width: 768px) {
+    @media(min-width: 600px) {
         .form-grid {
             grid-template-columns: 1fr 1fr;
         }
-
-        .full-width {
-            grid-column: span 2;
-        }
+        .full-width { grid-column: span 2; }
     }
 
-    .input-group {
-        position: relative;
-        margin-bottom: 8px;
-    }
+    /* Field label — static, above the input */
+    .input-group { display: flex; flex-direction: column; gap: 0; }
 
-    .input-icon {
-        position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
-        right: 16px;
-        color: var(--text-sub);
-        font-size: 1.1rem;
-        transition: var(--transition);
-        pointer-events: none;
-        z-index: 10;
-        height: 20px;
-        width: 20px;
+    .field-label {
         display: flex;
         align-items: center;
-        justify-content: center;
+        gap: 6px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-sub);
+        margin-bottom: 7px;
     }
+    .field-label i { font-size: 0.82rem; opacity: 0.8; }
 
-    /* Override for floating label interaction */
+    /* Input wrapper — needed for absolutely-positioned validation icons */
+    .input-wrap { position: relative; }
+
     .form-control {
         width: 100%;
-        padding: 16px 50px 16px 20px;
+        box-sizing: border-box;
+        padding: 0 14px 0 42px;
         border: 2px solid var(--input-border);
-        border-radius: 16px;
-        font-size: 1rem;
+        border-radius: 12px;
+        font-size: 0.95rem;
         background: var(--input-bg);
         color: var(--text-main);
         transition: var(--transition);
         font-family: inherit;
-        height: 56px;
+        height: 46px;
     }
-
     .form-control:focus {
         border-color: var(--primary);
         box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
         outline: none;
     }
-
-    .form-control:focus+.input-icon {
-        color: var(--primary);
-    }
-
-    /* Floating Label Logic */
-    .floating-label {
-        position: absolute;
-        right: 48px;
-        top: 50%;
-        transform: translateY(-50%);
-        background: transparent;
-        color: var(--text-sub);
-        font-size: 1rem;
-        transition: all 0.2s ease-in-out;
-        pointer-events: none;
-        padding: 0 4px;
-    }
-
-    .form-control:focus~.floating-label,
-    .form-control:not(:placeholder-shown)~.floating-label {
-        top: 0;
-        transform: translateY(-50%) scale(0.85);
-        color: var(--primary);
-        background: var(--input-bg);
-        /* Match input bg */
-        right: 14px;
-    }
+    .form-control:disabled { opacity: 0.6; cursor: not-allowed; }
 
     /* Validation States */
-    .form-control.valid {
-        border-color: var(--success);
-    }
+    .form-control.valid   { border-color: var(--success); }
+    .form-control.invalid { border-color: var(--danger);  }
 
-    .form-control.invalid {
-        border-color: var(--danger);
-    }
-
+    /* Validation icons — inside input-wrap on the left (LTR physical = text-end in RTL) */
     .validation-feedback {
         position: absolute;
-        left: 16px;
+        left: 14px;
         top: 50%;
         transform: translateY(-50%);
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         display: none;
     }
+    .form-control.valid ~ .validation-feedback.valid-icon   { display: block; color: var(--success); }
+    .form-control.invalid ~ .validation-feedback.invalid-icon { display: block; color: var(--danger);  }
 
-    .form-control.valid~.validation-feedback.valid-icon {
-        display: block;
+    /* Locked-field check badge */
+    .valid-badge {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
         color: var(--success);
-    }
-
-    .form-control.invalid~.validation-feedback.invalid-icon {
-        display: block;
-        color: var(--danger);
+        font-size: 0.85rem;
     }
 
     /* Custom Select */
     select.form-control {
         appearance: none;
         cursor: pointer;
+        padding-right: 14px;
     }
-
     .select-chevron {
         position: absolute;
-        left: 16px;
+        left: 14px;
         top: 50%;
         transform: translateY(-50%);
         pointer-events: none;
         color: var(--text-sub);
+        font-size: 0.75rem;
     }
 
     /* Password Strength Meter */
@@ -386,9 +349,23 @@
         text-decoration: none;
     }
 
-    /* RTL specific adjustments */
-    html[dir="rtl"] .floating-label {
-        transform-origin: right top;
+    /* NID counter indicator */
+    .nid-indicator {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-sub);
+        transition: color 0.2s;
+    }
+    .nid-indicator.valid   { color: #48bb78; }
+    .nid-indicator.invalid { color: #e53e3e; }
+    .nid-indicator .dot {
+        width: 7px; height: 7px;
+        border-radius: 50%;
+        background: currentColor;
+        flex-shrink: 0;
     }
 </style>
 {% endblock %}
@@ -426,88 +403,107 @@
             <div class="form-grid">
                 <!-- Phone Field (Locked) -->
                 <div class="input-group">
-                    <input type="text" id="phone" name="phone" class="form-control"
-                        value="{{ form.phone.value|default:'' }}" disabled placeholder=" ">
-                    <label class="floating-label" for="phone">رقم الهاتف</label>
-                    <i class="fa-solid fa-mobile-screen input-icon"></i>
-                    <i class="fa-solid fa-check-circle validation-feedback valid-icon" style="display: block;"></i>
+                    <label class="field-label" for="phone">
+                        <i class="fa-solid fa-mobile-screen"></i> رقم الهاتف
+                    </label>
+                    <div class="input-wrap">
+                        <input type="text" id="phone" name="phone" class="form-control valid"
+                            value="{{ form.phone.value|default:'' }}" disabled>
+                        <span class="valid-badge"><i class="fa-solid fa-check-circle"></i></span>
+                    </div>
                 </div>
 
                 <!-- Full Name -->
                 <div class="input-group">
-                    <input type="text" id="name" name="name" class="form-control"
-                        value="{{ form.name.value|default:'' }}" required placeholder=" ">
-                    <label class="floating-label" for="name">الاسم الكامل</label>
-                    <i class="fa-regular fa-user input-icon"></i>
+                    <label class="field-label" for="name">
+                        <i class="fa-regular fa-user"></i> الاسم الكامل
+                    </label>
+                    <div class="input-wrap">
+                        <input type="text" id="name" name="name" class="form-control"
+                            value="{{ form.name.value|default:'' }}" required autocomplete="name">
+                        <i class="fa-solid fa-check validation-feedback valid-icon"></i>
+                        <i class="fa-solid fa-xmark validation-feedback invalid-icon"></i>
+                    </div>
                     {% if form.name.errors %}
                     <div class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> {{ form.name.errors.0 }}</div>
                     {% endif %}
                 </div>
 
-                <!-- National ID (Real-time Validation) -->
+                <!-- National ID -->
                 <div class="input-group">
-                    <input type="text" id="national_id" name="national_id" class="form-control"
-                        value="{{ form.national_id.value|default:'' }}" required placeholder=" " maxlength="9">
-                    <label class="floating-label" for="national_id">رقم الهوية</label>
-                    <i class="fa-regular fa-id-card input-icon"></i>
-
-                    <i class="fa-solid fa-check validation-feedback valid-icon"></i>
-                    <i class="fa-solid fa-xmark validation-feedback invalid-icon"></i>
-
+                    <label class="field-label" for="national_id">
+                        <i class="fa-regular fa-id-card"></i> رقم الهوية
+                    </label>
+                    <div class="input-wrap">
+                        <input type="text" id="national_id" name="national_id" class="form-control"
+                            value="{{ form.national_id.value|default:'' }}" required maxlength="9"
+                            inputmode="numeric" dir="ltr">
+                        <i class="fa-solid fa-check validation-feedback valid-icon"></i>
+                        <i class="fa-solid fa-xmark validation-feedback invalid-icon"></i>
+                    </div>
+                    <div class="nid-indicator" id="patientNidIndicator" style="margin-top: 5px;">
+                        <span class="dot"></span>
+                        <span class="msg">9 أرقام</span>
+                    </div>
                     {% if form.national_id.errors %}
-                    <div class="error-msg"><i class="fa-solid fa-circle-exclamation"></i>
-                        {{ form.national_id.errors.0}}</div>
+                    <div class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> {{ form.national_id.errors.0 }}</div>
                     {% endif %}
                 </div>
 
                 <!-- City -->
                 <div class="input-group">
-                    <select id="city" name="city" class="form-control" required style="padding-top: 16px;">
-                        <option value="" disabled selected></option>
-                        {% for city in form.fields.city.queryset %}
-                        <option value="{{ city.id }}" {% if form.city.value|stringformat:"s" == city.id|stringformat:"s" %}selected{% endif %}>
-                            {{ city.name }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                    <label class="floating-label" for="city" style="background: transparent;">المدينة</label>
-                    <i class="fa-solid fa-location-dot input-icon"></i>
-                    <i class="fa-solid fa-chevron-down select-chevron"></i>
+                    <label class="field-label" for="city">
+                        <i class="fa-solid fa-location-dot"></i> المدينة
+                    </label>
+                    <div class="input-wrap">
+                        <select id="city" name="city" class="form-control" required>
+                            <option value="" disabled selected>اختر مدينتك</option>
+                            {% for city in form.fields.city.queryset %}
+                            <option value="{{ city.id }}" {% if form.city.value|stringformat:"s" == city.id|stringformat:"s" %}selected{% endif %}>
+                                {{ city.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <span class="select-chevron"><i class="fa-solid fa-chevron-down"></i></span>
+                    </div>
                     {% if form.city.errors %}
                     <div class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> {{ form.city.errors.0 }}</div>
                     {% endif %}
                 </div>
 
-
-
                 <!-- Password -->
                 <div class="input-group">
-                    <input type="password" id="password1" name="password1" class="form-control" required
-                        placeholder=" ">
-                    <label class="floating-label" for="password1">كلمة المرور</label>
-                    <i class="fa-solid fa-lock input-icon"></i>
-
+                    <label class="field-label" for="password1">
+                        <i class="fa-solid fa-lock"></i> كلمة المرور
+                    </label>
+                    <div class="input-wrap">
+                        <input type="password" id="password1" name="password1" class="form-control" required
+                            autocomplete="new-password">
+                        <i class="fa-solid fa-check validation-feedback valid-icon"></i>
+                        <i class="fa-solid fa-xmark validation-feedback invalid-icon"></i>
+                    </div>
                     <div class="password-strength">
                         <div class="strength-bar" id="strength-bar"></div>
                     </div>
                     <div class="strength-text" id="strength-text"></div>
-
                     {% if form.password1.errors %}
-                    <div class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> {{ form.password1.errors.0 }}
-                    </div>
+                    <div class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> {{ form.password1.errors.0 }}</div>
                     {% endif %}
                 </div>
 
                 <!-- Confirm Password -->
                 <div class="input-group">
-                    <input type="password" id="password2" name="password2" class="form-control" required
-                        placeholder=" ">
-                    <label class="floating-label" for="password2">تأكيد كلمة المرور</label>
-                    <i class="fa-solid fa-lock input-icon"></i>
-                    <i class="fa-solid fa-check validation-feedback valid-icon"></i>
-                    {% if form.password2.errors %}
-                    <div class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> {{ form.password2.errors.0 }}
+                    <label class="field-label" for="password2">
+                        <i class="fa-solid fa-lock"></i> تأكيد كلمة المرور
+                    </label>
+                    <div class="input-wrap">
+                        <input type="password" id="password2" name="password2" class="form-control" required
+                            autocomplete="new-password">
+                        <i class="fa-solid fa-check validation-feedback valid-icon"></i>
+                        <i class="fa-solid fa-xmark validation-feedback invalid-icon"></i>
                     </div>
+                    {% if form.password2.errors %}
+                    <div class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> {{ form.password2.errors.0 }}</div>
                     {% endif %}
                 </div>
             </div>
@@ -558,6 +554,21 @@
         // =========================
         // National ID Validation
         // =========================
+        const nidIndicator = document.getElementById('patientNidIndicator');
+        function updateNidIndicator(val) {
+            if (!nidIndicator) return;
+            var msg = nidIndicator.querySelector('.msg');
+            nidIndicator.classList.remove('valid', 'invalid');
+            if (!val) {
+                msg.textContent = '9 أرقام';
+            } else if (val.length === 9) {
+                nidIndicator.classList.add('valid');
+                msg.textContent = 'صيغة صحيحة ✓';
+            } else {
+                nidIndicator.classList.add('invalid');
+                msg.textContent = val.length + ' / 9 أرقام';
+            }
+        }
         if (nationalIdInput) {
             nationalIdInput.addEventListener('input', function () {
                 const val = this.value.replace(/\D/g, '');
@@ -572,7 +583,10 @@
                 } else {
                     this.classList.remove('valid', 'invalid');
                 }
+                updateNidIndicator(val);
             });
+            // Run on load for pre-filled values
+            if (nationalIdInput.value) updateNidIndicator(nationalIdInput.value.replace(/\D/g, ''));
         }
 
         // =========================

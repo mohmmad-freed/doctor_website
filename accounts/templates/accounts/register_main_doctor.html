@@ -52,29 +52,17 @@
                         المعلومات الشخصية
                     </h3>
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-                        <div class="form-group">
-                            <label for="{{ form.first_name.id_for_label }}">الاسم الأول <span class="required-star">*</span></label>
-                            <input type="text"
-                                   name="{{ form.first_name.name }}"
-                                   id="{{ form.first_name.id_for_label }}"
-                                   value="{{ form.first_name.value|default:'' }}"
-                                   placeholder="محمد">
-                            <span class="field-error" id="err-first_name">
-                                {% if form.first_name.errors %}{{ form.first_name.errors|first }}{% endif %}
-                            </span>
-                        </div>
-                        <div class="form-group">
-                            <label for="{{ form.last_name.id_for_label }}">الاسم الأخير <span class="required-star">*</span></label>
-                            <input type="text"
-                                   name="{{ form.last_name.name }}"
-                                   id="{{ form.last_name.id_for_label }}"
-                                   value="{{ form.last_name.value|default:'' }}"
-                                   placeholder="أحمد">
-                            <span class="field-error" id="err-last_name">
-                                {% if form.last_name.errors %}{{ form.last_name.errors|first }}{% endif %}
-                            </span>
-                        </div>
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label for="{{ form.name.id_for_label }}">الاسم الكامل <span class="required-star">*</span></label>
+                        <input type="text"
+                               name="{{ form.name.name }}"
+                               id="{{ form.name.id_for_label }}"
+                               value="{{ form.name.value|default:'' }}"
+                               placeholder="مثال: محمد أحمد"
+                               autocomplete="name">
+                        <span class="field-error" id="err-name">
+                            {% if form.name.errors %}{{ form.name.errors|first }}{% endif %}
+                        </span>
                     </div>
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
@@ -97,10 +85,15 @@
                                    name="{{ form.national_id.name }}"
                                    id="{{ form.national_id.id_for_label }}"
                                    value="{{ form.national_id.value|default:'' }}"
-                                   placeholder="9 أرقام"
+                                   placeholder="000000000"
                                    maxlength="9"
                                    inputmode="numeric"
-                                   dir="ltr">
+                                   dir="ltr"
+                                   oninput="checkNID(this, 'mainDrNidIndicator')">
+                            <div class="nid-indicator" id="mainDrNidIndicator">
+                                <span class="dot"></span>
+                                <span class="msg">9 أرقام</span>
+                            </div>
                             <span class="field-error" id="err-national_id">
                                 {% if form.national_id.errors %}{{ form.national_id.errors|first }}{% endif %}
                             </span>
@@ -355,6 +348,25 @@
         grid-template-columns: 1fr 1fr;
     }
 }
+
+.nid-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 5px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-neutral-500);
+    transition: color 0.2s;
+}
+.nid-indicator.valid   { color: #10b981; }
+.nid-indicator.invalid { color: #ef4444; }
+.nid-indicator .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+}
 </style>
 
 <script>
@@ -393,14 +405,9 @@
         else clearError("activation_code");
     });
 
-    bindLive("first_name", function (v) {
-        if (!v.trim()) showError("first_name", "يرجى إدخال الاسم الأول.");
-        else clearError("first_name");
-    });
-
-    bindLive("last_name", function (v) {
-        if (!v.trim()) showError("last_name", "يرجى إدخال الاسم الأخير.");
-        else clearError("last_name");
+    bindLive("name", function (v) {
+        if (!v.trim()) showError("name", "يرجى إدخال الاسم الكامل.");
+        else clearError("name");
     });
 
     bindLive("phone", function (v) {
@@ -490,8 +497,7 @@
         }
 
         require("activation_code", "يرجى إدخال كود التفعيل.");
-        require("first_name",      "يرجى إدخال الاسم الأول.");
-        require("last_name",       "يرجى إدخال الاسم الأخير.");
+        require("name",            "يرجى إدخال الاسم الكامل.");
         require("clinic_name",     "يرجى إدخال اسم العيادة.");
         require("clinic_address",  "يرجى إدخال عنوان العيادة.");
 
@@ -581,6 +587,29 @@
             }
         }
     });
+
+    // ── NID live counter indicator ─────────────────────────────
+    window.checkNID = function (input, indicatorId) {
+        var val = input.value.replace(/\D/g, '');
+        if (input.value !== val) input.value = val;
+        var indicator = document.getElementById(indicatorId);
+        if (!indicator) return;
+        var msg = indicator.querySelector('.msg');
+        indicator.classList.remove('valid', 'invalid');
+        if (!val) {
+            msg.textContent = '9 أرقام';
+        } else if (val.length === 9) {
+            indicator.classList.add('valid');
+            msg.textContent = 'صيغة صحيحة ✓';
+        } else {
+            indicator.classList.add('invalid');
+            msg.textContent = val.length + ' / 9 أرقام';
+        }
+    };
+    (function () {
+        var nid = document.getElementById('{{ form.national_id.id_for_label }}');
+        if (nid && nid.value) checkNID(nid, 'mainDrNidIndicator');
+    })();
 
     // Clear specialty error on any checkbox change
     form.querySelectorAll(".specialty-checkbox-input").forEach(function (cb) {

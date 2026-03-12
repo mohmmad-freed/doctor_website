@@ -41,7 +41,13 @@
     
     <div class="form-group">
         <label for="national_id">National ID *</label>
-        <input type="text" id="national_id" name="national_id" value="{{ form.national_id.value|default:'' }}" placeholder="9 digits" required>
+        <input type="text" id="national_id" name="national_id" value="{{ form.national_id.value|default:'' }}"
+            placeholder="000000000" maxlength="9" inputmode="numeric" dir="ltr" required
+            oninput="checkNID(this, 'nidIndicator')">
+        <div id="nidIndicator" style="display:flex;align-items:center;gap:0.4rem;margin-top:4px;font-size:0.8rem;font-weight:600;color:#6b7280;">
+            <span id="nidDot" style="width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;"></span>
+            <span id="nidMsg">9 أرقام</span>
+        </div>
         {% if form.national_id.errors %}
             <ul class="errorlist">
                 {% for error in form.national_id.errors %}
@@ -114,4 +120,30 @@
     <p><a href="{% url 'accounts:register' %}">← Back to registration options</a></p>
     <p>Already have an account? <a href="{% url 'accounts:login' %}">Login here</a></p>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function checkNID(input, indicatorId) {
+    var val = input.value.replace(/\D/g, '');
+    if (input.value !== val) input.value = val;
+    var wrap = document.getElementById(indicatorId);
+    var msg = document.getElementById('nidMsg');
+    if (!wrap || !msg) return;
+    wrap.style.color = '#6b7280';
+    if (!val) {
+        msg.textContent = '9 أرقام';
+    } else if (val.length === 9) {
+        wrap.style.color = '#10b981';
+        msg.textContent = 'صيغة صحيحة ✓';
+    } else {
+        wrap.style.color = '#ef4444';
+        msg.textContent = val.length + ' / 9 أرقام';
+    }
+}
+(function () {
+    var nid = document.getElementById('national_id');
+    if (nid && nid.value) checkNID(nid, 'nidIndicator');
+})();
+</script>
 {% endblock %}

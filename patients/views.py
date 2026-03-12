@@ -15,7 +15,7 @@ from .permissions import IsPatient
 from .models import PatientProfile
 from .forms import UserUpdateForm, PatientProfileUpdateForm
 from clinics.models import Clinic, ClinicStaff
-from doctors.models import Specialty, DoctorProfile, DoctorIntakeFormTemplate
+from doctors.models import Specialty, DoctorProfile, DoctorIntakeFormTemplate, ClinicDoctorCredential
 from appointments.models import AppointmentType
 from appointments.services.patient_appointments_service import (
     cancel_appointment,
@@ -59,8 +59,11 @@ def browse_doctors(request):
             selected_specialty_id = None
 
     # --- Build filtered doctor user IDs ---
-    # Start with all doctor/main_doctor users
-    doctor_users = User.objects.filter(role__in=["DOCTOR", "MAIN_DOCTOR"])
+    # Only DOCTOR role (not MAIN_DOCTOR/clinic owners), and only identity-verified
+    doctor_users = User.objects.filter(
+        role="DOCTOR",
+        doctor_verification__identity_status="IDENTITY_VERIFIED",
+    )
 
     # Apply specialty filter
     if selected_specialty:
@@ -88,14 +91,12 @@ def browse_doctors(request):
         )
         matching_clinic_ids = set(matching_clinics.values_list("id", flat=True))
 
-        # Doctors who are main_doctor of matching clinics
-        main_doc_ids = matching_clinics.values_list("main_doctor_id", flat=True)
-        # Doctors who are staff at matching clinics
+        # Doctors who are staff at matching clinics (DOCTOR role only, not owner)
         staff_doc_ids = ClinicStaff.objects.filter(
             clinic__in=matching_clinics, role="DOCTOR", is_active=True
         ).values_list("user_id", flat=True)
 
-        clinic_match = Q(id__in=list(main_doc_ids) + list(staff_doc_ids))
+        clinic_match = Q(id__in=list(staff_doc_ids))
 
         doctor_users = doctor_users.filter(name_match | specialty_match | clinic_match)
     else:
@@ -112,9 +113,6 @@ def browse_doctors(request):
     if search_query or selected_specialty:
         relevant_clinic_ids = set()
         for clinic in clinics:
-            c_main = clinic.main_doctor
-            if c_main and c_main.id in filtered_doctor_ids:
-                relevant_clinic_ids.add(clinic.id)
             staff = ClinicStaff.objects.filter(
                 clinic=clinic, role="DOCTOR", is_active=True
             ).values_list("user_id", flat=True)
@@ -127,13 +125,16 @@ def browse_doctors(request):
     doctors_by_clinic = []
     for clinic in clinics:
         doctors = []
-        main_doc = clinic.main_doctor
 
-        # Main doctor
-        if main_doc and main_doc.id in filtered_doctor_ids:
-            doctors.append(main_doc)
+        # Doctors with clinic-level credential verification for this clinic
+        clinic_credential_ids = set(
+            ClinicDoctorCredential.objects.filter(
+                clinic=clinic,
+                credential_status="CREDENTIALS_VERIFIED",
+            ).values_list("doctor_id", flat=True)
+        )
 
-        # Staff doctors
+        # Staff doctors (DOCTOR role only — clinic owner is never shown here)
         staff_doctors = ClinicStaff.objects.filter(
             clinic=clinic,
             role="DOCTOR",
@@ -141,17 +142,17 @@ def browse_doctors(request):
         ).select_related("user")
 
         for staff in staff_doctors:
-            if staff.user not in doctors and staff.user.id in filtered_doctor_ids:
+            if (
+                staff.user not in doctors
+                and staff.user.id in filtered_doctor_ids
+                and staff.user.id in clinic_credential_ids
+            ):
                 doctors.append(staff.user)
 
-        # If searching by clinic name, include the clinic even if
-        # no doctors matched by name/specialty (they're still at that clinic)
+        # If searching by clinic name, include all fully-verified doctors at that clinic
         if not doctors and matching_clinic_ids and clinic.id in matching_clinic_ids:
-            # Re-add all doctors of this clinic (unfiltered by name/specialty)
-            if main_doc and main_doc not in doctors:
-                doctors.append(main_doc)
             for staff in staff_doctors:
-                if staff.user not in doctors:
+                if staff.user not in doctors and staff.user.id in clinic_credential_ids:
                     doctors.append(staff.user)
 
         if doctors:

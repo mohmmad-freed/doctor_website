@@ -553,8 +553,7 @@ def register_clinic_step1(request):
             if user_has_email:
                 # Existing user already has email — skip stage 2
                 reg["stage2_done"] = True
-                reg["first_name"] = None
-                reg["last_name"] = None
+                reg["name"] = None
                 reg["email"] = existing.email
                 reg["password"] = None
 
@@ -589,7 +588,7 @@ def register_clinic_step2(request):
     if request.method == "POST":
         if request.POST.get("action") == "back":
             # Clear everything beyond stage 1.
-            for k in ("stage2_done", "first_name", "last_name", "email", "password",
+            for k in ("stage2_done", "name", "email", "password",
                       "stage3_done", "clinic_name", "clinic_address", "clinic_city_id",
                       "specialty_ids", "clinic_description", "phone_verified"):
                 reg.pop(k, None)
@@ -602,12 +601,10 @@ def register_clinic_step2(request):
             reg["stage2_done"] = True
             reg["email"] = d["email"]
             if user_exists:
-                reg["first_name"] = None
-                reg["last_name"] = None
+                reg["name"] = None
                 reg["password"] = None
             else:
-                reg["first_name"] = d["first_name"]
-                reg["last_name"] = d["last_name"]
+                reg["name"] = d["name"]
                 reg["password"] = d["password"]
             request.session["clinic_reg"] = reg
             return redirect("accounts:register_clinic_step3")
@@ -617,10 +614,8 @@ def register_clinic_step2(request):
         if reg.get("email"):
             initial["email"] = reg["email"]
         if not user_exists:
-            if reg.get("first_name"):
-                initial["first_name"] = reg["first_name"]
-            if reg.get("last_name"):
-                initial["last_name"] = reg["last_name"]
+            if reg.get("name"):
+                initial["name"] = reg["name"]
         form = FormClass(initial=initial, phone=phone)
 
     return render(request, "accounts/register_clinic_step2.html", {
@@ -727,7 +722,7 @@ def register_clinic_verify_phone(request):
                 existing = User.objects.filter(phone=phone).first()
                 recipient_name = existing.name if existing else ""
             else:
-                recipient_name = f"{reg.get('first_name', '')} {reg.get('last_name', '')}".strip()
+                recipient_name = reg.get('name', '')
             send_email_otp(reg["email"], recipient_name)
             return redirect("accounts:register_clinic_verify_email")
         messages.error(request, msg)
@@ -761,7 +756,7 @@ def register_clinic_verify_email(request):
                 existing = User.objects.filter(phone=reg["phone"]).first()
                 recipient_name = existing.name if existing else ""
             else:
-                recipient_name = f"{reg.get('first_name', '')} {reg.get('last_name', '')}".strip()
+                recipient_name = reg.get('name', '')
             success, msg = send_email_otp(email, recipient_name)
             if success:
                 messages.success(request, msg)
@@ -801,7 +796,7 @@ def register_clinic_verify_email(request):
                     user = User(
                         phone=reg["phone"],
                         national_id=reg["national_id"],
-                        name=f"{reg['first_name']} {reg['last_name']}".strip(),
+                        name=reg['name'],
                         email=email,
                         email_verified=True,
                         is_verified=True,
