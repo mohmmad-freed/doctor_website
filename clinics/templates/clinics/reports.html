@@ -1,0 +1,787 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}التقارير والتحليلات{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ── Layout ─────────────────────────────────────────────────────────── */
+    .reports-wrapper {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 1rem 3rem;
+    }
+    .page-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 2rem;
+    }
+    .page-header h1 {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--color-text-main);
+        margin: 0;
+    }
+    .page-header .page-subtitle {
+        font-size: 0.9rem;
+        color: var(--color-text-muted);
+        margin: 0.2rem 0 0;
+    }
+
+    /* ── Section headers ─────────────────────────────────────────────────── */
+    .section-title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--color-text-main);
+        margin: 2rem 0 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        border-bottom: 2px solid var(--color-surface-border);
+        padding-bottom: 0.5rem;
+    }
+    .section-title i { color: var(--color-primary-500); }
+
+    /* ── KPI Cards ───────────────────────────────────────────────────────── */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 0.5rem;
+    }
+    .kpi-card {
+        background: var(--color-surface-card);
+        border: 1px solid var(--color-surface-border);
+        border-radius: 10px;
+        padding: 1.2rem 1.4rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        transition: box-shadow 0.15s;
+    }
+    .kpi-card:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
+    .kpi-icon {
+        width: 36px; height: 36px;
+        border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1rem;
+        margin-bottom: 0.4rem;
+    }
+    .kpi-icon-blue   { background: rgba(0,120,212,0.12); color: #0078d4; }
+    .kpi-icon-green  { background: rgba(5,150,105,0.12); color: #059669; }
+    .kpi-icon-orange { background: rgba(217,119,6,0.12);  color: #d97706; }
+    .kpi-icon-red    { background: rgba(220,38,38,0.12);  color: #dc2626; }
+    .kpi-icon-purple { background: rgba(124,58,237,0.12); color: #7c3aed; }
+    .kpi-icon-teal   { background: rgba(0,191,165,0.12);  color: #00bfa5; }
+    .kpi-value {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: var(--color-text-main);
+        line-height: 1;
+    }
+    .kpi-label {
+        font-size: 0.82rem;
+        color: var(--color-text-muted);
+        font-weight: 500;
+    }
+    .kpi-sub {
+        font-size: 0.78rem;
+        color: var(--color-text-muted);
+        margin-top: 0.1rem;
+    }
+    .kpi-sub .up   { color: #059669; }
+    .kpi-sub .down { color: #dc2626; }
+
+    /* ── Rate cards row ──────────────────────────────────────────────────── */
+    .rate-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 1rem;
+        margin-bottom: 0.5rem;
+    }
+    .rate-card {
+        background: var(--color-surface-card);
+        border: 1px solid var(--color-surface-border);
+        border-radius: 10px;
+        padding: 1rem 1.2rem;
+        text-align: center;
+    }
+    .rate-value {
+        font-size: 2rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+    .rate-label { font-size: 0.82rem; color: var(--color-text-muted); margin-top: 0.3rem; }
+    .rate-green  { color: #059669; }
+    .rate-red    { color: #dc2626; }
+    .rate-orange { color: #d97706; }
+
+    /* ── Chart cards ─────────────────────────────────────────────────────── */
+    .charts-2col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.25rem;
+        margin-bottom: 1.25rem;
+    }
+    .charts-3col {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 1.25rem;
+        margin-bottom: 1.25rem;
+    }
+    @media (max-width: 900px) {
+        .charts-2col, .charts-3col { grid-template-columns: 1fr; }
+    }
+    @media (min-width: 901px) and (max-width: 1100px) {
+        .charts-3col { grid-template-columns: 1fr 1fr; }
+    }
+    .chart-card {
+        background: var(--color-surface-card);
+        border: 1px solid var(--color-surface-border);
+        border-radius: 10px;
+        padding: 1.25rem 1.4rem;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    .chart-card-full {
+        background: var(--color-surface-card);
+        border: 1px solid var(--color-surface-border);
+        border-radius: 10px;
+        padding: 1.25rem 1.4rem;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        margin-bottom: 1.25rem;
+    }
+    .chart-title {
+        font-size: 0.92rem;
+        font-weight: 700;
+        color: var(--color-text-main);
+        margin: 0 0 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+    .chart-title i { color: var(--color-primary-500); font-size: 0.85rem; }
+    .chart-container { position: relative; }
+    .chart-container canvas { max-width: 100%; }
+
+    /* ── Data table ──────────────────────────────────────────────────────── */
+    .data-table-wrap {
+        overflow-x: auto;
+        border-radius: 8px;
+        border: 1px solid var(--color-surface-border);
+    }
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.88rem;
+    }
+    .data-table th {
+        background: var(--color-surface-ground, #f9fafb);
+        color: var(--color-text-muted);
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 0.65rem 1rem;
+        border-bottom: 1px solid var(--color-surface-border);
+        white-space: nowrap;
+    }
+    [data-theme="dark"] .data-table th {
+        background: var(--color-surface-card);
+    }
+    .data-table td {
+        padding: 0.7rem 1rem;
+        border-bottom: 1px solid var(--color-surface-border);
+        color: var(--color-text-body);
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: var(--color-surface-ground, #f9fafb); }
+    [data-theme="dark"] .data-table tr:hover td { background: rgba(255,255,255,0.03); }
+
+    /* ── Progress bar ────────────────────────────────────────────────────── */
+    .progress-bar-wrap {
+        background: var(--color-surface-border);
+        border-radius: 9999px;
+        height: 6px;
+        width: 100%;
+        overflow: hidden;
+    }
+    .progress-bar-fill {
+        height: 100%;
+        border-radius: 9999px;
+        transition: width 0.3s;
+    }
+    .fill-green  { background: #10b981; }
+    .fill-red    { background: #ef4444; }
+    .fill-orange { background: #f59e0b; }
+    .fill-blue   { background: #3b82f6; }
+
+    /* ── Badge ───────────────────────────────────────────────────────────── */
+    .badge-sm {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+    .badge-active   { background: #d1fae5; color: #065f46; }
+    .badge-pending  { background: #dbeafe; color: #1e40af; }
+    .badge-suspended{ background: #fef3c7; color: #92400e; }
+    [data-theme="dark"] .badge-active   { background: #064e3b; color: #6ee7b7; }
+    [data-theme="dark"] .badge-pending  { background: #1e3a5f; color: #93c5fd; }
+    [data-theme="dark"] .badge-suspended{ background: #451a03; color: #fcd34d; }
+
+    /* ── Empty state ─────────────────────────────────────────────────────── */
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: var(--color-text-muted);
+    }
+    .empty-state i { font-size: 3rem; opacity: 0.3; margin-bottom: 1rem; display: block; }
+
+    /* ── Revenue row ─────────────────────────────────────────────────────── */
+    .revenue-highlight {
+        font-weight: 700;
+        color: #059669;
+    }
+    [data-theme="dark"] .revenue-highlight { color: #34d399; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="reports-wrapper">
+
+    <!-- Page header -->
+    <div class="page-header">
+        <div>
+            <h1><i class="fa-solid fa-chart-line" style="color:var(--color-primary-500);margin-left:0.5rem;"></i>التقارير والتحليلات</h1>
+            <p class="page-subtitle">بيانات مجمّعة لجميع عياداتك — مفيدة لتحسين الجودة واتخاذ القرار</p>
+        </div>
+    </div>
+
+    {% if no_clinics %}
+    <div class="empty-state">
+        <i class="fa-solid fa-hospital"></i>
+        <p>لا توجد عيادات مسجلة بعد.</p>
+    </div>
+    {% else %}
+
+    <!-- ══════════════════════════════════════════════════════════
+         1. KPI SUMMARY
+    ══════════════════════════════════════════════════════════ -->
+    <div class="section-title"><i class="fa-solid fa-gauge-high"></i> المقاييس الرئيسية</div>
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-icon kpi-icon-blue"><i class="fa-solid fa-calendar-check"></i></div>
+            <div class="kpi-value">{{ total_appointments }}</div>
+            <div class="kpi-label">إجمالي المواعيد</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon kpi-icon-green"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="kpi-value">{{ completed }}</div>
+            <div class="kpi-label">مواعيد مكتملة</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon kpi-icon-purple"><i class="fa-solid fa-users"></i></div>
+            <div class="kpi-value">{{ total_unique_patients }}</div>
+            <div class="kpi-label">مرضى مختلفون</div>
+            <div class="kpi-sub">
+                <span class="up">{{ new_patients }}</span> جدد &nbsp;·&nbsp;
+                <span>{{ returning_patients }}</span> متكررون
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon kpi-icon-teal"><i class="fa-solid fa-user-doctor"></i></div>
+            <div class="kpi-value">{{ total_active_doctors }}</div>
+            <div class="kpi-label">أطباء نشطون</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon kpi-icon-orange"><i class="fa-solid fa-hospital"></i></div>
+            <div class="kpi-value">{{ total_clinics }}</div>
+            <div class="kpi-label">عياداتي</div>
+        </div>
+        {% if total_revenue > 0 %}
+        <div class="kpi-card">
+            <div class="kpi-icon kpi-icon-green"><i class="fa-solid fa-coins"></i></div>
+            <div class="kpi-value" style="font-size:1.35rem;">{{ total_revenue|floatformat:0 }}</div>
+            <div class="kpi-label">الإيرادات التقديرية (₪)</div>
+            <div class="kpi-sub">من المواعيد المكتملة</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Rate cards -->
+    <div class="rate-grid" style="margin-top:1rem;">
+        <div class="rate-card">
+            <div class="rate-value rate-green">{{ completion_rate }}%</div>
+            <div class="rate-label"><i class="fa-solid fa-circle-check"></i> معدل الإكمال</div>
+        </div>
+        <div class="rate-card">
+            <div class="rate-value rate-red">{{ no_show_rate }}%</div>
+            <div class="rate-label"><i class="fa-solid fa-user-slash"></i> معدل عدم الحضور</div>
+        </div>
+        <div class="rate-card">
+            <div class="rate-value rate-orange">{{ cancel_rate }}%</div>
+            <div class="rate-label"><i class="fa-solid fa-ban"></i> معدل الإلغاء</div>
+        </div>
+        <div class="rate-card">
+            <div class="rate-value" style="color:var(--color-primary-500);">
+                {% if total_unique_patients > 0 %}{{ returning_patients|floatformat:0 }}{% else %}0{% endif %}
+            </div>
+            <div class="rate-label"><i class="fa-solid fa-rotate"></i> مرضى عائدون</div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         2. APPOINTMENTS OVER TIME + STATUS BREAKDOWN
+    ══════════════════════════════════════════════════════════ -->
+    <div class="section-title"><i class="fa-solid fa-calendar-days"></i> المواعيد</div>
+    <div class="chart-card-full">
+        <div class="chart-title"><i class="fa-solid fa-chart-bar"></i> حجم المواعيد — آخر 12 شهراً</div>
+        <div class="chart-container" style="height:260px;">
+            <canvas id="chartMonthly"></canvas>
+        </div>
+    </div>
+
+    <div class="charts-2col">
+        <div class="chart-card">
+            <div class="chart-title"><i class="fa-solid fa-chart-pie"></i> توزيع المواعيد حسب الحالة</div>
+            <div class="chart-container" style="height:240px;">
+                <canvas id="chartStatus"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title"><i class="fa-solid fa-chart-bar"></i> توزيع المواعيد حسب يوم الأسبوع</div>
+            <div class="chart-container" style="height:240px;">
+                <canvas id="chartDow"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="chart-card-full">
+        <div class="chart-title"><i class="fa-solid fa-clock"></i> الساعات الذروة (8 ص — 9 م)</div>
+        <div class="chart-container" style="height:220px;">
+            <canvas id="chartHours"></canvas>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         3. DOCTORS
+    ══════════════════════════════════════════════════════════ -->
+    {% if doctor_labels_json != '[]' %}
+    <div class="section-title"><i class="fa-solid fa-user-doctor"></i> الأطباء</div>
+    <div class="chart-card-full">
+        <div class="chart-title"><i class="fa-solid fa-ranking-star"></i> أكثر الأطباء مواعيد (أعلى 10)</div>
+        <div class="chart-container" style="height:260px;">
+            <canvas id="chartDoctors"></canvas>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ══════════════════════════════════════════════════════════
+         4. PATIENTS
+    ══════════════════════════════════════════════════════════ -->
+    <div class="section-title"><i class="fa-solid fa-users"></i> المرضى</div>
+    <div class="charts-2col">
+        <div class="chart-card">
+            <div class="chart-title"><i class="fa-solid fa-venus-mars"></i> توزيع الجنس</div>
+            <div class="chart-container" style="height:240px;">
+                <canvas id="chartGender"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title"><i class="fa-solid fa-user-plus"></i> مرضى جدد مقابل متكررون</div>
+            <div class="chart-container" style="height:240px;">
+                <canvas id="chartNewReturning"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         5. SERVICES & REVENUE
+    ══════════════════════════════════════════════════════════ -->
+    {% if type_labels_json != '[]' %}
+    <div class="section-title"><i class="fa-solid fa-stethoscope"></i> الخدمات والأنواع</div>
+    <div class="chart-card-full">
+        <div class="chart-title"><i class="fa-solid fa-list-ol"></i> أكثر أنواع المواعيد طلباً</div>
+        <div class="chart-container" style="height:240px;">
+            <canvas id="chartTypes"></canvas>
+        </div>
+    </div>
+
+    {% if revenue_by_type %}
+    <div class="chart-card-full">
+        <div class="chart-title"><i class="fa-solid fa-coins"></i> الإيرادات التقديرية حسب الخدمة (₪)</div>
+        <div class="data-table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>الخدمة</th>
+                        <th>عدد المواعيد المكتملة</th>
+                        <th>الإيرادات التقديرية (₪)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in revenue_by_type %}
+                    <tr>
+                        <td style="color:var(--color-text-muted);">{{ forloop.counter }}</td>
+                        <td style="font-weight:600;color:var(--color-text-main);">{{ r.name }}</td>
+                        <td>{{ r.count }}</td>
+                        <td class="revenue-highlight">{{ r.revenue|floatformat:0 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    <!-- ══════════════════════════════════════════════════════════
+         6. PER-CLINIC BREAKDOWN
+    ══════════════════════════════════════════════════════════ -->
+    {% if clinic_stats|length > 1 %}
+    <div class="section-title"><i class="fa-solid fa-hospital-user"></i> تفصيل لكل عيادة</div>
+    <div class="chart-card-full" style="padding:0;">
+        <div class="data-table-wrap" style="border:none;border-radius:10px;">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>العيادة</th>
+                        <th>الحالة</th>
+                        <th>إجمالي المواعيد</th>
+                        <th>مكتملة</th>
+                        <th>معدل الإكمال</th>
+                        <th>لم يحضر</th>
+                        <th>ملغى</th>
+                        <th>أطباء</th>
+                        <th>سكرتارية</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in clinic_stats %}
+                    <tr>
+                        <td style="font-weight:600;color:var(--color-text-main);">{{ s.clinic.name }}</td>
+                        <td>
+                            {% if s.clinic.status == "ACTIVE" %}
+                                <span class="badge-sm badge-active">نشطة</span>
+                            {% elif s.clinic.status == "PENDING" %}
+                                <span class="badge-sm badge-pending">قيد المراجعة</span>
+                            {% else %}
+                                <span class="badge-sm badge-suspended">موقوفة</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ s.total }}</td>
+                        <td>{{ s.completed }}</td>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:0.5rem;">
+                                <span style="font-weight:700;color:{% if s.completion_rate >= 70 %}#059669{% elif s.completion_rate >= 40 %}#d97706{% else %}#dc2626{% endif %};">{{ s.completion_rate }}%</span>
+                                <div class="progress-bar-wrap" style="width:60px;">
+                                    <div class="progress-bar-fill {% if s.completion_rate >= 70 %}fill-green{% elif s.completion_rate >= 40 %}fill-orange{% else %}fill-red{% endif %}"
+                                         style="width:{{ s.completion_rate }}%;"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td style="color:#dc2626;font-weight:600;">{{ s.no_show }} <small style="color:var(--color-text-muted);font-weight:400;">({{ s.no_show_rate }}%)</small></td>
+                        <td style="color:#d97706;font-weight:600;">{{ s.cancelled }} <small style="color:var(--color-text-muted);font-weight:400;">({{ s.cancel_rate }}%)</small></td>
+                        <td>{{ s.doctors }}</td>
+                        <td>{{ s.secretaries }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Single-clinic compact summary -->
+    {% if clinic_stats|length == 1 %}
+    {% with s=clinic_stats.0 %}
+    <div class="section-title"><i class="fa-solid fa-hospital-user"></i> ملخص العيادة</div>
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-icon kpi-icon-green"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="kpi-value">{{ s.completion_rate }}%</div>
+            <div class="kpi-label">معدل الإكمال</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon kpi-icon-red"><i class="fa-solid fa-user-slash"></i></div>
+            <div class="kpi-value">{{ s.no_show_rate }}%</div>
+            <div class="kpi-label">معدل عدم الحضور</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon kpi-icon-orange"><i class="fa-solid fa-ban"></i></div>
+            <div class="kpi-value">{{ s.cancel_rate }}%</div>
+            <div class="kpi-label">معدل الإلغاء</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon kpi-icon-teal"><i class="fa-solid fa-user-doctor"></i></div>
+            <div class="kpi-value">{{ s.doctors }}</div>
+            <div class="kpi-label">أطباء نشطون</div>
+        </div>
+    </div>
+    {% endwith %}
+    {% endif %}
+
+    {% if total_appointments == 0 %}
+    <div class="empty-state" style="margin-top:2rem;">
+        <i class="fa-solid fa-chart-line"></i>
+        <p>لا توجد بيانات مواعيد بعد — ستظهر التقارير بمجرد بدء الحجوزات.</p>
+    </div>
+    {% endif %}
+
+    {% endif %}{# end if not no_clinics #}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+    // ── Detect theme ──────────────────────────────────────────────────────
+    function isDark() {
+        return document.documentElement.getAttribute('data-theme') === 'dark';
+    }
+    function textColor()   { return isDark() ? '#94a3b8' : '#64748b'; }
+    function gridColor()   { return isDark() ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)'; }
+    function legendColor() { return isDark() ? '#f1f5f9' : '#1e293b'; }
+
+    // ── Shared defaults ───────────────────────────────────────────────────
+    Chart.defaults.font.family = "'Cairo', 'Inter', sans-serif";
+    Chart.defaults.font.size   = 12;
+
+    function baseScales(yLabel) {
+        return {
+            x: {
+                ticks: { color: textColor() },
+                grid:  { color: gridColor() },
+            },
+            y: {
+                beginAtZero: true,
+                ticks: { color: textColor(), precision: 0 },
+                grid:  { color: gridColor() },
+                title: yLabel ? { display: true, text: yLabel, color: textColor() } : undefined,
+            }
+        };
+    }
+
+    function baseLegend() {
+        return { labels: { color: legendColor(), padding: 14 } };
+    }
+
+    // Colour palettes
+    const PALETTE_BAR   = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#84cc16','#ec4899','#14b8a6'];
+    const PALETTE_DONUT = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#84cc16'];
+    const STATUS_COLORS = {
+        'مكتمل':  '#10b981',
+        'مؤكد':   '#3b82f6',
+        'معلق':   '#94a3b8',
+        'حضر':    '#06b6d4',
+        'جارٍ':   '#8b5cf6',
+        'ملغى':   '#ef4444',
+        'لم يحضر':'#f59e0b',
+    };
+
+    // ── Data from Django ──────────────────────────────────────────────────
+    const monthlyLabels = {{ monthly_labels_json|safe }};
+    const monthlyData   = {{ monthly_data_json|safe }};
+    const statusLabels  = {{ status_labels_json|safe }};
+    const statusData    = {{ status_data_json|safe }};
+    const dowLabels     = {{ dow_labels_json|safe }};
+    const dowData       = {{ dow_data_json|safe }};
+    const hourLabels    = {{ hour_labels_json|safe }};
+    const hourData      = {{ hour_data_json|safe }};
+    const doctorLabels  = {{ doctor_labels_json|safe }};
+    const doctorData    = {{ doctor_data_json|safe }};
+    const typeLabels    = {{ type_labels_json|safe }};
+    const typeData      = {{ type_data_json|safe }};
+    const genderLabels  = {{ gender_labels_json|safe }};
+    const genderData    = {{ gender_data_json|safe }};
+    const nrLabels      = {{ new_returning_labels_json|safe }};
+    const nrData        = {{ new_returning_data_json|safe }};
+
+    // ── Monthly bar chart ─────────────────────────────────────────────────
+    new Chart(document.getElementById('chartMonthly'), {
+        type: 'bar',
+        data: {
+            labels: monthlyLabels,
+            datasets: [{
+                label: 'عدد المواعيد',
+                data: monthlyData,
+                backgroundColor: 'rgba(59,130,246,0.75)',
+                borderColor: '#3b82f6',
+                borderWidth: 1,
+                borderRadius: 5,
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: baseLegend() },
+            scales: baseScales('مواعيد'),
+        }
+    });
+
+    // ── Status doughnut ───────────────────────────────────────────────────
+    new Chart(document.getElementById('chartStatus'), {
+        type: 'doughnut',
+        data: {
+            labels: statusLabels,
+            datasets: [{
+                data: statusData,
+                backgroundColor: statusLabels.map(l => STATUS_COLORS[l] || '#94a3b8'),
+                borderWidth: 2,
+                borderColor: isDark() ? '#151e32' : '#fff',
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { ...baseLegend(), position: 'bottom' },
+            },
+            cutout: '60%',
+        }
+    });
+
+    // ── Day-of-week bar ───────────────────────────────────────────────────
+    new Chart(document.getElementById('chartDow'), {
+        type: 'bar',
+        data: {
+            labels: dowLabels,
+            datasets: [{
+                label: 'مواعيد',
+                data: dowData,
+                backgroundColor: PALETTE_BAR.slice(0, 7),
+                borderRadius: 5,
+                borderWidth: 0,
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: baseScales(),
+        }
+    });
+
+    // ── Peak hours bar ────────────────────────────────────────────────────
+    new Chart(document.getElementById('chartHours'), {
+        type: 'bar',
+        data: {
+            labels: hourLabels,
+            datasets: [{
+                label: 'مواعيد',
+                data: hourData,
+                backgroundColor: 'rgba(16,185,129,0.75)',
+                borderColor: '#10b981',
+                borderWidth: 1,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: baseScales('مواعيد'),
+        }
+    });
+
+    // ── Top doctors horizontal bar ────────────────────────────────────────
+    const doctorEl = document.getElementById('chartDoctors');
+    if (doctorEl && doctorLabels.length) {
+        new Chart(doctorEl, {
+            type: 'bar',
+            data: {
+                labels: doctorLabels,
+                datasets: [{
+                    label: 'مواعيد',
+                    data: doctorData,
+                    backgroundColor: PALETTE_BAR,
+                    borderRadius: 5,
+                    borderWidth: 0,
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { beginAtZero: true, ticks: { color: textColor(), precision: 0 }, grid: { color: gridColor() } },
+                    y: { ticks: { color: textColor() }, grid: { display: false } },
+                },
+            }
+        });
+    }
+
+    // ── Top appointment types horizontal bar ──────────────────────────────
+    const typeEl = document.getElementById('chartTypes');
+    if (typeEl && typeLabels.length) {
+        new Chart(typeEl, {
+            type: 'bar',
+            data: {
+                labels: typeLabels,
+                datasets: [{
+                    label: 'مواعيد',
+                    data: typeData,
+                    backgroundColor: PALETTE_BAR,
+                    borderRadius: 5,
+                    borderWidth: 0,
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { beginAtZero: true, ticks: { color: textColor(), precision: 0 }, grid: { color: gridColor() } },
+                    y: { ticks: { color: textColor() }, grid: { display: false } },
+                },
+            }
+        });
+    }
+
+    // ── Gender doughnut ───────────────────────────────────────────────────
+    new Chart(document.getElementById('chartGender'), {
+        type: 'doughnut',
+        data: {
+            labels: genderLabels,
+            datasets: [{
+                data: genderData,
+                backgroundColor: ['#3b82f6','#ec4899','#94a3b8','#f59e0b'],
+                borderWidth: 2,
+                borderColor: isDark() ? '#151e32' : '#fff',
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { ...baseLegend(), position: 'bottom' } },
+            cutout: '60%',
+        }
+    });
+
+    // ── New vs returning doughnut ─────────────────────────────────────────
+    new Chart(document.getElementById('chartNewReturning'), {
+        type: 'doughnut',
+        data: {
+            labels: nrLabels,
+            datasets: [{
+                data: nrData,
+                backgroundColor: ['#10b981','#3b82f6'],
+                borderWidth: 2,
+                borderColor: isDark() ? '#151e32' : '#fff',
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { ...baseLegend(), position: 'bottom' } },
+            cutout: '60%',
+        }
+    });
+
+    // ── Re-render on theme change ─────────────────────────────────────────
+    // Chart.js doesn't auto-update colors; a full page refresh on theme switch
+    // is acceptable since landing.js handles the theme toggle.
+
+})();
+</script>
+{% endblock %}

@@ -252,6 +252,10 @@
     [data-theme="dark"] .user-menu-item-active {
         background: rgba(59, 143, 217, 0.12);
     }
+    .navbar-link-active {
+        color: var(--color-primary-500, #2563eb) !important;
+        font-weight: 700;
+    }
 </style>
 
 <nav class="navbar">
@@ -264,7 +268,8 @@
         <ul class="navbar-menu">
             {% if request.resolver_match.namespace == 'clinics' %}
             {# Clinic owner navigation #}
-            <li><a href="{% url 'clinics:my_clinics' %}" class="navbar-link">عياداتي</a></li>
+            <li><a href="{% url 'clinics:my_clinics' %}" class="navbar-link {% if request.resolver_match.url_name == 'my_clinics' or request.resolver_match.url_name == 'my_clinic' %}navbar-link-active{% endif %}">عياداتي</a></li>
+            <li><a href="{% url 'clinics:reports' %}" class="navbar-link {% if request.resolver_match.url_name == 'reports' %}navbar-link-active{% endif %}">التقارير</a></li>
             {% else %}
             {# Landing page navigation #}
             <li><a href="{% url 'accounts:landing' %}" class="navbar-link">الرئيسية</a></li>
