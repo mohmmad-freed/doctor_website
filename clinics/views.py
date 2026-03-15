@@ -115,6 +115,34 @@ def my_clinic(request, clinic_id):
 
 
 @login_required
+def doctor_schedule_panel(request, clinic_id, staff_id):
+    """HTMX endpoint: return doctor working hours drawer content."""
+    clinic = get_owner_clinic_or_404(request, clinic_id)
+    staff = get_object_or_404(ClinicStaff, id=staff_id, clinic=clinic, is_active=True)
+
+    from doctors.models import DoctorAvailability
+    availability = list(
+        DoctorAvailability.objects
+        .filter(doctor=staff.user, clinic=clinic, is_active=True)
+        .order_by("day_of_week", "start_time")
+    )
+
+    days_map = dict(DoctorAvailability.DAY_CHOICES)
+    grouped = {}
+    for slot in availability:
+        day = slot.day_of_week
+        if day not in grouped:
+            grouped[day] = {"name": days_map[day], "slots": []}
+        grouped[day]["slots"].append(slot)
+
+    return render(request, "clinics/partials/doctor_schedule_drawer.html", {
+        "staff": staff,
+        "grouped_availability": grouped,
+        "has_availability": bool(availability),
+    })
+
+
+@login_required
 def appointments_panel_view(request, clinic_id):
     """HTMX endpoint: return the appointments panel partial for a given month/year."""
     clinic = get_owner_clinic_or_404(request, clinic_id)

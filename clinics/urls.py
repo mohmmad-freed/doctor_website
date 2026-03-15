@@ -26,6 +26,7 @@ urlpatterns = [
     path('<int:clinic_id>/staff/', views.manage_staff, name='manage_staff'),
     path('<int:clinic_id>/staff/add/', views.add_staff, name='add_staff'),
     path('<int:clinic_id>/staff/<int:staff_id>/remove/', views.remove_staff, name='remove_staff'),
+    path('<int:clinic_id>/staff/<int:staff_id>/schedule/', views.doctor_schedule_panel, name='doctor_schedule_panel'),
 
     # Clinic Invitations
     path('<int:clinic_id>/invitations/', views.invitations_list, name='invitations_list'),

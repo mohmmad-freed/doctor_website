@@ -1,0 +1,71 @@
+{% load i18n %}
+{# Drawer inner content — loaded via HTMX into #schedule-drawer-content #}
+
+<div class="drawer-inner">
+
+    <!-- Doctor header -->
+    <div class="drawer-doctor-header">
+        <div class="avatar {% if staff.role == 'MAIN_DOCTOR' %}avatar-owner{% else %}avatar-doctor{% endif %} avatar-lg">
+            {{ staff.user.name|first }}
+        </div>
+        <div class="drawer-doctor-info">
+            <div class="drawer-doctor-name">{{ staff.user.name }}</div>
+            {% with profile=staff.user.doctor_profile %}
+                {% if profile %}
+                    {% with primary=profile.primary_specialty %}
+                        {% if primary %}
+                            <div class="drawer-doctor-specialty">
+                                <i class="fa-solid fa-stethoscope"></i>
+                                {{ primary.name_ar }}
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+                    {% if profile.years_of_experience %}
+                        <div class="drawer-doctor-exp">
+                            <i class="fa-regular fa-clock"></i>
+                            {{ profile.years_of_experience }} سنوات خبرة
+                        </div>
+                    {% endif %}
+                {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+
+    <div class="drawer-divider"></div>
+
+    <!-- Section title -->
+    <h3 class="drawer-section-title">
+        <i class="fa-regular fa-calendar-days"></i>
+        أوقات العمل الأسبوعية
+    </h3>
+
+    {% if has_availability %}
+    <div class="schedule-days-list">
+        {% for day_num, day_data in grouped_availability.items %}
+        <div class="schedule-day-row">
+            <div class="schedule-day-label">
+                <span class="day-dot"></span>
+                {{ day_data.name }}
+            </div>
+            <div class="schedule-time-chips">
+                {% for slot in day_data.slots %}
+                <span class="time-chip">
+                    <i class="fa-regular fa-clock"></i>
+                    {{ slot.start_time|time:"H:i" }}
+                    <span class="chip-dash">–</span>
+                    {{ slot.end_time|time:"H:i" }}
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="schedule-empty-state">
+        <i class="fa-regular fa-calendar-xmark"></i>
+        <p>لم يتم تحديد أوقات عمل لهذا الطبيب في هذه العيادة بعد.</p>
+    </div>
+    {% endif %}
+
+</div>

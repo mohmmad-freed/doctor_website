@@ -441,6 +441,245 @@
 }
 .appt-empty i { font-size: 2.5rem; margin-bottom: 0.75rem; display: block; opacity: 0.4; }
 .appt-empty p { margin: 0; font-size: 0.9rem; }
+
+/* ─── Clickable staff cards ──────────────────────────────────────────── */
+.staff-card-clickable {
+    cursor: pointer;
+    position: relative;
+}
+.staff-card-clickable:hover {
+    border-color: var(--color-primary-400);
+    box-shadow: 0 2px 10px rgba(99,102,241,0.10);
+}
+.staff-card-clickable.htmx-request {
+    opacity: 0.65;
+    pointer-events: none;
+}
+.schedule-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-top: 0.3rem;
+    font-size: 0.72rem;
+    color: var(--color-primary-500);
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--color-primary-500) 10%, transparent);
+    transition: background 0.15s;
+}
+.staff-card-clickable:hover .schedule-hint {
+    background: color-mix(in srgb, var(--color-primary-500) 18%, transparent);
+}
+
+/* ─── Schedule Drawer ────────────────────────────────────────────────── */
+.schedule-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+.schedule-backdrop.backdrop-visible {
+    opacity: 1;
+    pointer-events: all;
+}
+.schedule-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: min(420px, 100vw);
+    height: 100vh;
+    background: var(--color-surface-card);
+    border-left: 1px solid var(--color-surface-border);
+    z-index: 1000;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-y: auto;
+    box-shadow: -6px 0 32px rgba(0, 0, 0, 0.14);
+    display: flex;
+    flex-direction: column;
+}
+.schedule-drawer.drawer-open {
+    transform: translateX(0);
+}
+.drawer-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.1rem 1.4rem 0.9rem;
+    border-bottom: 1px solid var(--color-surface-border);
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    background: var(--color-surface-card);
+    z-index: 1;
+}
+.drawer-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+.drawer-title i { color: var(--color-primary-500); }
+.drawer-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--color-surface-border);
+    background: var(--color-surface-ground);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+    flex-shrink: 0;
+}
+.drawer-close-btn:hover {
+    border-color: var(--color-primary-400);
+    color: var(--color-primary-500);
+    background: var(--color-surface-card);
+}
+#schedule-drawer-content {
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* ─── Drawer inner content ───────────────────────────────────────────── */
+.drawer-inner { padding: 1.4rem; }
+
+.drawer-doctor-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+.avatar-lg {
+    width: 56px;
+    height: 56px;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+.drawer-doctor-info { display: flex; flex-direction: column; gap: 0.25rem; }
+.drawer-doctor-name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    line-height: 1.3;
+}
+.drawer-doctor-specialty,
+.drawer-doctor-exp {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+.drawer-divider {
+    height: 1px;
+    background: var(--color-surface-border);
+    margin: 1rem 0;
+}
+.drawer-section-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    margin: 0 0 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.drawer-section-title i { color: var(--color-primary-500); font-size: 0.85rem; }
+
+/* ─── Schedule days ──────────────────────────────────────────────────── */
+.schedule-days-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.schedule-day-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem 0.9rem;
+    background: var(--color-surface-ground);
+    border: 1px solid var(--color-surface-border);
+    border-radius: 10px;
+}
+.schedule-day-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    min-width: 72px;
+    flex-shrink: 0;
+    padding-top: 1px;
+}
+.day-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-primary-500);
+    flex-shrink: 0;
+}
+.schedule-time-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+.time-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 3px 10px;
+    background: color-mix(in srgb, var(--color-primary-500) 12%, transparent);
+    color: var(--color-primary-500);
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.time-chip i { font-size: 0.7rem; opacity: 0.8; }
+.chip-dash { opacity: 0.6; }
+
+[data-theme="dark"] .time-chip {
+    background: color-mix(in srgb, var(--color-primary-500) 18%, transparent);
+}
+
+/* ─── Empty state ────────────────────────────────────────────────────── */
+.schedule-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 2.5rem 1rem;
+    text-align: center;
+    color: var(--color-text-muted);
+}
+.schedule-empty-state i { font-size: 2.5rem; opacity: 0.35; }
+.schedule-empty-state p { margin: 0; font-size: 0.88rem; line-height: 1.6; }
+
+/* ─── Drawer loading state ───────────────────────────────────────────── */
+.drawer-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 3rem 1rem;
+    color: var(--color-text-muted);
+    font-size: 0.88rem;
+}
+.drawer-loading i { font-size: 1.5rem; color: var(--color-primary-500); animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 {% endblock %}
 
@@ -532,13 +771,18 @@
         </p>
         {% if clinic_owner %}
         <div class="staff-grid" style="margin-bottom:1.25rem;">
-            <div class="staff-card">
+            <div class="staff-card staff-card-clickable"
+                 hx-get="{% url 'clinics:doctor_schedule_panel' clinic_id=clinic.id staff_id=clinic_owner.id %}"
+                 hx-target="#schedule-drawer-content"
+                 hx-swap="innerHTML"
+                 hx-indicator=".drawer-loading">
                 <div class="avatar avatar-owner">{{ clinic_owner.user.name|first }}</div>
                 <span class="staff-name">{{ clinic_owner.user.name }}</span>
                 <span class="staff-role-badge role-owner">مالك العيادة</span>
                 {% if clinic_owner.user.phone %}
                     <span class="staff-specialty">{{ clinic_owner.user.phone }}</span>
                 {% endif %}
+                <span class="schedule-hint"><i class="fa-regular fa-calendar-days"></i> جدول العمل</span>
             </div>
         </div>
         {% endif %}
@@ -553,7 +797,11 @@
         {% if doctors %}
         <div class="staff-grid">
             {% for staff_member in doctors %}
-            <div class="staff-card">
+            <div class="staff-card staff-card-clickable"
+                 hx-get="{% url 'clinics:doctor_schedule_panel' clinic_id=clinic.id staff_id=staff_member.id %}"
+                 hx-target="#schedule-drawer-content"
+                 hx-swap="innerHTML"
+                 hx-indicator=".drawer-loading">
                 <div class="avatar avatar-doctor">{{ staff_member.user.name|first }}</div>
                 <span class="staff-name">{{ staff_member.user.name }}</span>
                 <span class="staff-role-badge role-doctor">طبيب</span>
@@ -569,6 +817,7 @@
                         {% endif %}
                     {% endif %}
                 {% endwith %}
+                <span class="schedule-hint"><i class="fa-regular fa-calendar-days"></i> جدول العمل</span>
             </div>
             {% endfor %}
         </div>
@@ -643,8 +892,48 @@
     </div>
 
 </div>
+
+<!-- ── Doctor Schedule Drawer ────────────────────────────────────────── -->
+<div class="schedule-backdrop" id="scheduleBackdrop" onclick="closeScheduleDrawer()"></div>
+<div class="schedule-drawer" id="scheduleDrawer" role="dialog" aria-modal="true" aria-label="جدول عمل الطبيب">
+    <div class="drawer-topbar">
+        <div class="drawer-title">
+            <i class="fa-regular fa-calendar-days"></i>
+            جدول العمل
+        </div>
+        <button class="drawer-close-btn" onclick="closeScheduleDrawer()" aria-label="إغلاق">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+    <div id="schedule-drawer-content"
+         hx-on::after-swap="openScheduleDrawer()">
+        <!-- Loaded via HTMX on card click -->
+        <div class="drawer-loading" style="display:none;">
+            <i class="fa-solid fa-circle-notch"></i>
+            جاري التحميل...
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+<script>
+function openScheduleDrawer() {
+    document.getElementById('scheduleDrawer').classList.add('drawer-open');
+    document.getElementById('scheduleBackdrop').classList.add('backdrop-visible');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeScheduleDrawer() {
+    document.getElementById('scheduleDrawer').classList.remove('drawer-open');
+    document.getElementById('scheduleBackdrop').classList.remove('backdrop-visible');
+    document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeScheduleDrawer();
+});
+</script>
 {% endblock %}
