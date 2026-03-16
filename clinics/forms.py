@@ -68,7 +68,7 @@ class AddClinicDetailsForm(forms.Form):
         max_length=20,
         required=False,
         label="هاتف العيادة",
-        widget=forms.TextInput(attrs={"placeholder": "059XXXXXXX"}),
+        widget=forms.TextInput(attrs={"placeholder": "05XXXXXXXX"}),
     )
     clinic_email = forms.EmailField(
         required=False,
@@ -92,7 +92,7 @@ class ClinicInvitationForm(forms.Form):
     doctor_phone = forms.CharField(
         max_length=20, 
         label="رقم هاتف الطبيب",
-        widget=forms.TextInput(attrs={"placeholder": "059XXXXXXX", "class": "form-control"})
+        widget=forms.TextInput(attrs={"placeholder": "05XXXXXXXX", "class": "form-control"})
     )
     doctor_email = forms.EmailField(
         label="البريد الإلكتروني للطبيب",
@@ -115,7 +115,7 @@ class ClinicInvitationForm(forms.Form):
         phone = self.cleaned_data.get("doctor_phone", "").strip()
         phone = PhoneNumberAuthBackend.normalize_phone_number(phone)
         if not PhoneNumberAuthBackend.is_valid_phone_number(phone):
-             raise forms.ValidationError("رقم الهاتف غير صحيح. يجب أن يتكون من 10 أرقام ويبدأ بـ 059 أو 056.")
+             raise forms.ValidationError("رقم الهاتف غير صحيح. يجب أن يتكون من 10 أرقام ويبدأ بـ 05.")
         return phone
 
 
@@ -128,7 +128,7 @@ class SecretaryInvitationForm(forms.Form):
     secretary_phone = forms.CharField(
         max_length=20, 
         label="رقم هاتف السكرتير/ة",
-        widget=forms.TextInput(attrs={"placeholder": "059XXXXXXX", "class": "form-control"})
+        widget=forms.TextInput(attrs={"placeholder": "05XXXXXXXX", "class": "form-control"})
     )
     secretary_email = forms.EmailField(
         label="البريد الإلكتروني للسكرتير/ة",
@@ -145,6 +145,6 @@ class SecretaryInvitationForm(forms.Form):
         phone = self.cleaned_data.get("secretary_phone", "").strip()
         phone = PhoneNumberAuthBackend.normalize_phone_number(phone)
         if not PhoneNumberAuthBackend.is_valid_phone_number(phone):
-             raise forms.ValidationError("رقم الهاتف غير صحيح. يجب أن يتكون من 10 أرقام ويبدأ بـ 059 أو 056.")
+             raise forms.ValidationError("رقم الهاتف غير صحيح. يجب أن يتكون من 10 أرقام ويبدأ بـ 05.")
         return phone
 

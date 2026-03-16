@@ -86,6 +86,34 @@ def home_redirect(request):
     return redirect("patients:dashboard")
 
 
+def send_verification_email(email, request):
+    # (The existing content hasn't been changed, simply injecting our helper after it)
+    pass # this is just a context marker
+
+def handle_pending_invitation_redirect(request, default_url=None):
+    """
+    Check if there's a pending invitation token in the session.
+    If so, consume it and return a redirect to the correct guest acceptance view.
+    Otherwise, return a redirect to the default_url (or accounts:home).
+    """
+    token = request.session.get("pending_invitation_token")
+    app_slug = request.session.get("pending_invitation_app")
+    
+    if token and app_slug:
+        # Consume the tokens
+        del request.session["pending_invitation_token"]
+        del request.session["pending_invitation_app"]
+        
+        if app_slug == "secretary":
+            return redirect("secretary:guest_accept_invitation", token=token)
+        elif app_slug == "doctors":
+            return redirect("doctors:guest_accept_invitation", token=token)
+            
+    if default_url:
+        return redirect(default_url)
+    return redirect("accounts:home")
+
+
 def login_view(request):
     """Handle user login with phone number"""
     if request.user.is_authenticated:
@@ -122,8 +150,8 @@ def login_view(request):
             if user is not None:
                 login(request, user)
                 messages.success(request, f"أهلاً بعودتك، {user.name}!")
-                next_url = request.GET.get("next") or "accounts:home"
-                return redirect(next_url)
+                next_url = request.GET.get("next")
+                return handle_pending_invitation_redirect(request, default_url=next_url)
             else:
                 messages.error(request, "رقم الهاتف أو كلمة المرور غير صحيحة.")
         else:
@@ -150,9 +178,6 @@ def register_patient_phone(request):
     if request.user.is_authenticated:
         return redirect("accounts:home")
 
-    # Support pre-filling phone number from invitation flow
-    initial_phone = request.session.get("registration_phone", "")
-
     if request.method == "POST":
         phone = request.POST.get("phone", "").strip()
 
@@ -162,7 +187,7 @@ def register_patient_phone(request):
         if not PhoneNumberAuthBackend.is_valid_phone_number(phone):
             messages.error(
                 request,
-                "رقم هاتف غير صالح. يجب أن يبدأ بـ 059 أو 056 ويتكون من 10 أرقام.",
+                "رقم هاتف غير صالح. يجب أن يبدأ بـ 05 ويتكون من 10 أرقام.",
             )
             return render(request, "accounts/register_patient_phone.html")
 
@@ -180,10 +205,7 @@ def register_patient_phone(request):
         else:
             messages.error(request, message)
 
-    return render(request, "accounts/register_patient_phone.html", {
-        "initial_phone": initial_phone,
-        "phone_locked": bool(initial_phone),
-    })
+    return render(request, "accounts/register_patient_phone.html")
 
 
 # ============================================
@@ -329,7 +351,7 @@ def verify_email(request, token):
 # STEP 3: Fill in registration details
 # ============================================
 def register_patient_details(request):
-    """Third step: Fill in registration details"""
+    """Third step: Fill in registration details (fully isolated from invitation system)"""
     if request.user.is_authenticated:
         return redirect("accounts:home")
 
@@ -340,21 +362,11 @@ def register_patient_details(request):
         messages.error(request, "يرجى التحقق من رقم هاتفك أولاً.")
         return redirect("accounts:register_patient_phone")
 
-    # Check if this registration was triggered by a clinic invitation.
-    from clinics.models import ClinicInvitation
-    pending_invitation = ClinicInvitation.objects.filter(
-        doctor_phone=phone, status="PENDING"
-    ).order_by("-created_at").first()
-
     if request.method == "POST":
         form = PatientRegistrationForm(request.POST)
         form.data = form.data.copy()
         form.data["phone"] = phone
         form._phone_pre_verified = True
-
-        # Supply invitation NID so clean_national_id validates against it.
-        if pending_invitation and pending_invitation.doctor_national_id:
-            form._invitation_national_id = pending_invitation.doctor_national_id
 
         if form.is_valid():
             try:
@@ -377,25 +389,11 @@ def register_patient_details(request):
                 login(request, user, backend="accounts.backends.PhoneNumberAuthBackend")
                 request.session["just_registered"] = True
 
-                # Auto-accept invitation if registration was triggered by an invite link.
-                if pending_invitation:
-                    try:
-                        from clinics.services import accept_invitation as _accept_invitation
-                        _accept_invitation(pending_invitation, user)
-                        messages.success(
-                            request,
-                            f"تم إنشاء حسابك بنجاح وانضمامك إلى عيادة {pending_invitation.clinic.name}."
-                        )
-                    except Exception as e:
-                        err_msg = " ".join(e.messages) if hasattr(e, "messages") else str(e)
-                        messages.error(request, f"تم إنشاء الحساب، لكن حدث خطأ عند قبول الدعوة: {err_msg}")
-                    request.session.pop("next_after_login", None)
-                    return redirect(reverse("doctors:doctor_invitations_inbox"))
-
-                # Otherwise go to next_after_login or optional email step.
-                next_url = request.session.pop("next_after_login", None)
-                if next_url:
-                    return redirect(next_url)
+                # If there's a pending invitation, bypass email and go straight to invitation.
+                # Only redirect to email flow if there's no pending invitation.
+                if request.session.get("pending_invitation_token"):
+                    return handle_pending_invitation_redirect(request)
+                    
                 return redirect("accounts:register_patient_email")
 
             except IntegrityError:
@@ -505,7 +503,8 @@ def register_main_doctor(request):
                 request.session["clinic_welcome_name"] = user.name
 
                 from django.urls import reverse
-                return redirect(reverse("clinics:verify_owner_phone", kwargs={"clinic_id": clinic.id}))
+                default_url = reverse("clinics:verify_owner_phone", kwargs={"clinic_id": clinic.id})
+                return handle_pending_invitation_redirect(request, default_url=default_url)
 
             except Exception as e:
                 messages.error(
@@ -845,7 +844,7 @@ def register_clinic_verify_email(request):
 
             login(request, user, backend="accounts.backends.PhoneNumberAuthBackend")
             messages.success(request, f"مرحباً {user.name}! تم إنشاء عيادتك بنجاح.")
-            return redirect("clinics:my_clinics")
+            return handle_pending_invitation_redirect(request, default_url="clinics:my_clinics")
 
         except ClinicActivationCode.DoesNotExist:
             messages.error(
@@ -897,7 +896,7 @@ def change_phone_request(request):
         if not PhoneNumberAuthBackend.is_valid_phone_number(new_phone):
             messages.error(
                 request,
-                "رقم الهاتف غير صحيح. يجب أن يبدأ بـ 059 أو 056 ويتكون من 10 أرقام.",
+                "رقم الهاتف غير صحيح. يجب أن يبدأ بـ 05 ويتكون من 10 أرقام.",
             )
             return render(request, "accounts/change_phone_request.html")
 

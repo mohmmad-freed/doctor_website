@@ -259,7 +259,7 @@ from .models import ClinicInvitation, InvitationAuditLog
 def _normalize_phone_for_invite(phone_str):
     phone = PhoneNumberAuthBackend.normalize_phone_number(phone_str)
     if not PhoneNumberAuthBackend.is_valid_phone_number(phone):
-        raise ValidationError("رقم الهاتف غير صحيح. يجب أن يتكون من 10 أرقام ويبدأ بـ 059 أو 056.")
+        raise ValidationError("رقم الهاتف غير صحيح. يجب أن يتكون من 10 أرقام ويبدأ بـ 05.")
     return phone
 
 
@@ -382,9 +382,17 @@ def create_invitation(clinic, owner, data, role="DOCTOR", request=None):
         if user_exists.email:
             delivery_email = user_exists.email
 
-        # NID validation — must not contradict stored NID
-        if entered_nid and user_exists.national_id and entered_nid != user_exists.national_id:
-            raise ValidationError("تعذر إرسال الدعوة. يرجى التحقق من صحة البيانات المُدخلة.")
+        # NID validation — must not contradict stored NID, and if they don't have one,
+        # it must not belong to someone else.
+        _IDENTITY_ERROR = "تعذر إرسال الدعوة. يرجى التحقق من صحة البيانات المُدخلة."
+        if entered_nid:
+            if user_exists.national_id:
+                if entered_nid != user_exists.national_id:
+                    raise ValidationError(_IDENTITY_ERROR)
+            else:
+                nid_owner = CustomUser.objects.filter(national_id=entered_nid).first()
+                if nid_owner and nid_owner != user_exists:
+                    raise ValidationError(_IDENTITY_ERROR)
     else:
         # Phone not in the system: NID must not be claimed by someone else
         _IDENTITY_ERROR = "تعذر إرسال الدعوة. يرجى التحقق من صحة البيانات المُدخلة."
@@ -484,17 +492,29 @@ def accept_invitation(invitation, user):
     - ClinicDoctorCredential (per clinic-specialty)
     - Releases PendingDoctorIdentity lock
     """
-    if invitation.status != "PENDING":
-        raise ValidationError("هذه الدعوة لم تعد صالحة.")
+    # 1. Lock the invitation row to prevent race conditions
+    with transaction.atomic():
+        locked_invitation = ClinicInvitation.objects.select_for_update().get(id=invitation.id)
 
-    if invitation.is_expired:
-        invitation.status = "EXPIRED"
-        invitation.save()
-        raise ValidationError("لقد انتهت صلاحية هذه الدعوة.")
+        if locked_invitation.status != "PENDING":
+            raise ValidationError("هذه الدعوة لم تعد صالحة (تمت معالجتها بالفعل).")
 
-    normalized_user_phone = _normalize_phone_for_invite(user.phone)
-    if normalized_user_phone != invitation.doctor_phone:
-        raise ValidationError("لا تملك صلاحية قبول هذه الدعوة (رقم الهاتف غير متطابق).")
+        if locked_invitation.is_expired:
+            locked_invitation.status = "EXPIRED"
+            locked_invitation.save()
+            raise ValidationError("لقد انتهت صلاحية هذه الدعوة.")
+
+        normalized_user_phone = _normalize_phone_for_invite(user.phone)
+        if normalized_user_phone != locked_invitation.doctor_phone:
+            raise ValidationError("لا تملك صلاحية قبول هذه الدعوة (رقم الهاتف غير متطابق).")
+
+        # Update status immediately to prevent any other process from entering this block
+        locked_invitation.status = "ACCEPTED"
+        locked_invitation.save()
+
+    # Now we continue with the locked_invitation object (or the original, attributes are in sync)
+    # We will use locked_invitation exclusively for consistency:
+    invitation = locked_invitation
 
     # Re-enforce subscription limit inside atomic transaction only for DOCTOR
     if invitation.role == "DOCTOR":
@@ -620,8 +640,7 @@ def accept_invitation(invitation, user):
     if update_fields:
         user.save(update_fields=update_fields)
 
-    invitation.status = "ACCEPTED"
-    invitation.save()
+    # Note: Status was already set to ACCEPTED early in the transaction to prevent races.
 
     _log_invitation_action(invitation, "ACCEPTED", performed_by=user)
 

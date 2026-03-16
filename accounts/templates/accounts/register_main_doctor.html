@@ -72,7 +72,7 @@
                                    name="{{ form.phone.name }}"
                                    id="{{ form.phone.id_for_label }}"
                                    value="{{ form.phone.value|default:'' }}"
-                                   placeholder="059XXXXXXX"
+                                   placeholder="05XXXXXXXX"
                                    inputmode="tel"
                                    dir="ltr">
                             <span class="field-error" id="err-phone">
@@ -160,7 +160,7 @@
                                    name="{{ form.clinic_phone.name }}"
                                    id="{{ form.clinic_phone.id_for_label }}"
                                    value="{{ form.clinic_phone.value|default:'' }}"
-                                   placeholder="059XXXXXXX"
+                                   placeholder="05XXXXXXXX"
                                    inputmode="tel"
                                    dir="ltr">
                             <span class="field-error" id="err-clinic_phone">
@@ -385,7 +385,7 @@
         if (el) el.textContent = "";
     }
 
-    const PHONE_RE = /^(059|056)\d{7}$|^\+970(59|56)\d{7}$/;
+    const PHONE_RE = /^05\d{8}$|^\+9705\d{8}$|^\+9725\d{8}$/;
     const NID_RE   = /^\d{9}$/;
     const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -413,7 +413,7 @@
     bindLive("phone", function (v) {
         const raw = v.replace(/\s|-/g, "");
         if (!raw) { showError("phone", "يرجى إدخال رقم الهاتف."); return; }
-        if (!PHONE_RE.test(raw)) showError("phone", "رقم الهاتف غير صحيح. يجب أن يبدأ بـ 059 أو 056 ويتكون من 10 أرقام (مثال: 0594073157).");
+        if (!PHONE_RE.test(raw)) showError("phone", "رقم الهاتف غير صحيح. يجب أن يبدأ بـ 05 ويتكون من 10 أرقام (مثال: 0523225038).");
         else clearError("phone");
     });
 
@@ -466,7 +466,7 @@
     bindLive("clinic_phone", function (v) {
         const raw = v.replace(/\s|-/g, "");
         if (!raw) { showError("clinic_phone", "يرجى إدخال هاتف العيادة."); return; }
-        if (!PHONE_RE.test(raw)) showError("clinic_phone", "هاتف العيادة غير صحيح. يجب أن يبدأ بـ 059 أو 056 ويتكون من 10 أرقام.");
+        if (!PHONE_RE.test(raw)) showError("clinic_phone", "هاتف العيادة غير صحيح. يجب أن يبدأ بـ 05 ويتكون من 10 أرقام.");
         else clearError("clinic_phone");
     });
 

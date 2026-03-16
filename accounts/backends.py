@@ -9,10 +9,9 @@ class PhoneNumberAuthBackend(ModelBackend):
     """
     Custom authentication backend that allows login with phone number
     Supports these formats:
-        - 059XXXXXXX
-        - 056XXXXXXX
-        - +97059XXXXXXX
-        - +97056XXXXXXX
+        - 05XXXXXXXX (e.g., 059, 056, 050, 052...)
+        - +9705XXXXXXXX
+        - +9725XXXXXXXX (also common in the region)
     """
 
     def authenticate(self, request, username=None, password=None, **kwargs):
@@ -46,27 +45,27 @@ class PhoneNumberAuthBackend(ModelBackend):
     @staticmethod
     def normalize_phone_number(phone):
         """
-        Normalize phone to 059XXXXXXX or 056XXXXXXX format
-        Accepts: 059XXXXXXX, 056XXXXXXX, +97059XXXXXXX, +97056XXXXXXX
-        Returns: 059XXXXXXX or 056XXXXXXX
+        Normalize phone to 05XXXXXXXX format
+        Accepts: 05XXXXXXXX, +9705XXXXXXXX, +9725XXXXXXXX
+        Returns: 05XXXXXXXX
         """
         if not phone:
             return phone
 
         phone = phone.strip().replace(" ", "").replace("-", "")
 
-        # If starts with +97059 or +97056, convert to 059/056
-        if phone.startswith("+97059"):
-            phone = "059" + phone[6:]
-        elif phone.startswith("+97056"):
-            phone = "056" + phone[6:]
+        # If starts with +9705... or +9725..., convert to 05...
+        if phone.startswith("+9705"):
+            phone = "05" + phone[5:]
+        elif phone.startswith("+9725"):
+            phone = "05" + phone[5:]
 
         return phone
 
     @staticmethod
     def is_valid_phone_number(phone):
         """
-        Validate Palestinian phone number:
-        Must start with 059 or 056 and have 10 digits total
+        Validate phone number:
+        Must start with 05 and have 10 digits total.
         """
-        return bool(re.match(r"^(059|056)\d{7}$", phone))
+        return bool(re.match(r"^05\d{8}$", phone))

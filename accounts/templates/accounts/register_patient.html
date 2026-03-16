@@ -28,8 +28,8 @@
     
     <div class="form-group">
         <label for="phone">Phone Number *</label>
-        <input type="text" id="phone" name="phone" value="{{ form.phone.value|default:'' }}" placeholder="059XXXXXXX" required>
-        <p class="help-text">This will be used for login (059XXXXXXX or +97059XXXXXXX)</p>
+        <input type="text" id="phone" name="phone" value="{{ form.phone.value|default:'' }}" placeholder="05XXXXXXXX" required>
+        <p class="help-text">This will be used for login (05XXXXXXXX or +9705XXXXXXXX)</p>
         {% if form.phone.errors %}
             <ul class="errorlist">
                 {% for error in form.phone.errors %}

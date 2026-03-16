@@ -61,7 +61,8 @@ class ClinicInvitationServiceTests(TestCase):
         self.assertEqual(invitation.doctor_phone, "0590000000")
         self.assertEqual(invitation.status, "PENDING")
         self.assertEqual(invitation.specialties.count(), 1)
-        mock_send_sms.assert_called_once()
+        self.assertEqual(invitation.specialties.count(), 1)
+        mock_send_sms.assert_not_called()
         
     @patch('clinics.services.send_sms')
     def test_create_invitation_existing_doctor_no_sms(self, mock_send_sms):
@@ -211,8 +212,8 @@ class ClinicInvitationServiceTests(TestCase):
         self.assertEqual(invitation.role, "SECRETARY")
         self.assertEqual(invitation.doctor_phone, "0597777777")
         self.assertEqual(invitation.status, "PENDING")
-        mock_send_sms.assert_called_once()
-        self.assertIn("سكرتير/ة", mock_send_sms.call_args[0][1])
+        self.assertEqual(invitation.status, "PENDING")
+        mock_send_sms.assert_not_called()
 
     @patch('clinics.services.send_sms')
     def test_create_secretary_invitation_existing_user_no_sms(self, mock_send_sms):
@@ -419,10 +420,11 @@ class ClinicInvitationServiceTests(TestCase):
         self.assertNotIn("مسجل", err)
 
     @patch('clinics.services.send_sms')
-    def test_registered_phone_mismatched_email_fails(self, mock_send_sms):
+    def test_registered_phone_mismatched_email_succeeds(self, mock_send_sms):
         """
-        Inviting with a registered phone but a different email should fail
-        with a generic error — not one that reveals the phone is registered.
+        Inviting with a registered phone but a different email should succeed,
+        and the system should use the existing user's email as the delivery destination
+        instead of whatever the clinic owner typed, to protect identity isolation.
         """
         CustomUser.objects.create(
             phone="0567777777", name="Existing", email="real@example.com"
@@ -430,16 +432,12 @@ class ClinicInvitationServiceTests(TestCase):
         data = {
             "doctor_name": "Existing",
             "doctor_phone": "0567777777",
-            "doctor_email": "wrong@example.com",  # mismatch
+            "doctor_email": "wrong@example.com",  # clinic typed this
         }
-        with self.assertRaises(ValidationError) as ctx:
-            create_invitation(self.clinic, self.owner, data)
-        err = str(ctx.exception)
-        self.assertIn("تعذر إرسال الدعوة", err)
-        self.assertNotIn("يتطابق", err)
-        self.assertNotIn("مسجل", err)
-
-    # -- Case 1 (unregistered phone + NID belonging to another user) --
+        invitation = create_invitation(self.clinic, self.owner, data)
+        # Expected behavior: invitation created, but delivery_email=real@example.com
+        self.assertEqual(invitation.status, "PENDING")
+        self.assertEqual(invitation.doctor_email, "real@example.com")
 
     @patch('clinics.services.send_sms')
     def test_unregistered_phone_national_id_belongs_to_another_user_fails(self, mock_send_sms):
@@ -573,4 +571,4 @@ class ClinicInvitationServiceTests(TestCase):
         }
         invitation = create_invitation(self.clinic, self.owner, data)
         self.assertEqual(invitation.status, "PENDING")
-        mock_send_sms.assert_called_once()
+        mock_send_sms.assert_not_called()

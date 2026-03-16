@@ -321,7 +321,11 @@ def guest_accept_invitation_view(request, token):
     inbox_url = reverse("doctors:doctor_invitations_inbox")
 
     if existing_user:
-        login_url = reverse("accounts:login") + f"?next={inbox_url}"
+        # Store token for redirection after login
+        request.session["pending_invitation_token"] = token
+        request.session["pending_invitation_app"] = "doctors"
+        login_url = reverse("accounts:login")
+        
         if invitation.role == "SECRETARY":
             messages.info(
                 request,
@@ -334,16 +338,24 @@ def guest_accept_invitation_view(request, token):
             )
         return redirect(login_url)
 
-    # No account yet: store next url and pre-fill phone, then send to registration.
-    request.session["next_after_login"] = inbox_url
-    request.session["registration_phone"] = invitation.doctor_phone
-
+    # No account yet: instruct them to register first.
     if invitation.role == "SECRETARY":
-        messages.info(request, f"مرحباً {invitation.doctor_name}، تلقّيت دعوة للانضمام كسكرتير/ة في {invitation.clinic.name}. اضغط على الزر لإرسال رمز التحقق إلى رقمك.")
+        messages.info(
+            request, 
+            f"مرحباً {invitation.doctor_name}، تلقّيت دعوة للانضمام كسكرتير/ة في {invitation.clinic.name}. يرجى إنشاء حساب جديد لقبول الدعوة."
+        )
     else:
-        messages.info(request, f"مرحباً د. {invitation.doctor_name}، تلقّيت دعوة للانضمام إلى {invitation.clinic.name}. اضغط على الزر لإرسال رمز التحقق إلى رقمك.")
+        messages.info(
+            request, 
+            f"مرحباً د. {invitation.doctor_name}، تلقّيت دعوة للانضمام إلى {invitation.clinic.name}. يرجى إنشاء حساب جديد لقبول الدعوة."
+        )
 
-    return redirect(reverse("accounts:register_patient_phone"))
+    # Note: Since patient registration is now fully isolated, they must manually register.
+    # We redirect them to the general registration choice page.
+    # Store token for redirection after registration
+    request.session["pending_invitation_token"] = token
+    request.session["pending_invitation_app"] = "doctors"
+    return redirect(reverse("accounts:register"))
 
 
 # ============================================

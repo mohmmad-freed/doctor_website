@@ -119,6 +119,8 @@ def guest_accept_invitation_view(request, token):
             })
             
     # Unauthenticated but token is valid: store generic next url and redirect to login
-    request.session["next_after_login"] = reverse("secretary:secretary_invitations_inbox")
+    request.session["pending_invitation_token"] = token
+    request.session["pending_invitation_app"] = "secretary"
+    
     messages.info(request, "يرجى تسجيل الدخول أو إنشاء حساب جديد لقبول دعوة الانضمام للعيادة كـ سكرتير/ة.")
     return redirect(reverse("accounts:login"))

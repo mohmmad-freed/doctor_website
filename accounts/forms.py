@@ -45,7 +45,7 @@ class ClinicRegStep1Form(forms.Form):
         phone = PhoneNumberAuthBackend.normalize_phone_number(phone)
         if not PhoneNumberAuthBackend.is_valid_phone_number(phone):
             raise ValidationError(
-                "رقم الهاتف غير صحيح. يجب أن يبدأ بـ 059 أو 056 ويتكون من 10 أرقام."
+                "رقم الهاتف غير صحيح. يجب أن يبدأ بـ 05 ويتكون من 10 أرقام."
             )
         return phone
 
@@ -252,7 +252,7 @@ class PatientRegistrationForm(forms.ModelForm):
 
         if not PhoneNumberAuthBackend.is_valid_phone_number(phone):
             raise ValidationError(
-                "Invalid phone number format. Phone must start with 059 or 056 and be 10 digits."
+                "Invalid phone number format. Phone must start with 05 and be 10 digits."
             )
 
         # Skip duplicate check if phone is already verified via OTP
@@ -385,7 +385,7 @@ class MainDoctorRegistrationForm(forms.ModelForm):
 
         if not PhoneNumberAuthBackend.is_valid_phone_number(phone):
             raise ValidationError(
-                "رقم الهاتف غير صحيح. يجب أن يبدأ بـ 059 أو 056 ويتكون من 10 أرقام."
+                "رقم الهاتف غير صحيح. يجب أن يبدأ بـ 05 ويتكون من 10 أرقام."
             )
 
         # No uniqueness check here — existing users are reused in save()
@@ -435,7 +435,7 @@ class MainDoctorRegistrationForm(forms.ModelForm):
 
         if not PhoneNumberAuthBackend.is_valid_phone_number(phone):
             raise ValidationError(
-                "هاتف العيادة غير صحيح. يجب أن يبدأ بـ 059 أو 056 ويتكون من 10 أرقام."
+                "هاتف العيادة غير صحيح. يجب أن يبدأ بـ 05 ويتكون من 10 أرقام."
             )
 
         return phone
@@ -602,7 +602,7 @@ class ForgotPasswordPhoneForm(forms.Form):
 
         if not PhoneNumberAuthBackend.is_valid_phone_number(phone):
             raise ValidationError(
-                "رقم الهاتف غير صحيح. يجب أن يبدأ بـ 059 أو 056 ويتكون من 10 أرقام."
+                "رقم الهاتف غير صحيح. يجب أن يبدأ بـ 05 ويتكون من 10 أرقام."
             )
 
         if not CustomUser.objects.filter(phone=phone).exists():

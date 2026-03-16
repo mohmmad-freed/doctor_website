@@ -39,8 +39,9 @@ def _normalize_phone(phone: str) -> str:
     Normalize Palestinian phone numbers for TweetsMS.
     TweetsMS expects numbers WITHOUT the '+' prefix.
     Handles:
-      - 059xxxxxxxx / 056xxxxxxxx  -> 97059xxxxxxxx / 97056xxxxxxxx
-      - +97059xxxxxxxx             -> 97059xxxxxxxx
+      - 05xxxxxxxx                 -> 9705xxxxxxxx
+      - +9705xxxxxxxx              -> 9705xxxxxxxx
+      - +9725xxxxxxxx              -> 9725xxxxxxxx
       - 97059xxxxxxxx              -> 97059xxxxxxxx
       - strips spaces, dashes, parentheses
     """
@@ -60,14 +61,14 @@ def _normalize_phone(phone: str) -> str:
     if raw.startswith("970"):
         return raw
 
-    # If local Palestinian mobile starting with 0 (059/056)
+    # If local Palestinian/Regional mobile starting with 0 (05...)
     if raw.startswith("0"):
         # Remove exactly ONE leading zero (safer than lstrip("0"))
         raw = raw[1:]
 
-    # After removing one leading 0, it should look like 59xxxxxxxx or 56xxxxxxxx
-    # If user entered already 59/56 prefix, this will work too.
-    if raw.startswith("59") or raw.startswith("56"):
+    # After removing one leading 0, it should look like 5xxxxxxxx
+    # If user entered already 5... prefix, this will work too.
+    if raw.startswith("5"):
         return f"970{raw}"
 
     # Fallback: if user gave something else, still try 970 + raw
