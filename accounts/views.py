@@ -22,6 +22,7 @@ from .forms import (
 )
 from .otp_utils import request_otp, verify_otp, is_in_cooldown, get_remaining_resends
 from .email_utils import (
+    generate_email_verification_token,
     send_verification_email,
     verify_email_token,
     send_change_email_verification,
@@ -36,6 +37,7 @@ from clinics.services import create_clinic_for_main_doctor
 from doctors.models import Specialty
 from patients.models import PatientProfile
 from patients.services import ensure_patient_profile
+from accounts.services.identity_claim_service import assign_national_id
 
 User = get_user_model()
 
@@ -84,11 +86,6 @@ def home_redirect(request):
 
     # 4. Default: patient dashboard
     return redirect("patients:dashboard")
-
-
-def send_verification_email(email, request):
-    # (The existing content hasn't been changed, simply injecting our helper after it)
-    pass # this is just a context marker
 
 def handle_pending_invitation_redirect(request, default_url=None):
     """
@@ -297,7 +294,13 @@ def send_email_verification(request):
         return JsonResponse({"success": False, "message": "Invalid email format."})
 
     # Send verification email
-    success, message = send_verification_email(email, request)
+    verification_url = request.build_absolute_uri(
+        reverse(
+            "accounts:verify_email",
+            kwargs={"token": generate_email_verification_token(request.user, email)},
+        )
+    )
+    success, message = send_verification_email(request.user, email, verification_url)
 
     if success:
         # Store email in session to track which email was sent verification
@@ -376,7 +379,9 @@ def register_patient_details(request):
                     # Email is optional and will be verified later from profile settings
                     user.email_verified = False
                     user.is_verified = True  # Phone is verified
+                    user.national_id = None
                     user.save()
+                    assign_national_id(user, form.cleaned_data["national_id"])
 
                     PatientProfile.objects.create(user=user)
 
@@ -452,7 +457,13 @@ def register_patient_email(request):
 
             # DON'T save email yet - only save after verification link is clicked
             # Just send the verification email
-            success, message = send_verification_email(email, request)
+            verification_url = request.build_absolute_uri(
+                reverse(
+                    "accounts:verify_email",
+                    kwargs={"token": generate_email_verification_token(request.user, email)},
+                )
+            )
+            success, message = send_verification_email(request.user, email, verification_url)
 
             if success:
                 messages.success(
@@ -478,7 +489,10 @@ def register_main_doctor(request):
         form = MainDoctorRegistrationForm(request.POST)
         if form.is_valid():
             try:
-                user = form.save()
+                user = form.save(commit=False)
+                user.national_id = getattr(form, "_existing_original", {}).get("national_id")
+                user.save()
+                assign_national_id(user, form.cleaned_data["national_id"])
 
                 # Every registered user is also a potential patient —
                 # create their PatientProfile if it doesn't exist yet
@@ -795,7 +809,6 @@ def register_clinic_verify_email(request):
                 else:
                     user = User(
                         phone=reg["phone"],
-                        national_id=reg["national_id"],
                         name=reg['name'],
                         email=email,
                         email_verified=True,
@@ -805,6 +818,8 @@ def register_clinic_verify_email(request):
                     )
                     user.set_password(reg["password"])
                     user.save()
+
+                assign_national_id(user, reg["national_id"])
 
                 # 2. Patient profile.
                 ensure_patient_profile(user)
@@ -1007,7 +1022,17 @@ def change_email_request(request):
             )
 
         # 3. Send Verification Email
-        success, message = send_change_email_verification(new_email, request)
+        verification_url = request.build_absolute_uri(
+            reverse(
+                "accounts:verify_change_email",
+                kwargs={"token": generate_email_verification_token(request.user, new_email)},
+            )
+        )
+        success, message = send_change_email_verification(
+            request.user,
+            new_email,
+            verification_url,
+        )
 
         if success:
             # Store intended email in session

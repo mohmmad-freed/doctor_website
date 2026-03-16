@@ -5,6 +5,13 @@ from .models import CustomUser, City
 from clinics.models import ClinicActivationCode
 from doctors.models import Specialty
 from .backends import PhoneNumberAuthBackend
+from .services.identity_claim_service import (
+    get_effective_national_id_for_user,
+    get_national_id_owner_user,
+    get_verified_claim_for_national_id,
+    normalize_national_id,
+    validate_national_id,
+)
 import re
 
 _CREDENTIAL_MISMATCH_MSG = (
@@ -50,10 +57,16 @@ class ClinicRegStep1Form(forms.Form):
         return phone
 
     def clean_national_id(self):
-        nid = (self.cleaned_data.get("national_id") or "").strip()
-        nid = nid.replace(" ", "").replace("-", "")
-        if not re.match(r"^\d{9}$", nid):
-            raise ValidationError("رقم الهوية يجب أن يتكون من 9 أرقام فقط.")
+        nid = normalize_national_id(self.cleaned_data.get("national_id"))
+        nid = validate_national_id(nid)
+
+        raw_phone = (self.data.get("phone") or "").strip()
+        normalized_phone = PhoneNumberAuthBackend.normalize_phone_number(raw_phone)
+        existing_user = CustomUser.objects.filter(phone=normalized_phone).first()
+        existing_user_nid = get_effective_national_id_for_user(existing_user)
+        if existing_user_nid and existing_user_nid != nid:
+            raise ValidationError("رقم الهوية الوطنية لا يطابق بيانات هذا الحساب.")
+
         return nid
 
     def clean_activation_code(self):
@@ -94,11 +107,11 @@ class ClinicRegStep1Form(forms.Form):
         if self.errors:
             return cleaned_data
 
-        # Cross-field: if the NID exists in DB but is linked to a DIFFERENT phone,
+        # Cross-field: if the verified NID exists but is linked to a DIFFERENT phone,
         # the user may have given the admin the wrong phone → reject without revealing why.
         if nid and phone:
-            existing_by_nid = CustomUser.objects.filter(national_id=nid).first()
-            if existing_by_nid and existing_by_nid.phone != phone:
+            owner_user = get_national_id_owner_user(nid)
+            if owner_user and owner_user.phone != phone:
                 self.add_error("phone", _CREDENTIAL_MISMATCH_MSG)
                 self.add_error("national_id", _CREDENTIAL_MISMATCH_MSG)
 
@@ -264,22 +277,21 @@ class PatientRegistrationForm(forms.ModelForm):
 
     def clean_national_id(self):
         national_id = (self.cleaned_data.get("national_id") or "").strip()
-        national_id = national_id.replace(" ", "").replace("-", "")
-
-        if national_id and not re.match(r"^\d{9}$", national_id):
-            raise ValidationError("رقم الهوية يجب أن يتكون من 9 أرقام فقط.")
+        if national_id:
+            national_id = validate_national_id(normalize_national_id(national_id))
 
         # Invitation context: validate against the NID stored on the invitation.
         invitation_nid = getattr(self, "_invitation_national_id", None)
         if invitation_nid:
+            invitation_nid = validate_national_id(normalize_national_id(invitation_nid))
             if not national_id:
                 raise ValidationError("يرجى إدخال رقم الهوية الوطنية للتحقق من هويتك.")
             if national_id != invitation_nid:
                 raise ValidationError(_CREDENTIAL_MISMATCH_MSG)
-            # Matches the invitation's NID — skip uniqueness check.
+            # Matches the invitation's NID — allow the claim workflow to resolve ownership.
             return national_id or None
 
-        if national_id and CustomUser.objects.filter(national_id=national_id).exists():
+        if national_id and get_national_id_owner_user(national_id):
             raise ValidationError("رقم الهوية الوطنية مسجل مسبقاً.")
 
         return national_id or None
@@ -392,11 +404,15 @@ class MainDoctorRegistrationForm(forms.ModelForm):
         return phone
 
     def clean_national_id(self):
-        nid = (self.cleaned_data.get("national_id") or "").strip()
-        nid = nid.replace(" ", "").replace("-", "")
+        nid = normalize_national_id(self.cleaned_data.get("national_id"))
+        nid = validate_national_id(nid)
 
-        if not re.match(r"^\d{9}$", nid):
-            raise ValidationError("رقم الهوية يجب أن يتكون من 9 أرقام فقط.")
+        raw_phone = (self.data.get("phone") or "").strip()
+        normalized_phone = PhoneNumberAuthBackend.normalize_phone_number(raw_phone)
+        existing_user = CustomUser.objects.filter(phone=normalized_phone).first()
+        existing_user_nid = get_effective_national_id_for_user(existing_user)
+        if existing_user_nid and existing_user_nid != nid:
+            raise ValidationError("رقم الهوية الوطنية لا يطابق بيانات هذا الحساب.")
 
         return nid
 
@@ -485,19 +501,12 @@ class MainDoctorRegistrationForm(forms.ModelForm):
         phone = cleaned_data.get("phone")
         existing_user = CustomUser.objects.filter(phone=phone).first() if phone else None
 
-        # ── NID uniqueness ────────────────────────────────────────────────
+        # ── Verified claim conflict check ─────────────────────────────────
         nid = cleaned_data.get("national_id")
         if nid:
-            if existing_user:
-                if existing_user.national_id and existing_user.national_id != nid:
-                    self.add_error("national_id", _CREDENTIAL_MISMATCH_MSG)
-                elif CustomUser.objects.filter(national_id=nid).exclude(
-                    pk=existing_user.pk
-                ).exists():
-                    self.add_error("national_id", "رقم الهوية الوطنية هذا مسجل بالفعل.")
-            else:
-                if CustomUser.objects.filter(national_id=nid).exists():
-                    self.add_error("national_id", "رقم الهوية الوطنية هذا مسجل بالفعل.")
+            owner_user = get_national_id_owner_user(nid)
+            if owner_user and (not existing_user or owner_user.pk != existing_user.pk):
+                self.add_error("national_id", "رقم الهوية الوطنية هذا مسجل بالفعل.")
 
         # ── Email uniqueness ──────────────────────────────────────────────
         email = cleaned_data.get("email", "")

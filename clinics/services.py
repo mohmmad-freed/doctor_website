@@ -251,6 +251,15 @@ def apply_auto_forgiveness(clinic):
 
 from accounts.backends import PhoneNumberAuthBackend
 from accounts.models import CustomUser
+from accounts.services.identity_claim_service import (
+    assign_national_id,
+    get_effective_national_id_for_user,
+    get_national_id_owner_user,
+    get_verified_claim_for_national_id,
+    get_verified_claim_for_user,
+    normalize_national_id,
+    validate_national_id,
+)
 from doctors.models import DoctorProfile, DoctorSpecialty
 from accounts.services.tweetsms import send_sms
 from .models import ClinicInvitation, InvitationAuditLog
@@ -298,7 +307,14 @@ def _check_invitation_rate_limits(clinic, normalized_phone):
         )
 
 
-def create_invitation(clinic, owner, data, role="DOCTOR", request=None):
+def create_invitation(
+    clinic,
+    owner,
+    data,
+    role="DOCTOR",
+    request=None,
+    accept_base_url=None,
+):
     """
     Creates a ClinicInvitation for a doctor or secretary.
 
@@ -358,6 +374,8 @@ def create_invitation(clinic, owner, data, role="DOCTOR", request=None):
     user_exists = CustomUser.objects.filter(phone=normalized_phone).first()
     entered_email = data.get(email_key, "")
     entered_nid = data.get(national_id_key, "")
+    if entered_nid:
+        entered_nid = validate_national_id(normalize_national_id(entered_nid))
 
     # Determine delivery email
     delivery_email = entered_email  # Default: use what clinic owner entered
@@ -386,18 +404,19 @@ def create_invitation(clinic, owner, data, role="DOCTOR", request=None):
         # it must not belong to someone else.
         _IDENTITY_ERROR = "تعذر إرسال الدعوة. يرجى التحقق من صحة البيانات المُدخلة."
         if entered_nid:
-            if user_exists.national_id:
-                if entered_nid != user_exists.national_id:
+            existing_user_nid = get_effective_national_id_for_user(user_exists)
+            if existing_user_nid:
+                if entered_nid != existing_user_nid:
                     raise ValidationError(_IDENTITY_ERROR)
             else:
-                nid_owner = CustomUser.objects.filter(national_id=entered_nid).first()
-                if nid_owner and nid_owner != user_exists:
+                nid_owner = get_national_id_owner_user(entered_nid)
+                if nid_owner and nid_owner.pk != user_exists.pk:
                     raise ValidationError(_IDENTITY_ERROR)
     else:
         # Phone not in the system: NID must not be claimed by someone else
         _IDENTITY_ERROR = "تعذر إرسال الدعوة. يرجى التحقق من صحة البيانات المُدخلة."
         if entered_nid:
-            nid_owner = CustomUser.objects.filter(national_id=entered_nid).first()
+            nid_owner = get_national_id_owner_user(entered_nid)
             if nid_owner:
                 raise ValidationError(_IDENTITY_ERROR)
 
@@ -459,8 +478,13 @@ def create_invitation(clinic, owner, data, role="DOCTOR", request=None):
             import logging
             _email_logger = logging.getLogger("clinics.services")
 
-            accept_path = reverse("doctors:guest_accept_invitation", kwargs={"token": invitation.token})
-            if request:
+            accept_path = reverse(
+                "doctors:guest_accept_invitation",
+                kwargs={"token": invitation.token},
+            )
+            if accept_base_url:
+                accept_url = f"{accept_base_url.rstrip('/')}{accept_path}"
+            elif request:
                 accept_url = request.build_absolute_uri(accept_path)
             else:
                 accept_url = accept_path
@@ -609,9 +633,8 @@ def accept_invitation(invitation, user):
             )
 
     # Update user national_id if provided in invitation and user doesn't have one
-    if invitation.doctor_national_id and not user.national_id:
-        user.national_id = invitation.doctor_national_id
-        user.save(update_fields=["national_id"])
+    if invitation.doctor_national_id:
+        assign_national_id(user, invitation.doctor_national_id)
 
     # Role hierarchy — higher index = higher privilege.
     _ROLE_RANK = {"PATIENT": 0, "SECRETARY": 1, "DOCTOR": 2, "MAIN_DOCTOR": 3}

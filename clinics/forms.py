@@ -1,7 +1,8 @@
 from django import forms
 from django.utils import timezone
 
-from accounts.models import City
+from accounts.models import City, CustomUser
+from accounts.services.identity_claim_service import get_verified_claim_for_user
 from doctors.models import Specialty
 from .models import ClinicActivationCode
 
@@ -38,7 +39,13 @@ class AddClinicCodeForm(forms.Form):
         if ac.phone and self.user_phone and ac.phone != self.user_phone:
             raise forms.ValidationError(_GENERIC_ERROR)
 
-        if ac.national_id and self.user_national_id and ac.national_id != self.user_national_id:
+        verified_claim = None
+        if self.user_phone:
+            user = CustomUser.objects.filter(phone=self.user_phone).first()
+            if user:
+                verified_claim = get_verified_claim_for_user(user)
+
+        if ac.national_id and verified_claim and ac.national_id != verified_claim.national_id:
             raise forms.ValidationError(_GENERIC_ERROR)
 
         self.cleaned_data["_activation_code_obj"] = ac

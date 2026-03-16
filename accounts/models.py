@@ -1,8 +1,18 @@
+import os
+import uuid
+
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.conf import settings
 from django.db.models import Q
+
+from core.validators.file_validators import (
+    validate_file_extension,
+    validate_file_signature,
+    validate_file_size,
+)
+from .constants import IdentityClaimStatus
 
 
 class City(models.Model):
@@ -86,7 +96,13 @@ class CustomUser(AbstractUser):
     )
 
     # Patient-specific fields (will be NULL for non-patients)
-    national_id = models.CharField(max_length=20, unique=True, null=True, blank=True)
+    national_id = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Verified/canonical national ID only. Pending claims live in IdentityClaim.",
+    )
     city = models.ForeignKey("City", on_delete=models.SET_NULL, null=True, blank=True)
 
     # Set phone as the unique identifier for login
@@ -105,3 +121,67 @@ class CustomUser(AbstractUser):
     class Meta:
         verbose_name = "User"
         verbose_name_plural = "Users"
+
+
+def identity_claim_evidence_upload_path(instance, filename):
+    extension = os.path.splitext(filename)[1]
+    return f"identity_claims/user_{instance.user_id}/{uuid.uuid4().hex}{extension}"
+
+
+class IdentityClaim(models.Model):
+    """Global national ID claim record."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="identity_claims",
+    )
+    national_id = models.CharField(max_length=9, db_index=True)
+    status = models.CharField(
+        max_length=20,
+        choices=IdentityClaimStatus.choices,
+        default=IdentityClaimStatus.UNVERIFIED,
+        db_index=True,
+    )
+    evidence_file = models.FileField(
+        upload_to=identity_claim_evidence_upload_path,
+        blank=True,
+        null=True,
+        validators=[validate_file_extension, validate_file_signature, validate_file_size],
+        help_text="Optional evidence submitted for manual review.",
+    )
+    verified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="identity_claim_reviews",
+    )
+    verified_at = models.DateTimeField(null=True, blank=True)
+    rejection_reason = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Identity Claim"
+        verbose_name_plural = "Identity Claims"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "status"], name="identity_claim_user_status_idx"),
+            models.Index(fields=["national_id", "status"], name="identity_claim_nid_status_idx"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["national_id"],
+                condition=models.Q(status=IdentityClaimStatus.VERIFIED),
+                name="unique_verified_identity_claim_per_national_id",
+            ),
+            models.UniqueConstraint(
+                fields=["user"],
+                condition=models.Q(status=IdentityClaimStatus.VERIFIED),
+                name="unique_verified_identity_claim_per_user",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.user_id} - {self.national_id} ({self.status})"

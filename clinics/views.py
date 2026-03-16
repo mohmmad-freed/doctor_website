@@ -267,7 +267,12 @@ def create_invitation_view(request, clinic_id):
         form = ClinicInvitationForm(request.POST)
         if form.is_valid():
             try:
-                create_invitation(clinic, request.user, form.cleaned_data, request=request)
+                create_invitation(
+                    clinic,
+                    request.user,
+                    form.cleaned_data,
+                    accept_base_url=request.build_absolute_uri("/"),
+                )
                 messages.success(request, "تم إرسال الدعوة بنجاح.")
                 return redirect(reverse("clinics:invitations_list", kwargs={"clinic_id": clinic_id}))
             except Exception as e:
@@ -292,7 +297,13 @@ def create_secretary_invitation_view(request, clinic_id):
         form = SecretaryInvitationForm(request.POST)
         if form.is_valid():
             try:
-                create_invitation(clinic, request.user, form.cleaned_data, role="SECRETARY", request=request)
+                create_invitation(
+                    clinic,
+                    request.user,
+                    form.cleaned_data,
+                    role="SECRETARY",
+                    accept_base_url=request.build_absolute_uri("/"),
+                )
                 messages.success(request, "تم إرسال دعوة السكرتير/ة بنجاح.")
                 return redirect(reverse("clinics:invitations_list", kwargs={"clinic_id": clinic_id}))
             except Exception as e:

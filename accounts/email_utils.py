@@ -2,7 +2,6 @@ import random
 import sib_api_v3_sdk
 from sib_api_v3_sdk.rest import ApiException
 from django.conf import settings
-from django.urls import reverse
 from django.core.cache import cache
 from django.utils.crypto import get_random_string
 import os
@@ -60,14 +59,8 @@ def verify_email_token(token):
         return False, None, "Invalid verification link."
 
 
-def send_verification_email(email, request):
+def send_verification_email(user, email, verification_url):
     try:
-        user = request.user
-        token = generate_email_verification_token(user, email)
-        verification_url = request.build_absolute_uri(
-            reverse("accounts:verify_email", kwargs={"token": token})
-        )
-
         subject = "تحقق من بريدك الإلكتروني — كلينك"
         text_content = (
             "\u200f"
@@ -104,14 +97,8 @@ def send_verification_email(email, request):
         return False, "Failed to send verification email. Please try again."
 
 
-def send_change_email_verification(email, request):
+def send_change_email_verification(user, email, verification_url):
     try:
-        user = request.user
-        token = generate_email_verification_token(user, email)
-        verification_url = request.build_absolute_uri(
-            reverse("accounts:verify_change_email", kwargs={"token": token})
-        )
-
         subject = "تأكيد عنوان بريدك الإلكتروني الجديد — كلينك"
         text_content = (
             "\u200f"

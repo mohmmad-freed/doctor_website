@@ -121,7 +121,7 @@ def request_otp(phone):
     # 1. Check cooldown
     if cache.get(_otp_cooldown_key(phone)):
         logger.warning("[OTP] Cooldown active for phone=%s", phone)
-        return False, "يرجى الانتظار قبل طلب رمز جديد."
+        return False, "ط¸ظ¹ط·آ±ط·آ¬ط¸â€° ط·آ§ط¸â€‍ط·آ§ط¸â€ ط·ع¾ط·آ¸ط·آ§ط·آ± ط¸â€ڑط·آ¨ط¸â€‍ ط·آ·ط¸â€‍ط·آ¨ ط·آ±ط¸â€¦ط·آ² ط·آ¬ط·آ¯ط¸ظ¹ط·آ¯."
 
     # 2. Check daily resend limit
     resend_count = cache.get(_otp_resend_count_key(phone)) or 0
@@ -135,7 +135,7 @@ def request_otp(phone):
             )
             return (
                 False,
-                "لقد تجاوزت الحد اليومي لطلبات رمز التحقق. يرجى المحاولة غداً.",
+                "ط¸â€‍ط¸â€ڑط·آ¯ ط·ع¾ط·آ¬ط·آ§ط¸ث†ط·آ²ط·ع¾ ط·آ§ط¸â€‍ط·آ­ط·آ¯ ط·آ§ط¸â€‍ط¸ظ¹ط¸ث†ط¸â€¦ط¸ظ¹ ط¸â€‍ط·آ·ط¸â€‍ط·آ¨ط·آ§ط·ع¾ ط·آ±ط¸â€¦ط·آ² ط·آ§ط¸â€‍ط·ع¾ط·آ­ط¸â€ڑط¸â€ڑ. ط¸ظ¹ط·آ±ط·آ¬ط¸â€° ط·آ§ط¸â€‍ط¸â€¦ط·آ­ط·آ§ط¸ث†ط¸â€‍ط·آ© ط·ط›ط·آ¯ط·آ§ط¸â€¹.",
             )
 
     # 3. Generate and store OTP locally (always)
@@ -149,7 +149,7 @@ def request_otp(phone):
 
     if using_tweetsms:
         sms_phone = _normalize_phone(phone)
-        message = f"رمز التحقق الخاص بك هو: {otp}"
+        message = f"ط·آ±ط¸â€¦ط·آ² ط·آ§ط¸â€‍ط·ع¾ط·آ­ط¸â€ڑط¸â€ڑ ط·آ§ط¸â€‍ط·آ®ط·آ§ط·آµ ط·آ¨ط¸ئ’ ط¸â€،ط¸ث†: {otp}"
 
         try:
             tweetsms_send_sms(sms_phone, message)
@@ -170,7 +170,7 @@ def request_otp(phone):
 
             return (
                 False,
-                "فشل إرسال رمز التحقق عبر الرسائل النصية. يرجى التحقق من رقم هاتفك أو التواصل مع الدعم.",
+                "ط¸ظ¾ط·آ´ط¸â€‍ ط·آ¥ط·آ±ط·آ³ط·آ§ط¸â€‍ ط·آ±ط¸â€¦ط·آ² ط·آ§ط¸â€‍ط·ع¾ط·آ­ط¸â€ڑط¸â€ڑ ط·آ¹ط·آ¨ط·آ± ط·آ§ط¸â€‍ط·آ±ط·آ³ط·آ§ط·آ¦ط¸â€‍ ط·آ§ط¸â€‍ط¸â€ ط·آµط¸ظ¹ط·آ©. ط¸ظ¹ط·آ±ط·آ¬ط¸â€° ط·آ§ط¸â€‍ط·ع¾ط·آ­ط¸â€ڑط¸â€ڑ ط¸â€¦ط¸â€  ط·آ±ط¸â€ڑط¸â€¦ ط¸â€،ط·آ§ط·ع¾ط¸ظ¾ط¸ئ’ ط·آ£ط¸ث† ط·آ§ط¸â€‍ط·ع¾ط¸ث†ط·آ§ط·آµط¸â€‍ ط¸â€¦ط·آ¹ ط·آ§ط¸â€‍ط·آ¯ط·آ¹ط¸â€¦.",
             )
 
     if not otp_sent_via_sms:
@@ -180,7 +180,7 @@ def request_otp(phone):
                 "[OTP] SMS provider not configured in production. Cannot send OTP."
             )
             cache.delete(_otp_key(phone))
-            return False, "خدمة الرسائل النصية غير مهيأة."
+            return False, "ط·آ®ط·آ¯ط¸â€¦ط·آ© ط·آ§ط¸â€‍ط·آ±ط·آ³ط·آ§ط·آ¦ط¸â€‍ ط·آ§ط¸â€‍ط¸â€ ط·آµط¸ظ¹ط·آ© ط·ط›ط¸ظ¹ط·آ± ط¸â€¦ط¸â€،ط¸ظ¹ط·آ£ط·آ©."
 
         # Mock: OTP already generated and stored, just log it
         logger.warning("[OTP] Falling back to MOCK mode for phone=%s", phone)
@@ -200,9 +200,9 @@ def request_otp(phone):
 
     # Return different message if we used Mock
     if not otp_sent_via_sms:
-        return True, "تم إنشاء رمز التحقق (وضع التطوير). تحقق من وحدة التحكم."
+        return True, "ط·ع¾ط¸â€¦ ط·آ¥ط¸â€ ط·آ´ط·آ§ط·طŒ ط·آ±ط¸â€¦ط·آ² ط·آ§ط¸â€‍ط·ع¾ط·آ­ط¸â€ڑط¸â€ڑ (ط¸ث†ط·آ¶ط·آ¹ ط·آ§ط¸â€‍ط·ع¾ط·آ·ط¸ث†ط¸ظ¹ط·آ±). ط·ع¾ط·آ­ط¸â€ڑط¸â€ڑ ط¸â€¦ط¸â€  ط¸ث†ط·آ­ط·آ¯ط·آ© ط·آ§ط¸â€‍ط·ع¾ط·آ­ط¸ئ’ط¸â€¦."
 
-    return True, "تم إرسال رمز التحقق بنجاح."
+    return True, "ط·ع¾ط¸â€¦ ط·آ¥ط·آ±ط·آ³ط·آ§ط¸â€‍ ط·آ±ط¸â€¦ط·آ² ط·آ§ط¸â€‍ط·ع¾ط·آ­ط¸â€ڑط¸â€ڑ ط·آ¨ط¸â€ ط·آ¬ط·آ§ط·آ­."
 
 
 def verify_otp(phone, entered_otp):
@@ -220,13 +220,13 @@ def _verify_otp_from_cache(phone, entered_otp):
     if stored_otp is None:
         return (
             False,
-            "انتهت صلاحية رمز التحقق أو لم يتم طلبه. يرجى طلب رمز جديد.",
+            "ط·آ§ط¸â€ ط·ع¾ط¸â€،ط·ع¾ ط·آµط¸â€‍ط·آ§ط·آ­ط¸ظ¹ط·آ© ط·آ±ط¸â€¦ط·آ² ط·آ§ط¸â€‍ط·ع¾ط·آ­ط¸â€ڑط¸â€ڑ ط·آ£ط¸ث† ط¸â€‍ط¸â€¦ ط¸ظ¹ط·ع¾ط¸â€¦ ط·آ·ط¸â€‍ط·آ¨ط¸â€،. ط¸ظ¹ط·آ±ط·آ¬ط¸â€° ط·آ·ط¸â€‍ط·آ¨ ط·آ±ط¸â€¦ط·آ² ط·آ¬ط·آ¯ط¸ظ¹ط·آ¯.",
         )
 
     if str(entered_otp).strip() == str(stored_otp).strip():
         cache.delete(_otp_key(phone))
         cache.delete(_otp_attempts_key(phone))
-        return True, "تم التحقق من رقم الهاتف بنجاح."
+        return True, "ط·ع¾ط¸â€¦ ط·آ§ط¸â€‍ط·ع¾ط·آ­ط¸â€ڑط¸â€ڑ ط¸â€¦ط¸â€  ط·آ±ط¸â€ڑط¸â€¦ ط·آ§ط¸â€‍ط¸â€،ط·آ§ط·ع¾ط¸ظ¾ ط·آ¨ط¸â€ ط·آ¬ط·آ§ط·آ­."
 
     attempts = cache.get(_otp_attempts_key(phone)) or 0
     attempts += 1
@@ -237,9 +237,9 @@ def _verify_otp_from_cache(phone, entered_otp):
     if remaining <= 0:
         cache.delete(_otp_key(phone))
         cache.delete(_otp_attempts_key(phone))
-        return False, "تجاوزت الحد المسموح من المحاولات. يرجى طلب رمز جديد."
+        return False, "ط·ع¾ط·آ¬ط·آ§ط¸ث†ط·آ²ط·ع¾ ط·آ§ط¸â€‍ط·آ­ط·آ¯ ط·آ§ط¸â€‍ط¸â€¦ط·آ³ط¸â€¦ط¸ث†ط·آ­ ط¸â€¦ط¸â€  ط·آ§ط¸â€‍ط¸â€¦ط·آ­ط·آ§ط¸ث†ط¸â€‍ط·آ§ط·ع¾. ط¸ظ¹ط·آ±ط·آ¬ط¸â€° ط·آ·ط¸â€‍ط·آ¨ ط·آ±ط¸â€¦ط·آ² ط·آ¬ط·آ¯ط¸ظ¹ط·آ¯."
 
-    return False, f"رمز التحقق غير صحيح. لديك {remaining} محاولة متبقية."
+    return False, f"Incorrect OTP. You have {remaining} attempts remaining."
 
 
 # ============================================

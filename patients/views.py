@@ -14,6 +14,7 @@ from .serializers import PatientProfileSerializer
 from .permissions import IsPatient
 from .models import PatientProfile
 from .forms import UserUpdateForm, PatientProfileUpdateForm
+from accounts.services.identity_claim_service import assign_national_id
 from clinics.models import Clinic, ClinicStaff
 from doctors.models import Specialty, DoctorProfile, DoctorIntakeFormTemplate, ClinicDoctorCredential
 from appointments.models import AppointmentType
@@ -353,7 +354,7 @@ def edit_appointment_view(request, appointment_id):
     import json
     from datetime import datetime as dt_cls, date as date_cls
     from appointments.models import Appointment, AppointmentType, AppointmentAnswer, AppointmentAttachment
-    from appointments.views import (
+    from appointments.services.intake_service import (
         get_active_intake_template, get_rules_for_template,
         collect_and_validate_intake, save_intake_answers,
     )
@@ -615,7 +616,7 @@ def load_edit_intake_form(request, appointment_id):
     """
     import json
     from appointments.models import Appointment, AppointmentAnswer, AppointmentAttachment
-    from appointments.views import get_active_intake_template, get_rules_for_template
+    from appointments.services.intake_service import get_active_intake_template, get_rules_for_template
 
     if not request.user.has_role("PATIENT"):
         return HttpResponse("")
@@ -743,6 +744,8 @@ def edit_profile(request):
         if u_form.is_valid() and p_form.is_valid():
             old_email = request.user.email or ""
             new_email = u_form.cleaned_data.get("email") or ""
+            old_national_id = request.user.national_id or ""
+            new_national_id = u_form.cleaned_data.get("national_id") or ""
 
             email_changed = False
             if new_email and old_email:
@@ -757,7 +760,11 @@ def edit_profile(request):
                 )
                 return redirect("accounts:change_email_request")
 
-            u_form.save()
+            user = u_form.save(commit=False)
+            user.national_id = request.user.national_id
+            user.save()
+            if new_national_id and new_national_id != old_national_id:
+                assign_national_id(request.user, new_national_id)
             p_form.save()
             messages.success(request, "تم تحديث ملفك الشخصي بنجاح!")
             return redirect("patients:profile")

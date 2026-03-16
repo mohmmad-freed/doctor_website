@@ -2,11 +2,18 @@ from django import forms
 from django.contrib.auth import get_user_model
 from .models import PatientProfile
 from accounts.models import City
+from accounts.services.identity_claim_service import normalize_national_id, validate_national_id
 
 User = get_user_model()
 
 
 class UserUpdateForm(forms.ModelForm):
+    def clean_national_id(self):
+        national_id = self.cleaned_data.get("national_id")
+        if not national_id:
+            return ""
+        return validate_national_id(normalize_national_id(national_id))
+
     class Meta:
         model = User
         fields = ["name",  "national_id", "city"]
