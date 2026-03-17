@@ -92,8 +92,7 @@ def book_appointment(
     """
 
     # ── 0. Validate the patient argument is actually a patient ────────
-    patient_roles = getattr(patient, 'roles', None) or []
-    if getattr(patient, 'role', None) != "PATIENT" and "PATIENT" not in patient_roles:
+    if not patient.has_role("PATIENT"):
         raise BookingError(
             "Only patients can book appointments.",
             code="not_a_patient",

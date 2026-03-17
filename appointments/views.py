@@ -60,8 +60,7 @@ def book_appointment_view(request, clinic_id):
 
     Steps: Select Doctor أ¢â€ â€™ Select Type أ¢â€ â€™ Select Date/Time أ¢â€ â€™ Fill Intake Form أ¢â€ â€™ Confirm
     """
-    role = getattr(request.user, "role", None)
-    if role != "PATIENT":
+    if not request.user.has_role("PATIENT"):
         return HttpResponseForbidden("Only patients can book appointments.")
 
     clinic = get_object_or_404(Clinic, id=clinic_id, is_active=True)
@@ -301,8 +300,7 @@ def load_intake_form(request, clinic_id):
 @login_required
 def booking_confirmation(request, appointment_id):
     """Displays booking confirmation after successful appointment creation."""
-    role = getattr(request.user, "role", None)
-    if role != "PATIENT":
+    if not request.user.has_role("PATIENT"):
         return HttpResponseForbidden("Only patients can view this page.")
 
     appointment = get_object_or_404(Appointment, id=appointment_id, patient=request.user)

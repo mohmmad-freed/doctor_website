@@ -41,7 +41,7 @@ class BookAppointmentAPIView(APIView):
 
     def post(self, request):
         # Ensure only patients can book
-        if getattr(request.user, "role", None) != "PATIENT":
+        if not request.user.has_role("PATIENT"):
             return Response(
                 {"detail": "Only patients can book appointments."},
                 status=status.HTTP_403_FORBIDDEN,
