@@ -978,104 +978,166 @@ def change_phone_verify(request):
     return render(request, "accounts/change_phone_verify.html", {"phone": new_phone})
 
 
+def _profile_url_for_user(user):
+    """Return the correct profile URL for a given user based on their roles."""
+    if user.has_role("MAIN_DOCTOR"):
+        return reverse("clinics:owner_profile")
+    if "DOCTOR" in (user.roles or []):
+        return reverse("doctors:doctor_profile")
+    return reverse("patients:profile")
+
+
+def _edit_profile_url_for_user(user):
+    """Return the correct edit-profile URL for a given user based on their roles."""
+    if user.has_role("MAIN_DOCTOR"):
+        return reverse("clinics:owner_edit_profile")
+    if "DOCTOR" in (user.roles or []):
+        return reverse("doctors:doctor_edit_profile")
+    return reverse("patients:edit_profile")
+
+
 @login_required
 def change_email_request(request):
-    """Initiate email change: Enter new email and send verification"""
-
-    # Get the current email to show in the form
+    """Initiate email change: Enter new email and send verification link."""
     current_email = request.user.email or ""
-
-    # Pre-fill with pending email if coming from edit profile
     pending_email = request.session.get("pending_email_change", "")
+    profile_url = _profile_url_for_user(request.user)
+    cancel_url = _edit_profile_url_for_user(request.user)
+
+    ctx = {"current_email": current_email, "pending_email": pending_email,
+           "profile_url": profile_url, "cancel_url": cancel_url}
 
     if request.method == "POST":
         new_email = request.POST.get("email", "").strip()
 
-        # 1. Basic validation
         if not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", new_email):
             messages.error(request, "تنسيق البريد الإلكتروني غير صحيح.")
-            return render(
-                request,
-                "accounts/change_email_request.html",
-                {"current_email": current_email, "pending_email": pending_email},
-            )
+            return render(request, "accounts/change_email_request.html",
+                          {**ctx, "pending_email": new_email})
 
-        # 2. Check uniqueness
         if request.user.email and request.user.email.lower() == new_email.lower():
             messages.error(request, "لقد أدخلت بريدك الإلكتروني الحالي.")
-            return render(
-                request,
-                "accounts/change_email_request.html",
-                {"current_email": current_email, "pending_email": pending_email},
-            )
+            return render(request, "accounts/change_email_request.html",
+                          {**ctx, "pending_email": new_email})
 
-        if (
-            User.objects.filter(email__iexact=new_email)
-            .exclude(pk=request.user.pk)
-            .exists()
-        ):
+        if User.objects.filter(email__iexact=new_email).exclude(pk=request.user.pk).exists():
             messages.error(request, "البريد الإلكتروني هذا مسجل بالفعل.")
-            return render(
-                request,
-                "accounts/change_email_request.html",
-                {"current_email": current_email, "pending_email": pending_email},
-            )
+            return render(request, "accounts/change_email_request.html",
+                          {**ctx, "pending_email": new_email})
 
-        # 3. Send Verification Email
         verification_url = request.build_absolute_uri(
             reverse(
                 "accounts:verify_change_email",
                 kwargs={"token": generate_email_verification_token(request.user, new_email)},
             )
         )
-        success, message = send_change_email_verification(
-            request.user,
-            new_email,
-            verification_url,
-        )
+        success, message = send_change_email_verification(request.user, new_email, verification_url)
 
         if success:
-            # Store intended email in session
             request.session["change_email_pending"] = new_email
-            # Clear the pending_email_change flag
             if "pending_email_change" in request.session:
                 del request.session["pending_email_change"]
-            return render(
-                request, "accounts/change_email_sent.html", {"email": new_email}
-            )
+            return render(request, "accounts/change_email_sent.html",
+                          {"email": new_email, "profile_url": profile_url})
         else:
             messages.error(request, message)
 
-    return render(
-        request,
-        "accounts/change_email_request.html",
-        {"current_email": current_email, "pending_email": pending_email},
-    )
+    return render(request, "accounts/change_email_request.html", ctx)
 
 
 @login_required
 def verify_change_email(request, token):
-    """Verify email change token and update user email"""
+    """Verify email change token and update user email."""
     success, data, message = verify_email_token(token)
 
     if success:
-        # Extract the actual email string from the token data
         email = data.get("email")
-
-        # Update user's email
         request.user.email = email
         request.user.email_verified = True
         request.user.save()
 
-        # Cleanup session
         if "change_email_pending" in request.session:
             del request.session["change_email_pending"]
 
         messages.success(request, f"تم تحديث البريد الإلكتروني بنجاح إلى {email}!")
-        return redirect("patients:profile")
+        return redirect(_profile_url_for_user(request.user))
     else:
         messages.error(request, message)
         return redirect("accounts:change_email_request")
+
+
+@login_required
+def change_email_otp_request(request):
+    """Enter new email → send 6-digit OTP to that address."""
+    current_email = request.user.email or ""
+    prefill_email = request.session.pop("pending_email_change", "")
+
+    if request.method == "POST":
+        new_email = request.POST.get("email", "").strip().lower()
+
+        if not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", new_email):
+            messages.error(request, "تنسيق البريد الإلكتروني غير صحيح.")
+            return render(request, "accounts/change_email_otp_request.html",
+                          {"current_email": current_email, "prefill_email": new_email})
+
+        if current_email and current_email.lower() == new_email:
+            messages.error(request, "لقد أدخلت بريدك الإلكتروني الحالي.")
+            return render(request, "accounts/change_email_otp_request.html",
+                          {"current_email": current_email, "prefill_email": new_email})
+
+        if User.objects.filter(email__iexact=new_email).exclude(pk=request.user.pk).exists():
+            messages.error(request, "البريد الإلكتروني هذا مسجل بالفعل.")
+            return render(request, "accounts/change_email_otp_request.html",
+                          {"current_email": current_email, "prefill_email": new_email})
+
+        success, msg = send_email_otp(new_email, request.user.name)
+        if success:
+            request.session["change_email_otp_pending"] = new_email
+            return redirect("accounts:change_email_otp_verify")
+        messages.error(request, msg)
+        return render(request, "accounts/change_email_otp_request.html",
+                      {"current_email": current_email, "prefill_email": new_email})
+
+    return render(request, "accounts/change_email_otp_request.html",
+                  {"current_email": current_email, "prefill_email": prefill_email})
+
+
+@login_required
+def change_email_otp_verify(request):
+    """Enter the 6-digit OTP sent to the new email, then apply the change."""
+    pending_email = request.session.get("change_email_otp_pending")
+    if not pending_email:
+        return redirect("accounts:change_email_otp_request")
+
+    if request.method == "POST":
+        if request.POST.get("action") == "resend":
+            success, msg = send_email_otp(pending_email, request.user.name)
+            if success:
+                messages.success(request, msg)
+            else:
+                messages.error(request, msg)
+            return redirect("accounts:change_email_otp_verify")
+
+        otp = request.POST.get("otp", "").strip()
+        success, msg = verify_email_otp(pending_email, otp)
+        if success:
+            request.user.email = pending_email
+            request.user.email_verified = True
+            request.user.save(update_fields=["email", "email_verified"])
+            del request.session["change_email_otp_pending"]
+            messages.success(request, "تم تحديث البريد الإلكتروني بنجاح!")
+            # Redirect to the right profile page based on role
+            if request.user.has_role("MAIN_DOCTOR"):
+                return redirect("clinics:owner_profile")
+            if "DOCTOR" in (request.user.roles or []):
+                return redirect("doctors:doctor_profile")
+            return redirect("patients:profile")
+        messages.error(request, msg)
+
+    return render(request, "accounts/change_email_otp_verify.html", {
+        "email": pending_email,
+        "cooldown": is_email_otp_in_cooldown(pending_email),
+    })
 
 
 # ============================================

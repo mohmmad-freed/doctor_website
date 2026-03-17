@@ -320,9 +320,14 @@
             <i class="fa-solid fa-user-circle" style="color:var(--color-primary-500);"></i>
             الملف الشخصي
         </h1>
-        <a href="{% url 'clinics:my_clinics' %}" class="btn-back">
-            <i class="fa-solid fa-arrow-right"></i> عياداتي
-        </a>
+        <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;">
+            <a href="{% url 'clinics:owner_edit_profile' %}" class="btn-back" style="color:var(--color-primary-500);border-color:var(--color-primary-500);">
+                <i class="fa-solid fa-pen-to-square"></i> تعديل الملف
+            </a>
+            <a href="{% url 'clinics:my_clinics' %}" class="btn-back">
+                <i class="fa-solid fa-arrow-right"></i> عياداتي
+            </a>
+        </div>
     </div>
 
     <!-- Hero card: avatar + name + phone + roles -->
@@ -388,89 +393,17 @@
                         <span class="verify-badge verify-badge-no"><i class="fa-solid fa-circle-xmark"></i> غير موثق</span>
                     {% endif %}
                 {% endif %}
+                <a href="{% url 'accounts:change_email_request' %}"
+                   style="font-size:0.78rem;color:var(--color-primary-500);text-decoration:none;border:1px solid var(--color-primary-500);padding:2px 8px;border-radius:6px;"
+                   title="تغيير البريد الإلكتروني">
+                    <i class="fa-solid fa-pen"></i>
+                </a>
             </dd>
             {% if user.city %}
             <dt>المدينة</dt>
             <dd>{{ user.city.name }}</dd>
             {% endif %}
         </dl>
-    </div>
-
-    <!-- Edit form -->
-    <div class="section-card">
-        <h2>
-            <i class="fa-solid fa-pen-to-square"></i>
-            تعديل المعلومات
-        </h2>
-        <form method="post" novalidate>
-            {% csrf_token %}
-            <div class="form-grid">
-
-                <!-- Name -->
-                <div class="form-group form-group-full">
-                    <label for="id_name">الاسم الكامل</label>
-                    <input type="text" id="id_name" name="name"
-                           value="{{ form_data.name|default:user.name }}"
-                           class="{% if errors.name %}input-has-error{% endif %}"
-                           autocomplete="name" required>
-                    {% if errors.name %}
-                    <span class="form-error-msg">{{ errors.name }}</span>
-                    {% endif %}
-                </div>
-
-                <!-- Email -->
-                <div class="form-group form-group-full">
-                    <label for="id_email">البريد الإلكتروني <span style="color:var(--color-text-muted);font-weight:400;">(اختياري)</span></label>
-                    <input type="email" id="id_email" name="email"
-                           value="{{ form_data.email|default:user.email|default:'' }}"
-                           class="{% if errors.email %}input-has-error{% endif %}"
-                           autocomplete="email" dir="ltr">
-                    {% if errors.email %}
-                    <span class="form-error-msg">{{ errors.email }}</span>
-                    {% else %}
-                    <span class="field-hint"><i class="fa-solid fa-circle-info"></i> تغيير البريد يتطلب إعادة التحقق.</span>
-                    {% endif %}
-                </div>
-
-                <!-- Phone (read-only) -->
-                <div class="form-group">
-                    <label>رقم الهاتف</label>
-                    <input type="text" value="{{ user.phone }}" disabled dir="ltr">
-                    <span class="field-hint"><i class="fa-solid fa-lock"></i> لا يمكن تغيير رقم الهاتف.</span>
-                </div>
-
-                <!-- National ID (read-only) -->
-                <div class="form-group">
-                    <label>رقم الهوية الوطنية</label>
-                    <input type="text" value="{{ user.national_id|default:'—' }}" disabled>
-                    <span class="field-hint"><i class="fa-solid fa-lock"></i> لا يمكن تغيير رقم الهوية.</span>
-                </div>
-
-                <!-- City -->
-                <div class="form-group form-group-full">
-                    <label for="id_city">المدينة <span style="color:var(--color-text-muted);font-weight:400;">(اختياري)</span></label>
-                    <select id="id_city" name="city">
-                        <option value="">— اختر المدينة —</option>
-                        {% for city in cities %}
-                        <option value="{{ city.id }}"
-                            {% if form_data.city %}
-                                {% if form_data.city == city.id|stringformat:"s" %}selected{% endif %}
-                            {% elif user.city_id == city.id %}selected{% endif %}>
-                            {{ city.name }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-            </div>
-
-            <div class="form-actions">
-                <button type="submit" class="btn-save">
-                    <i class="fa-solid fa-floppy-disk"></i>
-                    حفظ التغييرات
-                </button>
-            </div>
-        </form>
     </div>
 
     <!-- Owned clinics -->

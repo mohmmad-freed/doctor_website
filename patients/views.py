@@ -754,9 +754,6 @@ def edit_profile(request):
 
             if email_changed:
                 request.session["pending_email_change"] = new_email
-                messages.info(
-                    request, "يرجى التحقق من البريد الإلكتروني الجديد لإتمام التغيير."
-                )
                 return redirect("accounts:change_email_request")
 
             user = u_form.save(commit=False)

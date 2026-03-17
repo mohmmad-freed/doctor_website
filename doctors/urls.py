@@ -67,6 +67,11 @@ urlpatterns = [
         views.doctor_profile_view,
         name="doctor_profile",
     ),
+    path(
+        "profile/edit/",
+        views.doctor_edit_profile_view,
+        name="doctor_edit_profile",
+    ),
     # --- API Endpoints ---
     path(
         "api/specialties/",

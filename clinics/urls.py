@@ -12,6 +12,7 @@ urlpatterns = [
 
     # Clinic owner profile
     path('profile/', views.owner_profile, name='owner_profile'),
+    path('profile/edit/', views.owner_edit_profile, name='owner_edit_profile'),
 
     # Add a new clinic (for already-authenticated clinic owners)
     path('add/', views.add_clinic_code_view, name='add_clinic_code'),

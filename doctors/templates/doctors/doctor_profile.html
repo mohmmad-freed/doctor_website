@@ -145,9 +145,14 @@ textarea.form-control { resize: vertical; }
             <i class="fa-solid fa-user-doctor" style="color:var(--color-primary-500);"></i>
             الملف الشخصي
         </h1>
-        <a href="{% url 'doctors:dashboard' %}" class="btn-back">
-            <i class="fa-solid fa-arrow-right"></i> لوحة التحكم
-        </a>
+        <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;">
+            <a href="{% url 'doctors:doctor_edit_profile' %}" class="btn-back" style="color:var(--color-primary-500);border-color:var(--color-primary-500);">
+                <i class="fa-solid fa-pen-to-square"></i> تعديل الملف
+            </a>
+            <a href="{% url 'doctors:dashboard' %}" class="btn-back">
+                <i class="fa-solid fa-arrow-right"></i> لوحة التحكم
+            </a>
+        </div>
     </div>
 
     <!-- User Info Card (read-only) -->
@@ -156,7 +161,22 @@ textarea.form-control { resize: vertical; }
         <dl class="info-grid">
             <dt>الاسم</dt><dd>{{ request.user.name }}</dd>
             <dt>الهاتف</dt><dd style="direction:ltr;text-align:right;">{{ request.user.phone }}</dd>
-            <dt>البريد</dt><dd>{{ request.user.email|default:"غير محدد" }}</dd>
+            <dt>البريد</dt>
+            <dd style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+                {{ request.user.email|default:"غير محدد" }}
+                {% if request.user.email %}
+                    {% if request.user.email_verified %}
+                    <span style="color:#065f46;font-size:0.8rem;font-weight:700;"><i class="fa-solid fa-circle-check" style="font-size:0.75rem;"></i> موثق</span>
+                    {% else %}
+                    <span style="color:#92400e;font-size:0.8rem;font-weight:700;"><i class="fa-solid fa-circle-xmark" style="font-size:0.75rem;"></i> غير موثق</span>
+                    {% endif %}
+                {% endif %}
+                <a href="{% url 'accounts:change_email_request' %}"
+                   style="font-size:0.78rem;color:var(--color-primary-500);text-decoration:none;border:1px solid var(--color-primary-500);padding:2px 8px;border-radius:6px;"
+                   title="تغيير البريد الإلكتروني">
+                    <i class="fa-solid fa-pen"></i>
+                </a>
+            </dd>
             <dt>الحالة</dt>
             <dd>
                 {% if request.user.is_verified %}
@@ -203,30 +223,6 @@ textarea.form-control { resize: vertical; }
         {% endif %}
     </div>
 
-    <!-- Editable Profile Form -->
-    <div class="card">
-        <h2><i class="fa-solid fa-pen-to-square"></i> تعديل الملف الشخصي</h2>
-        <form method="post">
-            {% csrf_token %}
-            <div class="form-group">
-                <label for="id_bio">{{ form.bio.label }}</label>
-                {{ form.bio }}
-                {% if form.bio.errors %}
-                <div class="field-error"><i class="fa-solid fa-circle-exclamation"></i> {{ form.bio.errors.0 }}</div>
-                {% endif %}
-            </div>
-            <div class="form-group">
-                <label for="id_years_of_experience">{{ form.years_of_experience.label }}</label>
-                {{ form.years_of_experience }}
-                {% if form.years_of_experience.errors %}
-                <div class="field-error"><i class="fa-solid fa-circle-exclamation"></i> {{ form.years_of_experience.errors.0 }}</div>
-                {% endif %}
-            </div>
-            <button type="submit" class="btn-primary">
-                <i class="fa-solid fa-floppy-disk"></i> حفظ التغييرات
-            </button>
-        </form>
-    </div>
 
 </div>
 {% endblock %}

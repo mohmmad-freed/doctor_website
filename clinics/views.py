@@ -158,37 +158,49 @@ def appointments_panel_view(request, clinic_id):
 
 @login_required
 def owner_profile(request):
-    """Clinic owner profile — view and edit personal info."""
+    """Clinic owner profile — read-only view."""
+    user = request.user
+    owned_clinics = Clinic.objects.filter(main_doctor=user, is_active=True).order_by("name")
+    return render(request, "clinics/owner_profile.html", {
+        "owned_clinics": owned_clinics,
+    })
+
+
+@login_required
+def owner_edit_profile(request):
+    """Clinic owner edit profile — name, city; email change goes through OTP flow."""
     user = request.user
     from accounts.models import City
     cities = City.objects.all().order_by("name")
 
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
-        email = request.POST.get("email", "").strip()
+        email = request.POST.get("email", "").strip().lower()
         city_id = request.POST.get("city", "")
 
         errors = {}
         if not name:
             errors["name"] = "الاسم مطلوب."
 
-        if not errors:
-            user.name = name
-            if email:
-                from django.core.validators import validate_email
-                from django.core.exceptions import ValidationError as DjangoValidationError
-                try:
-                    validate_email(email)
-                    if email != user.email:
-                        user.email = email
-                        user.email_verified = False
-                except DjangoValidationError:
-                    errors["email"] = "البريد الإلكتروني غير صحيح."
-            else:
-                user.email = None
-                user.email_verified = False
+        if not email:
+            errors["email"] = "البريد الإلكتروني مطلوب."
+
+        # Detect email change
+        current_email = user.email or ""
+        email_changed = email and email != current_email.lower()
+
+        if email_changed and not errors:
+            # Validate format before handing off to OTP flow
+            from django.core.validators import validate_email as _validate_email
+            from django.core.exceptions import ValidationError as DjangoValidationError
+            try:
+                _validate_email(email)
+            except DjangoValidationError:
+                errors["email"] = "البريد الإلكتروني غير صحيح."
 
             if not errors:
+                # Save non-email fields first
+                user.name = name
                 if city_id:
                     from accounts.models import City as CityModel
                     try:
@@ -197,20 +209,32 @@ def owner_profile(request):
                         user.city = None
                 else:
                     user.city = None
-                user.save(update_fields=["name", "email", "email_verified", "city"])
-                messages.success(request, "تم حفظ التغييرات بنجاح.")
-                return redirect("clinics:owner_profile")
+                user.save(update_fields=["name", "city"])
+                request.session["pending_email_change"] = email
+                return redirect("accounts:change_email_request")
 
-        return render(request, "clinics/owner_profile.html", {
+        if not errors:
+            user.name = name
+            if city_id:
+                from accounts.models import City as CityModel
+                try:
+                    user.city = CityModel.objects.get(id=city_id)
+                except CityModel.DoesNotExist:
+                    user.city = None
+            else:
+                user.city = None
+            user.save(update_fields=["name", "city"])
+            messages.success(request, "تم حفظ التغييرات بنجاح.")
+            return redirect("clinics:owner_profile")
+
+        return render(request, "clinics/owner_edit_profile.html", {
             "cities": cities,
             "errors": errors,
             "form_data": request.POST,
         })
 
-    owned_clinics = Clinic.objects.filter(main_doctor=user, is_active=True).order_by("name")
-    return render(request, "clinics/owner_profile.html", {
+    return render(request, "clinics/owner_edit_profile.html", {
         "cities": cities,
-        "owned_clinics": owned_clinics,
     })
 
 

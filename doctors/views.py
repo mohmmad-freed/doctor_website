@@ -651,7 +651,29 @@ class DoctorProfileForm(django_forms.Form):
 
 @login_required
 def doctor_profile_view(request):
-    """View and edit the doctor's public profile."""
+    """Read-only view of the doctor's profile."""
+    user = request.user
+    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
+        messages.error(request, "هذه الصفحة متاحة للأطباء فقط.")
+        return redirect(reverse("accounts:home"))
+
+    profile, _ = DoctorProfile.objects.get_or_create(user=user)
+    specialties = profile.specialties.all()
+    memberships = (
+        ClinicStaff.objects.filter(user=user, revoked_at__isnull=True)
+        .select_related("clinic")
+    )
+
+    return render(request, "doctors/doctor_profile.html", {
+        "profile": profile,
+        "specialties": specialties,
+        "memberships": memberships,
+    })
+
+
+@login_required
+def doctor_edit_profile_view(request):
+    """Edit doctor's bio, experience, and email (email change via OTP)."""
     user = request.user
     if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
         messages.error(request, "هذه الصفحة متاحة للأطباء فقط.")
@@ -661,32 +683,52 @@ def doctor_profile_view(request):
 
     if request.method == "POST":
         form = DoctorProfileForm(request.POST)
+        email = request.POST.get("email", "").strip().lower()
+        current_email = user.email or ""
+        email_changed = email and email != current_email.lower()
+
+        if email_changed:
+            from django.core.validators import validate_email as _validate_email
+            from django.core.exceptions import ValidationError as DjangoValidationError
+            from django.contrib.auth import get_user_model
+            _User = get_user_model()
+            try:
+                _validate_email(email)
+                if _User.objects.filter(email__iexact=email).exclude(pk=user.pk).exists():
+                    messages.error(request, "البريد الإلكتروني هذا مسجل بالفعل.")
+                    return render(request, "doctors/doctor_edit_profile.html", {
+                        "form": form,
+                        "profile": profile,
+                    })
+                if form.is_valid():
+                    profile.bio = form.cleaned_data.get("bio", "")
+                    profile.years_of_experience = form.cleaned_data.get("years_of_experience")
+                    profile.save()
+                request.session["pending_email_change"] = email
+                return redirect(reverse("accounts:change_email_request"))
+            except DjangoValidationError:
+                messages.error(request, "البريد الإلكتروني غير صحيح.")
+                return render(request, "doctors/doctor_edit_profile.html", {
+                    "form": form,
+                    "profile": profile,
+                })
+
         if form.is_valid():
             profile.bio = form.cleaned_data.get("bio", "")
             profile.years_of_experience = form.cleaned_data.get("years_of_experience")
             profile.save()
             messages.success(request, "تم تحديث الملف الشخصي بنجاح.")
             return redirect(reverse("doctors:doctor_profile"))
+
     else:
         form = DoctorProfileForm(initial={
             "bio": profile.bio,
             "years_of_experience": profile.years_of_experience,
         })
 
-    # Specialties (read-only, managed via invitations)
-    specialties = profile.specialties.all()
-
-    # Clinic memberships
-    memberships = (
-        ClinicStaff.objects.filter(user=user, revoked_at__isnull=True)
-        .select_related("clinic")
-    )
-
-    return render(request, "doctors/doctor_profile.html", {
+    return render(request, "doctors/doctor_edit_profile.html", {
         "form": form,
         "profile": profile,
-        "specialties": specialties,
-        "memberships": memberships,
     })
 
 

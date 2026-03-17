@@ -1,31 +1,93 @@
-{% extends 'patients/base_dashboard.html' %}
+{% extends 'accounts/base.html' %}
 {% load mask_filters %}
 
 {% block title %}تم إرسال رابط التحقق{% endblock %}
 
+{% block extra_css %}
+<style>
+.wrapper {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+.card {
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-surface-border);
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+    padding: 2.5rem 2rem;
+    max-width: 440px;
+    width: 100%;
+    text-align: center;
+}
+[data-theme="dark"] .card { box-shadow: 0 4px 24px rgba(0,0,0,0.3); }
+.icon-circle {
+    width: 80px; height: 80px;
+    background: #dcfce7;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1.5rem;
+    color: #16a34a;
+    font-size: 2rem;
+}
+[data-theme="dark"] .icon-circle { background: rgba(22,163,74,0.15); color: #4ade80; }
+.card-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--color-text-main);
+    margin: 0 0 1rem;
+}
+.email-label { color: var(--color-text-muted); font-size: 0.95rem; margin-bottom: 4px; }
+.email-value {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--color-primary-500);
+    direction: ltr;
+    display: inline-block;
+    word-break: break-all;
+    margin-bottom: 1.25rem;
+}
+.note {
+    font-size: 0.88rem;
+    color: var(--color-text-muted);
+    margin-bottom: 1.75rem;
+    line-height: 1.6;
+}
+.btn-profile {
+    display: block;
+    width: 100%;
+    background: var(--color-primary-500);
+    color: #fff;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background 0.15s;
+}
+.btn-profile:hover { background: var(--color-primary-600); }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="max-w-md mx-auto mt-10">
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 md:p-8 text-center">
-        <div
-            class="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600 dark:text-green-400 text-4xl">
+<div class="wrapper">
+    <div class="card">
+        <div class="icon-circle">
             <i class="fa-solid fa-envelope-circle-check"></i>
         </div>
 
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">تحقق من بريدك الإلكتروني</h2>
+        <h2 class="card-title">تحقق من بريدك الإلكتروني</h2>
 
-        <div class="text-gray-600 dark:text-gray-300 mb-6 space-y-2">
-            <p>تم إرسال رابط التحقق إلى:</p>
-            <p class="font-bold text-lg text-primary-600 dir-ltr">{{ email|mask_email }}</p>
-        </div>
+        <p class="email-label">تم إرسال رابط التحقق إلى:</p>
+        <p class="email-value">{{ email|mask_email }}</p>
 
-        <p class="text-sm text-gray-500 dark:text-gray-400 mb-8">
+        <p class="note">
             يرجى النقر على الرابط المرسل لتأكيد تغيير البريد الإلكتروني. الرابط صالح لمدة 15 دقيقة.
         </p>
 
-        <a href="{% url 'patients:profile' %}"
-            class="block w-full bg-primary-600 hover:bg-primary-700 text-white px-4 py-3 rounded-lg font-medium shadow-md transition-all hover:shadow-lg">
-            العودة للملف الشخصي
-        </a>
+        <a href="{{ profile_url }}" class="btn-profile">العودة للملف الشخصي</a>
     </div>
 </div>
 {% endblock %}

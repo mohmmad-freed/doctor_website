@@ -80,7 +80,7 @@ urlpatterns = [
         views.change_phone_verify,
         name="change_phone_verify",
     ),
-    # Change Email
+    # Change Email (link-based, legacy)
     path(
         "profile/change-email/", views.change_email_request, name="change_email_request"
     ),
@@ -88,6 +88,17 @@ urlpatterns = [
         "profile/change-email/verify/<str:token>/",
         views.verify_change_email,
         name="verify_change_email",
+    ),
+    # Change Email (OTP-based)
+    path(
+        "profile/change-email/otp/",
+        views.change_email_otp_request,
+        name="change_email_otp_request",
+    ),
+    path(
+        "profile/change-email/otp/verify/",
+        views.change_email_otp_verify,
+        name="change_email_otp_verify",
     ),
     # Forgot Password
     path(
