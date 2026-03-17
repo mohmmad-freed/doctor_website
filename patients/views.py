@@ -384,9 +384,8 @@ def edit_appointment_view(request, appointment_id):
             messages.error(request, "لا يمكن تعديل هذا الموعد.")
         return redirect("patients:my_appointments")
 
-    # Get appointment types for this doctor+clinic
+    # Get appointment types for this clinic
     appointment_types = AppointmentType.objects.filter(
-        doctor=appointment.doctor,
         clinic=appointment.clinic,
         is_active=True,
     )
@@ -554,7 +553,7 @@ def load_edit_slots(request, appointment_id):
     if type_id:
         try:
             apt_type = AppointmentType.objects.get(
-                id=int(type_id), doctor=appointment.doctor,
+                id=int(type_id),
                 clinic=appointment.clinic, is_active=True,
             )
         except (AppointmentType.DoesNotExist, ValueError):

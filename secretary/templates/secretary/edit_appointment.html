@@ -1,0 +1,80 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}تعديل الموعد{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+
+            <div class="d-flex align-items-center gap-3 mb-4">
+                <a href="{% url 'secretary:appointments' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fa-solid fa-arrow-right"></i>
+                </a>
+                <h2 class="mb-0">تعديل الموعد</h2>
+            </div>
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-header d-flex align-items-center gap-2 text-muted small">
+                    <i class="fa-solid fa-circle-info"></i>
+                    معلومات الموعد الحالية
+                </div>
+                <div class="card-body py-2">
+                    <dl class="row mb-0 small">
+                        <dt class="col-4 text-muted fw-normal">المريض</dt>
+                        <dd class="col-8 mb-1 fw-semibold">{{ appointment.patient.name }}</dd>
+                        <dt class="col-4 text-muted fw-normal">الطبيب</dt>
+                        <dd class="col-8 mb-1">{{ appointment.doctor.name|default:"—" }}</dd>
+                        <dt class="col-4 text-muted fw-normal">الموعد</dt>
+                        <dd class="col-8 mb-0">{{ appointment.appointment_date|date:"d/m/Y" }} — {{ appointment.appointment_time|time:"H:i" }}</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">نوع الموعد</label>
+                            <select name="appointment_type_id" class="form-select" required>
+                                {% for at in appointment_types %}
+                                <option value="{{ at.id }}"
+                                    {% if appointment.appointment_type_id == at.id %}selected{% endif %}>
+                                    {{ at.display_name }} ({{ at.duration_minutes }} دقيقة)
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-sm-6">
+                                <label class="form-label fw-semibold">التاريخ الجديد</label>
+                                <input type="date" name="appointment_date" class="form-control" required
+                                    value="{{ appointment.appointment_date|date:'Y-m-d' }}">
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="form-label fw-semibold">الوقت الجديد</label>
+                                <input type="time" name="appointment_time" class="form-control" required
+                                    value="{{ appointment.appointment_time|time:'H:i' }}">
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">سبب الزيارة</label>
+                            <textarea name="reason" class="form-control" rows="3" maxlength="1000">{{ appointment.reason }}</textarea>
+                        </div>
+
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a href="{% url 'secretary:appointments' %}" class="btn btn-outline-secondary">إلغاء</a>
+                            <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

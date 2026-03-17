@@ -91,6 +91,14 @@ def book_appointment(
         Clinic.DoesNotExist: If the clinic is invalid.
     """
 
+    # ── 0. Validate the patient argument is actually a patient ────────
+    patient_roles = getattr(patient, 'roles', None) or []
+    if getattr(patient, 'role', None) != "PATIENT" and "PATIENT" not in patient_roles:
+        raise BookingError(
+            "Only patients can book appointments.",
+            code="not_a_patient",
+        )
+
     # ── 1. Basic date validation ──────────────────────────────────────
     today = date.today()
     if appointment_date < today:
@@ -113,6 +121,72 @@ def book_appointment(
     if hasattr(patient, 'patient_profile'):
         if is_patient_blocked(clinic, patient.patient_profile):
             raise BookingError("You are blocked from booking at this clinic due to repeated no-shows.", code="patient_blocked")
+
+    # ── 2b. Validate doctor is active at this clinic ──────────────────
+    from clinics.models import ClinicStaff
+    is_main_doctor = (clinic.main_doctor_id == doctor_id)
+    is_active_staff = ClinicStaff.objects.filter(
+        clinic=clinic, user_id=doctor_id, role__in=["DOCTOR", "MAIN_DOCTOR"], is_active=True
+    ).exists()
+    if not is_main_doctor and not is_active_staff:
+        raise BookingError(
+            "This doctor is not available at this clinic.",
+            code="doctor_not_active",
+        )
+
+    # ── 2c. Validate doctor identity is verified ──────────────────────
+    from doctors.models import DoctorVerification
+    try:
+        verification = DoctorVerification.objects.get(user_id=doctor_id)
+        if verification.identity_status != "IDENTITY_VERIFIED":
+            raise BookingError(
+                "This doctor is not available for booking at this time.",
+                code="doctor_not_verified",
+            )
+    except DoctorVerification.DoesNotExist:
+        raise BookingError(
+            "This doctor is not available for booking at this time.",
+            code="doctor_not_verified",
+        )
+
+    # ── 2d. Validate clinic subscription is active ────────────────────
+    from clinics.models import ClinicSubscription
+    try:
+        subscription = ClinicSubscription.objects.get(clinic=clinic)
+        if not subscription.is_effectively_active():
+            raise BookingError(
+                "Appointments cannot be booked at this clinic right now.",
+                code="clinic_subscription_inactive",
+            )
+    except ClinicSubscription.DoesNotExist:
+        pass  # No subscription record — allow booking
+
+    # ── 2e. Check for clinic holiday on the requested date ────────────
+    from clinics.models import ClinicHoliday
+    if ClinicHoliday.objects.filter(
+        clinic=clinic,
+        is_active=True,
+        start_date__lte=appointment_date,
+        end_date__gte=appointment_date,
+    ).exists():
+        raise BookingError(
+            "The clinic is closed on the selected date.",
+            code="clinic_holiday",
+        )
+
+    # ── 2f. Check for doctor availability exception on the date ───────
+    from clinics.models import DoctorAvailabilityException
+    if DoctorAvailabilityException.objects.filter(
+        doctor_id=doctor_id,
+        clinic=clinic,
+        is_active=True,
+        start_date__lte=appointment_date,
+        end_date__gte=appointment_date,
+    ).exists():
+        raise BookingError(
+            "The doctor is not available on the selected date.",
+            code="doctor_exception",
+        )
 
     # ── 3. Validate appointment type ──────────────────────────────────
     try:
@@ -200,5 +274,11 @@ def book_appointment(
             reason=reason,
             created_by=patient,
         )
+
+        # Notify patient after DB commit (in-app + email)
+        from appointments.services.appointment_notification_service import (
+            notify_appointment_booked,
+        )
+        transaction.on_commit(lambda: notify_appointment_booked(appointment))
 
     return appointment

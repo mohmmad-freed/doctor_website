@@ -225,10 +225,25 @@ class InvitationAuditLog(models.Model):
 class ClinicSubscription(models.Model):
     """Subscription plan bound to a clinic, seeded from the activation code."""
 
+    # Billing period (kept for backward compatibility)
     PLAN_CHOICES = [
         ("MONTHLY", "Monthly"),
         ("YEARLY", "Yearly"),
     ]
+    # Plan tier — defines capacity limits
+    class PlanName(models.TextChoices):
+        SMALL = "SMALL", "صغير"
+        MEDIUM = "MEDIUM", "متوسط"
+        ENTERPRISE = "ENTERPRISE", "مؤسسة"
+
+    # Default limits per plan tier.
+    # ENTERPRISE is intentionally absent — admin sets max_doctors/max_secretaries
+    # explicitly on the subscription or activation code for each enterprise clinic.
+    PLAN_LIMITS = {
+        "SMALL":  {"doctors": 2, "secretaries": 5},
+        "MEDIUM": {"doctors": 4, "secretaries": 5},
+    }
+
     STATUS_CHOICES = [
         ("ACTIVE", "Active"),
         ("EXPIRED", "Expired"),
@@ -239,13 +254,81 @@ class ClinicSubscription(models.Model):
         Clinic, on_delete=models.CASCADE, related_name="subscription"
     )
     plan_type = models.CharField(max_length=10, choices=PLAN_CHOICES, default="MONTHLY")
+    plan_name = models.CharField(
+        max_length=20,
+        choices=PlanName.choices,
+        default=PlanName.SMALL,
+        help_text="Plan tier that determines doctor/secretary capacity.",
+    )
     expires_at = models.DateTimeField()
-    max_doctors = models.PositiveIntegerField(default=2)
+    max_doctors = models.PositiveIntegerField(
+        default=2,
+        help_text="Override capacity; 0 = unlimited. Auto-set from plan_name if left at default.",
+    )
+    max_secretaries = models.PositiveIntegerField(
+        default=5,
+        help_text="Override capacity; 0 = unlimited. Auto-set from plan_name if left at default.",
+    )
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="ACTIVE")
+    notes = models.TextField(blank=True, help_text="Internal admin notes (billing, support, etc.)")
+    activated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="subscriptions_activated",
+        help_text="Admin who last activated/extended this subscription.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # ── Helper properties ─────────────────────────────────────────────
+
+    def is_effectively_active(self) -> bool:
+        """True only when status=ACTIVE and not yet expired."""
+        from django.utils import timezone
+        return self.status == "ACTIVE" and self.expires_at > timezone.now()
+
+    def current_doctors_count(self) -> int:
+        from clinics.models import ClinicStaff
+        return ClinicStaff.objects.filter(
+            clinic=self.clinic,
+            role__in=["DOCTOR", "MAIN_DOCTOR"],
+            revoked_at__isnull=True,
+        ).count()
+
+    def current_secretaries_count(self) -> int:
+        from clinics.models import ClinicStaff
+        return ClinicStaff.objects.filter(
+            clinic=self.clinic,
+            role="SECRETARY",
+            revoked_at__isnull=True,
+        ).count()
+
+    def can_add_doctor(self) -> bool:
+        """Return True if another doctor can be added under the current limits.
+
+        A max_doctors value of 0 means unlimited — this is an explicit admin
+        opt-in (typically used for ENTERPRISE plans where the admin sets the
+        field directly rather than relying on PLAN_LIMITS defaults).
+        """
+        if self.max_doctors == 0:  # 0 = unlimited (explicit admin opt-in)
+            return True
+        return self.current_doctors_count() < self.max_doctors
+
+    def can_add_secretary(self) -> bool:
+        """Return True if another secretary can be added under the current limits.
+
+        A max_secretaries value of 0 means unlimited — this is an explicit
+        admin opt-in (typically used for ENTERPRISE plans where the admin sets
+        the field directly rather than relying on PLAN_LIMITS defaults).
+        """
+        if self.max_secretaries == 0:  # 0 = unlimited (explicit admin opt-in)
+            return True
+        return self.current_secretaries_count() < self.max_secretaries
 
     def __str__(self):
-        return f"{self.clinic.name} — {self.plan_type} (expires {self.expires_at:%Y-%m-%d})"
+        return f"{self.clinic.name} — {self.plan_name} / {self.plan_type} (expires {self.expires_at:%Y-%m-%d})"
 
     class Meta:
         verbose_name = "Clinic Subscription"
@@ -276,7 +359,13 @@ class ClinicActivationCode(models.Model):
         max_length=10,
         choices=PLAN_CHOICES,
         default="MONTHLY",
-        help_text="Subscription plan granted to the clinic.",
+        help_text="Subscription billing period granted to the clinic.",
+    )
+    plan_name = models.CharField(
+        max_length=20,
+        choices=ClinicSubscription.PlanName.choices,
+        default=ClinicSubscription.PlanName.SMALL,
+        help_text="Plan tier (capacity) granted to the clinic.",
     )
     subscription_expires_at = models.DateTimeField(
         help_text="When the subscription granted by this code expires.",
@@ -284,6 +373,10 @@ class ClinicActivationCode(models.Model):
     max_doctors = models.PositiveIntegerField(
         default=2,
         help_text="Maximum number of doctors allowed under this subscription.",
+    )
+    max_secretaries = models.PositiveIntegerField(
+        default=5,
+        help_text="Maximum number of secretaries allowed under this subscription.",
     )
     expires_at = models.DateTimeField(
         null=True,
@@ -441,6 +534,91 @@ class ClinicWorkingHours(models.Model):
                         f"{self.get_weekday_display()}: "
                         f"{conflict.start_time:%H:%M}-{conflict.end_time:%H:%M}."
                     )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+
+class ClinicHoliday(models.Model):
+    """
+    Clinic-level closure / holiday.
+    No bookings are allowed on dates that fall within an active holiday range.
+    """
+    clinic = models.ForeignKey(
+        Clinic, on_delete=models.CASCADE, related_name="holidays"
+    )
+    title = models.CharField(max_length=255, help_text="e.g. عطلة عيد الأضحى")
+    start_date = models.DateField()
+    end_date = models.DateField()
+    is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="clinic_holidays_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Clinic Holiday"
+        verbose_name_plural = "Clinic Holidays"
+        ordering = ["start_date"]
+
+    def __str__(self):
+        return f"{self.clinic.name} — {self.title} ({self.start_date} → {self.end_date})"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        super().clean()
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValidationError({"end_date": "تاريخ الانتهاء يجب أن يكون بعد تاريخ البداية."})
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+
+class DoctorAvailabilityException(models.Model):
+    """
+    Doctor-specific day-off / unavailability at a particular clinic.
+    Slots will not be generated for dates within an active exception range.
+    """
+    doctor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="availability_exceptions",
+    )
+    clinic = models.ForeignKey(
+        Clinic, on_delete=models.CASCADE, related_name="doctor_exceptions"
+    )
+    start_date = models.DateField()
+    end_date = models.DateField()
+    reason = models.CharField(max_length=500, blank=True, help_text="e.g. إجازة سنوية، مؤتمر طبي")
+    is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="doctor_exceptions_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Doctor Availability Exception"
+        verbose_name_plural = "Doctor Availability Exceptions"
+        ordering = ["start_date"]
+
+    def __str__(self):
+        return f"{self.doctor} @ {self.clinic.name} — off {self.start_date} → {self.end_date}"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        super().clean()
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValidationError({"end_date": "تاريخ الانتهاء يجب أن يكون بعد تاريخ البداية."})
 
     def save(self, *args, **kwargs):
         self.full_clean()

@@ -1,3 +1,8 @@
+# =============================================================================
+# DEBUG / DEVELOPMENT SCRIPT — NOT PART OF THE APPLICATION
+# DESTRUCTIVE: drops and recreates the database
+# DO NOT DEPLOY TO PRODUCTION
+# =============================================================================
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 import os

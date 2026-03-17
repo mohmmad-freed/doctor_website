@@ -1,6 +1,6 @@
 from datetime import datetime, date
 
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
 from django.http import HttpResponse
@@ -98,17 +98,177 @@ def dashboard(request):
 
 @login_required
 def appointments_list(request):
-    return HttpResponse("Doctor Appointments List - Coming Soon!")
+    """Doctor's full appointment list — filterable by date and status."""
+    user = request.user
+    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
+        from django.contrib import messages as _msg
+        from django.urls import reverse as _rev
+        _msg.error(request, "هذه الصفحة متاحة للأطباء فقط.")
+        return redirect(_rev("accounts:home"))
+
+    status_filter = request.GET.get("status", "")
+    date_filter = request.GET.get("date", "")
+    clinic_filter = request.GET.get("clinic_id", "")
+
+    patient_filter = request.GET.get("patient_id", "")
+
+    qs = (
+        Appointment.objects.filter(doctor=user)
+        .select_related("patient", "clinic", "appointment_type")
+        .order_by("-appointment_date", "appointment_time")
+    )
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+    if date_filter:
+        try:
+            from datetime import datetime as _dt
+            qs = qs.filter(appointment_date=_dt.strptime(date_filter, "%Y-%m-%d").date())
+        except ValueError:
+            pass
+    if clinic_filter:
+        qs = qs.filter(clinic_id=clinic_filter)
+    if patient_filter:
+        try:
+            qs = qs.filter(patient_id=int(patient_filter))
+        except ValueError:
+            pass
+
+    # Clinics this doctor works at (for filter dropdown)
+    my_clinics = (
+        ClinicStaff.objects.filter(user=user, is_active=True)
+        .select_related("clinic")
+        .values_list("clinic_id", "clinic__name")
+    )
+
+    return render(request, "doctors/appointments_list.html", {
+        "appointments": qs,
+        "status_choices": Appointment.Status.choices,
+        "current_status": status_filter,
+        "current_date": date_filter,
+        "current_clinic": clinic_filter,
+        "current_patient": patient_filter,
+        "my_clinics": my_clinics,
+    })
 
 
 @login_required
 def appointment_detail(request, appointment_id):
-    return HttpResponse(f"Appointment {appointment_id} Detail - Coming Soon!")
+    """Single appointment view with patient info, intake answers, and status controls."""
+    user = request.user
+    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
+        from django.contrib import messages as _msg
+        from django.urls import reverse as _rev
+        _msg.error(request, "هذه الصفحة متاحة للأطباء فقط.")
+        return redirect(_rev("accounts:home"))
+
+    appointment = get_object_or_404(
+        Appointment,
+        id=appointment_id,
+        doctor=user,
+    )
+
+    from appointments.models import AppointmentAnswer
+    intake_answers = (
+        AppointmentAnswer.objects.filter(appointment=appointment)
+        .select_related("question")
+        .order_by("question__order", "id")
+    )
+
+    # Status transitions the doctor can trigger — as (value, label) tuples for template use
+    _TRANSITION_MAP = {
+        Appointment.Status.PENDING: [
+            Appointment.Status.CONFIRMED,
+            Appointment.Status.CANCELLED,
+        ],
+        Appointment.Status.CONFIRMED: [
+            Appointment.Status.CHECKED_IN,
+            Appointment.Status.CANCELLED,
+            Appointment.Status.NO_SHOW,
+        ],
+        Appointment.Status.CHECKED_IN: [Appointment.Status.IN_PROGRESS],
+        Appointment.Status.IN_PROGRESS: [Appointment.Status.COMPLETED],
+    }
+    raw_transitions = _TRANSITION_MAP.get(appointment.status, [])
+    # Build (value, human_label) tuples for the template
+    allowed_transitions = [(s.value, s.label) for s in raw_transitions]
+    # Keep a set of valid values for POST validation
+    valid_transition_values = {s.value for s in raw_transitions}
+
+    if request.method == "POST":
+        new_status = request.POST.get("status", "").strip()
+        notes = request.POST.get("notes", "").strip()
+        # Backend enforcement: only allow whitelisted transitions (ignore stale/tampered POSTs)
+        if new_status in valid_transition_values:
+            appointment.status = new_status
+            if notes:
+                appointment.notes = notes
+            appointment.save(update_fields=["status", "notes", "updated_at"])
+
+            # Notify patient when doctor cancels
+            if new_status == Appointment.Status.CANCELLED:
+                from django.db import transaction as _txn
+                from clinics.models import ClinicStaff as _CS
+                from appointments.services.appointment_notification_service import (
+                    notify_appointment_cancelled_by_staff,
+                )
+                doctor_staff = _CS.objects.filter(
+                    clinic=appointment.clinic, user=user, revoked_at__isnull=True
+                ).first()
+                _txn.on_commit(
+                    lambda: notify_appointment_cancelled_by_staff(appointment, doctor_staff)
+                )
+
+            from django.contrib import messages as _msg
+            _msg.success(request, "تم تحديث حالة الموعد.")
+            return redirect("doctors:appointment_detail", appointment_id=appointment_id)
+        elif new_status:
+            from django.contrib import messages as _msg
+            _msg.error(request, "هذا التحديث غير مسموح به.")
+
+    return render(request, "doctors/appointment_detail.html", {
+        "appointment": appointment,
+        "intake_answers": intake_answers,
+        "allowed_transitions": allowed_transitions,
+    })
 
 
 @login_required
 def patients_list(request):
-    return HttpResponse("Doctor's Patients List - Coming Soon!")
+    """Doctor's unique patient list across all their clinics."""
+    user = request.user
+    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
+        from django.contrib import messages as _msg
+        from django.urls import reverse as _rev
+        _msg.error(request, "هذه الصفحة متاحة للأطباء فقط.")
+        return redirect(_rev("accounts:home"))
+
+    clinic_filter = request.GET.get("clinic_id", "")
+
+    qs = Appointment.objects.filter(doctor=user).exclude(
+        status=Appointment.Status.CANCELLED
+    )
+    if clinic_filter:
+        qs = qs.filter(clinic_id=clinic_filter)
+
+    # Distinct patients with their latest appointment date
+    from django.db.models import Max, Count
+    patient_stats = (
+        qs.values("patient_id", "patient__name", "patient__phone")
+        .annotate(last_visit=Max("appointment_date"), total_visits=Count("id"))
+        .order_by("-last_visit")
+    )
+
+    my_clinics = (
+        ClinicStaff.objects.filter(user=user, is_active=True)
+        .select_related("clinic")
+        .values_list("clinic_id", "clinic__name")
+    )
+
+    return render(request, "doctors/patients_list.html", {
+        "patient_stats": patient_stats,
+        "my_clinics": my_clinics,
+        "current_clinic": clinic_filter,
+    })
 
 
 # --- Patient-facing views ---
@@ -302,31 +462,36 @@ def guest_accept_invitation_view(request, token):
             "error": "انتهت صلاحية هذه الدعوة أو لم تعد متاحة."
         })
 
+    is_secretary_invite = (invitation.role == "SECRETARY")
+
     if request.user.is_authenticated:
         normalized_user_phone = PhoneNumberAuthBackend.normalize_phone_number(request.user.phone)
         if normalized_user_phone == invitation.doctor_phone:
-             # Already logged in as the right doctor, redirect to inbox to accept
-             return redirect(reverse("doctors:doctor_invitations_inbox"))
+            # Already logged in as the right user — send to the correct inbox
+            if is_secretary_invite:
+                return redirect(reverse("secretary:secretary_invitations_inbox"))
+            return redirect(reverse("doctors:doctor_invitations_inbox"))
         else:
-             # Logged in as someone else (wrong phone)
-             return render(request, "doctors/invalid_invitation.html", {
-                "error": "لا تملك الصلاحية للوصول إلى هذه الدعوة. يرجى تسجيل الدخول بالحساب الصحيح."
-            })
+            # Logged in as someone else (wrong phone)
+            return render(request, "doctors/invalid_invitation.html", {
+               "error": "لا تملك الصلاحية للوصول إلى هذه الدعوة. يرجى تسجيل الدخول بالحساب الصحيح."
+           })
 
     # Check if the invited phone belongs to an existing user.
     from django.contrib.auth import get_user_model as _get_user_model
     _User = _get_user_model()
     existing_user = _User.objects.filter(phone=invitation.doctor_phone).first()
 
-    inbox_url = reverse("doctors:doctor_invitations_inbox")
+    # Determine which app slug to store in session for post-login redirect
+    app_slug = "secretary" if is_secretary_invite else "doctors"
 
     if existing_user:
         # Store token for redirection after login
         request.session["pending_invitation_token"] = token
-        request.session["pending_invitation_app"] = "doctors"
+        request.session["pending_invitation_app"] = app_slug
         login_url = reverse("accounts:login")
-        
-        if invitation.role == "SECRETARY":
+
+        if is_secretary_invite:
             messages.info(
                 request,
                 f"مرحباً {invitation.doctor_name}، لديك حساب بالفعل. يرجى تسجيل الدخول لقبول الدعوة."
@@ -339,22 +504,20 @@ def guest_accept_invitation_view(request, token):
         return redirect(login_url)
 
     # No account yet: instruct them to register first.
-    if invitation.role == "SECRETARY":
+    if is_secretary_invite:
         messages.info(
-            request, 
+            request,
             f"مرحباً {invitation.doctor_name}، تلقّيت دعوة للانضمام كسكرتير/ة في {invitation.clinic.name}. يرجى إنشاء حساب جديد لقبول الدعوة."
         )
     else:
         messages.info(
-            request, 
+            request,
             f"مرحباً د. {invitation.doctor_name}، تلقّيت دعوة للانضمام إلى {invitation.clinic.name}. يرجى إنشاء حساب جديد لقبول الدعوة."
         )
 
-    # Note: Since patient registration is now fully isolated, they must manually register.
-    # We redirect them to the general registration choice page.
     # Store token for redirection after registration
     request.session["pending_invitation_token"] = token
-    request.session["pending_invitation_app"] = "doctors"
+    request.session["pending_invitation_app"] = app_slug
     return redirect(reverse("accounts:register"))
 
 

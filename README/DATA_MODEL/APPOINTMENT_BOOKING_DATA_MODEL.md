@@ -1,9 +1,9 @@
 # Appointment Booking System — Data Model Specification
 
-> **Document Type:** Architecture Specification — Data Model & Database Design  
-> **Version:** 1.0  
-> **Status:** Draft  
-> **Last Updated:** 2026-02-17
+> **Document Type:** Architecture Specification — Data Model & Database Design
+> **Version:** 1.1
+> **Status:** Updated — reflects current implemented models. Planned items are labelled **[PLANNED]**.
+> **Last Updated:** 2026-03-17
 
 ---
 
@@ -157,35 +157,70 @@ This document defines the **complete data model** required to implement the Appo
 
 ### 2.5 AppointmentType
 
-**App:** `appointments`  
-**Purpose:** Defines the types of visits a doctor offers at a specific clinic.
+**App:** `appointments`
+**Purpose:** Defines the types of visits offered at a specific clinic.
+
+> **Correction**: `AppointmentType` is scoped to **`Clinic` only** — there is **no `doctor` FK**.
+> All doctors at a clinic share the same appointment type catalogue.
+> Adding a `doctor` FK for per-doctor-per-clinic scoping is **[PLANNED]**.
 
 | Field              | Role in Booking System                                       |
 |--------------------|--------------------------------------------------------------|
-| `doctor`           | FK to `CustomUser` — the offering doctor                     |
 | `clinic`           | FK to `Clinic` — scoped to a specific clinic                 |
 | `name` / `name_ar` | Displayed to patients in the booking UI                      |
 | `duration_minutes` | **Critical** — determines slot size in the calculation engine |
 | `price`            | Displayed to patients; may be used for billing               |
 | `is_active`        | Inactive types hidden from patients                          |
 
-**Booking Role:** Determines the **duration** of each appointment slot. Different types may produce different slot grids for the same doctor on the same day. The `unique_appointment_type_per_doctor_clinic` constraint prevents naming collisions.
+**Booking Role:** Determines the **duration** of each appointment slot. Different types produce
+different slot grids for the same doctor on the same day. The `unique_appointment_type_per_clinic`
+constraint prevents naming collisions within a clinic.
 
 ---
 
 ### 2.6 Appointment
 
-**App:** `appointments`  
+**App:** `appointments`
 **Purpose:** The core transactional record representing a booking between a patient and a doctor at a clinic.
 
-> **Note:** This model requires significant enhancement. See Section 4 for the full proposed field list.
+**Current implemented fields (as of 2026-03-17):**
 
-**Current State:**
-- Uses `appointment_date` (DateField) + `appointment_time` (TimeField) — must be migrated to `start_at` / `end_at` (DateTimeField pair).
-- Status enum has `PENDING`, `CONFIRMED`, `CHECKED_IN`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`, `NO_SHOW` — must be updated to the required 9-status lifecycle.
-- Missing fields: `hold_expires_at`, `pending_expires_at`, `proposed_start_at`, `proposed_end_at`, `visit_kind`.
+| Field               | Type            | Description                                           |
+|---------------------|-----------------|-------------------------------------------------------|
+| `id`                | AutoField       | Primary key                                           |
+| `clinic`            | FK → `Clinic`   | Clinic where the appointment takes place              |
+| `doctor`            | FK → `CustomUser` | The treating doctor (SET_NULL, nullable)            |
+| `patient`           | FK → `CustomUser` | The patient (CASCADE)                              |
+| `appointment_type`  | FK → `AppointmentType` | Type determining slot duration (SET_NULL, nullable) |
+| `appointment_date`  | DateField       | Date of the appointment                               |
+| `appointment_time`  | TimeField       | Start time of the appointment                         |
+| `reason`            | TextField       | Patient-supplied reason for visit                     |
+| `notes`             | TextField       | Doctor's notes after the appointment                  |
+| `status`            | CharField       | See status enum below                                 |
+| `intake_responses`  | JSONField       | Legacy intake answers (replaced by `AppointmentAnswer`) |
+| `patient_edit_count`| PositiveIntegerField | Tracks how many times the patient has edited; max = `MAX_PATIENT_EDITS = 2` |
+| `reminder_sent`     | BooleanField    | `True` after `send_appointment_reminders` command processes this appointment |
+| `created_by`        | FK → `CustomUser` | Who created the appointment (patient or secretary; SET_NULL, nullable) |
+| `created_at`        | DateTimeField   | Auto-set on creation                                  |
+| `updated_at`        | DateTimeField   | Auto-set on update                                    |
 
-**Booking Role:** Central record tracking the entire lifecycle from HOLD to COMPLETED/NO_SHOW.
+**Current Status Enum (7 values):**
+`PENDING`, `CONFIRMED`, `CHECKED_IN`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`, `NO_SHOW`
+
+New bookings are created with `status = CONFIRMED` directly.
+Patient self-booking and secretary booking both result in `CONFIRMED`.
+`PENDING` exists in the model and is used as a source state in the doctor's `_TRANSITION_MAP`.
+
+**[PLANNED] Fields not yet added:**
+- `hold_expires_at` — required for HOLD state
+- `pending_expires_at` — required for PENDING_APPROVAL state
+- `proposed_start_at` / `proposed_end_at` — required for PROPOSED_TIME state
+- Migration from `appointment_date` + `appointment_time` → `start_at` DateTimeField
+
+**[PLANNED] Status values not yet added:**
+`HOLD`, `PENDING_APPROVAL`, `PROPOSED_TIME`, `EXPIRED`, `REJECTED`
+
+**Booking Role:** Central record tracking the lifecycle from `CONFIRMED` through completion or cancellation.
 
 ---
 
@@ -236,7 +271,10 @@ This document defines the **complete data model** required to implement the Appo
 
 ---
 
-## 3. Proposed New Models
+## 3. Intake & Answer Models (Implemented)
+
+> These models were previously described as "proposed". They are now **fully implemented**
+> in the `doctors` and `appointments` apps.
 
 ### 3.1 DoctorIntakeFormTemplate
 
@@ -290,7 +328,7 @@ This document defines the **complete data model** required to implement the Appo
 | `template`        | FK → `DoctorIntakeFormTemplate` | Parent template                                           |
 | `question_text`   | CharField(500)             | English question text                                          |
 | `question_text_ar`| CharField(500)             | Arabic question text                                           |
-| `field_type`      | CharField(20, choices)     | One of: `TEXT`, `TEXTAREA`, `SELECT`, `MULTISELECT`, `CHECKBOX`, `DATE`, `FILE` |
+| `field_type`      | CharField(20, choices)     | One of: `TEXT`, `TEXTAREA`, `SELECT`, `MULTISELECT`, `CHECKBOX`, `DATE`, `FILE`, `DATED_FILES` |
 | `choices`         | JSONField (blank, default=list) | Array of choice strings for SELECT/MULTISELECT types       |
 | `is_required`     | BooleanField               | Whether the patient must answer                                |
 | `order`           | PositiveIntegerField       | Display order (ascending)                                      |
@@ -433,60 +471,75 @@ UUID prefix prevents filename collisions.
 
 ---
 
-### 3.6 NotificationLog
+### 3.6 AppointmentNotification
 
-**App:** `appointments` (or new app `notifications`)  
-**Purpose:** Audit log for all SMS notifications sent by the system. Enables tracking, retry logic, and duplicate prevention.
+> **IMPLEMENTATION NOTE**: The earlier version of this section described a planned
+> `NotificationLog` model for SMS audit trails. That model was **never implemented**.
+> The actual implemented model is `AppointmentNotification` in `appointments/models.py`,
+> described here. It handles in-app notifications with optional email tracking.
+> A pure SMS audit log (`NotificationLog`) remains **[PLANNED / DEFERRED]**.
+
+**App:** `appointments`
+**Model:** `AppointmentNotification`
+**Purpose:** Stores in-app notifications for patients (and staff) about appointment events.
+Tracks whether an email was also sent for each notification.
 
 #### Fields
 
-| Field Name          | Type                      | Description                                                 |
-|---------------------|---------------------------|-------------------------------------------------------------|
-| `id`                | AutoField (PK)            | Primary key                                                 |
-| `appointment`       | FK → `Appointment`        | (Nullable) Related appointment                              |
-| `recipient`         | FK → `CustomUser`         | The user who received the notification                      |
-| `recipient_phone`   | CharField(20)             | The phone number used (snapshot — may differ from current)  |
-| `notification_type` | CharField(30, choices)    | Enum: see below                                             |
-| `message_text`      | TextField                 | The full SMS message sent                                   |
-| `status`            | CharField(20, choices)    | `PENDING`, `SENT`, `FAILED`, `PERMANENTLY_FAILED`           |
-| `provider_response` | TextField (blank)         | Raw API response from TweetsMS                              |
-| `retry_count`       | PositiveIntegerField      | Number of send attempts (default 0)                         |
-| `sent_at`           | DateTimeField (null)      | Timestamp of successful send                                |
-| `created_at`        | DateTimeField             | Auto-set on creation                                        |
-| `last_retry_at`     | DateTimeField (null)      | Timestamp of last retry attempt                             |
+| Field Name           | Type                      | Description                                                 |
+|----------------------|---------------------------|-------------------------------------------------------------|
+| `id`                 | AutoField (PK)            | Primary key                                                 |
+| `patient`            | FK → `CustomUser`         | The notification recipient (CASCADE)                        |
+| `appointment`        | FK → `Appointment`        | Related appointment (SET_NULL, nullable — survives deletion) |
+| `notification_type`  | CharField(60, choices)    | Event type — see enum below                                 |
+| `title`              | CharField(255)            | Short Arabic notification title                             |
+| `message`            | TextField                 | Full Arabic notification message body                       |
+| `cancelled_by_staff` | FK → `ClinicStaff`        | Who cancelled (SET_NULL; populated only on CANCELLED events)|
+| `is_read`            | BooleanField              | `True` when patient has read this notification (default `False`) |
+| `is_delivered`       | BooleanField              | Always `True` for in-app notifications (default `True`)     |
+| `sent_via_email`     | BooleanField              | `True` if an email was successfully sent for this notification (default `False`) |
+| `created_at`         | DateTimeField             | Auto-set on creation                                        |
 
-#### Notification Type Enum
+#### Notification Type Enum (`AppointmentNotification.Type`)
 
-| Value                    | Description                                           |
-|--------------------------|-------------------------------------------------------|
-| `BOOKING_SUBMITTED`      | Patient submitted a booking request                   |
-| `BOOKING_CONFIRMED`      | Appointment confirmed by secretary or auto-confirmed  |
-| `BOOKING_REJECTED`       | Appointment rejected by secretary                     |
-| `ALTERNATIVE_PROPOSED`   | Secretary proposed an alternative time                |
-| `PROPOSAL_ACCEPTED`      | Patient accepted the proposed time                    |
-| `PROPOSAL_REJECTED`      | Patient rejected the proposed time                    |
-| `APPOINTMENT_EXPIRED`    | Appointment auto-expired                              |
-| `APPOINTMENT_CANCELLED`  | Appointment cancelled                                 |
-| `REMINDER_24H`           | 24-hour reminder before appointment                   |
-| `APPOINTMENT_COMPLETED`  | Post-visit thanks message                             |
+| Value                      | Trigger / Description                                        |
+|----------------------------|--------------------------------------------------------------|
+| `APPOINTMENT_BOOKED`       | Patient books (self-service or via secretary) — sent to patient |
+| `APPOINTMENT_CANCELLED`    | Doctor/secretary cancels (to patient) OR patient cancels (to staff) |
+| `APPOINTMENT_EDITED`       | Patient edits appointment — sent to doctor and secretaries   |
+| `APPOINTMENT_REMINDER`     | 24h advance reminder — sent to patient by management command |
+| `APPOINTMENT_RESCHEDULED`  | Secretary reschedules appointment — sent to patient          |
+| `APPOINTMENT_STATUS_CHANGED` | Reserved for future use                                   |
 
 #### Relationships
 
-- **appointment** → `Appointment` (FK, SET_NULL, nullable) — some notifications may be system-level.
-- **recipient** → `CustomUser` (FK, CASCADE)
+- **patient** → `CustomUser` (FK, CASCADE) — notification recipient
+- **appointment** → `Appointment` (FK, SET_NULL, nullable) — survives appointment deletion
+- **cancelled_by_staff** → `ClinicStaff` (FK, SET_NULL, nullable) — audit field for cancellations
 
 #### Constraints
 
-- `UniqueConstraint(fields=["appointment", "notification_type"], condition=Q(notification_type="REMINDER_24H"))` — prevents sending duplicate 24h reminders.
+> **REMOVED**: An earlier design had `UniqueConstraint(fields=["appointment", "notification_type"])`.
+> This constraint has been **removed** from the current implementation. Multiple notifications
+> of the same type can be created for a single appointment. Duplicate reminder prevention
+> is handled via `Appointment.reminder_sent = True` instead.
+
+No `UniqueConstraint` on `(appointment, notification_type)`.
+
+#### Channel Rules
+- **In-app**: always created with `is_delivered=True`. Never blocked.
+- **Email**: sent after in-app creation only if `user.email` is set AND `user.email_verified=True`.
+  `sent_via_email=True` is set on the notification record if email succeeds.
+- **SMS**: only for cancellations, only if `SMS_PROVIDER=TWEETSMS` is configured. Not tracked here.
 
 #### Example Records
 
-| id | appointment_id | recipient_id | notification_type  | status | retry_count | sent_at             |
-|----|----------------|-------------|---------------------|--------|-------------|---------------------|
-| 1  | 42             | 15          | BOOKING_SUBMITTED   | SENT   | 0           | 2026-02-17 10:15:00 |
-| 2  | 42             | 15          | BOOKING_CONFIRMED   | SENT   | 0           | 2026-02-17 10:45:00 |
-| 3  | 42             | 15          | REMINDER_24H        | SENT   | 0           | 2026-02-18 10:00:00 |
-| 4  | 43             | 18          | BOOKING_SUBMITTED   | FAILED | 2           | NULL                |
+| id | appointment_id | patient_id | notification_type        | is_read | sent_via_email |
+|----|----------------|------------|--------------------------|---------|----------------|
+| 1  | 42             | 15         | APPOINTMENT_BOOKED       | False   | True           |
+| 2  | 42             | 15         | APPOINTMENT_REMINDER     | True    | True           |
+| 3  | 43             | 18         | APPOINTMENT_CANCELLED    | False   | False          |
+| 4  | 44             | 20         | APPOINTMENT_RESCHEDULED  | False   | True           |
 
 ---
 

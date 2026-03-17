@@ -1,0 +1,143 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}قائمة المواعيد — السكرتارية{% endblock %}
+
+{% block extra_css %}
+<style>
+.appt-badge { display:inline-block; padding:2px 10px; border-radius:10px; font-size:0.78rem; font-weight:700; white-space:nowrap; }
+.appt-badge-confirmed  { background:#d1fae5; color:#065f46; }
+.appt-badge-checked_in { background:#dbeafe; color:#1e40af; }
+.appt-badge-in_progress{ background:#ede9fe; color:#5b21b6; }
+.appt-badge-completed  { background:#f3f4f6; color:#374151; }
+.appt-badge-cancelled  { background:#fee2e2; color:#991b1b; }
+.appt-badge-no_show    { background:#fef3c7; color:#92400e; }
+.appt-badge-pending    { background:#f0fdf4; color:#166534; }
+[data-theme="dark"] .appt-badge-confirmed  { background:#064e3b; color:#6ee7b7; }
+[data-theme="dark"] .appt-badge-checked_in { background:#1e3a5f; color:#93c5fd; }
+[data-theme="dark"] .appt-badge-in_progress{ background:#2e1065; color:#c4b5fd; }
+[data-theme="dark"] .appt-badge-completed  { background:#1f2937; color:#9ca3af; }
+[data-theme="dark"] .appt-badge-cancelled  { background:#450a0a; color:#fca5a5; }
+[data-theme="dark"] .appt-badge-no_show    { background:#451a03; color:#fcd34d; }
+[data-theme="dark"] .appt-badge-pending    { background:#14532d; color:#86efac; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0">قائمة المواعيد</h2>
+            <small class="text-muted">{{ clinic.name }}</small>
+        </div>
+        <a href="{% url 'secretary:create_appointment' %}" class="btn btn-primary">
+            <i class="fa-solid fa-plus me-1"></i> حجز موعد جديد
+        </a>
+    </div>
+
+    {# Filters #}
+    <div class="card shadow-sm mb-3">
+        <div class="card-body py-2">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-sm-auto">
+                    <label class="form-label form-label-sm mb-1 text-muted">الحالة</label>
+                    <select name="status" class="form-select form-select-sm">
+                        <option value="">كل الحالات</option>
+                        {% for val, label in status_choices %}
+                        <option value="{{ val }}" {% if val == current_status %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-sm-auto">
+                    <label class="form-label form-label-sm mb-1 text-muted">التاريخ</label>
+                    <input type="date" name="date" class="form-control form-control-sm" value="{{ current_date }}">
+                </div>
+                <div class="col-sm-auto d-flex align-items-end gap-1">
+                    <button type="submit" class="btn btn-sm btn-primary">
+                        <i class="fa-solid fa-filter me-1"></i>تصفية
+                    </button>
+                    {% if current_status or current_date %}
+                    <a href="{% url 'secretary:appointments' %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="fa-solid fa-xmark me-1"></i>إلغاء التصفية
+                    </a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            {% if appointments %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>الوقت</th>
+                            <th>المريض</th>
+                            <th>الطبيب</th>
+                            <th>نوع الموعد</th>
+                            <th>الحالة</th>
+                            <th class="text-end">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for appt in appointments %}
+                        <tr>
+                            <td>{{ appt.appointment_date|date:"d/m/Y" }}</td>
+                            <td style="font-variant-numeric:tabular-nums;">{{ appt.appointment_time|time:"H:i" }}</td>
+                            <td class="fw-semibold">{{ appt.patient.name }}</td>
+                            <td>{{ appt.doctor.name|default:"—" }}</td>
+                            <td>{{ appt.appointment_type.display_name|default:"—" }}</td>
+                            <td>
+                                <span class="appt-badge appt-badge-{{ appt.status|lower }}">
+                                    {{ appt.get_status_display }}
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                {% if appt.status not in terminal_statuses %}
+                                <div class="d-flex justify-content-end gap-1">
+                                    <a href="{% url 'secretary:edit_appointment' appt.id %}"
+                                       class="btn btn-sm btn-outline-secondary" title="تعديل">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </a>
+                                    <form method="post" action="{% url 'secretary:cancel_appointment' appt.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="إلغاء"
+                                            onclick="return confirm('هل أنت متأكد من إلغاء هذا الموعد؟')">
+                                            <i class="fa-solid fa-xmark"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fa-regular fa-calendar-xmark fa-2x text-muted mb-2 d-block"></i>
+                <p class="text-muted mb-1 fw-semibold">لا توجد مواعيد</p>
+                <p class="text-muted small mb-3">
+                    {% if current_status or current_date %}
+                        لا توجد نتائج تطابق معايير التصفية المحددة.
+                    {% else %}
+                        لا توجد مواعيد مسجلة في العيادة بعد.
+                    {% endif %}
+                </p>
+                {% if current_status or current_date %}
+                <a href="{% url 'secretary:appointments' %}" class="btn btn-sm btn-outline-secondary me-2">إلغاء التصفية</a>
+                {% endif %}
+                <a href="{% url 'secretary:create_appointment' %}" class="btn btn-sm btn-primary">
+                    <i class="fa-solid fa-plus me-1"></i> حجز موعد جديد
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

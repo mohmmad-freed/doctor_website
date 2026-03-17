@@ -1,0 +1,100 @@
+{% extends "accounts/base.html" %}
+
+{% block title %}حجز موعد جديد{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+
+            <div class="d-flex align-items-center gap-3 mb-4">
+                <a href="{% url 'secretary:appointments' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fa-solid fa-arrow-right"></i>
+                </a>
+                <h2 class="mb-0">حجز موعد جديد — {{ clinic.name }}</h2>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                رقم هاتف المريض
+                                <span class="text-danger">*</span>
+                            </label>
+                            <input type="tel" name="patient_phone"
+                                class="form-control" placeholder="مثال: 0591234567" required
+                                value="{{ request.POST.patient_phone|default:'' }}">
+                            <div class="form-text">أدخل رقم الهاتف المسجل للمريض في النظام.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                الطبيب
+                                <span class="text-danger">*</span>
+                            </label>
+                            <select name="doctor_id" class="form-select" required>
+                                <option value="">— اختر الطبيب —</option>
+                                {% for doc in doctor_users %}
+                                <option value="{{ doc.id }}"
+                                    {% if request.POST.doctor_id == doc.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ doc.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                نوع الموعد
+                                <span class="text-danger">*</span>
+                            </label>
+                            <select name="appointment_type_id" class="form-select" required>
+                                <option value="">— اختر النوع —</option>
+                                {% for at in appointment_types %}
+                                <option value="{{ at.id }}"
+                                    {% if request.POST.appointment_type_id == at.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ at.display_name }} ({{ at.duration_minutes }} دقيقة — ₪{{ at.price }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-sm-6">
+                                <label class="form-label fw-semibold">
+                                    التاريخ
+                                    <span class="text-danger">*</span>
+                                </label>
+                                <input type="date" name="appointment_date" class="form-control" required
+                                    value="{{ request.POST.appointment_date|default:'' }}">
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="form-label fw-semibold">
+                                    الوقت
+                                    <span class="text-danger">*</span>
+                                </label>
+                                <input type="time" name="appointment_time" class="form-control" required
+                                    value="{{ request.POST.appointment_time|default:'' }}">
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">سبب الزيارة (اختياري)</label>
+                            <textarea name="reason" class="form-control" rows="3" maxlength="1000">{{ request.POST.reason|default:'' }}</textarea>
+                        </div>
+
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a href="{% url 'secretary:appointments' %}" class="btn btn-outline-secondary">إلغاء</a>
+                            <button type="submit" class="btn btn-primary">حجز الموعد</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

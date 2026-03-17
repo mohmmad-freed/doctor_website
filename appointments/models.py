@@ -40,15 +40,20 @@ class Appointment(models.Model):
     """Core appointment booking record."""
 
     class Status(models.TextChoices):
-        PENDING = "PENDING", "Pending"
-        CONFIRMED = "CONFIRMED", "Confirmed"
-        CHECKED_IN = "CHECKED_IN", "Checked In"
-        IN_PROGRESS = "IN_PROGRESS", "In Progress"
-        COMPLETED = "COMPLETED", "Completed"
-        CANCELLED = "CANCELLED", "Cancelled"
-        NO_SHOW = "NO_SHOW", "No Show"
+        PENDING = "PENDING", "قيد الانتظار"
+        CONFIRMED = "CONFIRMED", "مؤكد"
+        CHECKED_IN = "CHECKED_IN", "وصل المريض"
+        IN_PROGRESS = "IN_PROGRESS", "جارٍ"
+        COMPLETED = "COMPLETED", "مكتمل"
+        CANCELLED = "CANCELLED", "ملغى"
+        NO_SHOW = "NO_SHOW", "لم يحضر"
 
     MAX_PATIENT_EDITS = 2
+
+    reminder_sent = models.BooleanField(
+        default=False,
+        help_text="Whether a reminder notification has been sent for this appointment.",
+    )
 
     patient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="appointments_as_patient")
     clinic = models.ForeignKey(Clinic, on_delete=models.CASCADE, related_name="appointments")
@@ -231,6 +236,10 @@ class AppointmentNotification(models.Model):
     class Type(models.TextChoices):
         APPOINTMENT_CANCELLED = "APPOINTMENT_CANCELLED", "Appointment Cancelled"
         APPOINTMENT_EDITED = "APPOINTMENT_EDITED", "Appointment Edited"
+        APPOINTMENT_BOOKED = "APPOINTMENT_BOOKED", "Appointment Booked"
+        APPOINTMENT_REMINDER = "APPOINTMENT_REMINDER", "Appointment Reminder"
+        APPOINTMENT_RESCHEDULED = "APPOINTMENT_RESCHEDULED", "Appointment Rescheduled"
+        APPOINTMENT_STATUS_CHANGED = "APPOINTMENT_STATUS_CHANGED", "Appointment Status Changed"
 
     patient = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -245,7 +254,7 @@ class AppointmentNotification(models.Model):
         related_name="notifications",
     )
     notification_type = models.CharField(
-        max_length=40,
+        max_length=60,
         choices=Type.choices,
         default=Type.APPOINTMENT_CANCELLED,
     )
@@ -267,18 +276,16 @@ class AppointmentNotification(models.Model):
         default=True,
         help_text="Always True for in-app notifications.",
     )
+    sent_via_email = models.BooleanField(
+        default=False,
+        help_text="True if an email was successfully sent for this notification.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name = "Appointment Notification"
         verbose_name_plural = "Appointment Notifications"
         ordering = ["-created_at"]
-        constraints = [
-            models.UniqueConstraint(
-                fields=["appointment", "notification_type"],
-                name="unique_notification_per_appointment_type",
-            ),
-        ]
 
     def __str__(self):
         return f"[{self.notification_type}] \u2192 {self.patient.name} ({self.created_at:%Y-%m-%d})"

@@ -382,6 +382,162 @@ def send_verification_approved_email(user, layer="identity"):
         logger.error("[EMAIL] Failed to send approval email to %s: %r", user.email, e)
 
 
+def send_appointment_booking_email(patient, appointment):
+    """
+    Send a booking confirmation email to the patient.
+
+    Only sent when patient.email is present and patient.email_verified is True.
+    Returns True if email was sent successfully, False otherwise.
+    """
+    if not patient.email or not getattr(patient, "email_verified", False):
+        logger.info(
+            "[EMAIL] Skipping booking email for user_id=%s — no verified email.",
+            patient.id,
+        )
+        return False
+
+    try:
+        doctor_name = appointment.doctor.name if appointment.doctor else "الطبيب"
+        date_str = appointment.appointment_date.strftime("%Y-%m-%d")
+        time_str = appointment.appointment_time.strftime("%H:%M")
+        clinic_name = appointment.clinic.name
+
+        subject = "تأكيد حجز موعدك — Clinic"
+        text_content = (
+            f"عزيزي {patient.name}،\n\n"
+            f"تم تأكيد موعدك مع {doctor_name} "
+            f"بتاريخ {date_str} الساعة {time_str} "
+            f"في {clinic_name}.\n\n"
+            f"مع تحيات،\nفريق كلينك"
+        )
+        html_content = (
+            f"<p>عزيزي <strong>{patient.name}</strong>،</p>"
+            f"<p>تم تأكيد موعدك مع <strong>{doctor_name}</strong> "
+            f"بتاريخ <strong>{date_str}</strong> الساعة <strong>{time_str}</strong> "
+            f"في <strong>{clinic_name}</strong>.</p>"
+            f"<br><p>مع تحيات،<br>فريق كلينك</p>"
+        )
+
+        _send_email(patient.email, subject, html_content, text_content)
+        logger.info(
+            "[EMAIL] Booking confirmation email sent to user_id=%s email=%s",
+            patient.id, patient.email,
+        )
+        return True
+
+    except Exception as e:
+        logger.error(
+            "[EMAIL] Failed to send booking email to user_id=%s: %r",
+            patient.id, e,
+        )
+        return False
+
+
+def send_appointment_reminder_email(patient, appointment):
+    """
+    Send a 24-hour reminder email to the patient.
+
+    Only sent when patient.email is present and patient.email_verified is True.
+    Returns True if email was sent successfully, False otherwise.
+    """
+    if not patient.email or not getattr(patient, "email_verified", False):
+        logger.info(
+            "[EMAIL] Skipping reminder email for user_id=%s — no verified email.",
+            patient.id,
+        )
+        return False
+
+    try:
+        doctor_name = appointment.doctor.name if appointment.doctor else "الطبيب"
+        date_str = appointment.appointment_date.strftime("%Y-%m-%d")
+        time_str = appointment.appointment_time.strftime("%H:%M")
+        clinic_name = appointment.clinic.name
+
+        subject = "تذكير بموعدك غداً — Clinic"
+        text_content = (
+            f"عزيزي {patient.name}،\n\n"
+            f"تذكير: لديك موعد غداً مع {doctor_name} "
+            f"بتاريخ {date_str} الساعة {time_str} "
+            f"في {clinic_name}.\n\n"
+            f"مع تحيات،\nفريق كلينك"
+        )
+        html_content = (
+            f"<p>عزيزي <strong>{patient.name}</strong>،</p>"
+            f"<p>تذكير: لديك موعد غداً مع <strong>{doctor_name}</strong> "
+            f"بتاريخ <strong>{date_str}</strong> الساعة <strong>{time_str}</strong> "
+            f"في <strong>{clinic_name}</strong>.</p>"
+            f"<br><p>مع تحيات،<br>فريق كلينك</p>"
+        )
+
+        _send_email(patient.email, subject, html_content, text_content)
+        logger.info(
+            "[EMAIL] Reminder email sent to user_id=%s email=%s",
+            patient.id, patient.email,
+        )
+        return True
+
+    except Exception as e:
+        logger.error(
+            "[EMAIL] Failed to send reminder email to user_id=%s: %r",
+            patient.id, e,
+        )
+        return False
+
+
+def send_appointment_rescheduled_email(patient, appointment, old_date, old_time):
+    """
+    Send a reschedule notification email to the patient.
+
+    Only sent when patient.email is present and patient.email_verified is True.
+    Returns True if email was sent successfully, False otherwise.
+    """
+    if not patient.email or not getattr(patient, "email_verified", False):
+        logger.info(
+            "[EMAIL] Skipping reschedule email for user_id=%s — no verified email.",
+            patient.id,
+        )
+        return False
+
+    try:
+        doctor_name = appointment.doctor.name if appointment.doctor else "الطبيب"
+        old_date_str = old_date.strftime("%Y-%m-%d")
+        old_time_str = old_time.strftime("%H:%M")
+        new_date_str = appointment.appointment_date.strftime("%Y-%m-%d")
+        new_time_str = appointment.appointment_time.strftime("%H:%M")
+        clinic_name = appointment.clinic.name
+
+        subject = "تم تعديل موعدك — Clinic"
+        text_content = (
+            f"عزيزي {patient.name}،\n\n"
+            f"تم تعديل موعدك مع {doctor_name} في {clinic_name}.\n\n"
+            f"الموعد القديم: {old_date_str} الساعة {old_time_str}\n"
+            f"الموعد الجديد: {new_date_str} الساعة {new_time_str}\n\n"
+            f"مع تحيات،\nفريق كلينك"
+        )
+        html_content = (
+            f"<p>عزيزي <strong>{patient.name}</strong>،</p>"
+            f"<p>تم تعديل موعدك مع <strong>{doctor_name}</strong> "
+            f"في <strong>{clinic_name}</strong>.</p>"
+            f"<p>الموعد القديم: <strong>{old_date_str}</strong> الساعة <strong>{old_time_str}</strong></p>"
+            f"<p>الموعد الجديد: <strong>{new_date_str}</strong> الساعة <strong>{new_time_str}</strong></p>"
+            f"<br><p>مع تحيات،<br>فريق كلينك</p>"
+        )
+
+        _send_email(patient.email, subject, html_content, text_content)
+        logger.info(
+            "[EMAIL] Reschedule email sent to user_id=%s email=%s",
+            patient.id, patient.email,
+        )
+        return True
+
+    except Exception as e:
+        logger.error(
+            "[EMAIL] Failed to send reschedule email to user_id=%s: %r",
+            patient.id, e,
+        )
+        return False
+
+
 def send_verification_rejected_email(user, reason="", layer="identity"):
     """
     Notify a doctor that their verification has been rejected.

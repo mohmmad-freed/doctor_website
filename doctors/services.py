@@ -34,6 +34,29 @@ def generate_slots_for_date(
 
     day_of_week = target_date.weekday()  # 0=Monday, 6=Sunday
 
+    # 0a. Check for active clinic holidays on this date — return no slots
+    from clinics.models import ClinicHoliday
+    is_holiday = ClinicHoliday.objects.filter(
+        clinic_id=clinic_id,
+        is_active=True,
+        start_date__lte=target_date,
+        end_date__gte=target_date,
+    ).exists()
+    if is_holiday:
+        return []
+
+    # 0b. Check for an active doctor availability exception on this date
+    from clinics.models import DoctorAvailabilityException
+    is_exception = DoctorAvailabilityException.objects.filter(
+        doctor_id=doctor_id,
+        clinic_id=clinic_id,
+        is_active=True,
+        start_date__lte=target_date,
+        end_date__gte=target_date,
+    ).exists()
+    if is_exception:
+        return []
+
     # 1. Get active availability blocks for this doctor + clinic + day
     availability_blocks = DoctorAvailability.objects.filter(
         doctor_id=doctor_id,

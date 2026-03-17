@@ -449,47 +449,8 @@ def edit_appointment(appointment_id, patient, new_date, new_time, new_type_id=No
 
 def _notify_staff_patient_edited(appointment, old_date, old_time, old_type):
     """Notify doctor and secretaries that a patient edited their appointment."""
-    from appointments.models import AppointmentNotification
-    from clinics.models import ClinicStaff
-
-    patient_name = appointment.patient.name if appointment.patient else "مريض"
-    old_date_str = old_date.strftime("%Y-%m-%d")
-    old_time_str = old_time.strftime("%H:%M")
-    new_date_str = appointment.appointment_date.strftime("%Y-%m-%d")
-    new_time_str = appointment.appointment_time.strftime("%H:%M")
-
-    title = "تعديل موعد من قبل المريض"
-    message = (
-        f"قام المريض {patient_name} بتعديل موعده "
-        f"من {old_date_str} الساعة {old_time_str} "
-        f"إلى {new_date_str} الساعة {new_time_str} "
-        f"في {appointment.clinic.name}."
-    )
-
-    recipients = set()
-    if appointment.doctor_id:
-        recipients.add(appointment.doctor_id)
-    secretary_ids = ClinicStaff.objects.filter(
-        clinic=appointment.clinic, role="SECRETARY", is_active=True,
-    ).values_list("user_id", flat=True)
-    recipients.update(secretary_ids)
-
-    for user_id in recipients:
-        try:
-            AppointmentNotification.objects.create(
-                patient_id=user_id,
-                appointment=appointment,
-                notification_type="APPOINTMENT_EDITED",
-                title=title,
-                message=message,
-                is_delivered=True,
-            )
-        except Exception as exc:
-            logger.warning(
-                "[NOTIFICATION] Could not create edit notification "
-                "for user_id=%s appointment_id=%s: %r",
-                user_id, appointment.id, exc,
-            )
+    from appointments.services.appointment_notification_service import notify_staff_patient_edited
+    notify_staff_patient_edited(appointment, old_date, old_time, old_type)
 
 
 def _notify_staff_patient_cancelled(appointment):
@@ -497,56 +458,10 @@ def _notify_staff_patient_cancelled(appointment):
     Notify the doctor and clinic secretaries that a patient cancelled.
 
     Called inside transaction.on_commit() — fires only after successful DB write.
-
-    Creates in-app AppointmentNotification for:
-    1. The assigned doctor (if any)
-    2. All active secretaries at the appointment's clinic
+    Delegates to the centralised notification service.
     """
-    from appointments.models import AppointmentNotification
-    from clinics.models import ClinicStaff
-
-    patient_name = appointment.patient.name if appointment.patient else "مريض"
-    date_str = appointment.appointment_date.strftime("%Y-%m-%d")
-    time_str = appointment.appointment_time.strftime("%H:%M")
-
-    title = "إلغاء موعد من قبل المريض"
-    message = (
-        f"قام المريض {patient_name} بإلغاء موعده "
-        f"بتاريخ {date_str} الساعة {time_str} "
-        f"في {appointment.clinic.name}."
-    )
-
-    recipients = set()
-
-    # 1. Notify the assigned doctor
-    if appointment.doctor_id:
-        recipients.add(appointment.doctor_id)
-
-    # 2. Notify all active secretaries at this clinic
-    secretary_ids = ClinicStaff.objects.filter(
-        clinic=appointment.clinic,
-        role="SECRETARY",
-        is_active=True,
-    ).values_list("user_id", flat=True)
-    recipients.update(secretary_ids)
-
-    for user_id in recipients:
-        try:
-            AppointmentNotification.objects.create(
-                patient_id=user_id,  # recipient (doctor or secretary)
-                appointment=appointment,
-                notification_type=AppointmentNotification.Type.APPOINTMENT_CANCELLED,
-                title=title,
-                message=message,
-                is_delivered=True,
-            )
-        except Exception as exc:
-            # UniqueConstraint or other error — log and continue
-            logger.warning(
-                "[NOTIFICATION] Could not create patient-cancel notification "
-                "for user_id=%s appointment_id=%s: %r",
-                user_id, appointment.id, exc,
-            )
+    from appointments.services.appointment_notification_service import notify_staff_patient_cancelled
+    notify_staff_patient_cancelled(appointment)
 
 
 # ── Staff Cancellation ────────────────────────────────────────────────────────
@@ -598,49 +513,21 @@ def _notify_patient_cancellation(appointment, clinic_staff):
     the cancellation DB write has committed successfully.
 
     Channels:
-    - In-app: ALWAYS created first; email/SMS failures cannot prevent it.
-    - Email:   Only if patient.email is set AND patient.email_verified=True.
-    - SMS:     Only if TweetsMS is configured; skipped silently otherwise.
+    - In-app + Email: delegated to notify_appointment_cancelled_by_staff.
+    - SMS:            only if TweetsMS is configured; skipped silently otherwise.
     """
-    from appointments.models import AppointmentNotification
-    from accounts.email_utils import send_appointment_cancellation_email
-
-    patient = appointment.patient
-    title, message = _build_cancellation_message(appointment)
-
-    # ── 1. In-app notification (mandatory — always first) ─────────────────────
-    AppointmentNotification.objects.create(
-        patient=patient,
-        appointment=appointment,
-        notification_type=AppointmentNotification.Type.APPOINTMENT_CANCELLED,
-        title=title,
-        message=message,
-        cancelled_by_staff=clinic_staff,
-        is_delivered=True,
-    )
-    logger.info(
-        "[NOTIFICATION] In-app notification created for patient_id=%s "
-        "appointment_id=%s cancelled_by_staff_id=%s",
-        patient.id,
-        appointment.id,
-        clinic_staff.id if clinic_staff else None,
+    from appointments.services.appointment_notification_service import (
+        notify_appointment_cancelled_by_staff,
     )
 
-    # ── 2. Email (verified email only; failure never blocks in-app) ────
-    try:
-        send_appointment_cancellation_email(patient, appointment)
-    except Exception as exc:
-        logger.error(
-            "[EMAIL] Unexpected error sending cancellation email to patient_id=%s: %r",
-            patient.id,
-            exc,
-        )
+    # In-app + Email via centralised service
+    notify_appointment_cancelled_by_staff(appointment, clinic_staff)
 
-    # ── 3. SMS (explicit config gate; skip silently if not configured) ─
+    # ── SMS (explicit config gate; skip silently if not configured) ─
     if not _is_sms_configured():
         logger.info(
             "[SMS] TweetsMS not configured; skipping cancellation SMS for patient_id=%s",
-            patient.id,
+            appointment.patient.id if appointment.patient else None,
         )
         return
 
@@ -648,6 +535,7 @@ def _notify_patient_cancellation(appointment, clinic_staff):
         from accounts.otp_utils import _normalize_phone
         from accounts.services.tweetsms import send_sms
 
+        patient = appointment.patient
         phone = _normalize_phone(patient.phone)
         _, sms_message = _build_cancellation_message(appointment)
         send_sms(phone, sms_message)
@@ -659,7 +547,7 @@ def _notify_patient_cancellation(appointment, clinic_staff):
     except Exception as exc:
         logger.error(
             "[SMS] Failed to send cancellation SMS to patient_id=%s: %r",
-            patient.id,
+            appointment.patient.id if appointment.patient else None,
             exc,
         )
 

@@ -115,6 +115,11 @@ class ClinicIsolationMiddleware:
                 pass
 
             if not clinic:
+                # Secretary invitation paths are exempt: a secretary who has not yet
+                # accepted an invitation has no ClinicStaff record and must be allowed
+                # to reach the accept/reject views.
+                if role == "SECRETARY" and path.startswith("/secretary/invites/"):
+                    return self.get_response(request)
                 return HttpResponseForbidden(
                     "Access Denied: You are not assigned to any active clinic."
                 )

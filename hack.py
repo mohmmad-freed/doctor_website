@@ -1,3 +1,7 @@
+# =============================================================================
+# DEBUG / DEVELOPMENT SCRIPT — NOT PART OF THE APPLICATION
+# DO NOT DEPLOY TO PRODUCTION
+# =============================================================================
 import os
 base_dir = r"d:\Clinc website\doctor_website"
 appointments_views = os.path.join(base_dir, "appointments", "views.py")

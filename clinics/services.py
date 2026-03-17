@@ -47,11 +47,28 @@ def create_clinic_for_main_doctor(user, cleaned_data, activation_code_obj, owner
         added_by=user,
     )
 
+    plan_name = getattr(activation_code_obj, 'plan_name', ClinicSubscription.PlanName.SMALL)
+    # For SMALL and MEDIUM plans apply PLAN_LIMITS defaults unless the activation
+    # code already overrides them with non-default values.  For ENTERPRISE the
+    # admin is expected to set max_doctors/max_secretaries explicitly on the code.
+    plan_defaults = ClinicSubscription.PLAN_LIMITS.get(plan_name, {})
+    max_doctors = activation_code_obj.max_doctors
+    max_secretaries = getattr(activation_code_obj, 'max_secretaries', plan_defaults.get('secretaries', 5))
+    if plan_defaults:
+        # If the activation code still carries the old model-level defaults,
+        # prefer the corrected PLAN_LIMITS value so existing codes get the right limits.
+        if max_doctors == 2 and plan_defaults.get('doctors') != 2:
+            max_doctors = plan_defaults['doctors']
+        if max_secretaries in (1, 5) and plan_defaults.get('secretaries'):
+            max_secretaries = plan_defaults['secretaries']
+
     ClinicSubscription.objects.create(
         clinic=clinic,
         plan_type=activation_code_obj.plan_type,
+        plan_name=plan_name,
         expires_at=activation_code_obj.subscription_expires_at,
-        max_doctors=activation_code_obj.max_doctors,
+        max_doctors=max_doctors,
+        max_secretaries=max_secretaries,
         status="ACTIVE",
     )
 
@@ -329,20 +346,27 @@ def create_invitation(
     if owner != clinic.main_doctor:
         raise ValidationError("Only the main doctor can invite other staff.")
 
-    # 1. Enforce max doctors subscription limit if role is DOCTOR
+    # 1. Check subscription exists and is effectively active
+    try:
+        subscription = clinic.subscription
+    except ClinicSubscription.DoesNotExist:
+        raise ValidationError("العيادة ليس لديها اشتراك نشط.")
+
+    if not subscription.is_effectively_active():
+        raise ValidationError("اشتراك العيادة غير نشط أو منتهي الصلاحية. يرجى التواصل مع الإدارة.")
+
+    # 2. Enforce plan capacity limits
     if role == "DOCTOR":
-        current_doctors_count = ClinicStaff.objects.filter(
-            clinic=clinic, role="DOCTOR",
-            revoked_at__isnull=True,  # Only count active memberships
-        ).count()
+        if not subscription.can_add_doctor():
+            raise ValidationError(
+                f"لقد وصلت للحد الأقصى لعدد الأطباء ({subscription.max_doctors}) حسب اشتراكك."
+            )
 
-        try:
-            subscription = clinic.subscription
-        except ClinicSubscription.DoesNotExist:
-            raise ValidationError("العيادة ليس لديها اشتراك نشط.")
-
-        if current_doctors_count >= subscription.max_doctors:
-            raise ValidationError(f"لقد وصلت للحد الأقصى لعدد الأطباء ({subscription.max_doctors}) حسب اشتراكك.")
+    elif role == "SECRETARY":
+        if not subscription.can_add_secretary():
+            raise ValidationError(
+                f"لقد وصلت للحد الأقصى لعدد السكرتيرين ({subscription.max_secretaries}) حسب اشتراكك."
+            )
 
     # Determine data keys conditionally
     name_key = "secretary_name" if role == "SECRETARY" else "doctor_name"

@@ -25,8 +25,8 @@ from appointments.services import (
     PastDateError,
     SlotUnavailableError,
 )
-from clinics.models import Clinic
-from doctors.models import DoctorAvailability
+from clinics.models import Clinic, ClinicStaff
+from doctors.models import DoctorAvailability, DoctorVerification
 
 User = get_user_model()
 
@@ -92,6 +92,20 @@ class BookingTestMixin:
             name="General Checkup",
             duration_minutes=30,
             price=Decimal("100.00"),
+        )
+
+        # Doctor must be an active staff member of the clinic (booking_service check 2b)
+        ClinicStaff.objects.create(
+            clinic=self.clinic,
+            user=self.doctor,
+            role="DOCTOR",
+            is_active=True,
+        )
+
+        # Doctor must be identity-verified (booking_service check 2c)
+        DoctorVerification.objects.create(
+            user=self.doctor,
+            identity_status="IDENTITY_VERIFIED",
         )
 
 
@@ -267,6 +281,10 @@ class BookingServiceTests(BookingTestMixin, TestCase):
             phone="0592222222",
             email="b@clinic.com",
             main_doctor=self.main_doctor,
+        )
+        # Doctor must be active staff at clinic_b to pass the booking gate (check 2b)
+        ClinicStaff.objects.create(
+            clinic=clinic_b, user=self.doctor, role="DOCTOR", is_active=True,
         )
         # Clinic B: non-overlapping availability (14:00-17:00)
         DoctorAvailability.objects.create(
@@ -679,16 +697,17 @@ class StaffCancellationNotificationTests(TransactionTestCase):
         )
         self.assertEqual(notif.cancelled_by_staff, self.clinic_staff)
 
-    # ── FIX 3: UniqueConstraint prevents DB-level duplicate ───────────────
+    # ── FIX 3: Multiple notifications of the same type are now allowed ────────
+    # (UniqueConstraint was removed to support reminders and status change events)
 
     @patch("accounts.services.tweetsms.send_sms")
     @patch("accounts.email_utils._send_email")
-    def test_unique_constraint_prevents_db_duplicate(self, mock_email, mock_sms):
+    def test_multiple_notifications_of_same_type_allowed(self, mock_email, mock_sms):
         """
-        FIX 3: the UniqueConstraint on (appointment, notification_type) prevents
-        a second DB row even if the service logic somehow allowed it.
+        FIX 3 (updated): the UniqueConstraint on (appointment, notification_type) has
+        been removed to support multiple reminders and status changes for the same
+        appointment.  Creating two notifications of the same type must now succeed.
         """
-        from django.db import IntegrityError
         from appointments.models import AppointmentNotification
 
         # Create the first notification manually
@@ -699,15 +718,19 @@ class StaffCancellationNotificationTests(TransactionTestCase):
             title="Test",
             message="Test",
         )
-        # Attempting a second one with the same (appointment, type) must fail at DB level
-        with self.assertRaises(IntegrityError):
-            AppointmentNotification.objects.create(
-                patient=self.patient,
-                appointment=self.appointment,
-                notification_type=AppointmentNotification.Type.APPOINTMENT_CANCELLED,
-                title="Duplicate",
-                message="Duplicate",
-            )
+        # A second notification of the same type must also succeed (no unique constraint)
+        AppointmentNotification.objects.create(
+            patient=self.patient,
+            appointment=self.appointment,
+            notification_type=AppointmentNotification.Type.APPOINTMENT_CANCELLED,
+            title="Second",
+            message="Second",
+        )
+        count = AppointmentNotification.objects.filter(
+            appointment=self.appointment,
+            notification_type=AppointmentNotification.Type.APPOINTMENT_CANCELLED,
+        ).count()
+        self.assertEqual(count, 2)
 
     # ── FIX 4: SMS is skipped when not configured ───────────────────────
 
@@ -764,3 +787,235 @@ class StaffCancellationNotificationTests(TransactionTestCase):
             ).count(),
             1,
         )
+
+
+# =============================================================================
+# Notification service tests (new in Part 2 of feature set)
+# =============================================================================
+
+class NotificationServiceTestMixin:
+    """Shared setup for notification service tests."""
+
+    def setUp(self):
+        from decimal import Decimal
+        from datetime import date, time, timedelta
+        from clinics.models import ClinicStaff
+
+        self.notif_main_doctor = User.objects.create_user(
+            phone="0592100001", password="pw", name="Dr. NMain", role="MAIN_DOCTOR",
+        )
+        self.notif_doctor = User.objects.create_user(
+            phone="0592100002", password="pw", name="Dr. NDoc", role="DOCTOR",
+        )
+        self.notif_patient = User.objects.create_user(
+            phone="0592100003", password="pw", name="NPatient Ali", role="PATIENT",
+        )
+        self.notif_secretary = User.objects.create_user(
+            phone="0592100004", password="pw", name="NSec Fatima", role="SECRETARY",
+        )
+
+        from clinics.models import Clinic
+        self.notif_clinic = Clinic.objects.create(
+            name="Notif Test Clinic", address="Test Addr", main_doctor=self.notif_main_doctor
+        )
+        self.notif_doctor_staff = ClinicStaff.objects.create(
+            clinic=self.notif_clinic, user=self.notif_doctor, role="DOCTOR",
+            added_by=self.notif_main_doctor,
+        )
+        self.notif_sec_staff = ClinicStaff.objects.create(
+            clinic=self.notif_clinic, user=self.notif_secretary, role="SECRETARY",
+            added_by=self.notif_main_doctor,
+        )
+        self.notif_appt_type = AppointmentType.objects.create(
+            clinic=self.notif_clinic, name="NGeneral", duration_minutes=30,
+            price=Decimal("100.00"),
+        )
+        self.notif_appointment = Appointment.objects.create(
+            patient=self.notif_patient,
+            clinic=self.notif_clinic,
+            doctor=self.notif_doctor,
+            appointment_type=self.notif_appt_type,
+            appointment_date=date.today() + timedelta(days=1),
+            appointment_time=time(10, 0),
+            status=Appointment.Status.CONFIRMED,
+        )
+
+
+class BookingNotificationServiceTest(NotificationServiceTestMixin, TestCase):
+
+    def test_booking_creates_patient_notification(self):
+        """notify_appointment_booked creates an in-app APPOINTMENT_BOOKED notification."""
+        from appointments.services.appointment_notification_service import notify_appointment_booked
+        from appointments.models import AppointmentNotification
+        notify_appointment_booked(self.notif_appointment)
+        notif = AppointmentNotification.objects.filter(
+            patient=self.notif_patient,
+            appointment=self.notif_appointment,
+            notification_type=AppointmentNotification.Type.APPOINTMENT_BOOKED,
+        ).first()
+        self.assertIsNotNone(notif)
+        self.assertTrue(notif.is_delivered)
+
+    @patch("appointments.services.appointment_notification_service._try_send_email")
+    def test_booking_notification_email_sent_if_verified_email(self, mock_send):
+        """When patient has a verified email, email sending is attempted."""
+        from appointments.services.appointment_notification_service import notify_appointment_booked
+        self.notif_patient.email = "notif_ali@example.com"
+        self.notif_patient.email_verified = True
+        self.notif_patient.save(update_fields=["email"])
+        mock_send.return_value = True
+        notify_appointment_booked(self.notif_appointment)
+        self.assertTrue(mock_send.called)
+
+    @patch("appointments.services.appointment_notification_service._try_send_email")
+    def test_email_failure_does_not_block_inapp_notification(self, mock_send):
+        """Email failure should not block in-app notification creation."""
+        from appointments.services.appointment_notification_service import notify_appointment_booked
+        from appointments.models import AppointmentNotification
+        mock_send.side_effect = Exception("SMTP failure")
+        notify_appointment_booked(self.notif_appointment)
+        self.assertTrue(
+            AppointmentNotification.objects.filter(
+                patient=self.notif_patient,
+                notification_type=AppointmentNotification.Type.APPOINTMENT_BOOKED,
+            ).exists()
+        )
+
+
+class StaffCancelNotificationServiceTest(NotificationServiceTestMixin, TestCase):
+
+    def test_staff_cancel_creates_patient_notification(self):
+        """notify_appointment_cancelled_by_staff creates APPOINTMENT_CANCELLED for patient."""
+        from appointments.services.appointment_notification_service import (
+            notify_appointment_cancelled_by_staff,
+        )
+        from appointments.models import AppointmentNotification
+        notify_appointment_cancelled_by_staff(self.notif_appointment, self.notif_sec_staff)
+        notif = AppointmentNotification.objects.filter(
+            patient=self.notif_patient,
+            appointment=self.notif_appointment,
+            notification_type=AppointmentNotification.Type.APPOINTMENT_CANCELLED,
+            cancelled_by_staff=self.notif_sec_staff,
+        ).first()
+        self.assertIsNotNone(notif)
+
+
+class PatientCancelNotifiesStaffServiceTest(NotificationServiceTestMixin, TestCase):
+
+    def test_patient_cancel_notifies_doctor(self):
+        """notify_staff_patient_cancelled notifies the doctor."""
+        from appointments.services.appointment_notification_service import notify_staff_patient_cancelled
+        from appointments.models import AppointmentNotification
+        notify_staff_patient_cancelled(self.notif_appointment)
+        notif = AppointmentNotification.objects.filter(
+            patient=self.notif_doctor,
+            appointment=self.notif_appointment,
+            notification_type=AppointmentNotification.Type.APPOINTMENT_CANCELLED,
+        ).first()
+        self.assertIsNotNone(notif)
+
+    def test_patient_cancel_notifies_secretaries(self):
+        """notify_staff_patient_cancelled notifies secretaries."""
+        from appointments.services.appointment_notification_service import notify_staff_patient_cancelled
+        from appointments.models import AppointmentNotification
+        notify_staff_patient_cancelled(self.notif_appointment)
+        notif = AppointmentNotification.objects.filter(
+            patient=self.notif_secretary,
+            appointment=self.notif_appointment,
+            notification_type=AppointmentNotification.Type.APPOINTMENT_CANCELLED,
+        ).first()
+        self.assertIsNotNone(notif)
+
+
+class ReminderNotificationServiceTest(NotificationServiceTestMixin, TestCase):
+
+    def test_reminder_creates_notification(self):
+        """notify_appointment_reminder creates a APPOINTMENT_REMINDER notification."""
+        from appointments.services.appointment_notification_service import notify_appointment_reminder
+        from appointments.models import AppointmentNotification
+        self.assertFalse(self.notif_appointment.reminder_sent)
+        notify_appointment_reminder(self.notif_appointment)
+        notif = AppointmentNotification.objects.filter(
+            patient=self.notif_patient,
+            appointment=self.notif_appointment,
+            notification_type=AppointmentNotification.Type.APPOINTMENT_REMINDER,
+        ).first()
+        self.assertIsNotNone(notif)
+
+    def test_reminder_is_idempotent(self):
+        """When reminder_sent=True, notify_appointment_reminder is a no-op."""
+        from appointments.services.appointment_notification_service import notify_appointment_reminder
+        from appointments.models import AppointmentNotification
+        self.notif_appointment.reminder_sent = True
+        self.notif_appointment.save(update_fields=["reminder_sent"])
+        notify_appointment_reminder(self.notif_appointment)
+        count = AppointmentNotification.objects.filter(
+            patient=self.notif_patient,
+            notification_type=AppointmentNotification.Type.APPOINTMENT_REMINDER,
+        ).count()
+        self.assertEqual(count, 0)
+
+
+class DoctorStatusMachineTest(NotificationServiceTestMixin, TestCase):
+    """Tests for the doctor status transition machine including PENDING."""
+
+    def test_valid_doctor_transition_confirmed_to_checked_in(self):
+        """CONFIRMED transitions include CHECKED_IN."""
+        valid_from_confirmed = [
+            Appointment.Status.CHECKED_IN,
+            Appointment.Status.CANCELLED,
+            Appointment.Status.NO_SHOW,
+        ]
+        self.assertIn(Appointment.Status.CHECKED_IN, valid_from_confirmed)
+
+    def test_valid_doctor_transition_pending_to_confirmed(self):
+        """PENDING now includes CONFIRMED as a valid transition."""
+        valid_from_pending = [
+            Appointment.Status.CONFIRMED,
+            Appointment.Status.CANCELLED,
+        ]
+        self.assertIn(Appointment.Status.CONFIRMED, valid_from_pending)
+
+    def test_invalid_transition_completed_to_confirmed_rejected(self):
+        """COMPLETED has no outgoing transitions."""
+        _TRANSITION_MAP = {
+            Appointment.Status.PENDING: [
+                Appointment.Status.CONFIRMED,
+                Appointment.Status.CANCELLED,
+            ],
+            Appointment.Status.CONFIRMED: [
+                Appointment.Status.CHECKED_IN,
+                Appointment.Status.CANCELLED,
+                Appointment.Status.NO_SHOW,
+            ],
+            Appointment.Status.CHECKED_IN: [Appointment.Status.IN_PROGRESS],
+            Appointment.Status.IN_PROGRESS: [Appointment.Status.COMPLETED],
+        }
+        allowed = _TRANSITION_MAP.get(Appointment.Status.COMPLETED, [])
+        self.assertNotIn(Appointment.Status.CONFIRMED, allowed)
+
+    def test_terminal_status_cannot_be_changed_by_doctor(self):
+        """Terminal statuses have no outgoing transitions."""
+        _TRANSITION_MAP = {
+            Appointment.Status.PENDING: [
+                Appointment.Status.CONFIRMED,
+                Appointment.Status.CANCELLED,
+            ],
+            Appointment.Status.CONFIRMED: [
+                Appointment.Status.CHECKED_IN,
+                Appointment.Status.CANCELLED,
+                Appointment.Status.NO_SHOW,
+            ],
+            Appointment.Status.CHECKED_IN: [Appointment.Status.IN_PROGRESS],
+            Appointment.Status.IN_PROGRESS: [Appointment.Status.COMPLETED],
+        }
+        for status in [
+            Appointment.Status.COMPLETED,
+            Appointment.Status.CANCELLED,
+            Appointment.Status.NO_SHOW,
+        ]:
+            allowed = _TRANSITION_MAP.get(status, [])
+            self.assertEqual(
+                allowed, [],
+                f"Status {status} should have no outgoing transitions but got {allowed}",
+            )

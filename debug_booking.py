@@ -1,3 +1,7 @@
+# =============================================================================
+# DEBUG / DEVELOPMENT SCRIPT — NOT PART OF THE APPLICATION
+# DO NOT DEPLOY TO PRODUCTION
+# =============================================================================
 import traceback
 import os
 import django

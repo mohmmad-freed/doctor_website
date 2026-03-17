@@ -1,59 +1,256 @@
 # System Architecture
 
+> **Last updated**: 2026-03-17
+> Reflects the **current implemented system**. Planned/future items are explicitly labelled.
+
+---
+
 ## 1. High-Level Architecture
 
-The system is designed as a **Single-Database, Shared-Schema Multi-Tenant SaaS**. This means all tenants (clinics) share the same database tables, but data is logically isolated using a `clinic_id` foreign key on every tenant-specific record.
+The system is a **Single-Database, Shared-Schema Multi-Tenant SaaS** built on Django.
+All tenants (clinics) share the same database tables. Data isolation is enforced via
+`clinic_id` filtering at the view and service layer.
 
 ### Tenant Isolation Strategy
--   **Strict Filtering**: Every database query for tenant-specific data must include a `WHERE clinic_id = X` clause. This is enforced at the Django Manager level where possible.
--   **Global Resources**: `User`, `DoctorProfile`, and `PatientProfile` (demographics) are global to allow cross-clinic operability (e.g., a patient visiting Clinic A and Clinic B).
--   **Local Resources**: `ClinicPatient`, `Appointment`, `MedicalRecord`, `Invoice` are strictly scoped to a single `Clinic`.
+- **Strict Filtering** — every query for tenant-specific data scopes by `clinic_id`.
+- **Global Resources** — `CustomUser`, `DoctorProfile`, `PatientProfile` are global;
+  a user can belong to multiple clinics simultaneously.
+- **Local Resources** — `Appointment`, `ClinicStaff`, `ClinicWorkingHours`,
+  `DoctorAvailability`, `PatientClinicCompliance`, `ClinicHoliday`,
+  `DoctorAvailabilityException` are scoped to a specific clinic.
 
-## 2. Django Project Structure (MVT)
+> ~~`ClinicPatient`~~ — does **not** exist. Per-clinic patient records are planned but
+> not implemented. Patient identity within a clinic is tracked via `Appointment` records.
 
-The project follows the standard Django MVT (Model-View-Template) pattern, but structured for scalability:
+---
 
-**Core Apps:**
--   **`accounts`**: Custom User model, Authentication (Session & JWT), Global Profiles.
--   **`clinics`**: Clinic management, Clinic Settings, Clinic Staff roles.
--   **`patients`**: Patient management logic, `ClinicPatient` associations.
--   **`appointments`**: Scheduling logic, Slot management, Calendar views, Attachments.
--   **`medical`**: EMR (Electronic Medical Records), Prescriptions (future phase).
+## 2. Django App Structure
 
-**Frontend Integration:**
--   **Templates**: Server-side rendered HTML for SEO and initial load speed.
--   **HTMX**: Used for dynamic interactions (e.g., booking form validation, slot availability checking) without full page reloads.
--   **Static Files**: Served via WhiteNoise or Nginx.
+```
+clinic_website/          ← Project config (settings, root URLs)
+accounts/                ← CustomUser, auth (login/register/OTP/JWT), IdentityClaim
+clinics/                 ← Clinic CRUD, ClinicStaff, invitations, working hours,
+                            ClinicHoliday, DoctorAvailabilityException,
+                            ClinicSubscription, compliance settings, credential review
+doctors/                 ← DoctorProfile, availability, verification, intake forms
+patients/                ← PatientProfile, patient portal views, booking interface
+appointments/            ← Appointment model, booking service, notification service,
+                            intake answers, appointment types
+secretary/               ← Secretary role (dashboard, appointment management, invitations)
+compliance/              ← No-show tracking, compliance scores, auto-forgiveness
+core/                    ← Shared validators (file upload security)
+```
 
-## 3. Data Isolation & Security
+---
 
-### Tenant Identification
-How do we know which clinic is active?
-1.  **Staff Context**: Logged-in staff (Receptionist/Admin) are linked to a single `Clinic` via `ClinicIsolationMiddleware`. Their session automatically scopes all operations to their clinic.
-2.  **Patient Context**: When a patient logs in, they see a dashboard. If booking, they select a clinic context or browse a global directory (depending on config).
+## 3. Authentication & Authorization
 
-### Query Enforcement
--   **Middleware**: `ClinicIsolationMiddleware` runs on every request. It ensures staff members are linked to a valid clinic and sets `request.clinic` and `request.clinic_id`. It also blocks patients from accessing staff-only areas.
--   **Custom Managers**: Use Django's `Manager` class to override `get_queryset()` and automatically filter by `request.user.clinic_id` where applicable.
+### Session (Web)
+Standard Django sessions for all web views. `@login_required` is used throughout.
 
-## 4. Authentication & Authorization
+### JWT (API)
+SimpleJWT via `accounts/api_views.py`. Token obtain/refresh/blacklist endpoints.
+Used by the patient profile API and mobile clients.
 
-The system uses a hybrid authentication approach:
+### Role System
+`CustomUser` has two role fields:
+- `role` (CharField) — the user's **primary** (highest-privilege) role
+- `roles` (ArrayField) — all roles the user currently holds
 
-### 1. Web Interface (Clinics & Staff)
--   **Mechanism**: Standard Django **Sessions**.
--   **Flow**: User logs in -> Session ID stored in cookie -> Middleware validates session.
--   **Roles**: Managed via Group permissions (e.g., "Clinic Admin", "Receptionist").
+Roles: `PATIENT`, `SECRETARY`, `DOCTOR`, `MAIN_DOCTOR`
 
-### 2. API (Mobile Apps & 3rd Party)
--   **Mechanism**: **JWT (JSON Web Tokens)** via `CheckClinic` middleware.
--   **Flow**: Client exchanges credentials for Access/Refresh tokens -> Token included in `Authorization: Bearer` header.
+`home_redirect` view routes users to the correct dashboard based on their actual data:
+clinic ownership > doctor profile > secretary membership > patient (default).
 
-### 3. Login Logic
--   **Identifier**: Users log in using **Mobile Number** + **Password**.
--   **Verification**: **National ID** is collected during registration to verify identity and enforce uniqueness, but is **NOT** used as a daily login credential.
+### Multi-Role Users
+A single user can hold multiple roles simultaneously (e.g., a clinic owner who is
+also a patient at another clinic). Role expansion happens via invitation acceptance
+in `clinics/services.accept_invitation()`.
+
+---
+
+## 4. Clinic Context & Middleware
+
+`clinics/middleware.py` runs on every request:
+- Sets `request.selected_clinic` from `request.session["selected_clinic_id"]`
+- Used by multi-clinic owners to scope operations to the currently active clinic
+
+`clinics/context_processors.py` injects clinic context into all templates.
+
+Clinic switching: `clinics:switch_clinic` view updates the session variable and
+redirects to the switched clinic's dashboard.
+
+---
 
 ## 5. Doctor Availability Architecture
-To prevent overbooking across clinics, Doctor Availability is treated as a **Global Resource constraint**.
--   **Availability Table**: Links `DoctorUser` to `TimeSlot`.
--   **Conflict Check**: Before confirming ANY appointment, the system checks the `Appointment` table across **ALL** clinics for that `DoctorUser` for overlapping times.
+
+Slot generation is **stateless** — no pre-generated time slot table exists.
+
+`doctors/services.generate_slots_for_date(doctor_id, clinic_id, target_date, duration_minutes)`:
+
+1. **Holiday check** — queries `ClinicHoliday` for any active holiday covering `target_date`;
+   returns `[]` immediately if found (blocks all slots for all doctors).
+2. **Doctor exception check** — queries `DoctorAvailabilityException` for an active exception
+   for this specific doctor/clinic/date; returns `[]` if found.
+3. Loads `DoctorAvailability` records (weekly schedule) for the doctor/clinic/weekday.
+4. Generates candidate time slots at `duration_minutes` intervals within each window.
+5. Loads all `CONFIRMED`/`COMPLETED` appointments for the doctor **across all clinics**
+   on that date (global conflict check — R-03).
+6. Marks slots unavailable if they overlap any existing appointment.
+7. Returns the full slot list with `is_available` flags.
+
+`ClinicWorkingHours` defines the outer boundary. `DoctorAvailability.clean()` validates
+that a doctor's window falls within at least one clinic working hours range.
+
+### Defense in Depth
+Both `generate_slots_for_date` AND `booking_service.book_appointment()` independently
+check `ClinicHoliday` and `DoctorAvailabilityException`. This ensures blocking even if
+slots are requested via the API directly.
+
+---
+
+## 6. Subscription & Plan Tier Architecture
+
+`ClinicSubscription` is a OneToOne record bound to each clinic at creation time,
+seeded from the `ClinicActivationCode`.
+
+### Plan Tiers (`ClinicSubscription.PLAN_LIMITS`)
+| Plan | max_doctors | max_secretaries |
+|---|---|---|
+| SMALL | 2 | 5 |
+| MEDIUM | 4 | 5 |
+| ENTERPRISE | admin-set | admin-set |
+
+ENTERPRISE plans have no tier defaults in `PLAN_LIMITS`. The admin sets `max_doctors`
+and `max_secretaries` explicitly on the `ClinicActivationCode` or `ClinicSubscription`.
+**`0 = unlimited`** — this is an explicit admin opt-in, not a default.
+
+### Effective Active Check
+`subscription.is_effectively_active()` returns `True` only when:
+- `status == "ACTIVE"` AND
+- `expires_at > timezone.now()`
+
+This is what `book_appointment()` calls. A subscription with `status=ACTIVE` but
+a past `expires_at` is treated as inactive.
+
+### Admin Billing Actions (Django Admin)
+All actions in `ClinicSubscriptionAdmin` stamp `activated_by = request.user`:
+- **Activate** — sets `status = ACTIVE`
+- **Suspend** — sets `status = SUSPENDED`
+- **Extend 30 days** — extends `expires_at` by 30 days, sets `status = ACTIVE`
+- **Extend 365 days** — extends `expires_at` by 365 days, sets `status = ACTIVE`
+
+---
+
+## 7. Invitation & Onboarding Architecture
+
+### Doctor/Secretary Invitation Flow
+1. Clinic owner creates an invitation via `clinics:create_invitation` or
+   `clinics:create_secretary_invitation`
+2. `clinics/services.create_invitation()` normalizes phone, checks rate limits,
+   validates identity, creates `ClinicInvitation` + `PendingDoctorIdentity` (DOCTOR only),
+   sends invitation email
+3. Email contains a link to `doctors:guest_accept_invitation` (universal public endpoint)
+4. Unauthenticated user: stores token in session → redirects to login/register
+5. `handle_pending_invitation_redirect()` in `accounts/views.py` consumes the session
+   token after login and redirects to the correct inbox:
+   - DOCTOR → `doctors:doctor_invitations_inbox`
+   - SECRETARY → `secretary:secretary_invitations_inbox`
+6. User accepts via the inbox → `clinics/services.accept_invitation()` creates
+   `ClinicStaff`, sets up `DoctorProfile`/`DoctorVerification`/`ClinicDoctorCredential`
+   (DOCTOR), or adds SECRETARY role (SECRETARY), updates `CustomUser.roles`
+
+### Identity Lock (`PendingDoctorIdentity`)
+For unregistered phones being invited as DOCTORs, a `PendingDoctorIdentity` record
+is created to prevent race conditions when multiple clinics invite the same unknown phone.
+Released (deleted) when the invitation is accepted.
+
+---
+
+## 8. Appointment Notification Architecture
+
+`appointments/services/appointment_notification_service.py` is the **central notification service**.
+
+### Rules
+- In-app `AppointmentNotification` is **always** created first.
+- Email is sent only if `user.email` is set AND `user.email_verified = True`.
+- Email failures are caught and logged — never raised to callers.
+- `notification.sent_via_email = True` is set after successful email delivery.
+- All notify_* functions are safe to call from `transaction.on_commit()`.
+
+### Public API functions
+| Function | Trigger |
+|---|---|
+| `notify_appointment_booked(appointment)` | Patient self-books or secretary books |
+| `notify_appointment_cancelled_by_staff(appointment, clinic_staff)` | Doctor or secretary cancels |
+| `notify_appointment_rescheduled_by_staff(appointment, old_date, old_time)` | Secretary reschedules |
+| `notify_staff_patient_cancelled(appointment)` | Patient cancels (notifies doctor + secretaries) |
+| `notify_staff_patient_edited(appointment, old_date, old_time, old_type)` | Patient edits (notifies doctor + secretaries) |
+| `notify_appointment_reminder(appointment)` | Called by `send_appointment_reminders` command |
+
+### Email functions (`accounts/email_utils.py`)
+- `send_appointment_booking_email(patient, appointment)`
+- `send_appointment_cancellation_email(user, appointment)`
+- `send_appointment_reminder_email(patient, appointment)`
+- `send_appointment_rescheduled_email(patient, appointment, old_date, old_time)`
+
+---
+
+## 9. Appointment Reminders Management Command
+
+`appointments/management/commands/send_appointment_reminders.py`
+
+```
+python manage.py send_appointment_reminders
+```
+
+- Looks for `CONFIRMED` appointments within the next 24 hours with `reminder_sent=False`
+- Calls `notify_appointment_reminder(appointment)`
+- Sets `appointment.reminder_sent = True`
+- Idempotent — safe to run multiple times via cron
+
+---
+
+## 10. Compliance Architecture
+
+`PatientClinicCompliance` tracks per-patient per-clinic no-show scores.
+
+Flow:
+1. `process_no_shows` management command marks missed `PENDING`/`CONFIRMED` appointments as `NO_SHOW`
+2. Compliance service increments `bad_score` and sets status to `BLOCKED` if threshold exceeded
+3. `is_patient_blocked(clinic, patient)` is called in `booking_service.book_appointment()`
+   before creating any appointment
+4. `run_auto_forgiveness` management command resets scores after dormancy period
+
+---
+
+## 11. File Upload Security
+
+All file uploads go through `core/validators/file_validators.py`:
+- `validate_file_extension` — allowed: `.jpg`, `.jpeg`, `.png`, `.pdf`
+- `validate_file_signature` — MIME magic bytes check
+- `validate_file_size` — configurable max size
+
+Applied to: `IdentityClaim.evidence_file`, `DoctorVerification` documents,
+`ClinicDoctorCredential.specialty_certificate`, `AppointmentAttachment` files.
+
+---
+
+## 12. Frontend Stack
+
+- **Server-side rendering** — Django templates (Arabic RTL, Bootstrap-based)
+- **Dynamic interactions** — HTMX for booking wizard steps, slot loading, intake form loading,
+  appointment type loading
+- **No SPA framework** — all interactivity via HTMX partial renders
+
+---
+
+## 13. Deployment
+
+See `DEPLOY_RENDER.md` for deployment configuration details (Render.com).
+
+Key settings:
+- PostgreSQL (with `contrib.postgres.fields.ArrayField`)
+- WhiteNoise for static files
+- `DEBUG = False` in production; `ALLOWED_HOSTS` set from environment
+- Media files: configured via `MEDIA_ROOT` / `MEDIA_URL`
