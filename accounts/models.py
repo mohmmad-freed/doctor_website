@@ -101,7 +101,7 @@ class CustomUser(AbstractUser):
         null=True,
         blank=True,
         db_index=True,
-        help_text="Verified/canonical national ID only. Pending claims live in IdentityClaim.",
+        help_text="رقم الهوية الوطنية الموثق فقط. الطلبات المعلقة محفوظة في سجل المطالبات.",
     )
     city = models.ForeignKey("City", on_delete=models.SET_NULL, null=True, blank=True)
 
