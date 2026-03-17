@@ -1,9 +1,26 @@
 from django.urls import path
-from . import views, api_views
+from . import views, api_views, notification_views
 
 app_name = "appointments"
 
 urlpatterns = [
+    # --- Notification Center ---
+    path(
+        "notifications/",
+        notification_views.notifications_center,
+        name="notifications_center",
+    ),
+    path(
+        "notifications/<int:pk>/read/",
+        notification_views.mark_notification_read,
+        name="mark_notification_read",
+    ),
+    path(
+        "notifications/mark-all-read/",
+        notification_views.mark_all_notifications_read,
+        name="mark_all_notifications_read",
+    ),
+
     # --- Template Views (Patient-facing) ---
     path(
         "book/<int:clinic_id>/",

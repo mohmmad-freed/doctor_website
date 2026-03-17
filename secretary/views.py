@@ -112,13 +112,14 @@ def create_appointment(request):
     else:
         doctor_users = [s.user for s in doctors_qs]
 
-    appointment_types = AppointmentType.objects.filter(clinic=clinic, is_active=True)
-
     # Build the set of valid doctor IDs for this clinic (for server-side validation)
     valid_doctor_ids = {u.id for u in doctor_users}
 
     if request.method == "POST":
         from appointments.services import book_appointment, BookingError
+        from appointments.services.appointment_type_service import (
+            get_appointment_types_for_doctor_in_clinic,
+        )
         try:
             patient_phone = request.POST.get("patient_phone", "").strip()
             doctor_id = int(request.POST.get("doctor_id") or 0)
@@ -134,6 +135,14 @@ def create_appointment(request):
             # S-02: Validate doctor belongs to this clinic
             if doctor_id not in valid_doctor_ids:
                 messages.error(request, "الطبيب المحدد لا ينتمي إلى هذه العيادة.")
+                return redirect("secretary:create_appointment")
+
+            # S-03: Validate appointment type is enabled for this doctor
+            enabled_type_ids = {
+                t.id for t in get_appointment_types_for_doctor_in_clinic(doctor_id, clinic.id)
+            }
+            if enabled_type_ids and type_id not in enabled_type_ids:
+                messages.error(request, "نوع الموعد المحدد غير متاح لهذا الطبيب.")
                 return redirect("secretary:create_appointment")
 
             from datetime import datetime as dt_cls
@@ -174,6 +183,10 @@ def create_appointment(request):
         except Exception as e:
             messages.error(request, f"حدث خطأ: {e}")
 
+    # For initial page load: show all active clinic types (no doctor selected yet)
+    # The HTMX endpoint will filter by doctor when one is selected in the form.
+    appointment_types = AppointmentType.objects.filter(clinic=clinic, is_active=True)
+
     return render(request, "secretary/create_appointment.html", {
         "clinic": clinic,
         "doctor_users": doctor_users,
@@ -203,7 +216,16 @@ def edit_appointment(request, appointment_id):
         messages.error(request, "لا يمكن تعديل هذا الموعد في حالته الحالية.")
         return redirect("secretary:appointments")
 
-    appointment_types = AppointmentType.objects.filter(clinic=clinic, is_active=True)
+    from appointments.services.appointment_type_service import (
+        get_appointment_types_for_doctor_in_clinic,
+    )
+    # Filter appointment types by what this specific doctor offers in this clinic
+    if appointment.doctor_id:
+        appointment_types = get_appointment_types_for_doctor_in_clinic(
+            appointment.doctor_id, clinic.id
+        )
+    else:
+        appointment_types = AppointmentType.objects.filter(clinic=clinic, is_active=True)
 
     if request.method == "POST":
         try:
@@ -224,6 +246,13 @@ def edit_appointment(request, appointment_id):
             if new_date < date.today():
                 messages.error(request, "لا يمكن جدولة موعد في تاريخ ماضٍ.")
                 return redirect("secretary:edit_appointment", appointment_id=appointment_id)
+
+            # Validate type is enabled for this doctor (S-03 equivalent for edit)
+            if appointment.doctor_id:
+                enabled_type_ids = {t.id for t in appointment_types}
+                if enabled_type_ids and new_type_id not in enabled_type_ids:
+                    messages.error(request, "نوع الموعد المحدد غير متاح لهذا الطبيب.")
+                    return redirect("secretary:edit_appointment", appointment_id=appointment_id)
 
             new_type = get_object_or_404(AppointmentType, id=new_type_id, clinic=clinic, is_active=True)
 

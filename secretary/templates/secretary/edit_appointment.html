@@ -1,80 +1,131 @@
-{% extends "accounts/base.html" %}
-
+{% extends "secretary/base_secretary.html" %}
 {% block title %}تعديل الموعد{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
+<div class="max-w-2xl mx-auto py-2" dir="rtl">
 
-            <div class="d-flex align-items-center gap-3 mb-4">
-                <a href="{% url 'secretary:appointments' %}" class="btn btn-sm btn-outline-secondary">
-                    <i class="fa-solid fa-arrow-right"></i>
-                </a>
-                <h2 class="mb-0">تعديل الموعد</h2>
-            </div>
-
-            <div class="card shadow-sm mb-3">
-                <div class="card-header d-flex align-items-center gap-2 text-muted small">
-                    <i class="fa-solid fa-circle-info"></i>
-                    معلومات الموعد الحالية
-                </div>
-                <div class="card-body py-2">
-                    <dl class="row mb-0 small">
-                        <dt class="col-4 text-muted fw-normal">المريض</dt>
-                        <dd class="col-8 mb-1 fw-semibold">{{ appointment.patient.name }}</dd>
-                        <dt class="col-4 text-muted fw-normal">الطبيب</dt>
-                        <dd class="col-8 mb-1">{{ appointment.doctor.name|default:"—" }}</dd>
-                        <dt class="col-4 text-muted fw-normal">الموعد</dt>
-                        <dd class="col-8 mb-0">{{ appointment.appointment_date|date:"d/m/Y" }} — {{ appointment.appointment_time|time:"H:i" }}</dd>
-                    </dl>
-                </div>
-            </div>
-
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <form method="post">
-                        {% csrf_token %}
-
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">نوع الموعد</label>
-                            <select name="appointment_type_id" class="form-select" required>
-                                {% for at in appointment_types %}
-                                <option value="{{ at.id }}"
-                                    {% if appointment.appointment_type_id == at.id %}selected{% endif %}>
-                                    {{ at.display_name }} ({{ at.duration_minutes }} دقيقة)
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <div class="row g-3 mb-3">
-                            <div class="col-sm-6">
-                                <label class="form-label fw-semibold">التاريخ الجديد</label>
-                                <input type="date" name="appointment_date" class="form-control" required
-                                    value="{{ appointment.appointment_date|date:'Y-m-d' }}">
-                            </div>
-                            <div class="col-sm-6">
-                                <label class="form-label fw-semibold">الوقت الجديد</label>
-                                <input type="time" name="appointment_time" class="form-control" required
-                                    value="{{ appointment.appointment_time|time:'H:i' }}">
-                            </div>
-                        </div>
-
-                        <div class="mb-4">
-                            <label class="form-label fw-semibold">سبب الزيارة</label>
-                            <textarea name="reason" class="form-control" rows="3" maxlength="1000">{{ appointment.reason }}</textarea>
-                        </div>
-
-                        <div class="d-flex gap-2 justify-content-end">
-                            <a href="{% url 'secretary:appointments' %}" class="btn btn-outline-secondary">إلغاء</a>
-                            <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-        </div>
+  {# ── Header ── #}
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">تعديل الموعد</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ clinic.name }}</p>
     </div>
+    <a href="{% url 'secretary:appointments' %}"
+       class="inline-flex items-center gap-2 text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 transition-colors">
+      <i class="fa-solid fa-arrow-right"></i>
+      قائمة المواعيد
+    </a>
+  </div>
+
+  {# ── Current appointment info card ── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-4">
+    <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+      <i class="fa-solid fa-circle-info text-gray-400 text-sm"></i>
+      <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">معلومات الموعد الحالية</span>
+    </div>
+    <div class="px-5 py-4">
+      <dl class="grid grid-cols-3 gap-y-2 text-sm">
+        <dt class="text-gray-500 dark:text-gray-400 font-medium">المريض</dt>
+        <dd class="col-span-2 font-semibold text-gray-800 dark:text-gray-100">{{ appointment.patient.name }}</dd>
+
+        <dt class="text-gray-500 dark:text-gray-400 font-medium">الطبيب</dt>
+        <dd class="col-span-2 text-gray-700 dark:text-gray-200">{{ appointment.doctor.name|default:"—" }}</dd>
+
+        <dt class="text-gray-500 dark:text-gray-400 font-medium">الموعد الحالي</dt>
+        <dd class="col-span-2 text-gray-700 dark:text-gray-200 font-mono">
+          {{ appointment.appointment_date|date:"d/m/Y" }} — {{ appointment.appointment_time|time:"H:i" }}
+        </dd>
+
+        <dt class="text-gray-500 dark:text-gray-400 font-medium">الحالة</dt>
+        <dd class="col-span-2">
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold
+            {% if appointment.status == 'CONFIRMED' %}bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300
+            {% elif appointment.status == 'PENDING' %}bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300
+            {% else %}bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300{% endif %}">
+            {{ appointment.get_status_display }}
+          </span>
+        </dd>
+      </dl>
+    </div>
+  </div>
+
+  {# ── Edit form ── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+      <i class="fa-solid fa-pen-to-square text-purple-500 text-sm"></i>
+      <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">تعديل تفاصيل الموعد</span>
+    </div>
+    <div class="px-5 py-5">
+      <form method="post" class="space-y-5">
+        {% csrf_token %}
+
+        {# Appointment type #}
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
+            نوع الموعد <span class="text-red-500">*</span>
+          </label>
+          <select name="appointment_type_id" required
+                  class="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
+            <option value="">— اختر نوع الموعد —</option>
+            {% for at in appointment_types %}
+            <option value="{{ at.id }}"
+                    {% if appointment.appointment_type_id == at.id %}selected{% endif %}>
+              {{ at.display_name }} ({{ at.duration_minutes }} دقيقة — ₪{{ at.price }})
+            </option>
+            {% endfor %}
+          </select>
+          {% if appointment.doctor_id %}
+          <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+            <i class="fa-solid fa-circle-info me-0.5"></i>
+            تظهر الأنواع المتاحة لهذا الطبيب في العيادة فقط.
+          </p>
+          {% endif %}
+        </div>
+
+        {# Date + Time #}
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
+              التاريخ الجديد <span class="text-red-500">*</span>
+            </label>
+            <input type="date" name="appointment_date" required
+                   value="{{ appointment.appointment_date|date:'Y-m-d' }}"
+                   class="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
+              الوقت الجديد <span class="text-red-500">*</span>
+            </label>
+            <input type="time" name="appointment_time" required
+                   value="{{ appointment.appointment_time|time:'H:i' }}"
+                   class="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
+          </div>
+        </div>
+
+        {# Reason #}
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
+            سبب الزيارة <span class="text-xs font-normal text-gray-400">(اختياري)</span>
+          </label>
+          <textarea name="reason" rows="3" maxlength="1000"
+                    class="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none transition">{{ appointment.reason }}</textarea>
+        </div>
+
+        {# Actions #}
+        <div class="flex items-center gap-3 pt-2">
+          <button type="submit"
+                  class="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 active:scale-95 text-white font-semibold text-sm px-6 py-2.5 rounded-xl transition-all shadow-sm">
+            <i class="fa-solid fa-floppy-disk text-xs"></i>
+            حفظ التغييرات
+          </button>
+          <a href="{% url 'secretary:appointments' %}"
+             class="text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+            إلغاء
+          </a>
+        </div>
+
+      </form>
+    </div>
+  </div>
 </div>
 {% endblock %}

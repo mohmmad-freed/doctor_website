@@ -1,100 +1,138 @@
-{% extends "accounts/base.html" %}
-
+{% extends "secretary/base_secretary.html" %}
 {% block title %}حجز موعد جديد{% endblock %}
 
+{% block extra_css %}
+<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+{% endblock %}
+
 {% block content %}
-<div class="container py-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
+<div class="max-w-2xl mx-auto py-2" dir="rtl">
 
-            <div class="d-flex align-items-center gap-3 mb-4">
-                <a href="{% url 'secretary:appointments' %}" class="btn btn-sm btn-outline-secondary">
-                    <i class="fa-solid fa-arrow-right"></i>
-                </a>
-                <h2 class="mb-0">حجز موعد جديد — {{ clinic.name }}</h2>
-            </div>
-
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <form method="post">
-                        {% csrf_token %}
-
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">
-                                رقم هاتف المريض
-                                <span class="text-danger">*</span>
-                            </label>
-                            <input type="tel" name="patient_phone"
-                                class="form-control" placeholder="مثال: 0591234567" required
-                                value="{{ request.POST.patient_phone|default:'' }}">
-                            <div class="form-text">أدخل رقم الهاتف المسجل للمريض في النظام.</div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">
-                                الطبيب
-                                <span class="text-danger">*</span>
-                            </label>
-                            <select name="doctor_id" class="form-select" required>
-                                <option value="">— اختر الطبيب —</option>
-                                {% for doc in doctor_users %}
-                                <option value="{{ doc.id }}"
-                                    {% if request.POST.doctor_id == doc.id|stringformat:"s" %}selected{% endif %}>
-                                    {{ doc.name }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">
-                                نوع الموعد
-                                <span class="text-danger">*</span>
-                            </label>
-                            <select name="appointment_type_id" class="form-select" required>
-                                <option value="">— اختر النوع —</option>
-                                {% for at in appointment_types %}
-                                <option value="{{ at.id }}"
-                                    {% if request.POST.appointment_type_id == at.id|stringformat:"s" %}selected{% endif %}>
-                                    {{ at.display_name }} ({{ at.duration_minutes }} دقيقة — ₪{{ at.price }})
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <div class="row g-3 mb-3">
-                            <div class="col-sm-6">
-                                <label class="form-label fw-semibold">
-                                    التاريخ
-                                    <span class="text-danger">*</span>
-                                </label>
-                                <input type="date" name="appointment_date" class="form-control" required
-                                    value="{{ request.POST.appointment_date|default:'' }}">
-                            </div>
-                            <div class="col-sm-6">
-                                <label class="form-label fw-semibold">
-                                    الوقت
-                                    <span class="text-danger">*</span>
-                                </label>
-                                <input type="time" name="appointment_time" class="form-control" required
-                                    value="{{ request.POST.appointment_time|default:'' }}">
-                            </div>
-                        </div>
-
-                        <div class="mb-4">
-                            <label class="form-label fw-semibold">سبب الزيارة (اختياري)</label>
-                            <textarea name="reason" class="form-control" rows="3" maxlength="1000">{{ request.POST.reason|default:'' }}</textarea>
-                        </div>
-
-                        <div class="d-flex gap-2 justify-content-end">
-                            <a href="{% url 'secretary:appointments' %}" class="btn btn-outline-secondary">إلغاء</a>
-                            <button type="submit" class="btn btn-primary">حجز الموعد</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-        </div>
+  {# ── Header ── #}
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">حجز موعد جديد</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ clinic.name }}</p>
     </div>
+    <a href="{% url 'secretary:appointments' %}"
+       class="inline-flex items-center gap-2 text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 transition-colors">
+      <i class="fa-solid fa-arrow-right"></i>
+      قائمة المواعيد
+    </a>
+  </div>
+
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+      <i class="fa-solid fa-calendar-plus text-purple-500 text-sm"></i>
+      <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">تفاصيل الموعد</span>
+    </div>
+    <div class="px-5 py-5">
+      <form method="post" class="space-y-5" id="booking-form">
+        {% csrf_token %}
+
+        {# Patient phone #}
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
+            رقم هاتف المريض <span class="text-red-500">*</span>
+          </label>
+          <input type="tel" name="patient_phone" required
+                 value="{{ request.POST.patient_phone|default:'' }}"
+                 placeholder="مثال: 0591234567"
+                 class="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 transition"
+                 dir="ltr">
+          <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">أدخل رقم الهاتف المسجل للمريض في النظام.</p>
+        </div>
+
+        {# Doctor — triggers HTMX to reload appointment types #}
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
+            الطبيب <span class="text-red-500">*</span>
+          </label>
+          <select name="doctor_id" required
+                  hx-get="{% url 'appointments:htmx_appointment_types' clinic.id %}"
+                  hx-trigger="change"
+                  hx-target="#appointment-types-container"
+                  hx-include="[name='doctor_id']"
+                  hx-swap="innerHTML"
+                  class="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
+            <option value="">— اختر الطبيب —</option>
+            {% for doc in doctor_users %}
+            <option value="{{ doc.id }}"
+                    {% if request.POST.doctor_id == doc.id|stringformat:"s" %}selected{% endif %}>
+              {{ doc.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        {# Appointment type — updated dynamically by HTMX #}
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
+            نوع الموعد <span class="text-red-500">*</span>
+          </label>
+          <div id="appointment-types-container">
+            {# Default: show all clinic types before doctor is selected #}
+            <select name="appointment_type_id" required
+                    class="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
+              <option value="">— اختر نوع الموعد —</option>
+              {% for at in appointment_types %}
+              <option value="{{ at.id }}"
+                      {% if request.POST.appointment_type_id == at.id|stringformat:"s" %}selected{% endif %}>
+                {{ at.display_name }} ({{ at.duration_minutes }} دقيقة — ₪{{ at.price }})
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+            <i class="fa-solid fa-circle-info me-0.5"></i>
+            سيتم تحديث قائمة الأنواع تلقائياً بعد اختيار الطبيب.
+          </p>
+        </div>
+
+        {# Date + Time #}
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
+              التاريخ <span class="text-red-500">*</span>
+            </label>
+            <input type="date" name="appointment_date" required
+                   value="{{ request.POST.appointment_date|default:'' }}"
+                   class="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
+              الوقت <span class="text-red-500">*</span>
+            </label>
+            <input type="time" name="appointment_time" required
+                   value="{{ request.POST.appointment_time|default:'' }}"
+                   class="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
+          </div>
+        </div>
+
+        {# Reason #}
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
+            سبب الزيارة <span class="text-xs font-normal text-gray-400">(اختياري)</span>
+          </label>
+          <textarea name="reason" rows="3" maxlength="1000"
+                    class="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none transition">{{ request.POST.reason|default:'' }}</textarea>
+        </div>
+
+        {# Actions #}
+        <div class="flex items-center gap-3 pt-2">
+          <button type="submit"
+                  class="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 active:scale-95 text-white font-semibold text-sm px-6 py-2.5 rounded-xl transition-all shadow-sm">
+            <i class="fa-solid fa-calendar-plus text-xs"></i>
+            حجز الموعد
+          </button>
+          <a href="{% url 'secretary:appointments' %}"
+             class="text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+            إلغاء
+          </a>
+        </div>
+
+      </form>
+    </div>
+  </div>
 </div>
 {% endblock %}

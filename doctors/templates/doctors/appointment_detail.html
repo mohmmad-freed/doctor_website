@@ -1,149 +1,193 @@
-{% extends "accounts/base.html" %}
-
+{% extends "doctors/base_doctor.html" %}
 {% block title %}تفاصيل الموعد{% endblock %}
 
-{% block extra_css %}
-<style>
-.detail-wrap { max-width: 800px; margin: 0 auto; padding: 2rem 1rem; }
-.appt-badge { display:inline-block; padding:3px 12px; border-radius:10px; font-size:0.85rem; font-weight:700; white-space:nowrap; }
-.appt-badge-confirmed  { background:#d1fae5; color:#065f46; }
-.appt-badge-checked_in { background:#dbeafe; color:#1e40af; }
-.appt-badge-in_progress{ background:#ede9fe; color:#5b21b6; }
-.appt-badge-completed  { background:#f3f4f6; color:#374151; }
-.appt-badge-cancelled  { background:#fee2e2; color:#991b1b; }
-.appt-badge-no_show    { background:#fef3c7; color:#92400e; }
-.appt-badge-pending    { background:#f0fdf4; color:#166534; }
-[data-theme="dark"] .appt-badge-confirmed  { background:#064e3b; color:#6ee7b7; }
-[data-theme="dark"] .appt-badge-checked_in { background:#1e3a5f; color:#93c5fd; }
-[data-theme="dark"] .appt-badge-in_progress{ background:#2e1065; color:#c4b5fd; }
-[data-theme="dark"] .appt-badge-completed  { background:#1f2937; color:#9ca3af; }
-[data-theme="dark"] .appt-badge-cancelled  { background:#450a0a; color:#fca5a5; }
-[data-theme="dark"] .appt-badge-no_show    { background:#451a03; color:#fcd34d; }
-[data-theme="dark"] .appt-badge-pending    { background:#14532d; color:#86efac; }
-.info-label { font-size:0.78rem; color:var(--bs-secondary-color, #6c757d); margin-bottom:2px; display:block; }
-.info-value { font-weight:600; }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="detail-wrap">
+<div class="max-w-3xl mx-auto px-4 py-8" dir="rtl">
 
-    <div class="d-flex align-items-center gap-3 mb-4">
-        <a href="{% url 'doctors:appointments' %}" class="btn btn-sm btn-outline-secondary">
-            <i class="fa-solid fa-arrow-right"></i>
-        </a>
+  {# ── Header row ── #}
+  <div class="flex items-start gap-4 mb-7">
+    <a href="{% url 'doctors:appointments' %}"
+       class="mt-1 flex-shrink-0 w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 flex items-center justify-center transition-colors"
+       title="العودة">
+      <i class="fa-solid fa-arrow-right text-gray-500 dark:text-gray-300 text-sm"></i>
+    </a>
+    <div class="flex-1 min-w-0">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white leading-tight">تفاصيل الموعد</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+        {{ appointment.patient.name }} — {{ appointment.appointment_date|date:"d/m/Y" }}
+      </p>
+    </div>
+    {# Current status badge (large) #}
+    {% with s=appointment.status|lower %}
+    <span class="flex-shrink-0 inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold
+      {% if s == 'confirmed' %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300
+      {% elif s == 'pending' %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300
+      {% elif s == 'checked_in' %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300
+      {% elif s == 'in_progress' %}bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300
+      {% elif s == 'completed' %}bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300
+      {% elif s == 'cancelled' %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300
+      {% elif s == 'no_show' %}bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300
+      {% else %}bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300{% endif %}">
+      {{ appointment.get_status_display }}
+    </span>
+    {% endwith %}
+  </div>
+
+  {# ── Core appointment info ── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 mb-5 overflow-hidden">
+    <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+      <i class="fa-solid fa-circle-info text-indigo-500 text-sm"></i>
+      <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">معلومات الموعد</span>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-0 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-gray-100 dark:divide-gray-700">
+
+      {# Patient #}
+      <div class="p-5">
+        <p class="text-xs font-medium text-gray-400 dark:text-gray-500 mb-1">المريض</p>
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-teal-100 dark:bg-teal-900/40 flex items-center justify-center flex-shrink-0">
+            <i class="fa-regular fa-user text-teal-600 dark:text-teal-400"></i>
+          </div>
+          <div>
+            <p class="font-semibold text-gray-800 dark:text-gray-100 leading-tight">{{ appointment.patient.name }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 font-mono">{{ appointment.patient.phone }}</p>
+          </div>
+        </div>
+      </div>
+
+      {# Clinic #}
+      <div class="p-5">
+        <p class="text-xs font-medium text-gray-400 dark:text-gray-500 mb-1">العيادة</p>
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-hospital text-indigo-400 text-sm"></i>
+          <span class="font-semibold text-gray-800 dark:text-gray-100">{{ appointment.clinic.name }}</span>
+        </div>
+      </div>
+
+      {# Date & time #}
+      <div class="p-5">
+        <p class="text-xs font-medium text-gray-400 dark:text-gray-500 mb-2">التاريخ والوقت</p>
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-sm font-semibold px-3 py-1.5 rounded-lg">
+            <i class="fa-regular fa-calendar text-xs"></i>
+            {{ appointment.appointment_date|date:"d/m/Y" }}
+          </div>
+          <div class="flex items-center gap-1.5 bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 text-sm font-semibold px-3 py-1.5 rounded-lg font-mono">
+            <i class="fa-regular fa-clock text-xs"></i>
+            {{ appointment.appointment_time|time:"H:i" }}
+          </div>
+        </div>
+      </div>
+
+      {# Appointment type #}
+      <div class="p-5">
+        <p class="text-xs font-medium text-gray-400 dark:text-gray-500 mb-1">نوع الموعد</p>
+        <span class="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-700 dark:text-gray-200">
+          <i class="fa-regular fa-clipboard text-gray-400 text-xs"></i>
+          {{ appointment.appointment_type.display_name|default:"—" }}
+        </span>
+      </div>
+
+      {# Reason (full width if present) #}
+      {% if appointment.reason %}
+      <div class="p-5 sm:col-span-2 border-t border-gray-100 dark:border-gray-700">
+        <p class="text-xs font-medium text-gray-400 dark:text-gray-500 mb-1">سبب الزيارة</p>
+        <p class="text-gray-700 dark:text-gray-200">{{ appointment.reason }}</p>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+  {# ── Intake form answers ── #}
+  {% if intake_answers %}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 mb-5 overflow-hidden">
+    <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+      <i class="fa-solid fa-clipboard-list text-teal-500 text-sm"></i>
+      <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">إجابات نموذج الاستقبال</span>
+    </div>
+    <div class="divide-y divide-gray-100 dark:divide-gray-700">
+      {% for ans in intake_answers %}
+      <div class="px-5 py-4">
+        <p class="text-xs font-medium text-gray-400 dark:text-gray-500 mb-1">
+          {{ ans.question.question_text_ar|default:ans.question.question_text }}
+        </p>
+        <p class="font-semibold text-gray-800 dark:text-gray-100">{{ ans.answer_text|default:"—" }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Doctor notes ── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 mb-5 overflow-hidden">
+    <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+      <i class="fa-solid fa-note-sticky text-amber-500 text-sm"></i>
+      <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">ملاحظات الطبيب</span>
+    </div>
+    <div class="px-5 py-4">
+      {% if appointment.notes %}
+      <p class="text-gray-700 dark:text-gray-200 leading-relaxed">{{ appointment.notes }}</p>
+      {% else %}
+      <div class="flex items-center gap-2 text-gray-400 dark:text-gray-500">
+        <i class="fa-regular fa-note-sticky text-sm"></i>
+        <span class="text-sm">لا توجد ملاحظات مضافة بعد.</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── Status transition form ── #}
+  {% if allowed_transitions %}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border-2 border-indigo-200 dark:border-indigo-700/60 overflow-hidden">
+    <div class="flex items-center gap-2 px-5 py-3.5 border-b border-indigo-100 dark:border-indigo-700/60 bg-indigo-50/60 dark:bg-indigo-900/20">
+      <i class="fa-solid fa-arrow-right-arrow-left text-indigo-500 text-sm"></i>
+      <span class="font-semibold text-indigo-700 dark:text-indigo-300 text-sm">تحديث حالة الموعد</span>
+    </div>
+    <div class="px-5 py-5">
+      <form method="post" class="space-y-4">
+        {% csrf_token %}
+
+        {# Status select #}
         <div>
-            <h2 class="mb-0">تفاصيل الموعد</h2>
-            <small class="text-muted">{{ appointment.patient.name }} — {{ appointment.appointment_date|date:"d/m/Y" }}</small>
-        </div>
-        <div class="ms-auto">
-            <span class="appt-badge appt-badge-{{ appointment.status|lower }}">
-                {{ appointment.get_status_display }}
-            </span>
-        </div>
-    </div>
-
-    {# Core info #}
-    <div class="card shadow-sm mb-4">
-        <div class="card-header fw-semibold">
-            <i class="fa-solid fa-circle-info me-1 text-primary"></i>
-            معلومات الموعد
-        </div>
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-sm-6">
-                    <span class="info-label">المريض</span>
-                    <span class="info-value d-block">{{ appointment.patient.name }}</span>
-                    <span class="text-muted small">{{ appointment.patient.phone }}</span>
-                </div>
-                <div class="col-sm-6">
-                    <span class="info-label">العيادة</span>
-                    <span class="info-value d-block">{{ appointment.clinic.name }}</span>
-                </div>
-                <div class="col-sm-6">
-                    <span class="info-label">التاريخ والوقت</span>
-                    <span class="info-value d-block">{{ appointment.appointment_date|date:"d/m/Y" }} — {{ appointment.appointment_time|time:"H:i" }}</span>
-                </div>
-                <div class="col-sm-6">
-                    <span class="info-label">نوع الموعد</span>
-                    <span class="info-value d-block">{{ appointment.appointment_type.display_name|default:"—" }}</span>
-                </div>
-                {% if appointment.reason %}
-                <div class="col-12">
-                    <span class="info-label">سبب الزيارة</span>
-                    <p class="mb-0">{{ appointment.reason }}</p>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-
-    {# Intake answers #}
-    {% if intake_answers %}
-    <div class="card shadow-sm mb-4">
-        <div class="card-header fw-semibold">
-            <i class="fa-solid fa-clipboard-list me-1 text-primary"></i>
-            إجابات نموذج الاستقبال
-        </div>
-        <div class="card-body">
-            {% for ans in intake_answers %}
-            <div class="mb-3">
-                <span class="info-label">{{ ans.question.question_text_ar|default:ans.question.question_text }}</span>
-                <span class="info-value d-block">{{ ans.answer_text|default:"—" }}</span>
-            </div>
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
+            الحالة الجديدة <span class="text-red-500">*</span>
+          </label>
+          <select name="status" required
+                  class="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+            {% for val, label in allowed_transitions %}
+            <option value="{{ val }}">{{ label }}</option>
             {% endfor %}
+          </select>
         </div>
-    </div>
-    {% endif %}
 
-    {# Doctor notes #}
-    <div class="card shadow-sm mb-4">
-        <div class="card-header fw-semibold">
-            <i class="fa-solid fa-note-sticky me-1 text-primary"></i>
+        {# Notes textarea #}
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
             ملاحظات الطبيب
+            <span class="text-xs font-normal text-gray-400 mr-1">(اختياري)</span>
+          </label>
+          <textarea name="notes" rows="3"
+                    placeholder="أضف أي ملاحظات طبية أو تعليمات للمريض..."
+                    class="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none transition">{{ appointment.notes }}</textarea>
         </div>
-        <div class="card-body">
-            {% if appointment.notes %}
-            <p class="mb-0">{{ appointment.notes }}</p>
-            {% else %}
-            <p class="text-muted mb-0 small">
-                <i class="fa-regular fa-note-sticky me-1"></i>
-                لا توجد ملاحظات مضافة بعد.
-            </p>
-            {% endif %}
-        </div>
-    </div>
 
-    {# Status transition #}
-    {% if allowed_transitions %}
-    <div class="card shadow-sm border-primary border-opacity-50">
-        <div class="card-header fw-semibold text-primary">
-            <i class="fa-solid fa-arrow-right-arrow-left me-1"></i>
-            تحديث حالة الموعد
+        <div class="flex items-center gap-3 pt-1">
+          <button type="submit"
+                  class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all shadow-sm">
+            <i class="fa-solid fa-check text-xs"></i>
+            تحديث الحالة
+          </button>
+          <a href="{% url 'doctors:appointments' %}"
+             class="inline-flex items-center gap-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-medium px-5 py-2.5 rounded-xl transition-colors">
+            إلغاء
+          </a>
         </div>
-        <div class="card-body">
-            <form method="post">
-                {% csrf_token %}
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">الحالة الجديدة <span class="text-danger">*</span></label>
-                    <select name="status" class="form-select" required>
-                        {% for val, label in allowed_transitions %}
-                        <option value="{{ val }}">{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">ملاحظات الطبيب <span class="text-muted fw-normal small">(اختياري)</span></label>
-                    <textarea name="notes" class="form-control" rows="3"
-                        placeholder="أضف أي ملاحظات طبية أو تعليمات للمريض...">{{ appointment.notes }}</textarea>
-                </div>
-                <button type="submit" class="btn btn-primary">
-                    <i class="fa-solid fa-check me-1"></i>تحديث الحالة
-                </button>
-            </form>
-        </div>
+
+      </form>
     </div>
-    {% endif %}
+  </div>
+  {% endif %}
 
 </div>
 {% endblock %}

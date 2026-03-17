@@ -29,7 +29,17 @@ User = get_user_model()
 
 @login_required
 def dashboard(request):
-    return render(request, "patients/dashboard.html")
+    from appointments.models import AppointmentNotification
+
+    recent_notifications = (
+        AppointmentNotification.objects.filter(patient=request.user)
+        .select_related("appointment__clinic")
+        .order_by("-created_at")[:5]
+    )
+    context = {
+        "recent_notifications": recent_notifications,
+    }
+    return render(request, "patients/dashboard.html", context)
 
 
 @login_required

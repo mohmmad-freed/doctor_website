@@ -1,24 +1,26 @@
-{% extends "accounts/base.html" %}
-
+{% extends "doctors/base_doctor.html" %}
 {% block title %}دعوة غير صالحة{% endblock %}
 
 {% block content %}
-<div class="container" style="margin-top: 2rem;">
-<div class="row min-vh-50 align-items-center justify-content-center">
-    <div class="col-md-6 text-center">
-        <div class="card shadow-sm border-0">
-            <div class="card-body p-5">
-                <div class="mb-4">
-                    <i class="fas fa-exclamation-triangle fa-4x text-warning"></i>
-                </div>
-                <h3 class="mb-3 text-danger">عذراً، فشل في معالجة الدعوة</h3>
-                <p class="lead text-muted mb-4">{{ error }}</p>
-                <a href="{% url 'accounts:home' %}" class="btn btn-primary px-4 py-2">
-                    <i class="fas fa-home me-2"></i> العودة للصفحة الرئيسية
-                </a>
-            </div>
-        </div>
+<div class="min-h-[60vh] flex items-center justify-center px-4 py-12" dir="rtl">
+  <div class="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden text-center">
+
+    {# Danger top bar #}
+    <div class="h-1.5 bg-gradient-to-r from-red-500 to-orange-400"></div>
+
+    <div class="px-8 py-10">
+      <div class="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mx-auto mb-5">
+        <i class="fa-solid fa-triangle-exclamation text-2xl text-amber-500"></i>
+      </div>
+      <h2 class="text-xl font-bold text-red-600 dark:text-red-400 mb-3">فشل في معالجة الدعوة</h2>
+      <p class="text-gray-600 dark:text-gray-300 mb-7 leading-relaxed">{{ error }}</p>
+      <a href="{% url 'accounts:home' %}"
+         class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-semibold text-sm px-6 py-2.5 rounded-xl transition-all shadow-sm">
+        <i class="fa-solid fa-home text-xs"></i>
+        العودة للصفحة الرئيسية
+      </a>
     </div>
-</div>
+
+  </div>
 </div>
 {% endblock %}

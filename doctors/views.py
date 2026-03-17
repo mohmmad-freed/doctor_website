@@ -65,6 +65,26 @@ def dashboard(request):
         .order_by("appointment_time")
     )
 
+    # Upcoming appointments this week (next 7 days, not today)
+    from datetime import timedelta
+    week_end = today + timedelta(days=7)
+    upcoming_count = Appointment.objects.filter(
+        doctor=user,
+        appointment_date__gt=today,
+        appointment_date__lte=week_end,
+        status__in=[Appointment.Status.CONFIRMED, Appointment.Status.PENDING],
+    ).count()
+
+    # Total unique patients seen
+    from django.db.models import Count as _Count
+    total_patients_count = (
+        Appointment.objects.filter(doctor=user)
+        .exclude(status=Appointment.Status.CANCELLED)
+        .values("patient_id")
+        .distinct()
+        .count()
+    )
+
     # Pending invitations count
     from accounts.backends import PhoneNumberAuthBackend
     from clinics.models import ClinicInvitation
@@ -89,6 +109,8 @@ def dashboard(request):
         "identity_verified": identity_verified,
         "clinic_cards": clinic_cards,
         "todays_appointments": todays_appointments,
+        "upcoming_count": upcoming_count,
+        "total_patients_count": total_patients_count,
         "pending_invitations_count": pending_invitations_count,
         "profile": profile,
         "profile_complete": profile_complete,
@@ -355,9 +377,17 @@ def doctor_appointment_types_view(request, doctor_id):
     """
     Patient-facing view: Shows appointment types offered by a doctor.
 
+    Returns only the types that doctor has enabled for the given clinic
+    (falling back to all active clinic types if the doctor has no
+    DoctorClinicAppointmentType rows configured yet).
+
     Query params:
         clinic_id (required): Which clinic to view types for.
     """
+    from appointments.services.appointment_type_service import (
+        get_appointment_types_for_doctor_in_clinic,
+    )
+
     doctor = get_object_or_404(User, pk=doctor_id, role__in=["DOCTOR", "MAIN_DOCTOR"])
     clinic_id = request.GET.get("clinic_id")
 
@@ -368,10 +398,10 @@ def doctor_appointment_types_view(request, doctor_id):
             {"error": "clinic_id is required.", "doctor": doctor},
         )
 
-    appointment_types = AppointmentType.objects.filter(
-        clinic_id=clinic_id,
-        is_active=True,
-    ).order_by("name")
+    appointment_types = get_appointment_types_for_doctor_in_clinic(
+        doctor_id=doctor_id,
+        clinic_id=int(clinic_id),
+    )
 
     context = {
         "doctor": doctor,
@@ -530,17 +560,32 @@ from django import forms as django_forms
 from core.validators.file_validators import validate_file_extension, validate_file_signature, validate_file_size
 
 
+_FILE_INPUT_CLASSES = (
+    "w-full text-sm text-gray-700 dark:text-gray-300 cursor-pointer "
+    "border border-gray-300 dark:border-gray-600 rounded-xl "
+    "file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 "
+    "file:text-sm file:font-semibold file:bg-indigo-50 dark:file:bg-indigo-900/40 "
+    "file:text-indigo-700 dark:file:text-indigo-300 hover:file:bg-indigo-100 dark:hover:file:bg-indigo-900/60"
+)
+
+_TEXT_INPUT_CLASSES = (
+    "w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 "
+    "bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 "
+    "px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+)
+
+
 class DoctorCredentialUploadForm(django_forms.Form):
     """Form for uploading doctor identity verification documents."""
     identity_document = django_forms.FileField(
         label="وثيقة الهوية (بطاقة هوية / جواز سفر)",
         required=False,
-        widget=django_forms.ClearableFileInput(attrs={"class": "form-control", "accept": ".jpg,.jpeg,.png,.pdf"}),
+        widget=django_forms.ClearableFileInput(attrs={"class": _FILE_INPUT_CLASSES, "accept": ".jpg,.jpeg,.png,.pdf"}),
     )
     medical_license = django_forms.FileField(
         label="رخصة مزاولة المهنة الطبية",
         required=False,
-        widget=django_forms.ClearableFileInput(attrs={"class": "form-control", "accept": ".jpg,.jpeg,.png,.pdf"}),
+        widget=django_forms.ClearableFileInput(attrs={"class": _FILE_INPUT_CLASSES, "accept": ".jpg,.jpeg,.png,.pdf"}),
     )
 
     def clean_identity_document(self):
@@ -632,7 +677,7 @@ class DoctorProfileForm(django_forms.Form):
         label="نبذة عنك",
         required=False,
         widget=django_forms.Textarea(attrs={
-            "class": "form-control",
+            "class": _TEXT_INPUT_CLASSES + " resize-none",
             "rows": 4,
             "placeholder": "اكتب نبذة مختصرة عن خبرتك وتخصصاتك...",
         }),
@@ -643,7 +688,7 @@ class DoctorProfileForm(django_forms.Form):
         min_value=0,
         max_value=70,
         widget=django_forms.NumberInput(attrs={
-            "class": "form-control",
+            "class": _TEXT_INPUT_CLASSES,
             "placeholder": "مثال: 10",
         }),
     )
@@ -743,7 +788,7 @@ class ClinicCredentialUploadForm(django_forms.Form):
         label="شهادة التخصص",
         required=True,
         widget=django_forms.ClearableFileInput(attrs={
-            "class": "form-control",
+            "class": _FILE_INPUT_CLASSES,
             "accept": ".jpg,.jpeg,.png,.pdf",
         }),
     )
@@ -784,4 +829,66 @@ def doctor_upload_clinic_credential(request, credential_id):
     return render(request, "doctors/upload_clinic_credential.html", {
         "form": form,
         "credential": credential,
+    })
+
+
+# ============================================
+# DOCTOR APPOINTMENT TYPES (self-service)
+# ============================================
+
+
+@login_required
+def my_appointment_types(request):
+    """Doctor manages their own enabled appointment types per clinic."""
+    from django.contrib import messages as _messages
+    from django.urls import reverse as _reverse
+    from appointments.services.appointment_type_service import (
+        get_doctor_type_assignments,
+        set_doctor_clinic_appointment_types,
+    )
+    from django.core.exceptions import ValidationError as DjangoValidationError
+
+    user = request.user
+    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
+        _messages.error(request, "هذه الصفحة متاحة للأطباء فقط.")
+        return redirect(_reverse("accounts:home"))
+
+    # All active clinics the doctor belongs to
+    memberships = (
+        ClinicStaff.objects.filter(user=user, is_active=True, revoked_at__isnull=True)
+        .select_related("clinic")
+        .order_by("clinic__name")
+    )
+
+    # Handle POST: update types for a specific clinic
+    if request.method == "POST":
+        clinic_id = request.POST.get("clinic_id")
+        if clinic_id:
+            try:
+                clinic_id = int(clinic_id)
+                # Verify doctor is in that clinic
+                membership = next((m for m in memberships if m.clinic_id == clinic_id), None)
+                if not membership:
+                    _messages.error(request, "لا تملك صلاحية تعديل هذه العيادة.")
+                else:
+                    active_ids = request.POST.getlist("type_ids")
+                    set_doctor_clinic_appointment_types(user.id, clinic_id, active_ids)
+                    _messages.success(request, f"تم حفظ أنواع مواعيدك في {membership.clinic.name}.")
+            except (ValueError, DjangoValidationError) as e:
+                err = e.messages[0] if hasattr(e, "messages") else str(e)
+                _messages.error(request, err)
+        return redirect(_reverse("doctors:my_appointment_types"))
+
+    # Build per-clinic assignment data for the template
+    clinic_data = []
+    for m in memberships:
+        assignments = get_doctor_type_assignments(user.id, m.clinic_id)
+        if assignments:  # only show clinics that have at least one appointment type defined
+            clinic_data.append({
+                "clinic": m.clinic,
+                "assignments": assignments,
+            })
+
+    return render(request, "doctors/my_appointment_types.html", {
+        "clinic_data": clinic_data,
     })

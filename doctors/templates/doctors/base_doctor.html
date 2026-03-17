@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="scroll-smooth">
+{% load static %}
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}بوابة الأطباء | منصتي الطبية{% endblock %}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Cairo', 'sans-serif'] },
+                    colors: {
+                        primary: {
+                            50:  '#eef2ff',
+                            100: '#e0e7ff',
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#1e1b4b',
+                        },
+                        accent: {
+                            50:  '#f0fdfa',
+                            100: '#ccfbf1',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .glass-card {
+                @apply bg-white border border-gray-100 shadow-sm rounded-2xl;
+            }
+            .dark .glass-card {
+                @apply bg-slate-800 border-slate-700;
+            }
+            .animate-fade-in-up {
+                animation: fadeInUp 0.4s ease-out forwards;
+            }
+            .dr-badge {
+                @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold;
+            }
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        body { font-family: 'Cairo', sans-serif; }
+
+        /* ── Theme toggle ──────────────────────────── */
+        .theme-toggle {
+            position: relative; width: 52px; height: 26px;
+            background: linear-gradient(to bottom, #4FABD9 0%, #76D1F6 100%);
+            border-radius: 999px; border: 3px solid #F0F0F0;
+            cursor: pointer; overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            transition: all 0.5s cubic-bezier(0.25,0.46,0.45,0.94);
+            flex-shrink: 0;
+        }
+        .theme-toggle.is-dark {
+            background: linear-gradient(to bottom, #1B2944 0%, #2D4367 100%);
+            border-color: #33425E;
+        }
+        .toggle-circle {
+            position: absolute; top: 2px; left: 2px;
+            width: 16px; height: 16px;
+            background: #FFD54F; border-radius: 50%;
+            transition: transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94), background 0.5s;
+            z-index: 10;
+        }
+        .theme-toggle.is-dark .toggle-circle {
+            transform: translateX(25px); background: #E0E0E0;
+        }
+        .star { position: absolute; background: white; border-radius: 50%; opacity: 0; transition: opacity 0.3s; }
+        .theme-toggle.is-dark .star { opacity: 1; }
+        .star-1 { width: 2px; height: 2px; top: 5px; left: 25px; }
+        .star-2 { width: 3px; height: 3px; top: 10px; left: 20px; }
+        .toggle-clouds { position: absolute; bottom: -2px; left: 0; width: 100%; height: 100%; transition: transform 0.5s; }
+        .theme-toggle.is-dark .toggle-clouds { transform: translateY(20px); }
+        .cloud { position: absolute; background: white; border-radius: 50%; }
+        .cloud-1 { width: 15px; height: 15px; bottom: 2px; left: 5px; }
+        .cloud-2 { width: 20px; height: 20px; bottom: -4px; right: 5px; }
+
+        /* ── Mobile glass nav ─────────────────────── */
+        .mobile-nav-glass {
+            position: fixed; bottom: 20px; left: 50%;
+            transform: translateX(-50%);
+            width: 92%; max-width: 420px; height: 64px;
+            background: rgba(255,255,255,0.8);
+            border: 1px solid rgba(255,255,255,0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 32px;
+            display: flex; justify-content: space-around; align-items: center;
+            padding: 0 8px;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+            z-index: 50;
+        }
+        .dark .mobile-nav-glass {
+            background: rgba(30,41,59,0.82);
+            border-color: rgba(255,255,255,0.08);
+        }
+        .mob-item {
+            position: relative;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            gap: 2px; text-decoration: none;
+            color: #64748b; min-width: 52px; height: 48px;
+            border-radius: 20px;
+            transition: all 0.3s cubic-bezier(0.68,-0.55,0.265,1.55);
+        }
+        .dark .mob-item { color: #94a3b8; }
+        .mob-item i { font-size: 18px; transition: all 0.25s; }
+        .mob-item span { font-size: 10px; font-weight: 600; opacity: 0; max-height: 0; overflow: hidden; transition: all 0.25s; }
+        .mob-item.active {
+            color: #ffffff !important;
+            background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+            box-shadow: 0 6px 16px rgba(99,102,241,0.35);
+            padding: 0 14px;
+        }
+        .mob-item.active i { margin-bottom: 1px; }
+        .mob-item.active span { opacity: 1; max-height: 20px; }
+        .mob-badge {
+            position: absolute; top: 4px; right: 4px;
+            min-width: 16px; height: 16px;
+            background: #ef4444; color: #fff; font-size: 9px; font-weight: 800;
+            border-radius: 999px; display: flex; align-items: center; justify-content: center;
+            padding: 0 3px; border: 1.5px solid white;
+        }
+        .dark .mob-badge { border-color: rgba(30,41,59,0.9); }
+
+        /* ── User dropdown ────────────────────────── */
+        #drUserMenu .dr-dropdown {
+            display: none; position: absolute; top: calc(100% + 8px); left: 0;
+            min-width: 230px; background: white;
+            border: 1px solid #e5e7eb; border-radius: 14px;
+            box-shadow: 0 8px 28px rgba(0,0,0,0.12); z-index: 200; overflow: hidden;
+        }
+        .dark #drUserMenu .dr-dropdown {
+            background: #1e293b; border-color: #334155;
+        }
+        #drUserMenu.open .dr-dropdown { display: block; }
+    </style>
+
+    <!-- Dark-mode pre-script (no FOUC) -->
+    <script>
+        const _t = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        if (_t === 'dark') document.documentElement.classList.add('dark');
+    </script>
+
+    <link rel="stylesheet" href="{% static 'accounts/css/loader.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 antialiased min-h-screen flex flex-col transition-colors duration-300">
+
+    <!-- Page transition bar -->
+    <div class="page-transition-bar" id="ptBar"><div class="page-transition-bar-fill"></div></div>
+    <div class="page-transition-skeleton skel-layout-dashboard" id="ptSkeleton">
+        <div class="skel-nav"></div>
+        <div class="skel-container">
+            <div class="skel-grid-3 mb-8">
+                <div class="skel-card skel-shape"></div>
+                <div class="skel-card skel-shape"></div>
+                <div class="skel-card skel-shape"></div>
+            </div>
+            <div class="skel-table skel-shape"></div>
+        </div>
+    </div>
+
+    <!-- ═══════════════ NAVBAR ═══════════════ -->
+    <nav class="sticky top-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-gray-200 dark:border-slate-700">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+
+                <!-- Logo -->
+                <div class="flex-shrink-0 flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white text-sm">
+                        <i class="fa-solid fa-stethoscope"></i>
+                    </div>
+                    <span class="font-bold text-xl text-gray-900 dark:text-white tracking-tight">منصتي الطبية</span>
+                    <span class="text-xs bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 px-2 py-0.5 rounded-full mr-1 hidden sm:inline-block">بوابة الأطباء</span>
+                </div>
+
+                <!-- Desktop nav links -->
+                <div class="hidden md:flex items-center gap-1">
+                    <a href="{% url 'doctors:dashboard' %}"
+                       class="px-3 py-2 rounded-lg text-sm font-semibold transition-colors
+                              {% if request.resolver_match.url_name == 'dashboard' %}
+                              text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20
+                              {% else %}
+                              text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-slate-800
+                              {% endif %}">
+                        <i class="fa-solid fa-house-medical ml-1 text-xs opacity-70"></i>
+                        لوحة التحكم
+                    </a>
+                    <a href="{% url 'doctors:appointments' %}"
+                       class="px-3 py-2 rounded-lg text-sm font-semibold transition-colors
+                              {% if request.resolver_match.url_name == 'appointments' or request.resolver_match.url_name == 'appointment_detail' %}
+                              text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20
+                              {% else %}
+                              text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-slate-800
+                              {% endif %}">
+                        <i class="fa-regular fa-calendar-check ml-1 text-xs opacity-70"></i>
+                        مواعيدي
+                    </a>
+                    <a href="{% url 'doctors:patients' %}"
+                       class="px-3 py-2 rounded-lg text-sm font-semibold transition-colors
+                              {% if request.resolver_match.url_name == 'patients' %}
+                              text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20
+                              {% else %}
+                              text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-slate-800
+                              {% endif %}">
+                        <i class="fa-solid fa-users ml-1 text-xs opacity-70"></i>
+                        مرضاي
+                    </a>
+                    <a href="{% url 'doctors:my_appointment_types' %}"
+                       class="px-3 py-2 rounded-lg text-sm font-semibold transition-colors
+                              {% if request.resolver_match.url_name == 'my_appointment_types' %}
+                              text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20
+                              {% else %}
+                              text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-slate-800
+                              {% endif %}">
+                        <i class="fa-solid fa-list-check ml-1 text-xs opacity-70"></i>
+                        أنواع مواعيدي
+                    </a>
+                    <a href="{% url 'doctors:doctor_invitations_inbox' %}"
+                       class="relative px-3 py-2 rounded-lg text-sm font-semibold transition-colors
+                              {% if request.resolver_match.url_name == 'doctor_invitations_inbox' %}
+                              text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20
+                              {% else %}
+                              text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-slate-800
+                              {% endif %}">
+                        <i class="fa-regular fa-envelope ml-1 text-xs opacity-70"></i>
+                        الدعوات
+                        {% if pending_invitations_count > 0 %}
+                        <span class="absolute -top-0.5 -left-0.5 min-w-[17px] h-[17px] bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5 border-2 border-white dark:border-slate-900">
+                            {{ pending_invitations_count }}
+                        </span>
+                        {% endif %}
+                    </a>
+                </div>
+
+                <!-- Right side actions -->
+                <div class="flex items-center gap-2.5">
+
+                    <!-- Notification bell -->
+                    <a href="{% url 'appointments:notifications_center' %}"
+                       class="relative inline-flex items-center justify-center w-9 h-9 rounded-full
+                              text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                       title="الإشعارات">
+                        <i class="fa-regular fa-bell text-lg"></i>
+                        {% if unread_notification_count > 0 %}
+                        <span class="absolute -top-0.5 -right-0.5 min-w-[17px] h-[17px] px-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900">
+                            {% if unread_notification_count > 9 %}9+{% else %}{{ unread_notification_count }}{% endif %}
+                        </span>
+                        {% endif %}
+                    </a>
+
+                    <!-- Theme toggle -->
+                    <button class="theme-toggle" id="theme-toggle" aria-label="Toggle Dark Mode">
+                        <span class="toggle-background">
+                            <span class="star star-1"></span>
+                            <span class="star star-2"></span>
+                        </span>
+                        <span class="toggle-circle"></span>
+                        <span class="toggle-clouds">
+                            <span class="cloud cloud-1"></span>
+                            <span class="cloud cloud-2"></span>
+                        </span>
+                    </button>
+
+                    <!-- User dropdown -->
+                    <div class="relative" id="drUserMenu">
+                        <button onclick="document.getElementById('drUserMenu').classList.toggle('open')"
+                                class="flex items-center gap-2 px-2.5 py-1.5 rounded-full border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-primary-400 transition-all">
+                            <div class="w-7 h-7 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center text-primary-600 dark:text-primary-300 font-bold text-sm flex-shrink-0">
+                                {{ request.user.name|slice:":1" }}
+                            </div>
+                            <span class="hidden sm:inline text-sm font-semibold text-gray-900 dark:text-white max-w-[110px] truncate">{{ request.user.name }}</span>
+                            <i class="fa-solid fa-chevron-down text-gray-400 dr-chevron" style="font-size:0.6rem;transition:transform 0.2s;"></i>
+                        </button>
+
+                        <div class="dr-dropdown">
+                            <!-- Header -->
+                            <div class="flex items-center gap-2.5 px-3.5 py-3 bg-gray-50 dark:bg-slate-700/50">
+                                <div class="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center text-primary-600 dark:text-primary-300 font-bold flex-shrink-0">
+                                    {{ request.user.name|slice:":1" }}
+                                </div>
+                                <div class="flex flex-col min-w-0">
+                                    <span class="text-sm font-bold text-gray-900 dark:text-white truncate">{{ request.user.name }}</span>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400" dir="ltr">{{ request.user.phone }}</span>
+                                </div>
+                            </div>
+
+                            <div class="h-px bg-gray-100 dark:bg-slate-700"></div>
+
+                            <a href="{% url 'doctors:doctor_profile' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                                <i class="fa-solid fa-user-doctor w-4 text-center text-gray-400"></i>
+                                ملفي الشخصي
+                            </a>
+                            <a href="{% url 'doctors:verification_status' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                                <i class="fa-solid fa-shield-check w-4 text-center text-gray-400"></i>
+                                حالة التحقق
+                            </a>
+
+                            {% if request.user.roles|length > 1 %}
+                            <div class="h-px bg-gray-100 dark:bg-slate-700"></div>
+                            <div class="px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">تبديل الدور</div>
+
+                            <a href="{% url 'doctors:dashboard' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-bold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20">
+                                <i class="fa-solid fa-stethoscope w-4 text-center text-primary-500"></i>
+                                طبيب
+                                <i class="fa-solid fa-check mr-auto text-primary-500" style="font-size:0.75rem;"></i>
+                            </a>
+                            {% if "PATIENT" in request.user.roles %}
+                            <a href="{% url 'patients:dashboard' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                                <i class="fa-solid fa-user-injured w-4 text-center text-gray-400"></i>
+                                مريض
+                            </a>
+                            {% endif %}
+                            {% if "MAIN_DOCTOR" in request.user.roles %}
+                            <a href="{% url 'clinics:my_clinics' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                                <i class="fa-solid fa-hospital-user w-4 text-center text-gray-400"></i>
+                                صاحب عيادة
+                            </a>
+                            {% endif %}
+                            {% if "SECRETARY" in request.user.roles %}
+                            <a href="{% url 'secretary:dashboard' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                                <i class="fa-solid fa-user-tie w-4 text-center text-gray-400"></i>
+                                سكرتير/ة
+                            </a>
+                            {% endif %}
+                            {% endif %}
+
+                            <div class="h-px bg-gray-100 dark:bg-slate-700"></div>
+                            <a href="{% url 'accounts:logout' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                                <i class="fa-solid fa-right-from-bracket w-4 text-center"></i>
+                                تسجيل الخروج
+                            </a>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ═══════════════ MAIN ═══════════════ -->
+    <main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-32 md:py-8">
+
+        <!-- Messages -->
+        {% if messages %}
+        <div class="mb-6 space-y-2 max-w-4xl mx-auto">
+            {% for message in messages %}
+            <div class="p-4 rounded-xl flex items-center gap-3 shadow-sm
+                        {% if message.tags == 'success' %}bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800
+                        {% elif message.tags == 'error' %}bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800
+                        {% else %}bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800{% endif %}">
+                {% if message.tags == 'success' %}<i class="fa-solid fa-circle-check"></i>
+                {% elif message.tags == 'error' %}<i class="fa-solid fa-circle-exclamation"></i>
+                {% else %}<i class="fa-solid fa-circle-info"></i>{% endif %}
+                <span class="font-medium">{{ message }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- ═══════════════ MOBILE NAV ═══════════════ -->
+    <nav class="mobile-nav-glass md:hidden">
+        <a href="{% url 'doctors:dashboard' %}" class="mob-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+            <i class="fa-solid fa-house-medical"></i>
+            <span>الرئيسية</span>
+        </a>
+        <a href="{% url 'doctors:appointments' %}" class="mob-item {% if request.resolver_match.url_name == 'appointments' or request.resolver_match.url_name == 'appointment_detail' %}active{% endif %}">
+            <i class="fa-regular fa-calendar-check"></i>
+            <span>المواعيد</span>
+        </a>
+        <a href="{% url 'doctors:patients' %}" class="mob-item {% if request.resolver_match.url_name == 'patients' %}active{% endif %}">
+            <i class="fa-solid fa-users"></i>
+            <span>المرضى</span>
+        </a>
+        <a href="{% url 'doctors:doctor_invitations_inbox' %}" class="mob-item {% if request.resolver_match.url_name == 'doctor_invitations_inbox' %}active{% endif %}" style="position:relative;">
+            <i class="fa-regular fa-envelope"></i>
+            <span>الدعوات</span>
+            {% if pending_invitations_count > 0 %}
+            <span class="mob-badge">{{ pending_invitations_count }}</span>
+            {% endif %}
+        </a>
+        <a href="{% url 'appointments:notifications_center' %}" class="mob-item {% if request.resolver_match.namespace == 'appointments' and request.resolver_match.url_name == 'notifications_center' %}active{% endif %}" style="position:relative;">
+            <i class="fa-regular fa-bell"></i>
+            <span>الإشعارات</span>
+            {% if unread_notification_count > 0 %}
+            <span class="mob-badge">{% if unread_notification_count > 9 %}9+{% else %}{{ unread_notification_count }}{% endif %}</span>
+            {% endif %}
+        </a>
+    </nav>
+
+    <!-- Footer -->
+    <footer class="bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 py-5 mt-auto transition-colors duration-300">
+        <div class="container mx-auto px-4 text-center text-sm text-gray-500 dark:text-gray-400">
+            &copy; {% now "Y" %} منصتي الطبية — بوابة الأطباء
+        </div>
+    </footer>
+
+    <!-- ═══════════════ SCRIPTS ═══════════════ -->
+    <script>
+        // Theme toggle
+        document.addEventListener('DOMContentLoaded', () => {
+            const btn = document.getElementById('theme-toggle');
+            const isDark = document.documentElement.classList.contains('dark');
+            if (isDark) btn.classList.add('is-dark');
+            btn.addEventListener('click', () => {
+                const dark = document.documentElement.classList.toggle('dark');
+                localStorage.setItem('theme', dark ? 'dark' : 'light');
+                btn.classList.toggle('is-dark', dark);
+            });
+        });
+
+        // Close user dropdown on outside click
+        document.addEventListener('click', function(e) {
+            const menu = document.getElementById('drUserMenu');
+            if (menu && !menu.contains(e.target)) menu.classList.remove('open');
+        });
+        // Chevron animation for user dropdown
+        const _drMenu = document.getElementById('drUserMenu');
+        if (_drMenu) {
+            new MutationObserver(() => {
+                const chevron = _drMenu.querySelector('.dr-chevron');
+                if (chevron) chevron.style.transform = _drMenu.classList.contains('open') ? 'rotate(180deg)' : '';
+            }).observe(_drMenu, { attributes: true, attributeFilter: ['class'] });
+        }
+
+        // Page transition
+        (function() {
+            const bar = document.getElementById('ptBar');
+            const skel = document.getElementById('ptSkeleton');
+            if (!bar || !skel) return;
+            document.addEventListener('click', function(e) {
+                const link = e.target.closest('a');
+                if (!link || e.defaultPrevented || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+                const href = link.getAttribute('href');
+                if (!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('mailto:') || link.target === '_blank' || link.hasAttribute('download')) return;
+                try {
+                    const t = new URL(link.href, location.origin);
+                    const c = new URL(location.href);
+                    if (t.pathname === c.pathname && t.search === c.search && t.hash) return;
+                } catch(e) {}
+                bar.classList.add('active');
+                skel.classList.add('active');
+            });
+            window.addEventListener('pageshow', () => { bar.classList.remove('active'); skel.classList.remove('active'); });
+            window.addEventListener('load', () => { setTimeout(() => { bar.classList.remove('active'); skel.classList.remove('active'); }, 100); });
+        })();
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

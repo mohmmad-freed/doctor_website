@@ -193,13 +193,22 @@ def book_appointment_view(request, clinic_id):
 
 @login_required
 def load_appointment_types(request, clinic_id):
-    """HTMX endpoint: Returns appointment types for a selected doctor."""
+    """
+    HTMX endpoint: Returns appointment types for a selected doctor.
+
+    If the doctor has configured DoctorClinicAppointmentType rows, only those
+    active types are returned.  Falls back to all active clinic types when no
+    configuration exists (backwards-compat).
+    """
     doctor_id = request.GET.get("doctor_id")
     if not doctor_id:
         return render(request, "appointments/partials/appointment_types.html", {"appointment_types": []})
 
-    appointment_types = AppointmentType.objects.filter(
-        clinic_id=clinic_id, is_active=True
+    from appointments.services.appointment_type_service import (
+        get_appointment_types_for_doctor_in_clinic,
+    )
+    appointment_types = get_appointment_types_for_doctor_in_clinic(
+        doctor_id=int(doctor_id), clinic_id=clinic_id
     )
     return render(
         request,

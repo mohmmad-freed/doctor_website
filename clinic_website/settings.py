@@ -108,6 +108,8 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "clinics.context_processors.clinic_switcher",
+                "appointments.context_processors.unread_notifications",
+                "doctors.context_processors.doctor_context",
             ],
         },
     },

@@ -1,5 +1,11 @@
 from django.contrib import admin
-from .models import Appointment, AppointmentAnswer, AppointmentAttachment, AppointmentType
+from .models import (
+    Appointment,
+    AppointmentAnswer,
+    AppointmentAttachment,
+    AppointmentType,
+    DoctorClinicAppointmentType,
+)
 
 
 @admin.register(AppointmentType)
@@ -69,3 +75,13 @@ class AppointmentAttachmentAdmin(admin.ModelAdmin):
     list_filter = ["mime_type"]
     search_fields = ["original_name", "appointment__patient__name"]
     raw_id_fields = ["appointment", "question", "uploaded_by"]
+
+
+@admin.register(DoctorClinicAppointmentType)
+class DoctorClinicAppointmentTypeAdmin(admin.ModelAdmin):
+    list_display = ["doctor", "clinic", "appointment_type", "is_active", "updated_at"]
+    list_filter = ["is_active", "clinic"]
+    search_fields = ["doctor__name", "clinic__name", "appointment_type__name"]
+    list_editable = ["is_active"]
+    raw_id_fields = ["doctor", "clinic", "appointment_type"]
+    ordering = ["clinic", "doctor", "appointment_type__name"]

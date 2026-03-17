@@ -188,7 +188,7 @@ def book_appointment(
             code="doctor_exception",
         )
 
-    # ── 3. Validate appointment type ──────────────────────────────────
+    # ── 3. Validate appointment type belongs to clinic ────────────────
     try:
         appointment_type = AppointmentType.objects.get(
             id=appointment_type_id,
@@ -199,6 +199,19 @@ def book_appointment(
         raise BookingError(
             "Appointment type not found for this clinic.",
             code="invalid_appointment_type",
+        )
+
+    # ── 3.5. Validate appointment type is enabled for this doctor ─────
+    # Uses backwards-compat fall-back: if no DCAT rows configured for the
+    # (doctor, clinic) pair, all active clinic types are allowed.
+    from appointments.services.appointment_type_service import (
+        get_appointment_types_for_doctor_in_clinic,
+    )
+    enabled_types = get_appointment_types_for_doctor_in_clinic(doctor_id, clinic_id)
+    if not any(t.id == appointment_type.id for t in enabled_types):
+        raise BookingError(
+            "هذا النوع من المواعيد غير متاح لدى هذا الطبيب في هذه العيادة.",
+            code="type_not_enabled_for_doctor",
         )
 
     # ── 4. Validate the slot is a legitimate generated slot ───────────

@@ -1,372 +1,113 @@
-{% extends "accounts/base.html" %}
-
+{% extends "doctors/base_doctor.html" %}
 {% block title %}دعوات الانضمام{% endblock %}
 
-{% block extra_css %}
-<style>
-  .invites-page {
-    max-width: 780px;
-    margin: 2rem auto;
-    padding: 0 1rem;
-  }
-
-  .invites-page-header {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1.75rem;
-  }
-
-  .invites-page-header .header-icon {
-    width: 46px;
-    height: 46px;
-    border-radius: var(--radius-md);
-    background: linear-gradient(135deg, var(--color-primary-500), var(--color-secondary-500));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    font-size: 1.2rem;
-    flex-shrink: 0;
-  }
-
-  .invites-page-header h2 {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: var(--color-text-main);
-    margin: 0;
-  }
-
-  .invites-page-header p {
-    font-size: 0.85rem;
-    color: var(--color-text-muted);
-    margin: 0;
-  }
-
-  /* ── Invite Card ── */
-  .invite-card {
-    background: var(--color-surface-card);
-    border: 1px solid var(--color-surface-border);
-    border-radius: var(--radius-lg);
-    padding: 1.4rem 1.6rem;
-    margin-bottom: 1rem;
-    box-shadow: var(--shadow-sm);
-    transition: box-shadow 0.2s ease, border-color 0.2s ease;
-  }
-
-  .invite-card:hover {
-    box-shadow: var(--shadow-md);
-    border-color: var(--color-primary-500);
-  }
-
-  .invite-card-top {
-    display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-    margin-bottom: 1rem;
-  }
-
-  .clinic-avatar {
-    width: 48px;
-    height: 48px;
-    border-radius: var(--radius-md);
-    background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-secondary-500) 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    font-size: 1.3rem;
-    font-weight: 700;
-    flex-shrink: 0;
-  }
-
-  .invite-meta {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .invite-clinic-name {
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: var(--color-text-main);
-    margin: 0 0 0.2rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .invite-clinic-location {
-    font-size: 0.82rem;
-    color: var(--color-text-muted);
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-  }
-
-  .invite-badge-expired {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    padding: 0.25rem 0.7rem;
-    border-radius: var(--radius-full);
-    font-size: 0.78rem;
-    font-weight: 600;
-    background: #fee2e2;
-    color: #b91c1c;
-    flex-shrink: 0;
-  }
-
-  [data-theme="dark"] .invite-badge-expired {
-    background: #450a0a;
-    color: #fca5a5;
-  }
-
-  /* ── Divider ── */
-  .invite-divider {
-    height: 1px;
-    background: var(--color-surface-border);
-    margin: 1rem 0;
-  }
-
-  /* ── Info rows ── */
-  .invite-info-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.6rem 1.2rem;
-    margin-bottom: 1rem;
-  }
-
-  @media (max-width: 480px) {
-    .invite-info-grid { grid-template-columns: 1fr; }
-  }
-
-  .invite-info-item {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-  }
-
-  .invite-info-label {
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  .invite-info-value {
-    font-size: 0.9rem;
-    color: var(--color-text-body);
-    font-weight: 500;
-  }
-
-  .invite-info-value .phone-ltr {
-    direction: ltr;
-    display: inline-block;
-    font-size: 0.85rem;
-    color: var(--color-text-muted);
-  }
-
-  /* ── Specialty badges ── */
-  .specialty-badges {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-  }
-
-  .spec-badge {
-    padding: 0.2rem 0.65rem;
-    border-radius: var(--radius-full);
-    font-size: 0.78rem;
-    font-weight: 600;
-    background: #dbeafe;
-    color: #1d4ed8;
-    border: 1px solid #bfdbfe;
-  }
-
-  [data-theme="dark"] .spec-badge {
-    background: #1e3a5f;
-    color: #93c5fd;
-    border-color: #1d4ed8;
-  }
-
-  /* ── Action buttons ── */
-  .invite-actions {
-    display: flex;
-    gap: 0.6rem;
-    justify-content: flex-end;
-  }
-
-  .btn-accept {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.45rem 1.1rem;
-    border-radius: var(--radius-md);
-    font-size: 0.88rem;
-    font-weight: 600;
-    border: none;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    background: #16a34a;
-    color: #fff;
-  }
-
-  .btn-accept:hover {
-    background: #15803d;
-    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.35);
-    transform: translateY(-1px);
-  }
-
-  .btn-reject {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.45rem 1.1rem;
-    border-radius: var(--radius-md);
-    font-size: 0.88rem;
-    font-weight: 600;
-    border: 1.5px solid var(--color-surface-border);
-    cursor: pointer;
-    transition: all 0.15s ease;
-    background: transparent;
-    color: var(--color-text-body);
-  }
-
-  .btn-reject:hover {
-    border-color: #dc2626;
-    color: #dc2626;
-    background: #fee2e2;
-  }
-
-  [data-theme="dark"] .btn-reject:hover {
-    background: #450a0a;
-    border-color: #dc2626;
-    color: #fca5a5;
-  }
-
-  /* ── Empty state ── */
-  .invites-empty {
-    background: var(--color-surface-card);
-    border: 1px dashed var(--color-surface-border);
-    border-radius: var(--radius-lg);
-    padding: 3.5rem 2rem;
-    text-align: center;
-  }
-
-  .invites-empty .empty-icon {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    background: var(--color-surface-border);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 1rem;
-    font-size: 1.7rem;
-    color: var(--color-text-muted);
-  }
-
-  .invites-empty h5 {
-    color: var(--color-text-main);
-    font-weight: 700;
-    margin-bottom: 0.4rem;
-  }
-
-  .invites-empty p {
-    color: var(--color-text-muted);
-    font-size: 0.9rem;
-    margin: 0;
-  }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="invites-page">
+<div class="max-w-3xl mx-auto px-4 py-8" dir="rtl">
 
-  <!-- Page Header -->
-  <div class="invites-page-header">
-    <div class="header-icon">
-      <i class="fas fa-envelope-open-text"></i>
+  {# ── Page header ── #}
+  <div class="flex items-center gap-4 mb-7">
+    <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-teal-500 flex items-center justify-center flex-shrink-0 shadow-lg">
+      <i class="fa-solid fa-envelope-open-text text-white text-xl"></i>
     </div>
     <div>
-      <h2>دعوات الانضمام</h2>
-      <p>الدعوات المعلقة للانضمام إلى العيادات</p>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">دعوات الانضمام</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+        الدعوات المعلقة للانضمام إلى العيادات
+        {% if invitations %}
+        <span class="font-semibold text-indigo-600 dark:text-indigo-400">({{ invitations|length }})</span>
+        {% endif %}
+      </p>
     </div>
   </div>
 
   {% if invitations %}
-    {% for inv in invitations %}
-    <div class="invite-card">
 
-      <!-- Top: clinic identity + expired badge -->
-      <div class="invite-card-top">
-        <div class="clinic-avatar">
-          {{ inv.clinic.name|first }}
+    {% for inv in invitations %}
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 mb-4 overflow-hidden
+                hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-600 transition-all duration-200">
+
+      {# ── Card top: clinic identity ── #}
+      <div class="flex items-start gap-4 p-5">
+        {# Clinic avatar #}
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-teal-500 flex items-center justify-center flex-shrink-0 shadow-sm">
+          <span class="text-white text-lg font-bold">{{ inv.clinic.name|first }}</span>
         </div>
-        <div class="invite-meta">
-          <p class="invite-clinic-name">{{ inv.clinic.name }}</p>
-          <span class="invite-clinic-location">
-            <i class="fas fa-map-marker-alt" style="font-size:0.75rem;"></i>
+
+        {# Clinic meta #}
+        <div class="flex-1 min-w-0">
+          <p class="font-bold text-gray-900 dark:text-white text-base truncate">{{ inv.clinic.name }}</p>
+          <span class="inline-flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+            <i class="fa-solid fa-location-dot text-xs"></i>
             {{ inv.clinic.city.name|default:"—" }}
           </span>
         </div>
+
+        {# Expired badge #}
         {% if inv.is_expired %}
-          <span class="invite-badge-expired">
-            <i class="fas fa-clock"></i> منتهية
-          </span>
+        <span class="flex-shrink-0 inline-flex items-center gap-1.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-xs font-semibold px-2.5 py-1 rounded-full">
+          <i class="fa-solid fa-clock text-[10px]"></i> منتهية
+        </span>
         {% endif %}
       </div>
 
-      <div class="invite-divider"></div>
+      {# ── Divider ── #}
+      <div class="border-t border-gray-100 dark:border-gray-700 mx-5"></div>
 
-      <!-- Info grid -->
-      <div class="invite-info-grid">
-        <div class="invite-info-item">
-          <span class="invite-info-label">المرسل</span>
-          <span class="invite-info-value">
-            {{ inv.invited_by.name }}
-            {% if inv.invited_by.phone %}
-              <br><span class="phone-ltr">{{ inv.invited_by.phone }}</span>
-            {% endif %}
-          </span>
+      {# ── Info grid ── #}
+      <div class="grid grid-cols-2 gap-4 p-5">
+        <div>
+          <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">المرسل</p>
+          <p class="font-semibold text-gray-800 dark:text-gray-200 text-sm">{{ inv.invited_by.name }}</p>
+          {% if inv.invited_by.phone %}
+          <p class="text-xs font-mono text-gray-400 dark:text-gray-500" dir="ltr">{{ inv.invited_by.phone }}</p>
+          {% endif %}
         </div>
 
-        <div class="invite-info-item">
-          <span class="invite-info-label">تاريخ الدعوة</span>
-          <span class="invite-info-value" title="{{ inv.created_at|date:'Y-m-d H:i' }}">
+        <div>
+          <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">تاريخ الدعوة</p>
+          <p class="font-medium text-gray-700 dark:text-gray-300 text-sm" title="{{ inv.created_at|date:'Y-m-d H:i' }}">
             {{ inv.created_at|timesince }} مضت
-          </span>
+          </p>
         </div>
 
-        <div class="invite-info-item" style="grid-column: 1 / -1;">
-          <span class="invite-info-label">التخصصات المطلوبة</span>
-          <div class="specialty-badges" style="margin-top:0.25rem;">
+        <div class="col-span-2">
+          <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">التخصصات المطلوبة</p>
+          <div class="flex flex-wrap gap-1.5">
             {% for spec in inv.specialties.all %}
-              <span class="spec-badge">{{ spec.name }}</span>
+            <span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-semibold px-2.5 py-1 rounded-full border border-blue-200 dark:border-blue-700">
+              {{ spec.name }}
+            </span>
             {% empty %}
-              <span style="color:var(--color-text-muted);font-size:0.85rem;">—</span>
+            <span class="text-gray-400 dark:text-gray-500 text-sm">—</span>
             {% endfor %}
           </div>
         </div>
       </div>
 
-      <!-- Actions -->
+      {# ── Actions ── #}
       {% if not inv.is_expired %}
-      <div class="invite-actions">
+      <div class="border-t border-gray-100 dark:border-gray-700 px-5 py-4 bg-gray-50/50 dark:bg-gray-700/30 flex items-center justify-end gap-3">
         <form method="post" action="{% url 'doctors:reject_invitation' inv.id %}"
               onsubmit="return confirm('هل أنت متأكد من رفض الدعوة؟');">
           {% csrf_token %}
-          <button type="submit" class="btn-reject">
-            <i class="fas fa-times"></i> رفض
+          <button type="submit"
+                  class="inline-flex items-center gap-2 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-red-400 hover:text-red-600 dark:hover:text-red-400 dark:hover:border-red-500 bg-white dark:bg-gray-800 text-sm font-semibold px-4 py-2 rounded-xl transition-colors">
+            <i class="fa-solid fa-times text-xs"></i> رفض
           </button>
         </form>
         <form method="post" action="{% url 'doctors:accept_invitation' inv.id %}">
           {% csrf_token %}
-          <button type="submit" class="btn-accept">
-            <i class="fas fa-check"></i> قبول والانضمام
+          <button type="submit"
+                  class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all shadow-sm">
+            <i class="fa-solid fa-check text-xs"></i> قبول والانضمام
           </button>
         </form>
+      </div>
+      {% else %}
+      <div class="border-t border-gray-100 dark:border-gray-700 px-5 py-3 bg-gray-50/50 dark:bg-gray-700/30">
+        <p class="text-sm text-gray-400 dark:text-gray-500 text-center">
+          <i class="fa-regular fa-clock me-1"></i>انتهت صلاحية هذه الدعوة
+        </p>
       </div>
       {% endif %}
 
@@ -374,13 +115,14 @@
     {% endfor %}
 
   {% else %}
-    <div class="invites-empty">
-      <div class="empty-icon">
-        <i class="fas fa-inbox"></i>
-      </div>
-      <h5>لا توجد دعوات معلقة</h5>
-      <p>ليس لديك أي دعوات جديدة للانضمام إلى العيادات حالياً.</p>
+  {# ── Empty state ── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-dashed border-gray-300 dark:border-gray-600 py-16 px-6 text-center">
+    <div class="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mx-auto mb-4">
+      <i class="fa-solid fa-inbox text-2xl text-gray-400 dark:text-gray-500"></i>
     </div>
+    <p class="font-bold text-gray-700 dark:text-gray-200 mb-2">لا توجد دعوات معلقة</p>
+    <p class="text-sm text-gray-500 dark:text-gray-400">ليس لديك أي دعوات جديدة للانضمام إلى العيادات حالياً.</p>
+  </div>
   {% endif %}
 
 </div>

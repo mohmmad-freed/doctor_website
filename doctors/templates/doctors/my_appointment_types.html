@@ -1,0 +1,100 @@
+{% extends "doctors/base_doctor.html" %}
+{% block title %}أنواع مواعيدي{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto" dir="rtl">
+
+  {# ── Header ── #}
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">أنواع مواعيدي</h1>
+    <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">
+      حدّد أنواع المواعيد التي تقدمها في كل عيادة. ستظهر للسكرتارية والمرضى عند الحجز.
+    </p>
+  </div>
+
+  {% if not clinic_data %}
+  {# ── Empty state ── #}
+  <div class="glass-card p-10 text-center">
+    <div class="w-16 h-16 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center mx-auto mb-4">
+      <i class="fa-solid fa-calendar-xmark text-2xl text-primary-400"></i>
+    </div>
+    <h3 class="text-base font-semibold text-gray-800 dark:text-white mb-1">لا توجد عيادات مُعيَّن لها أنواع مواعيد</h3>
+    <p class="text-sm text-gray-500 dark:text-slate-400">
+      اطلب من صاحب العيادة إضافة أنواع مواعيد أولاً، ثم عُد هنا لتحديد ما تقدمه.
+    </p>
+  </div>
+
+  {% else %}
+  {# ── Per-clinic accordion forms ── #}
+  <div class="space-y-4">
+    {% for item in clinic_data %}
+    <div class="glass-card overflow-hidden">
+
+      {# Clinic header #}
+      <div class="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/40">
+        <div class="w-9 h-9 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
+          <i class="fa-solid fa-hospital text-primary-600 dark:text-primary-400 text-sm"></i>
+        </div>
+        <div>
+          <p class="font-bold text-gray-900 dark:text-white text-sm">{{ item.clinic.name }}</p>
+          <p class="text-xs text-gray-500 dark:text-slate-400">{{ item.assignments|length }} نوع متاح</p>
+        </div>
+      </div>
+
+      {# Type checklist #}
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="clinic_id" value="{{ item.clinic.id }}">
+
+        <div class="divide-y divide-gray-100 dark:divide-slate-700">
+          {% for a in item.assignments %}
+          <label class="flex items-center gap-3 px-5 py-3.5 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors">
+            <input type="checkbox"
+                   name="type_ids"
+                   value="{{ a.appointment_type.id }}"
+                   {% if a.is_active %}checked{% endif %}
+                   class="w-4 h-4 rounded accent-indigo-500 cursor-pointer flex-shrink-0">
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">{{ a.appointment_type.display_name }}</p>
+              <p class="text-xs text-gray-500 dark:text-slate-400">
+                {{ a.appointment_type.duration_minutes }} دقيقة
+                {% if a.appointment_type.price %} · ₪{{ a.appointment_type.price }}{% endif %}
+              </p>
+            </div>
+            {% if a.is_active %}
+            <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">مفعّل</span>
+            {% else %}
+            <span class="text-xs text-gray-400 dark:text-slate-500">معطّل</span>
+            {% endif %}
+          </label>
+          {% endfor %}
+        </div>
+
+        <div class="flex items-center justify-between px-5 py-3.5 border-t border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/30">
+          <p class="text-xs text-gray-400 dark:text-slate-500">
+            <i class="fa-solid fa-circle-info me-1"></i>
+            إلغاء التحديد يعني أن هذا النوع لن يظهر عند حجز موعدك.
+          </p>
+          <button type="submit"
+                  class="inline-flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white font-semibold text-xs px-4 py-2 rounded-lg transition-all shadow-sm">
+            <i class="fa-solid fa-floppy-disk"></i>
+            حفظ
+          </button>
+        </div>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# Info card #}
+  <div class="mt-5 flex items-start gap-3 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 text-sm text-amber-700 dark:text-amber-300">
+    <i class="fa-solid fa-triangle-exclamation mt-0.5 flex-shrink-0"></i>
+    <p>
+      إذا لم تحدد أي نوع لعيادة معينة، ستظهر <strong>جميع أنواع المواعيد النشطة</strong> لتلك العيادة تلقائياً.
+      عيّن الأنواع فقط إذا كنت تقدم مجموعة محددة منها.
+    </p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -1,205 +1,92 @@
-{% extends "accounts/base.html" %}
-
+{% extends "doctors/base_doctor.html" %}
 {% block title %}تعديل الملف الشخصي{% endblock %}
 
-{% block extra_css %}
-<style>
-.profile-page {
-    max-width: 680px;
-    margin: 0 auto;
-    padding: 2rem 1rem;
-}
-.profile-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.75rem;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-}
-.profile-header h1 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--color-text-main);
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-.btn-back {
-    color: var(--color-text-muted);
-    text-decoration: none;
-    font-size: 0.88rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.45rem 0.9rem;
-    border: 1px solid var(--color-surface-border);
-    border-radius: 6px;
-    transition: color 0.15s, border-color 0.15s;
-}
-.btn-back:hover { color: var(--color-primary-500); border-color: var(--color-primary-500); }
-
-.card {
-    background: var(--color-surface-card);
-    border: 1px solid var(--color-surface-border);
-    border-radius: 12px;
-    padding: 1.4rem 1.6rem;
-    margin-bottom: 1.25rem;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-}
-.card h2 {
-    margin: 0 0 1.1rem;
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--color-text-main);
-    padding-bottom: 0.6rem;
-    border-bottom: 1px solid var(--color-surface-border);
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
-}
-.card h2 i { color: var(--color-primary-500); font-size: 0.9rem; }
-
-.form-group { margin-bottom: 1.15rem; }
-.form-group label {
-    display: block;
-    font-size: 0.88rem;
-    font-weight: 600;
-    color: var(--color-text-main);
-    margin-bottom: 0.4rem;
-}
-.form-control {
-    width: 100%;
-    padding: 0.6rem 0.9rem;
-    border: 1.5px solid var(--color-surface-border);
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-family: inherit;
-    background: var(--color-surface-ground);
-    color: var(--color-text-main);
-    transition: border-color 0.15s;
-    box-sizing: border-box;
-}
-.form-control:focus {
-    outline: none;
-    border-color: var(--color-primary-500);
-    box-shadow: 0 0 0 3px rgba(0,120,212,0.12);
-}
-textarea.form-control { resize: vertical; }
-
-.email-notice {
-    margin-top: 0.4rem;
-    background: rgba(37, 99, 235, 0.06);
-    border: 1px solid rgba(37, 99, 235, 0.2);
-    border-radius: 8px;
-    padding: 0.6rem 0.9rem;
-    font-size: 0.82rem;
-    color: var(--color-text-body);
-    display: flex;
-    align-items: flex-start;
-    gap: 0.5rem;
-}
-[data-theme="dark"] .email-notice { background: rgba(37,99,235,0.1); border-color: rgba(37,99,235,0.3); }
-.email-notice i { color: var(--color-primary-500); flex-shrink: 0; margin-top: 1px; }
-
-.form-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-top: 1.25rem;
-}
-.btn-primary {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.65rem 1.5rem;
-    background: var(--color-primary-500);
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-weight: 700;
-    font-family: inherit;
-    cursor: pointer;
-    transition: background 0.15s;
-}
-.btn-primary:hover { background: var(--color-primary-600); }
-.btn-cancel-link {
-    color: var(--color-text-muted);
-    text-decoration: none;
-    font-size: 0.88rem;
-    font-weight: 500;
-    transition: color 0.15s;
-}
-.btn-cancel-link:hover { color: var(--color-text-main); }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="profile-page">
+<div class="max-w-xl mx-auto px-4 py-8" dir="rtl">
 
-    <div class="profile-header">
-        <h1>
-            <i class="fa-solid fa-user-pen" style="color:var(--color-primary-500);"></i>
-            تعديل الملف الشخصي
-        </h1>
-        <a href="{% url 'doctors:doctor_profile' %}" class="btn-back">
-            <i class="fa-solid fa-arrow-right"></i> الملف الشخصي
-        </a>
+  {# ── Header ── #}
+  <div class="flex items-center justify-between mb-7">
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
+        <i class="fa-solid fa-user-pen text-indigo-600 dark:text-indigo-400 text-lg"></i>
+      </div>
+      <h1 class="text-xl font-bold text-gray-900 dark:text-white">تعديل الملف الشخصي</h1>
     </div>
+    <a href="{% url 'doctors:doctor_profile' %}"
+       class="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 transition-colors">
+      <i class="fa-solid fa-arrow-right"></i>
+      الملف الشخصي
+    </a>
+  </div>
 
-    <!-- Edit Form -->
-    <div class="card">
-        <h2><i class="fa-solid fa-pen-to-square"></i> تعديل المعلومات</h2>
-        <form method="post" novalidate>
-            {% csrf_token %}
-
-            <!-- Email (change via OTP) -->
-            <div class="form-group">
-                <label for="id_email">
-                    البريد الإلكتروني
-                    <span style="color:var(--color-text-muted);font-weight:400;">(اختياري)</span>
-                </label>
-                <input type="email" id="id_email" name="email"
-                       value="{{ request.user.email|default:'' }}"
-                       class="form-control" autocomplete="email" dir="ltr">
-                <div class="email-notice">
-                    <i class="fa-solid fa-circle-info"></i>
-                    <span>تغيير البريد الإلكتروني يتطلب التحقق عبر رابط يُرسل إلى العنوان الجديد.</span>
-                </div>
-            </div>
-
-            <!-- Bio -->
-            <div class="form-group">
-                <label for="id_bio">{{ form.bio.label }}</label>
-                {{ form.bio }}
-                {% if form.bio.errors %}
-                <div style="color:#dc2626;font-size:0.82rem;margin-top:4px;">
-                    <i class="fa-solid fa-circle-exclamation"></i> {{ form.bio.errors.0 }}
-                </div>
-                {% endif %}
-            </div>
-
-            <!-- Years of experience -->
-            <div class="form-group">
-                <label for="id_years_of_experience">{{ form.years_of_experience.label }}</label>
-                {{ form.years_of_experience }}
-                {% if form.years_of_experience.errors %}
-                <div style="color:#dc2626;font-size:0.82rem;margin-top:4px;">
-                    <i class="fa-solid fa-circle-exclamation"></i> {{ form.years_of_experience.errors.0 }}
-                </div>
-                {% endif %}
-            </div>
-
-            <div class="form-actions">
-                <button type="submit" class="btn-primary">
-                    <i class="fa-solid fa-floppy-disk"></i> حفظ التغييرات
-                </button>
-                <a href="{% url 'doctors:doctor_profile' %}" class="btn-cancel-link">إلغاء</a>
-            </div>
-        </form>
+  {# ── Edit form ── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+      <i class="fa-solid fa-pen-to-square text-indigo-500 text-sm"></i>
+      <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">تعديل المعلومات</span>
     </div>
+    <div class="px-5 py-5">
+      <form method="post" novalidate class="space-y-5">
+        {% csrf_token %}
+
+        {# Email #}
+        <div>
+          <label for="id_email" class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
+            البريد الإلكتروني
+            <span class="text-xs font-normal text-gray-400 mr-1">(اختياري)</span>
+          </label>
+          <input type="email" id="id_email" name="email"
+                 value="{{ request.user.email|default:'' }}"
+                 autocomplete="email" dir="ltr"
+                 class="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+          <div class="mt-2 flex items-start gap-2 bg-blue-50/60 dark:bg-blue-900/20 border border-blue-200/60 dark:border-blue-700/40 rounded-xl px-3 py-2.5 text-xs text-gray-600 dark:text-gray-300">
+            <i class="fa-solid fa-circle-info text-blue-500 flex-shrink-0 mt-0.5"></i>
+            <span>تغيير البريد الإلكتروني يتطلب التحقق عبر رابط يُرسل إلى العنوان الجديد.</span>
+          </div>
+        </div>
+
+        {# Bio #}
+        <div>
+          <label for="id_bio" class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
+            {{ form.bio.label }}
+          </label>
+          {{ form.bio }}
+          {% if form.bio.errors %}
+          <p class="mt-1.5 text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+            <i class="fa-solid fa-circle-exclamation"></i>{{ form.bio.errors.0 }}
+          </p>
+          {% endif %}
+        </div>
+
+        {# Years of experience #}
+        <div>
+          <label for="id_years_of_experience" class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
+            {{ form.years_of_experience.label }}
+          </label>
+          {{ form.years_of_experience }}
+          {% if form.years_of_experience.errors %}
+          <p class="mt-1.5 text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+            <i class="fa-solid fa-circle-exclamation"></i>{{ form.years_of_experience.errors.0 }}
+          </p>
+          {% endif %}
+        </div>
+
+        {# Actions #}
+        <div class="flex items-center gap-3 pt-2">
+          <button type="submit"
+                  class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-semibold text-sm px-6 py-2.5 rounded-xl transition-all shadow-sm">
+            <i class="fa-solid fa-floppy-disk text-xs"></i>
+            حفظ التغييرات
+          </button>
+          <a href="{% url 'doctors:doctor_profile' %}"
+             class="text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+            إلغاء
+          </a>
+        </div>
+
+      </form>
+    </div>
+  </div>
 
 </div>
 {% endblock %}

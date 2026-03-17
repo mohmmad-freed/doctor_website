@@ -36,6 +36,86 @@ class AppointmentType(models.Model):
         return self.name_ar if self.name_ar else self.name
 
 
+class DoctorClinicAppointmentType(models.Model):
+    """
+    Maps which AppointmentTypes a specific doctor offers inside a specific clinic.
+
+    Business rule: a doctor can only offer a subset of the clinic's approved
+    appointment type catalog.  The clinic owner (or the doctor themselves) can
+    enable/disable individual types.
+
+    Backwards-compatibility: if NO records exist for a (doctor, clinic) pair the
+    booking and secretary flows fall back to showing ALL active clinic types, so
+    existing deployments keep working without any data migration.
+    """
+
+    doctor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="clinic_appointment_types",
+        verbose_name="الطبيب",
+    )
+    clinic = models.ForeignKey(
+        "clinics.Clinic",
+        on_delete=models.CASCADE,
+        related_name="doctor_appointment_types",
+        verbose_name="العيادة",
+    )
+    appointment_type = models.ForeignKey(
+        AppointmentType,
+        on_delete=models.CASCADE,
+        related_name="doctor_assignments",
+        verbose_name="نوع الموعد",
+    )
+    is_active = models.BooleanField(default=True, verbose_name="مفعّل")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Doctor Appointment Type"
+        verbose_name_plural = "Doctor Appointment Types"
+        ordering = ["clinic", "doctor", "appointment_type__name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["doctor", "clinic", "appointment_type"],
+                name="unique_doctor_clinic_appointment_type",
+            )
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.doctor} @ {self.clinic} — {self.appointment_type.display_name}"
+            f" ({'✓' if self.is_active else '✗'})"
+        )
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        # Validate appointment_type belongs to clinic
+        if (
+            self.appointment_type_id
+            and self.clinic_id
+            and self.appointment_type.clinic_id != self.clinic_id
+        ):
+            raise ValidationError(
+                "نوع الموعد يجب أن ينتمي إلى نفس العيادة."
+            )
+
+        # Validate doctor is active staff at clinic
+        if self.doctor_id and self.clinic_id:
+            from clinics.models import ClinicStaff
+            is_staff = ClinicStaff.objects.filter(
+                clinic_id=self.clinic_id,
+                user_id=self.doctor_id,
+                role__in=["DOCTOR", "MAIN_DOCTOR"],
+                is_active=True,
+            ).exists()
+            if not is_staff:
+                raise ValidationError(
+                    "الطبيب يجب أن يكون عضواً نشطاً في هذه العيادة."
+                )
+
+
 class Appointment(models.Model):
     """Core appointment booking record."""
 

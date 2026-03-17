@@ -1,112 +1,146 @@
-{% extends "accounts/base.html" %}
-
+{% extends "doctors/base_doctor.html" %}
 {% block title %}قائمة مرضاي{% endblock %}
 
-{% block extra_css %}
-<style>
-.patients-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="patients-wrap">
+<div class="max-w-5xl mx-auto px-4 py-8" dir="rtl">
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">قائمة مرضاي</h2>
-        <a href="{% url 'doctors:dashboard' %}" class="btn btn-sm btn-outline-secondary">
-            <i class="fa-solid fa-arrow-right me-1"></i> لوحة التحكم
+  {# ── Page header ── #}
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">قائمة مرضاي</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+        جميع المرضى الذين قمت بمعالجتهم
+        {% if patient_stats %}<span class="font-medium text-indigo-600 dark:text-indigo-400">({{ patient_stats|length }})</span>{% endif %}
+      </p>
+    </div>
+    <a href="{% url 'doctors:dashboard' %}"
+       class="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 transition-colors">
+      <i class="fa-solid fa-arrow-right"></i>
+      لوحة التحكم
+    </a>
+  </div>
+
+  {# ── Clinic filter ── #}
+  {% if my_clinics %}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-5">
+    <form method="get" class="flex flex-wrap gap-3 items-end">
+      <div class="flex flex-col gap-1 min-w-[180px]">
+        <label class="text-xs font-medium text-gray-500 dark:text-gray-400">تصفية بالعيادة</label>
+        <select name="clinic_id"
+                class="text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <option value="">كل العيادات</option>
+          {% for cid, cname in my_clinics %}
+          <option value="{{ cid }}" {% if cid|stringformat:"s" == current_clinic %}selected{% endif %}>{{ cname }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="flex items-end gap-2">
+        <button type="submit"
+                class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+          <i class="fa-solid fa-filter text-xs"></i>
+          تصفية
+        </button>
+        {% if current_clinic %}
+        <a href="{% url 'doctors:patients' %}"
+           class="inline-flex items-center gap-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+          <i class="fa-solid fa-xmark text-xs"></i>
+          إلغاء
         </a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+  {% endif %}
+
+  {# ── Patients table / empty state ── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+
+    {% if patient_stats %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-gray-50 dark:bg-gray-700/60 border-b border-gray-200 dark:border-gray-700">
+            <th class="text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-5 py-3">المريض</th>
+            <th class="text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-5 py-3 hidden sm:table-cell">رقم الهاتف</th>
+            <th class="text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-5 py-3">آخر زيارة</th>
+            <th class="text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-5 py-3">الزيارات</th>
+            <th class="px-5 py-3"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          {% for p in patient_stats %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors group">
+
+            {# Patient avatar + name #}
+            <td class="px-5 py-4">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <span class="text-white text-xs font-bold">{{ p.patient__name|slice:":1" }}</span>
+                </div>
+                <span class="font-semibold text-gray-800 dark:text-gray-100">{{ p.patient__name }}</span>
+              </div>
+            </td>
+
+            {# Phone — hidden on xs #}
+            <td class="px-5 py-4 hidden sm:table-cell">
+              <span class="font-mono text-sm text-gray-500 dark:text-gray-400">{{ p.patient__phone }}</span>
+            </td>
+
+            {# Last visit #}
+            <td class="px-5 py-4 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+              {% if p.last_visit %}
+                <span class="inline-flex items-center gap-1.5">
+                  <i class="fa-regular fa-calendar-check text-emerald-500 text-xs"></i>
+                  {{ p.last_visit|date:"d/m/Y" }}
+                </span>
+              {% else %}
+                <span class="text-gray-300 dark:text-gray-600">—</span>
+              {% endif %}
+            </td>
+
+            {# Visit count badge #}
+            <td class="px-5 py-4 text-center">
+              <span class="inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold
+                {% if p.total_visits >= 5 %}bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300
+                {% elif p.total_visits >= 2 %}bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300
+                {% else %}bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400{% endif %}">
+                {{ p.total_visits }}
+              </span>
+            </td>
+
+            {# Appointments link #}
+            <td class="px-5 py-4">
+              <a href="{% url 'doctors:appointments' %}?patient_id={{ p.patient_id }}{% if current_clinic %}&clinic_id={{ current_clinic }}{% endif %}"
+                 class="inline-flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                <i class="fa-solid fa-calendar-days text-xs"></i>
+                مواعيده
+              </a>
+            </td>
+
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
 
-    {# Clinic filter #}
-    {% if my_clinics %}
-    <div class="card shadow-sm mb-3">
-        <div class="card-body py-2">
-            <form method="get" class="row g-2 align-items-end">
-                <div class="col-sm-auto">
-                    <label class="form-label form-label-sm mb-1 text-muted">العيادة</label>
-                    <select name="clinic_id" class="form-select form-select-sm">
-                        <option value="">كل العيادات</option>
-                        {% for cid, cname in my_clinics %}
-                        <option value="{{ cid }}" {% if cid|stringformat:"s" == current_clinic %}selected{% endif %}>{{ cname }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-sm-auto d-flex align-items-end gap-1">
-                    <button type="submit" class="btn btn-sm btn-primary">
-                        <i class="fa-solid fa-filter me-1"></i>تصفية
-                    </button>
-                    {% if current_clinic %}
-                    <a href="{% url 'doctors:patients' %}" class="btn btn-sm btn-outline-secondary">
-                        <i class="fa-solid fa-xmark me-1"></i>إلغاء
-                    </a>
-                    {% endif %}
-                </div>
-            </form>
-        </div>
+    {% else %}
+    {# ── Empty state ── #}
+    <div class="flex flex-col items-center justify-center py-16 px-6 text-center">
+      <div class="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-4">
+        <i class="fa-regular fa-user fa-2x text-gray-400 dark:text-gray-500"></i>
+      </div>
+      <p class="font-semibold text-gray-700 dark:text-gray-200 mb-1">لا يوجد مرضى</p>
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        {% if current_clinic %}
+          لا يوجد مرضى مرتبطون بهذه العيادة بعد.
+        {% else %}
+          لم يتم تسجيل أي زيارات بعد.
+        {% endif %}
+      </p>
     </div>
     {% endif %}
 
-    <div class="card shadow-sm">
-        <div class="card-body p-0">
-            {% if patient_stats %}
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>المريض</th>
-                            <th>رقم الهاتف</th>
-                            <th>آخر زيارة</th>
-                            <th class="text-center">عدد الزيارات</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for p in patient_stats %}
-                        <tr>
-                            <td class="fw-semibold">
-                                <i class="fa-regular fa-circle-user me-1 text-muted"></i>
-                                {{ p.patient__name }}
-                            </td>
-                            <td class="text-muted" style="font-variant-numeric:tabular-nums;">{{ p.patient__phone }}</td>
-                            <td class="text-muted">
-                                {% if p.last_visit %}
-                                    {{ p.last_visit|date:"d/m/Y" }}
-                                {% else %}
-                                    —
-                                {% endif %}
-                            </td>
-                            <td class="text-center">
-                                <span class="badge {% if p.total_visits >= 5 %}bg-primary{% elif p.total_visits >= 2 %}bg-success{% else %}bg-secondary{% endif %}">
-                                    {{ p.total_visits }}
-                                </span>
-                            </td>
-                            <td>
-                                <a href="{% url 'doctors:appointments' %}?patient_id={{ p.patient_id }}{% if current_clinic %}&clinic_id={{ current_clinic }}{% endif %}"
-                                   class="btn btn-sm btn-outline-primary">
-                                    <i class="fa-solid fa-calendar-days me-1"></i>المواعيد
-                                </a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <div class="text-center py-5">
-                <i class="fa-regular fa-user fa-2x text-muted mb-2 d-block"></i>
-                <p class="text-muted mb-1 fw-semibold">لا يوجد مرضى</p>
-                <p class="text-muted small mb-0">
-                    {% if current_clinic %}
-                        لا يوجد مرضى مرتبطون بهذه العيادة بعد.
-                    {% else %}
-                        لم يتم تسجيل أي زيارات بعد.
-                    {% endif %}
-                </p>
-            </div>
-            {% endif %}
-        </div>
-    </div>
+  </div>
 
 </div>
 {% endblock %}

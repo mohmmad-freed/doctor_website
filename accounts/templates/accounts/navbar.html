@@ -295,6 +295,28 @@
 
             {% if user.is_authenticated %}
 
+            {# Notification bell #}
+            <a href="{% url 'appointments:notifications_center' %}"
+               style="position:relative;display:inline-flex;align-items:center;justify-content:center;
+                      width:36px;height:36px;border-radius:50%;
+                      color:var(--color-text-muted,#9ca3af);
+                      transition:background 0.15s,color 0.15s;text-decoration:none;"
+               onmouseover="this.style.background='var(--color-surface-ground,#f9fafb)';this.style.color='var(--color-text-main,#111827)';"
+               onmouseout="this.style.background='';this.style.color='var(--color-text-muted,#9ca3af)';"
+               title="الإشعارات"
+               aria-label="الإشعارات">
+                <i class="fa-regular fa-bell" style="font-size:1.05rem;"></i>
+                {% if unread_notification_count > 0 %}
+                <span style="position:absolute;top:-2px;left:-2px;min-width:17px;height:17px;
+                             background:#ef4444;color:#fff;font-size:10px;font-weight:700;
+                             border-radius:999px;display:flex;align-items:center;
+                             justify-content:center;padding:0 3px;line-height:1;
+                             border:2px solid var(--color-surface-card,#fff);">
+                    {% if unread_notification_count > 9 %}9+{% else %}{{ unread_notification_count }}{% endif %}
+                </span>
+                {% endif %}
+            </a>
+
             {# Clinic switcher — only shown when owner has 2+ clinics #}
             {% if request.resolver_match.namespace == 'clinics' and owned_clinics|length > 1 %}
             <div class="clinic-switcher" id="clinicSwitcher">

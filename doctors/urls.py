@@ -72,6 +72,12 @@ urlpatterns = [
         views.doctor_edit_profile_view,
         name="doctor_edit_profile",
     ),
+    # --- Doctor Appointment Types (self-service) ---
+    path(
+        "my-appointment-types/",
+        views.my_appointment_types,
+        name="my_appointment_types",
+    ),
     # --- API Endpoints ---
     path(
         "api/specialties/",
