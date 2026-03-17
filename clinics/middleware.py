@@ -120,6 +120,10 @@ class ClinicIsolationMiddleware:
                 # to reach the accept/reject views.
                 if role == "SECRETARY" and path.startswith("/secretary/invites/"):
                     return self.get_response(request)
+                # Notification paths are exempt: staff can read their notifications
+                # even if they have no current active clinic assignment.
+                if path.startswith("/appointments/notifications/"):
+                    return self.get_response(request)
                 return HttpResponseForbidden(
                     "Access Denied: You are not assigned to any active clinic."
                 )

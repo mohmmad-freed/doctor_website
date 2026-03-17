@@ -4,265 +4,322 @@
 
 {% block extra_css %}
 <style>
-/* ─── Layout ────────────────────────────────────────────────────────── */
-.profile-page {
+/* ─── Layout ──────────────────────────────────────────────────────── */
+.edit-page {
     max-width: 680px;
     margin: 0 auto;
-    padding: 2rem 1rem 4rem;
+    padding: 2rem 1rem 5rem;
 }
-.dashboard-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.75rem;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-}
-.dashboard-header h1 {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: var(--color-text-main);
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-.btn-back {
-    color: var(--color-text-muted);
-    text-decoration: none;
-    font-size: 0.88rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.45rem 0.9rem;
-    border: 1px solid var(--color-surface-border);
-    border-radius: 6px;
-    transition: color 0.15s, border-color 0.15s;
-}
-.btn-back:hover { color: var(--color-primary-500); border-color: var(--color-primary-500); }
 
-/* ─── Section card ──────────────────────────────────────────────────── */
-.section-card {
+/* ─── Page Header ─────────────────────────────────────────────────── */
+.edit-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.75rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+.edit-header-left { display: flex; align-items: center; gap: 0.85rem; }
+.edit-header-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: rgba(0,120,212,0.1);
+    color: var(--color-primary-500);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+}
+[data-theme="dark"] .edit-header-icon { background: rgba(59,143,217,0.15); }
+.edit-header-title { font-size: 1.3rem; font-weight: 800; color: var(--color-text-main); margin: 0; }
+.edit-header-sub   { font-size: 0.82rem; color: var(--color-text-muted); margin: 0.15rem 0 0; }
+
+.btn-header-back {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.52rem 1rem;
+    border: 1.5px solid var(--color-surface-border);
+    border-radius: 9px;
+    color: var(--color-text-muted); font-size: 0.85rem; font-weight: 600;
+    text-decoration: none;
+    transition: border-color 0.15s, color 0.15s;
+}
+.btn-header-back:hover { border-color: var(--color-primary-500); color: var(--color-primary-500); }
+
+/* ─── Form Card ───────────────────────────────────────────────────── */
+.form-card {
     background: var(--color-surface-card);
     border: 1px solid var(--color-surface-border);
-    border-radius: 12px;
-    padding: 1.6rem 1.8rem;
-    margin-bottom: 1.25rem;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.05);
+    margin-bottom: 1.1rem;
 }
-.section-card h2 {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--color-text-main);
-    margin: 0 0 1.25rem;
-    padding-bottom: 0.6rem;
+.form-card-head {
+    padding: 1.1rem 1.6rem;
     border-bottom: 1px solid var(--color-surface-border);
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
+    display: flex; align-items: center; gap: 0.45rem;
 }
-.section-card h2 i { color: var(--color-primary-500); font-size: 0.88rem; }
+.form-card-head h2 {
+    font-size: 0.93rem; font-weight: 700; color: var(--color-text-main); margin: 0;
+    display: flex; align-items: center; gap: 0.45rem;
+}
+.form-card-head i { color: var(--color-primary-500); font-size: 0.85rem; }
+.form-card-body { padding: 1.5rem 1.6rem; }
 
-/* ─── Form ──────────────────────────────────────────────────────────── */
-.form-grid {
+/* ─── Form Fields ─────────────────────────────────────────────────── */
+.field-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1rem 1.25rem;
+    gap: 1.1rem 1.25rem;
 }
-@media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } }
-.form-grid .form-group-full { grid-column: 1 / -1; }
+@media (max-width: 540px) { .field-grid { grid-template-columns: 1fr; } }
+.field-full { grid-column: 1 / -1; }
 
-.form-group { display: flex; flex-direction: column; gap: 0.35rem; }
-.form-group label {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--color-text-body);
+.field-group { display: flex; flex-direction: column; gap: 0.4rem; }
+
+.field-label {
+    font-size: 0.84rem; font-weight: 700; color: var(--color-text-body);
+    display: flex; align-items: center; gap: 0.35rem;
 }
-.form-group input,
-.form-group select {
-    padding: 0.55rem 0.75rem;
+.field-label .opt {
+    font-size: 0.72rem; font-weight: 500;
+    color: var(--color-text-muted); margin-right: 0.25rem;
+}
+
+.field-input,
+.field-select {
+    padding: 0.62rem 0.85rem;
     border: 1.5px solid var(--color-surface-border);
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 0.9rem;
     font-family: inherit;
     background: var(--color-surface-ground);
     color: var(--color-text-main);
     transition: border-color 0.15s, box-shadow 0.15s;
     outline: none;
+    width: 100%;
+    box-sizing: border-box;
 }
-.form-group input:focus,
-.form-group select:focus {
+.field-input:focus,
+.field-select:focus {
     border-color: var(--color-primary-500);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
-.form-group input:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+    box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.12);
     background: var(--color-surface-card);
 }
-.field-hint {
-    font-size: 0.78rem;
-    color: var(--color-text-muted);
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-}
-.input-has-error {
+.field-input.has-error {
     border-color: #dc2626 !important;
     box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1) !important;
 }
-.form-error-msg {
-    font-size: 0.8rem;
-    color: #dc2626;
-    font-weight: 500;
+.field-input:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    background: var(--color-surface-card);
+}
+.field-error { font-size: 0.79rem; color: #dc2626; font-weight: 600; display: flex; align-items: center; gap: 0.3rem; }
+.field-hint  { font-size: 0.77rem; color: var(--color-text-muted); display: flex; align-items: flex-start; gap: 0.35rem; }
+.field-hint i { flex-shrink: 0; margin-top: 1px; }
+
+/* Read-only field appearance */
+.field-locked {
+    position: relative;
+}
+.field-locked .field-input:disabled {
+    padding-left: 2.2rem;
+}
+.lock-icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-text-muted);
+    font-size: 0.75rem;
+    pointer-events: none;
 }
 
-/* ─── Email change notice ───────────────────────────────────────────── */
+/* Email notice */
 .email-notice {
-    background: rgba(37, 99, 235, 0.06);
-    border: 1px solid rgba(37, 99, 235, 0.2);
-    border-radius: 8px;
-    padding: 0.7rem 1rem;
-    font-size: 0.82rem;
+    display: flex; align-items: flex-start; gap: 0.5rem;
+    padding: 0.65rem 0.9rem;
+    background: rgba(0, 120, 212, 0.06);
+    border: 1px solid rgba(0, 120, 212, 0.18);
+    border-radius: 9px;
+    font-size: 0.8rem;
     color: var(--color-text-body);
-    display: flex;
-    align-items: flex-start;
-    gap: 0.5rem;
 }
-[data-theme="dark"] .email-notice { background: rgba(37,99,235,0.1); border-color: rgba(37,99,235,0.3); }
-.email-notice i { color: var(--color-primary-500); flex-shrink: 0; margin-top: 1px; }
+[data-theme="dark"] .email-notice {
+    background: rgba(59,143,217,0.1);
+    border-color: rgba(59,143,217,0.25);
+}
+.email-notice i { color: var(--color-primary-500); flex-shrink: 0; margin-top: 1px; font-size: 0.82rem; }
 
-/* ─── Form actions ──────────────────────────────────────────────────── */
+/* ─── Form Actions ────────────────────────────────────────────────── */
 .form-actions {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    margin-top: 1.25rem;
     justify-content: flex-end;
+    gap: 0.85rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--color-surface-border);
+    margin-top: 1.25rem;
 }
 .btn-save {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    padding: 0.6rem 1.4rem;
-    background: var(--color-primary-500, #2563eb);
+    display: inline-flex; align-items: center; gap: 0.45rem;
+    padding: 0.65rem 1.6rem;
+    background: var(--color-primary-500);
     color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-weight: 700;
-    cursor: pointer;
-    font-family: inherit;
-    transition: background 0.15s, transform 0.1s;
+    border: none; border-radius: 10px;
+    font-size: 0.9rem; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+    transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+    box-shadow: 0 2px 8px rgba(0, 120, 212, 0.3);
 }
-.btn-save:hover { background: var(--color-primary-600, #1d4ed8); }
+.btn-save:hover {
+    background: var(--color-primary-600);
+    box-shadow: 0 4px 14px rgba(0, 120, 212, 0.4);
+}
 .btn-save:active { transform: scale(0.98); }
-.btn-cancel-link {
-    color: var(--color-text-muted);
-    text-decoration: none;
-    font-size: 0.88rem;
-    font-weight: 500;
-    transition: color 0.15s;
+.btn-cancel {
+    color: var(--color-text-muted); font-size: 0.87rem; font-weight: 600;
+    text-decoration: none; transition: color 0.15s;
 }
-.btn-cancel-link:hover { color: var(--color-text-main); }
+.btn-cancel:hover { color: var(--color-text-main); }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="profile-page">
+<div class="edit-page">
 
-    <!-- Page Header -->
-    <div class="dashboard-header">
-        <h1>
-            <i class="fa-solid fa-user-pen" style="color:var(--color-primary-500);"></i>
-            تعديل الملف الشخصي
-        </h1>
-        <a href="{% url 'clinics:owner_profile' %}" class="btn-back">
+    <!-- ── Page Header ────────────────────────────────────────────── -->
+    <div class="edit-header">
+        <div class="edit-header-left">
+            <div class="edit-header-icon"><i class="fa-solid fa-user-pen"></i></div>
+            <div>
+                <h1 class="edit-header-title">تعديل الملف الشخصي</h1>
+                <p class="edit-header-sub">تحديث معلوماتك الشخصية</p>
+            </div>
+        </div>
+        <a href="{% url 'clinics:owner_profile' %}" class="btn-header-back">
             <i class="fa-solid fa-arrow-right"></i> الملف الشخصي
         </a>
     </div>
 
-    <div class="section-card">
-        <h2>
-            <i class="fa-solid fa-pen-to-square"></i>
-            تعديل المعلومات
-        </h2>
-        <form method="post" novalidate>
-            {% csrf_token %}
-            <div class="form-grid">
+    <!-- ── Edit Form ──────────────────────────────────────────────── -->
+    <div class="form-card">
+        <div class="form-card-head">
+            <h2><i class="fa-solid fa-pen-to-square"></i> تعديل المعلومات</h2>
+        </div>
+        <div class="form-card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <div class="field-grid">
 
-                <!-- Name -->
-                <div class="form-group form-group-full">
-                    <label for="id_name">الاسم الكامل</label>
-                    <input type="text" id="id_name" name="name"
-                           value="{{ form_data.name|default:user.name }}"
-                           class="{% if errors.name %}input-has-error{% endif %}"
-                           autocomplete="name" required>
-                    {% if errors.name %}
-                    <span class="form-error-msg">{{ errors.name }}</span>
-                    {% endif %}
-                </div>
-
-                <!-- Email (required, change via verification link) -->
-                <div class="form-group form-group-full">
-                    <label for="id_email">البريد الإلكتروني</label>
-                    <input type="email" id="id_email" name="email"
-                           value="{{ form_data.email|default:user.email|default:'' }}"
-                           class="{% if errors.email %}input-has-error{% endif %}"
-                           autocomplete="email" dir="ltr" required>
-                    {% if errors.email %}
-                    <span class="form-error-msg">{{ errors.email }}</span>
-                    {% else %}
-                    <div class="email-notice">
-                        <i class="fa-solid fa-circle-info"></i>
-                        <span>تغيير البريد الإلكتروني يتطلب التحقق عبر رابط يُرسل إلى العنوان الجديد.</span>
+                    <!-- Full Name (full width) -->
+                    <div class="field-group field-full">
+                        <label class="field-label" for="id_name">
+                            <i class="fa-solid fa-user" style="color:var(--color-primary-500);font-size:0.78rem;"></i>
+                            الاسم الكامل
+                        </label>
+                        <input type="text"
+                               id="id_name"
+                               name="name"
+                               value="{{ form_data.name|default:user.name }}"
+                               class="field-input {% if errors.name %}has-error{% endif %}"
+                               autocomplete="name"
+                               placeholder="أدخل اسمك الكامل"
+                               required>
+                        {% if errors.name %}
+                        <span class="field-error"><i class="fa-solid fa-circle-exclamation"></i> {{ errors.name }}</span>
+                        {% endif %}
                     </div>
-                    {% endif %}
+
+                    <!-- Email (full width) -->
+                    <div class="field-group field-full">
+                        <label class="field-label" for="id_email">
+                            <i class="fa-solid fa-envelope" style="color:var(--color-primary-500);font-size:0.78rem;"></i>
+                            البريد الإلكتروني
+                        </label>
+                        <input type="email"
+                               id="id_email"
+                               name="email"
+                               value="{{ form_data.email|default:user.email|default:'' }}"
+                               class="field-input {% if errors.email %}has-error{% endif %}"
+                               autocomplete="email"
+                               dir="ltr"
+                               placeholder="example@email.com"
+                               required>
+                        {% if errors.email %}
+                        <span class="field-error"><i class="fa-solid fa-circle-exclamation"></i> {{ errors.email }}</span>
+                        {% else %}
+                        <div class="email-notice">
+                            <i class="fa-solid fa-circle-info"></i>
+                            <span>تغيير البريد الإلكتروني يتطلب التحقق عبر رابط يُرسل إلى العنوان الجديد.</span>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Phone (locked) -->
+                    <div class="field-group">
+                        <label class="field-label">
+                            <i class="fa-solid fa-phone" style="color:var(--color-text-muted);font-size:0.78rem;"></i>
+                            رقم الهاتف
+                        </label>
+                        <div class="field-locked">
+                            <input type="text" value="{{ user.phone }}" class="field-input" disabled dir="ltr">
+                            <i class="fa-solid fa-lock lock-icon"></i>
+                        </div>
+                        <span class="field-hint">
+                            <i class="fa-solid fa-lock"></i>
+                            رقم الهاتف مرتبط بحسابك ولا يمكن تغييره.
+                        </span>
+                    </div>
+
+                    <!-- National ID (locked) -->
+                    <div class="field-group">
+                        <label class="field-label">
+                            <i class="fa-solid fa-id-card" style="color:var(--color-text-muted);font-size:0.78rem;"></i>
+                            رقم الهوية الوطنية
+                        </label>
+                        <div class="field-locked">
+                            <input type="text" value="{{ user.national_id|default:'—' }}" class="field-input" disabled>
+                            <i class="fa-solid fa-lock lock-icon"></i>
+                        </div>
+                        <span class="field-hint">
+                            <i class="fa-solid fa-lock"></i>
+                            رقم الهوية لا يمكن تعديله.
+                        </span>
+                    </div>
+
+                    <!-- City (full width) -->
+                    <div class="field-group field-full">
+                        <label class="field-label" for="id_city">
+                            <i class="fa-solid fa-city" style="color:var(--color-primary-500);font-size:0.78rem;"></i>
+                            المدينة
+                            <span class="opt">(اختياري)</span>
+                        </label>
+                        <select id="id_city" name="city" class="field-input field-select">
+                            <option value="">— اختر المدينة —</option>
+                            {% for city in cities %}
+                            <option value="{{ city.id }}"
+                                {% if form_data.city %}
+                                    {% if form_data.city == city.id|stringformat:"s" %}selected{% endif %}
+                                {% elif user.city_id == city.id %}selected{% endif %}>
+                                {{ city.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
                 </div>
 
-                <!-- Phone (read-only) -->
-                <div class="form-group">
-                    <label>رقم الهاتف</label>
-                    <input type="text" value="{{ user.phone }}" disabled dir="ltr">
-                    <span class="field-hint"><i class="fa-solid fa-lock"></i> لا يمكن تغيير رقم الهاتف.</span>
+                <!-- Actions -->
+                <div class="form-actions">
+                    <a href="{% url 'clinics:owner_profile' %}" class="btn-cancel">إلغاء</a>
+                    <button type="submit" class="btn-save">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        حفظ التغييرات
+                    </button>
                 </div>
-
-                <!-- National ID (read-only) -->
-                <div class="form-group">
-                    <label>رقم الهوية الوطنية</label>
-                    <input type="text" value="{{ user.national_id|default:'—' }}" disabled>
-                    <span class="field-hint"><i class="fa-solid fa-lock"></i> لا يمكن تغيير رقم الهوية.</span>
-                </div>
-
-                <!-- City -->
-                <div class="form-group form-group-full">
-                    <label for="id_city">
-                        المدينة
-                        <span style="color:var(--color-text-muted);font-weight:400;">(اختياري)</span>
-                    </label>
-                    <select id="id_city" name="city">
-                        <option value="">— اختر المدينة —</option>
-                        {% for city in cities %}
-                        <option value="{{ city.id }}"
-                            {% if form_data.city %}
-                                {% if form_data.city == city.id|stringformat:"s" %}selected{% endif %}
-                            {% elif user.city_id == city.id %}selected{% endif %}>
-                            {{ city.name }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-            </div>
-
-            <div class="form-actions">
-                <a href="{% url 'clinics:owner_profile' %}" class="btn-cancel-link">إلغاء</a>
-                <button type="submit" class="btn-save">
-                    <i class="fa-solid fa-floppy-disk"></i>
-                    حفظ التغييرات
-                </button>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
 
 </div>

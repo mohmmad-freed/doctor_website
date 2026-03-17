@@ -10,7 +10,7 @@ from appointments.models import AppointmentNotification
 
 def unread_notifications(request):
     if not request.user.is_authenticated:
-        return {"unread_notification_count": 0}
+        return {}
     count = AppointmentNotification.objects.filter(
         patient=request.user,
         is_read=False,

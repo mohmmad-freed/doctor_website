@@ -5,173 +5,515 @@
 
 {% block extra_css %}
 <style>
-    .clinics-wrapper {
-        max-width: 1100px;
-        margin: 0 auto;
-        padding: 2rem 1rem;
-    }
+/* ─── Layout ──────────────────────────────────────────────────────── */
+.clinics-wrapper {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 1rem 5rem;
+}
 
-    .page-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.75rem;
-        flex-wrap: wrap;
-        gap: 1rem;
-    }
+/* ─── Welcome Hero ────────────────────────────────────────────────── */
+.clinics-hero {
+    background: linear-gradient(135deg, var(--color-primary-500) 0%, #3730a3 100%);
+    border-radius: 22px;
+    padding: 2.25rem 2.25rem 2rem;
+    margin-bottom: 1.75rem;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    box-shadow: 0 8px 32px rgba(0, 78, 163, 0.35);
+}
+.clinics-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%),
+                      radial-gradient(circle at 10% 80%, rgba(255,255,255,0.06) 0%, transparent 40%);
+    pointer-events: none;
+}
+.hero-orb {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.07);
+    pointer-events: none;
+}
+.hero-orb-1 { width: 250px; height: 250px; top: -80px; left: -60px; }
+.hero-orb-2 { width: 130px; height: 130px; bottom: -40px; right: 8%; }
 
-    .page-header h1 {
-        font-size: 1.6rem;
-        font-weight: 700;
-        color: var(--color-text-main);
-        margin: 0;
-    }
+.hero-content { position: relative; z-index: 1; }
+.hero-eyebrow {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: rgba(255,255,255,0.65);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0.35rem;
+}
+.hero-title {
+    font-size: 1.65rem;
+    font-weight: 800;
+    color: #fff;
+    margin: 0 0 0.4rem;
+    line-height: 1.2;
+}
+.hero-subtitle {
+    font-size: 0.88rem;
+    color: rgba(255,255,255,0.72);
+    margin: 0;
+}
 
-    .btn-new-clinic {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        background: var(--color-primary-500);
-        color: #fff;
-        padding: 0.6rem 1.25rem;
-        border-radius: 8px;
-        text-decoration: none;
-        font-size: 0.95rem;
-        font-weight: 600;
-        transition: background 0.15s;
-    }
-    .btn-new-clinic:hover { background: var(--color-primary-600); color: #fff; }
+.hero-ctas {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    position: relative;
+    z-index: 1;
+}
+.btn-cta-white {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    background: #fff;
+    color: var(--color-primary-500);
+    padding: 0.65rem 1.4rem;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+.btn-cta-white:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.24);
+    color: var(--color-primary-600);
+}
+.btn-cta-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    background: rgba(255,255,255,0.13);
+    color: #fff;
+    padding: 0.65rem 1.25rem;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid rgba(255,255,255,0.25);
+    transition: background 0.15s;
+}
+.btn-cta-ghost:hover { background: rgba(255,255,255,0.21); color: #fff; }
 
-    .clinic-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 1.25rem;
-    }
+/* ─── Stats Bar ───────────────────────────────────────────────────── */
+.stats-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.85rem;
+    margin-bottom: 2rem;
+}
+.stat-tile {
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-surface-border);
+    border-radius: 14px;
+    padding: 1.05rem 1.15rem;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.03);
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+.stat-tile:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.07);
+}
+.tile-icon {
+    width: 42px; height: 42px;
+    border-radius: 11px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+.ti-blue   { background: rgba(0,120,212,0.1);  color: #0078D4; }
+.ti-green  { background: rgba(5,150,105,0.1);  color: #059669; }
+.ti-purple { background: rgba(124,58,237,0.1); color: #7c3aed; }
+.ti-amber  { background: rgba(217,119,6,0.1);  color: #d97706; }
+[data-theme="dark"] .ti-blue   { background: rgba(59,143,217,0.15); }
+[data-theme="dark"] .ti-green  { background: rgba(5,150,105,0.15);  }
+[data-theme="dark"] .ti-purple { background: rgba(167,139,250,0.15);}
+[data-theme="dark"] .ti-amber  { background: rgba(251,191,36,0.15); }
 
-    .clinic-card {
-        background: var(--color-surface-card);
-        border: 1px solid var(--color-surface-border);
-        border-radius: 10px;
-        padding: 1.4rem 1.6rem;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-        transition: box-shadow 0.15s;
-    }
-    .clinic-card:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
+.tile-body {}
+.tile-num { font-size: 1.5rem; font-weight: 800; color: var(--color-text-main); line-height: 1; }
+.tile-lbl { font-size: 0.72rem; font-weight: 600; color: var(--color-text-muted); margin-top: 0.2rem; }
 
-    .clinic-card h3 {
-        margin: 0 0 0.85rem;
-        font-size: 1.1rem;
-        color: var(--color-text-main);
-    }
+/* ─── Section header ──────────────────────────────────────────────── */
+.section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.1rem;
+    gap: 1rem;
+}
+.section-head h2 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+.section-head h2 i { color: var(--color-primary-500); }
 
-    .clinic-card dl { margin: 0; }
-    .clinic-card dt {
-        font-weight: 600;
-        color: var(--color-text-muted);
-        font-size: 0.82rem;
-        margin-top: 0.5rem;
-    }
-    .clinic-card dd {
-        margin: 0.15rem 0 0;
-        color: var(--color-text-body);
-        font-size: 0.9rem;
-    }
+/* ─── Clinic Cards ────────────────────────────────────────────────── */
+.clinic-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+    gap: 1.25rem;
+}
 
-    .badge {
-        display: inline-block;
-        padding: 2px 10px;
-        border-radius: 12px;
-        font-size: 0.8rem;
-        font-weight: 700;
-    }
-    .badge-active   { background: #d1fae5; color: #065f46; }
-    .badge-pending  { background: #dbeafe; color: #1e40af; }
-    .badge-suspended{ background: #fef3c7; color: #92400e; }
+.clinic-card {
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-surface-border);
+    border-radius: 18px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.04);
+    transition: transform 0.2s cubic-bezier(.4,0,.2,1), box-shadow 0.2s cubic-bezier(.4,0,.2,1);
+}
+.clinic-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.07), 0 18px 48px rgba(0,0,0,0.09);
+}
 
-    [data-theme="dark"] .badge-active   { background: #064e3b; color: #6ee7b7; }
-    [data-theme="dark"] .badge-pending  { background: #1e3a5f; color: #93c5fd; }
-    [data-theme="dark"] .badge-suspended{ background: #451a03; color: #fcd34d; }
+/* Top accent bar based on status */
+.card-stripe {
+    height: 4px;
+    width: 100%;
+    flex-shrink: 0;
+}
+.stripe-active    { background: linear-gradient(90deg, #059669 0%, #00bfa5 100%); }
+.stripe-pending   { background: linear-gradient(90deg, #0078D4 0%, #3730a3 100%); }
+.stripe-suspended { background: linear-gradient(90deg, #d97706 0%, #dc2626 100%); }
 
-    .card-actions {
-        margin-top: 1.1rem;
-        display: flex;
-        gap: 0.6rem;
-    }
+.card-inner {
+    padding: 1.35rem 1.5rem 1.1rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
 
-    .btn-manage {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        background: var(--color-primary-500);
-        color: #fff;
-        padding: 0.5rem 1rem;
-        border-radius: 6px;
-        text-decoration: none;
-        font-size: 0.88rem;
-        font-weight: 600;
-        transition: background 0.15s;
-    }
-    .btn-manage:hover { background: var(--color-primary-600); color: #fff; }
+.card-header-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+.clinic-icon-wrap {
+    width: 50px; height: 50px;
+    border-radius: 13px;
+    background: rgba(0,120,212,0.09);
+    color: var(--color-primary-500);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+[data-theme="dark"] .clinic-icon-wrap { background: rgba(59,143,217,0.14); }
 
-    .empty-state {
-        text-align: center;
-        padding: 4rem 2rem;
-        color: var(--color-text-muted);
-    }
-    .empty-state i {
-        font-size: 3rem;
-        margin-bottom: 1rem;
-        opacity: 0.4;
-    }
-    .empty-state p { font-size: 1rem; }
+.clinic-name {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--color-text-main);
+    margin: 0 0 0.2rem;
+    line-height: 1.3;
+}
+.clinic-address {
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+/* Live status badge */
+.live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 4px 11px;
+    border-radius: 20px;
+    font-size: 0.73rem;
+    font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.live-badge .bdot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.lb-active    { background: #dcfce7; color: #15803d; }
+.lb-active .bdot { background: #22c55e; animation: blink 2.2s ease-in-out infinite; }
+.lb-pending   { background: #dbeafe; color: #1d4ed8; }
+.lb-pending .bdot { background: #3b82f6; }
+.lb-suspended { background: #fef3c7; color: #92400e; }
+.lb-suspended .bdot { background: #f59e0b; }
+[data-theme="dark"] .lb-active    { background: #052e16; color: #4ade80; }
+[data-theme="dark"] .lb-pending   { background: #1e3a5f; color: #93c5fd; }
+[data-theme="dark"] .lb-suspended { background: #3f2800; color: #fbbf24; }
+@keyframes blink { 0%,100%{ opacity:1; transform:scale(1); } 50%{ opacity:0.5; transform:scale(0.85); } }
+
+/* Subscription mini-card */
+.sub-mini {
+    background: var(--color-surface-ground);
+    border: 1px solid var(--color-surface-border);
+    border-radius: 11px;
+    padding: 0.7rem 0.9rem;
+    flex: 1;
+}
+.sub-mini-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+.sub-plan {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--color-text-main);
+}
+.sub-plan i { color: var(--color-primary-500); font-size: 0.72rem; }
+.sub-exp {
+    font-size: 0.72rem;
+    color: var(--color-text-muted);
+    font-weight: 500;
+    direction: ltr;
+}
+.sub-track { height: 5px; background: var(--color-surface-border); border-radius: 3px; overflow: hidden; }
+.sub-fill  { height: 100%; border-radius: 3px; }
+.fill-ok   { background: linear-gradient(90deg, #059669, #34d399); }
+.fill-warn { background: linear-gradient(90deg, #d97706, #fbbf24); }
+.fill-exp  { background: linear-gradient(90deg, #dc2626, #f87171); width: 10% !important; }
+
+/* Card footer */
+.card-foot {
+    padding: 0.85rem 1.5rem;
+    border-top: 1px solid var(--color-surface-border);
+    display: flex;
+    gap: 0.6rem;
+}
+.btn-go {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    background: var(--color-primary-500);
+    color: #fff;
+    padding: 0.6rem 1rem;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background 0.15s, transform 0.1s;
+}
+.btn-go:hover { background: var(--color-primary-600); color: #fff; }
+.btn-go:active { transform: scale(0.98); }
+
+.btn-rpt {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.6rem 0.9rem;
+    border: 1.5px solid var(--color-surface-border);
+    border-radius: 10px;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    transition: border-color 0.15s, color 0.15s;
+}
+.btn-rpt:hover { border-color: var(--color-primary-500); color: var(--color-primary-500); }
+
+/* ─── Empty State ─────────────────────────────────────────────────── */
+.empty-wrap {
+    text-align: center;
+    padding: 4.5rem 2rem;
+    background: var(--color-surface-card);
+    border: 2px dashed var(--color-surface-border);
+    border-radius: 22px;
+}
+.empty-icon {
+    width: 76px; height: 76px;
+    border-radius: 20px;
+    background: rgba(0,120,212,0.09);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.9rem; color: var(--color-primary-500);
+    margin: 0 auto 1.35rem;
+}
+.empty-wrap h3 { font-size: 1.15rem; font-weight: 800; color: var(--color-text-main); margin: 0 0 0.5rem; }
+.empty-wrap p  { font-size: 0.88rem; color: var(--color-text-muted); margin: 0 0 1.75rem; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="clinics-wrapper">
-    <div class="page-header">
-        <h1><i class="fa-solid fa-hospital-user" style="color:var(--color-primary-500);margin-left:0.5rem;"></i>عياداتي</h1>
-        <a href="{% url 'clinics:add_clinic_code' %}" class="btn-new-clinic">
-            <i class="fa-solid fa-plus"></i> إضافة عيادة جديدة
-        </a>
+
+    <!-- ── Welcome Hero ───────────────────────────────────────────── -->
+    <div class="clinics-hero">
+        <div class="hero-orb hero-orb-1"></div>
+        <div class="hero-orb hero-orb-2"></div>
+        <div class="hero-content">
+            <p class="hero-eyebrow">لوحة التحكم</p>
+            <h1 class="hero-title">مرحباً، {{ user.name|default:"مالك العيادة" }}</h1>
+            <p class="hero-subtitle">إدارة عياداتك واشتراكاتك وكادرك الطبي من مكان واحد</p>
+        </div>
+        <div class="hero-ctas">
+            <a href="{% url 'clinics:add_clinic_code' %}" class="btn-cta-white">
+                <i class="fa-solid fa-plus"></i> إضافة عيادة
+            </a>
+            <a href="{% url 'clinics:reports' %}" class="btn-cta-ghost">
+                <i class="fa-solid fa-chart-bar"></i> التقارير
+            </a>
+        </div>
     </div>
 
-    {% if clinics %}
-    <div class="clinic-grid">
-        {% for clinic in clinics %}
-        <div class="clinic-card">
-            <h3>{{ clinic.name }}</h3>
-            <dl>
-                <dt>الحالة</dt>
-                <dd>
-                    {% if clinic.status == "ACTIVE" %}
-                        <span class="badge badge-active">نشطة</span>
-                    {% elif clinic.status == "PENDING" %}
-                        <span class="badge badge-pending">قيد المراجعة</span>
-                    {% else %}
-                        <span class="badge badge-suspended">{{ clinic.get_status_display }}</span>
-                    {% endif %}
-                </dd>
-                {% with clinic.subscription as sub %}
-                {% if sub %}
-                <dt>الاشتراك</dt>
-                <dd>{{ sub.get_plan_type_display }} — ينتهي {{ sub.expires_at|date:"Y-m-d" }}</dd>
-                {% endif %}
-                {% endwith %}
-            </dl>
-            <div class="card-actions">
-                <a href="{% url 'clinics:my_clinic' clinic_id=clinic.id %}" class="btn-manage">
-                    <i class="fa-solid fa-sliders"></i> إدارة العيادة
+    <!-- ── Stats Bar ──────────────────────────────────────────────── -->
+    <div class="stats-bar">
+        <div class="stat-tile">
+            <div class="tile-icon ti-blue"><i class="fa-solid fa-hospital"></i></div>
+            <div class="tile-body">
+                <div class="tile-num">{{ clinics|length }}</div>
+                <div class="tile-lbl">إجمالي العيادات</div>
+            </div>
+        </div>
+        <div class="stat-tile">
+            <div class="tile-icon ti-green"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="tile-body">
+                <div class="tile-num">{{ clinics|length }}</div>
+                <div class="tile-lbl">عياداتي</div>
+            </div>
+        </div>
+        <div class="stat-tile">
+            <div class="tile-icon ti-purple"><i class="fa-solid fa-user-circle"></i></div>
+            <div class="tile-body">
+                <a href="{% url 'clinics:owner_profile' %}" style="text-decoration:none;display:block;">
+                    <div class="tile-num" style="font-size:1rem;font-weight:700;color:var(--color-primary-500);">الملف</div>
+                    <div class="tile-lbl">الملف الشخصي</div>
                 </a>
             </div>
         </div>
+        <div class="stat-tile">
+            <div class="tile-icon ti-amber"><i class="fa-solid fa-chart-pie"></i></div>
+            <div class="tile-body">
+                <a href="{% url 'clinics:reports' %}" style="text-decoration:none;display:block;">
+                    <div class="tile-num" style="font-size:1rem;font-weight:700;color:var(--color-primary-500);">التقارير</div>
+                    <div class="tile-lbl">التحليلات والأداء</div>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Clinics Grid ───────────────────────────────────────────── -->
+    {% if clinics %}
+    <div class="section-head">
+        <h2><i class="fa-solid fa-hospital-user"></i> عياداتي</h2>
+    </div>
+
+    <div class="clinic-grid">
+        {% for clinic in clinics %}
+        <div class="clinic-card">
+
+            <!-- Status accent stripe -->
+            <div class="card-stripe
+                {% if clinic.status == 'ACTIVE' %}stripe-active
+                {% elif clinic.status == 'PENDING' %}stripe-pending
+                {% else %}stripe-suspended{% endif %}">
+            </div>
+
+            <div class="card-inner">
+                <!-- Header: icon + name + status -->
+                <div class="card-header-row">
+                    <div style="display:flex;align-items:flex-start;gap:0.85rem;">
+                        <div class="clinic-icon-wrap">
+                            <i class="fa-solid fa-hospital-user"></i>
+                        </div>
+                        <div>
+                            <h3 class="clinic-name">{{ clinic.name }}</h3>
+                            {% if clinic.address %}
+                            <span class="clinic-address">
+                                <i class="fa-solid fa-location-dot"></i>
+                                {{ clinic.address }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <span class="live-badge
+                        {% if clinic.status == 'ACTIVE' %}lb-active
+                        {% elif clinic.status == 'PENDING' %}lb-pending
+                        {% else %}lb-suspended{% endif %}">
+                        <span class="bdot"></span>
+                        {% if clinic.status == 'ACTIVE' %}نشطة
+                        {% elif clinic.status == 'PENDING' %}قيد المراجعة
+                        {% else %}{{ clinic.get_status_display }}{% endif %}
+                    </span>
+                </div>
+
+                <!-- Subscription mini-card -->
+                {% with sub=clinic.subscription %}
+                {% if sub %}
+                <div class="sub-mini">
+                    <div class="sub-mini-top">
+                        <span class="sub-plan">
+                            <i class="fa-solid fa-tag"></i>
+                            {{ sub.get_plan_name_display }}
+                        </span>
+                        <span class="sub-exp">ينتهي {{ sub.expires_at|date:"d/m/Y" }}</span>
+                    </div>
+                    <div class="sub-track">
+                        <div class="sub-fill {% if sub.status == 'EXPIRED' %}fill-exp{% elif sub.status == 'SUSPENDED' %}fill-warn{% else %}fill-ok{% endif %}"
+                             style="width:{% if sub.status == 'ACTIVE' %}80{% elif sub.status == 'SUSPENDED' %}40{% else %}8{% endif %}%;">
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="sub-mini" style="text-align:center;color:var(--color-text-muted);font-size:0.82rem;padding:0.85rem;">
+                    <i class="fa-solid fa-circle-exclamation" style="margin-left:0.35rem;"></i>
+                    لا يوجد اشتراك مرتبط
+                </div>
+                {% endif %}
+                {% endwith %}
+            </div>
+
+            <!-- Footer actions -->
+            <div class="card-foot">
+                <a href="{% url 'clinics:my_clinic' clinic_id=clinic.id %}" class="btn-go">
+                    <i class="fa-solid fa-sliders"></i> إدارة العيادة
+                </a>
+                <a href="{% url 'clinics:reports' %}" class="btn-rpt" title="التقارير">
+                    <i class="fa-solid fa-chart-bar"></i>
+                </a>
+            </div>
+
+        </div>
         {% endfor %}
     </div>
+
     {% else %}
-    <div class="empty-state">
-        <i class="fa-solid fa-hospital"></i>
-        <p>لا توجد عيادات مسجلة بعد.</p>
+    <!-- Empty state -->
+    <div class="empty-wrap">
+        <div class="empty-icon"><i class="fa-solid fa-hospital"></i></div>
+        <h3>لا توجد عيادات بعد</h3>
+        <p>ابدأ بإضافة عيادتك الأولى باستخدام كود التفعيل</p>
+        <a href="{% url 'clinics:add_clinic_code' %}" class="btn-go" style="display:inline-flex;max-width:220px;margin:0 auto;">
+            <i class="fa-solid fa-plus"></i> إضافة عيادة جديدة
+        </a>
     </div>
     {% endif %}
+
 </div>
 {% endblock %}
