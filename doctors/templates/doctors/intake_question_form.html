@@ -1,0 +1,127 @@
+{% extends "doctors/base_doctor.html" %}
+{% block title %}تعديل السؤال{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto" dir="rtl">
+
+  {# ── Breadcrumb ── #}
+  <nav class="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400 mb-5">
+    <a href="{% url 'doctors:my_appointment_types' %}" class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">أنواع مواعيدي</a>
+    <i class="fa-solid fa-chevron-left text-[0.6rem] opacity-40"></i>
+    <a href="{% url 'doctors:intake_form_builder' appointment_type.id %}" class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
+      نموذج {{ appointment_type.display_name }}
+    </a>
+    <i class="fa-solid fa-chevron-left text-[0.6rem] opacity-40"></i>
+    <span class="text-gray-800 dark:text-white font-semibold">تعديل السؤال</span>
+  </nav>
+
+  <div class="glass-card overflow-hidden">
+    <div class="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/40">
+      <i class="fa-solid fa-pen-to-square text-primary-500 text-sm"></i>
+      <h1 class="font-bold text-gray-800 dark:text-white">تعديل السؤال</h1>
+    </div>
+
+    <form method="post" class="px-5 py-5 space-y-4">
+      {% csrf_token %}
+
+      {# Question text #}
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+          نص السؤال <span class="text-red-500">*</span>
+        </label>
+        <input type="text" name="question_text_ar"
+               value="{{ question.display_text }}"
+               required
+               class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-400 transition">
+      </div>
+
+      {# Field type + required #}
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">نوع الحقل</label>
+          <select name="field_type" id="field-type-select"
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 transition">
+            {% for val, label in field_types %}
+            <option value="{{ val }}" {% if val == question.field_type %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="flex items-end pb-0.5">
+          <label class="flex items-center gap-2.5 cursor-pointer select-none">
+            <input type="checkbox" name="is_required"
+                   {% if question.is_required %}checked{% endif %}
+                   class="w-4 h-4 rounded accent-indigo-500 cursor-pointer">
+            <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">سؤال إلزامي</span>
+          </label>
+        </div>
+      </div>
+
+      {# Choices #}
+      <div id="choices-section" class="{% if question.field_type != 'SELECT' and question.field_type != 'MULTISELECT' %}hidden{% endif %}">
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+          الخيارات <span class="text-red-500">*</span>
+          <span class="text-xs font-normal text-gray-400 mr-1">(كل خيار في سطر مستقل)</span>
+        </label>
+        <textarea name="choices_raw" id="choices-textarea" rows="4"
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-400 transition resize-none font-mono">{{ choices_raw }}</textarea>
+      </div>
+
+      {# Placeholder #}
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+          نص تلميح (Placeholder)
+          <span class="text-xs font-normal text-gray-400 mr-1">(اختياري)</span>
+        </label>
+        <input type="text" name="placeholder"
+               value="{{ question.placeholder }}"
+               class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-400 transition">
+      </div>
+
+      {# Help text #}
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+          نص مساعدة
+          <span class="text-xs font-normal text-gray-400 mr-1">(اختياري)</span>
+        </label>
+        <input type="text" name="help_text_content"
+               value="{{ question.help_text_content }}"
+               class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-400 transition">
+      </div>
+
+      {# Actions #}
+      <div class="flex items-center justify-between pt-2">
+        <a href="{% url 'doctors:intake_form_builder' appointment_type.id %}"
+           class="text-sm font-semibold text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 transition-colors px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700">
+          إلغاء
+        </a>
+        <button type="submit"
+                class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white font-semibold text-sm px-5 py-2.5 rounded-lg transition-all shadow-sm">
+          <i class="fa-solid fa-floppy-disk"></i>
+          حفظ التعديلات
+        </button>
+      </div>
+    </form>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const fieldTypeSelect = document.getElementById('field-type-select');
+  const choicesSection = document.getElementById('choices-section');
+  const choicesTextarea = document.getElementById('choices-textarea');
+
+  function toggleChoices() {
+    const val = fieldTypeSelect.value;
+    const needsChoices = val === 'SELECT' || val === 'MULTISELECT';
+    choicesSection.classList.toggle('hidden', !needsChoices);
+    if (choicesTextarea) choicesTextarea.required = needsChoices;
+  }
+
+  if (fieldTypeSelect) {
+    fieldTypeSelect.addEventListener('change', toggleChoices);
+    toggleChoices();
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,261 @@
+{% extends "doctors/base_doctor.html" %}
+{% block title %}نموذج {{ appointment_type.display_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto" dir="rtl">
+
+  {# ── Breadcrumb ── #}
+  <nav class="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400 mb-5">
+    <a href="{% url 'doctors:my_appointment_types' %}" class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
+      <i class="fa-solid fa-list-check ml-1 text-xs"></i>أنواع مواعيدي
+    </a>
+    <i class="fa-solid fa-chevron-left text-[0.6rem] opacity-40"></i>
+    <span class="text-gray-800 dark:text-white font-semibold">{{ appointment_type.display_name }}</span>
+  </nav>
+
+  {# ── Page header ── #}
+  <div class="flex items-start justify-between mb-6 gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">نموذج استقبال المريض</h1>
+      <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">
+        {{ appointment_type.display_name }}
+        <span class="mx-1 opacity-40">·</span>
+        {{ appointment_type.clinic.name }}
+      </p>
+    </div>
+    <a href="{% url 'doctors:my_appointment_types' %}"
+       class="flex-shrink-0 inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700">
+      <i class="fa-solid fa-arrow-right text-xs"></i>
+      رجوع
+    </a>
+  </div>
+
+  {# ── Template info card ── #}
+  <div class="glass-card mb-6 overflow-hidden">
+    <div class="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/40">
+      <i class="fa-solid fa-pen-to-square text-primary-500 text-sm"></i>
+      <h2 class="font-bold text-gray-800 dark:text-white text-sm">معلومات النموذج</h2>
+    </div>
+    <form method="post" class="px-5 py-4 space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="save_template" value="1">
+
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+          عنوان النموذج <span class="text-red-500">*</span>
+        </label>
+        <input type="text" name="title_ar"
+               value="{{ template.title_ar|default:template.title }}"
+               placeholder="مثال: نموذج الكشف الأول"
+               required
+               class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-400 dark:focus:ring-primary-500 transition">
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+          تعليمات للمريض
+          <span class="text-xs font-normal text-gray-400 mr-1">(اختياري — تظهر قبل بدء النموذج)</span>
+        </label>
+        <textarea name="description" rows="2"
+                  placeholder="مثال: يُرجى الإجابة بدقة لمساعدتنا في تقديم الرعاية المناسبة."
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-400 dark:focus:ring-primary-500 transition resize-none">{{ template.description }}</textarea>
+      </div>
+
+      <div class="flex justify-end">
+        <button type="submit"
+                class="inline-flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white font-semibold text-sm px-5 py-2 rounded-lg transition-all shadow-sm">
+          <i class="fa-solid fa-floppy-disk"></i>
+          حفظ
+        </button>
+      </div>
+    </form>
+  </div>
+
+  {# ── Questions section ── #}
+  <div class="glass-card overflow-hidden mb-6">
+    <div class="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/40">
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-clipboard-question text-indigo-500 text-sm"></i>
+        <h2 class="font-bold text-gray-800 dark:text-white text-sm">أسئلة النموذج</h2>
+        {% if questions %}
+        <span class="text-xs bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full font-bold">{{ questions|length }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if questions %}
+    <div class="divide-y divide-gray-100 dark:divide-slate-700/60" id="questions-list">
+      {% for q in questions %}
+      <div class="flex items-start gap-3 px-5 py-4 hover:bg-gray-50/50 dark:hover:bg-slate-700/20 transition-colors group">
+
+        {# Order badge #}
+        <div class="w-7 h-7 rounded-lg bg-gray-100 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-gray-500 dark:text-slate-400 flex-shrink-0 mt-0.5">
+          {{ forloop.counter }}
+        </div>
+
+        {# Question content #}
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">{{ q.display_text }}</p>
+            {% if q.is_required %}
+            <span class="text-red-500 text-xs font-bold">مطلوب</span>
+            {% endif %}
+          </div>
+          <div class="flex items-center gap-2 mt-1 flex-wrap">
+            <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium
+              {% if q.field_type == 'TEXT' %}bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300
+              {% elif q.field_type == 'TEXTAREA' %}bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300
+              {% elif q.field_type == 'SELECT' or q.field_type == 'MULTISELECT' %}bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300
+              {% elif q.field_type == 'CHECKBOX' %}bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300
+              {% elif q.field_type == 'DATE' %}bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300
+              {% else %}bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300{% endif %}">
+              {{ q.get_field_type_display }}
+            </span>
+            {% if q.choices %}
+            <span class="text-xs text-gray-400 dark:text-slate-500">{{ q.choices|length }} خيار</span>
+            {% endif %}
+            {% if q.placeholder %}
+            <span class="text-xs text-gray-400 dark:text-slate-500 truncate max-w-[200px]">تلميح: {{ q.placeholder }}</span>
+            {% endif %}
+          </div>
+        </div>
+
+        {# Actions #}
+        <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+          <a href="{% url 'doctors:intake_question_edit' template.id q.id %}"
+             class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 dark:hover:text-primary-400 transition-colors"
+             title="تعديل">
+            <i class="fa-solid fa-pen text-xs"></i>
+          </a>
+          <form method="post" action="{% url 'doctors:intake_question_delete' template.id q.id %}"
+                onsubmit="return confirm('هل تريد حذف هذا السؤال؟')">
+            {% csrf_token %}
+            <button type="submit"
+                    class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-colors"
+                    title="حذف">
+              <i class="fa-solid fa-trash-can text-xs"></i>
+            </button>
+          </form>
+        </div>
+
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="flex flex-col items-center justify-center py-10 text-center px-5">
+      <div class="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center mb-3">
+        <i class="fa-regular fa-clipboard text-2xl text-gray-400 dark:text-slate-500"></i>
+      </div>
+      <p class="text-sm font-semibold text-gray-600 dark:text-slate-400">لا توجد أسئلة بعد</p>
+      <p class="text-xs text-gray-400 dark:text-slate-500 mt-1">أضف أسئلة من النموذج أدناه</p>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ── Add question form ── #}
+  <div class="glass-card overflow-hidden" id="add-question-section">
+    <div class="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-slate-700 bg-indigo-50 dark:bg-indigo-900/10">
+      <i class="fa-solid fa-plus-circle text-indigo-500 text-sm"></i>
+      <h2 class="font-bold text-indigo-800 dark:text-indigo-300 text-sm">إضافة سؤال جديد</h2>
+    </div>
+
+    <form method="post" action="{% url 'doctors:intake_question_add' template.id %}" class="px-5 py-4 space-y-4">
+      {% csrf_token %}
+
+      {# Question text #}
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+          نص السؤال <span class="text-red-500">*</span>
+        </label>
+        <input type="text" name="question_text_ar"
+               placeholder="مثال: هل تعاني من أي حساسية للأدوية؟"
+               required
+               class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition">
+      </div>
+
+      {# Field type + required #}
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">نوع الحقل</label>
+          <select name="field_type" id="field-type-select"
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 transition">
+            {% for val, label in field_types %}
+            <option value="{{ val }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="flex items-end pb-0.5">
+          <label class="flex items-center gap-2.5 cursor-pointer select-none">
+            <input type="checkbox" name="is_required"
+                   class="w-4 h-4 rounded accent-indigo-500 cursor-pointer">
+            <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">سؤال إلزامي</span>
+          </label>
+        </div>
+      </div>
+
+      {# Choices (shown only for SELECT/MULTISELECT) #}
+      <div id="choices-section" class="hidden">
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+          الخيارات <span class="text-red-500">*</span>
+          <span class="text-xs font-normal text-gray-400 mr-1">(كل خيار في سطر مستقل)</span>
+        </label>
+        <textarea name="choices_raw" id="choices-textarea" rows="4"
+                  placeholder="خيار أول&#10;خيار ثانٍ&#10;خيار ثالث"
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition resize-none font-mono"></textarea>
+      </div>
+
+      {# Placeholder #}
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+          نص تلميح (Placeholder)
+          <span class="text-xs font-normal text-gray-400 mr-1">(اختياري)</span>
+        </label>
+        <input type="text" name="placeholder"
+               placeholder="مثال: اكتب إجابتك هنا..."
+               class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition">
+      </div>
+
+      {# Help text #}
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+          نص مساعدة
+          <span class="text-xs font-normal text-gray-400 mr-1">(اختياري — توضيح إضافي تحت السؤال)</span>
+        </label>
+        <input type="text" name="help_text_content"
+               placeholder="مثال: اذكر اسم الدواء وجرعته إن وجد."
+               class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition">
+      </div>
+
+      <div class="flex justify-end pt-1">
+        <button type="submit"
+                class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-semibold text-sm px-5 py-2.5 rounded-lg transition-all shadow-sm">
+          <i class="fa-solid fa-plus"></i>
+          إضافة السؤال
+        </button>
+      </div>
+    </form>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Show/hide choices textarea based on field type
+  const fieldTypeSelect = document.getElementById('field-type-select');
+  const choicesSection = document.getElementById('choices-section');
+  const choicesTextarea = document.getElementById('choices-textarea');
+
+  function toggleChoices() {
+    const val = fieldTypeSelect.value;
+    const needsChoices = val === 'SELECT' || val === 'MULTISELECT';
+    choicesSection.classList.toggle('hidden', !needsChoices);
+    if (choicesTextarea) choicesTextarea.required = needsChoices;
+  }
+
+  if (fieldTypeSelect) {
+    fieldTypeSelect.addEventListener('change', toggleChoices);
+    toggleChoices();
+  }
+</script>
+{% endblock %}

@@ -7,7 +7,7 @@ from django.http import HttpResponse
 
 from appointments.models import Appointment, AppointmentType
 from clinics.models import ClinicStaff
-from .models import DoctorAvailability, DoctorProfile, DoctorVerification, ClinicDoctorCredential
+from .models import DoctorAvailability, DoctorProfile, DoctorVerification, ClinicDoctorCredential, DoctorIntakeFormTemplate, DoctorIntakeQuestion
 from .services import generate_slots_for_date
 
 User = get_user_model()
@@ -324,10 +324,12 @@ def doctor_availability_view(request, doctor_id):
         is_active=True,
     )
 
-    # Appointment types for this clinic
-    appointment_types = AppointmentType.objects.filter(
-        clinic_id=clinic_id,
-        is_active=True,
+    # Appointment types enabled for this doctor at this clinic (not all clinic types)
+    from appointments.services.appointment_type_service import (
+        get_appointment_types_for_doctor_in_clinic,
+    )
+    appointment_types = get_appointment_types_for_doctor_in_clinic(
+        doctor_id=doctor.id, clinic_id=int(clinic_id)
     )
 
     # Slot generation (if date + appointment_type_id provided)
@@ -344,20 +346,23 @@ def doctor_availability_view(request, doctor_id):
             target_date = None
 
         if target_date and target_date >= date.today():
+            # Only allow slot generation for types the doctor actually offers
             try:
-                selected_type = AppointmentType.objects.get(
-                    id=appointment_type_id,
-                    clinic_id=clinic_id,
-                    is_active=True,
+                apt_type_id_int = int(appointment_type_id)
+            except (ValueError, TypeError):
+                apt_type_id_int = None
+
+            if apt_type_id_int:
+                selected_type = next(
+                    (t for t in appointment_types if t.id == apt_type_id_int), None
                 )
+            if selected_type:
                 slots = generate_slots_for_date(
                     doctor_id=doctor.id,
                     clinic_id=int(clinic_id),
                     target_date=target_date,
                     duration_minutes=selected_type.duration_minutes,
                 )
-            except AppointmentType.DoesNotExist:
-                selected_type = None
 
     context = {
         "doctor": doctor,
@@ -889,6 +894,219 @@ def my_appointment_types(request):
                 "assignments": assignments,
             })
 
+    # Annotate each assignment with intake form question count
+    for item in clinic_data:
+        for a in item["assignments"]:
+            template = DoctorIntakeFormTemplate.objects.filter(
+                doctor=user,
+                appointment_type=a["appointment_type"],
+                is_active=True,
+            ).first()
+            a["question_count"] = template.questions.count() if template else 0
+
     return render(request, "doctors/my_appointment_types.html", {
         "clinic_data": clinic_data,
     })
+
+
+# ============================================
+# INTAKE FORM BUILDER
+# ============================================
+
+def _doctor_required(request):
+    """Returns None if user is a doctor, otherwise returns a redirect response."""
+    user = request.user
+    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
+        from django.contrib import messages as _msg
+        from django.urls import reverse as _rev
+        _msg.error(request, "هذه الصفحة متاحة للأطباء فقط.")
+        return redirect(_rev("accounts:home"))
+    return None
+
+
+@login_required
+def intake_form_builder(request, appointment_type_id):
+    """
+    Doctor builds / edits the intake form for a specific appointment type.
+    GET  → show current template + questions.
+    POST → save template title/description (creates template if needed).
+    """
+    from django.contrib import messages as _messages
+    from django.urls import reverse as _reverse
+
+    denied = _doctor_required(request)
+    if denied:
+        return denied
+
+    user = request.user
+
+    # Fetch appointment type and verify doctor belongs to that clinic
+    appointment_type = get_object_or_404(AppointmentType, pk=appointment_type_id, is_active=True)
+    membership = ClinicStaff.objects.filter(
+        user=user,
+        clinic=appointment_type.clinic,
+        is_active=True,
+        revoked_at__isnull=True,
+    ).first()
+    if not membership:
+        _messages.error(request, "لا تملك صلاحية إدارة نماذج هذه العيادة.")
+        return redirect(_reverse("doctors:my_appointment_types"))
+
+    template, _ = DoctorIntakeFormTemplate.objects.get_or_create(
+        doctor=user,
+        appointment_type=appointment_type,
+        defaults={
+            "title": f"نموذج {appointment_type.display_name}",
+            "is_active": True,
+        },
+    )
+
+    if request.method == "POST" and "save_template" in request.POST:
+        title_ar = request.POST.get("title_ar", "").strip()
+        description = request.POST.get("description", "").strip()
+        if not title_ar:
+            _messages.error(request, "عنوان النموذج مطلوب.")
+        else:
+            template.title_ar = title_ar
+            template.title = title_ar  # keep in sync for display_title
+            template.description = description
+            template.save(update_fields=["title", "title_ar", "description", "updated_at"])
+            _messages.success(request, "تم حفظ معلومات النموذج.")
+        return redirect(_reverse("doctors:intake_form_builder", args=[appointment_type_id]))
+
+    questions = template.questions.order_by("order")
+    next_order = (questions.last().order + 1) if questions.exists() else 0
+
+    return render(request, "doctors/intake_form_builder.html", {
+        "appointment_type": appointment_type,
+        "template": template,
+        "questions": questions,
+        "next_order": next_order,
+        "field_types": DoctorIntakeQuestion.FieldType.choices,
+    })
+
+
+@login_required
+def intake_question_add(request, template_id):
+    """Add a question to an intake form template."""
+    from django.contrib import messages as _messages
+    from django.urls import reverse as _reverse
+    import json as _json
+
+    denied = _doctor_required(request)
+    if denied:
+        return denied
+
+    template = get_object_or_404(DoctorIntakeFormTemplate, pk=template_id, doctor=request.user)
+    apt_type_id = template.appointment_type_id
+
+    if request.method != "POST":
+        return redirect(_reverse("doctors:intake_form_builder", args=[apt_type_id]))
+
+    question_text_ar = request.POST.get("question_text_ar", "").strip()
+    field_type = request.POST.get("field_type", DoctorIntakeQuestion.FieldType.TEXT)
+    is_required = request.POST.get("is_required") == "on"
+    placeholder = request.POST.get("placeholder", "").strip()
+    help_text_content = request.POST.get("help_text_content", "").strip()
+
+    # Parse order (auto-increment to end)
+    existing_max = template.questions.order_by("-order").values_list("order", flat=True).first()
+    order = (existing_max + 1) if existing_max is not None else 0
+
+    # Choices for SELECT/MULTISELECT
+    choices = []
+    if field_type in (DoctorIntakeQuestion.FieldType.SELECT, DoctorIntakeQuestion.FieldType.MULTISELECT):
+        raw = request.POST.get("choices_raw", "")
+        choices = [c.strip() for c in raw.splitlines() if c.strip()]
+        if len(choices) < 2:
+            _messages.error(request, "يجب إضافة خيارَيْن على الأقل للحقول القائمة.")
+            return redirect(_reverse("doctors:intake_form_builder", args=[apt_type_id]))
+
+    try:
+        DoctorIntakeQuestion.objects.create(
+            template=template,
+            question_text=question_text_ar,
+            question_text_ar=question_text_ar,
+            field_type=field_type,
+            is_required=is_required,
+            order=order,
+            placeholder=placeholder,
+            help_text_content=help_text_content,
+            choices=choices,
+        )
+        _messages.success(request, "تمت إضافة السؤال.")
+    except Exception as e:
+        _messages.error(request, f"خطأ أثناء إضافة السؤال: {e}")
+
+    return redirect(_reverse("doctors:intake_form_builder", args=[apt_type_id]))
+
+
+@login_required
+def intake_question_edit(request, template_id, question_id):
+    """Edit an existing intake question."""
+    from django.contrib import messages as _messages
+    from django.urls import reverse as _reverse
+
+    denied = _doctor_required(request)
+    if denied:
+        return denied
+
+    template = get_object_or_404(DoctorIntakeFormTemplate, pk=template_id, doctor=request.user)
+    question = get_object_or_404(DoctorIntakeQuestion, pk=question_id, template=template)
+    apt_type_id = template.appointment_type_id
+
+    if request.method == "POST":
+        question_text_ar = request.POST.get("question_text_ar", "").strip()
+        field_type = request.POST.get("field_type", question.field_type)
+        is_required = request.POST.get("is_required") == "on"
+        placeholder = request.POST.get("placeholder", "").strip()
+        help_text_content = request.POST.get("help_text_content", "").strip()
+
+        choices = question.choices
+        if field_type in (DoctorIntakeQuestion.FieldType.SELECT, DoctorIntakeQuestion.FieldType.MULTISELECT):
+            raw = request.POST.get("choices_raw", "")
+            choices = [c.strip() for c in raw.splitlines() if c.strip()]
+            if len(choices) < 2:
+                _messages.error(request, "يجب إضافة خيارَيْن على الأقل للحقول القائمة.")
+                return redirect(_reverse("doctors:intake_question_edit", args=[template_id, question_id]))
+
+        question.question_text = question_text_ar
+        question.question_text_ar = question_text_ar
+        question.field_type = field_type
+        question.is_required = is_required
+        question.placeholder = placeholder
+        question.help_text_content = help_text_content
+        question.choices = choices
+        question.save()
+        _messages.success(request, "تم تحديث السؤال.")
+        return redirect(_reverse("doctors:intake_form_builder", args=[apt_type_id]))
+
+    return render(request, "doctors/intake_question_form.html", {
+        "template": template,
+        "question": question,
+        "appointment_type": template.appointment_type,
+        "field_types": DoctorIntakeQuestion.FieldType.choices,
+        "choices_raw": "\n".join(question.choices) if question.choices else "",
+        "is_edit": True,
+    })
+
+
+@login_required
+def intake_question_delete(request, template_id, question_id):
+    """Delete a question from an intake form template."""
+    from django.contrib import messages as _messages
+    from django.urls import reverse as _reverse
+
+    denied = _doctor_required(request)
+    if denied:
+        return denied
+
+    template = get_object_or_404(DoctorIntakeFormTemplate, pk=template_id, doctor=request.user)
+    question = get_object_or_404(DoctorIntakeQuestion, pk=question_id, template=template)
+    apt_type_id = template.appointment_type_id
+
+    if request.method == "POST":
+        question.delete()
+        _messages.success(request, "تم حذف السؤال.")
+
+    return redirect(_reverse("doctors:intake_form_builder", args=[apt_type_id]))

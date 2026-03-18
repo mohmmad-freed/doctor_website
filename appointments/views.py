@@ -88,8 +88,11 @@ def book_appointment_view(request, clinic_id):
             selected_doctor = User.objects.get(
                 id=doctor_id, role__in=["DOCTOR", "MAIN_DOCTOR"]
             )
-            appointment_types = AppointmentType.objects.filter(
-                clinic=clinic, is_active=True
+            from appointments.services.appointment_type_service import (
+                get_appointment_types_for_doctor_in_clinic,
+            )
+            appointment_types = get_appointment_types_for_doctor_in_clinic(
+                doctor_id=int(doctor_id), clinic_id=clinic_id
             )
         except User.DoesNotExist:
             selected_doctor = None
@@ -232,6 +235,16 @@ def load_available_slots(request, clinic_id):
             id=appointment_type_id, clinic_id=clinic_id, is_active=True,
         )
     except (ValueError, AppointmentType.DoesNotExist):
+        return render(request, "appointments/partials/time_slots.html", {"slots": []})
+
+    # Verify this appointment type is actually enabled for the selected doctor
+    from appointments.services.appointment_type_service import (
+        get_appointment_types_for_doctor_in_clinic,
+    )
+    enabled_types = get_appointment_types_for_doctor_in_clinic(
+        doctor_id=int(doctor_id), clinic_id=clinic_id
+    )
+    if not any(t.id == appointment_type.id for t in enabled_types):
         return render(request, "appointments/partials/time_slots.html", {"slots": []})
 
     if target_date < date.today():

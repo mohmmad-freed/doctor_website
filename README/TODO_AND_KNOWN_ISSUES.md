@@ -47,10 +47,17 @@ This UI layer is deferred.
 - Per-clinic notes, local file numbers, and clinic-specific history are not stored
 - Patients are identified within a clinic only through `Appointment` records
 
-### 1.5 AppointmentType Doctor Scoping
-- `AppointmentType` is currently scoped to `Clinic` only (no `doctor` FK)
-- All doctors at a clinic share the same appointment type catalogue
-- Per-doctor-per-clinic types would require adding a nullable `doctor` FK + migration
+### 1.5 AppointmentType Doctor Scoping — FIXED (2026-03-18)
+- `DoctorClinicAppointmentType` model handles per-doctor-per-clinic type assignment
+- `get_appointment_types_for_doctor_in_clinic()` service correctly returns doctor-specific types
+- Three UI-layer views were incorrectly querying all clinic types instead of doctor-scoped ones:
+  - `book_appointment_view` (appointments/views.py) — now uses service function
+  - `doctor_availability_view` (doctors/views.py) — now uses service function; `selected_type`
+    lookup now validates type is in doctor's enabled set before generating slots
+  - `load_available_slots` HTMX endpoint (appointments/views.py) — now validates the
+    appointment type is enabled for the doctor before generating slots
+- Backward-compat fallback still applies: doctors with no DoctorClinicAppointmentType rows
+  configured see all active clinic types (intended behaviour)
 
 ### 1.6 Billing & Invoicing
 - No billing, invoicing, or insurance models exist

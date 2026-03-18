@@ -78,6 +78,27 @@ urlpatterns = [
         views.my_appointment_types,
         name="my_appointment_types",
     ),
+    # --- Intake Form Builder ---
+    path(
+        "intake-forms/<int:appointment_type_id>/",
+        views.intake_form_builder,
+        name="intake_form_builder",
+    ),
+    path(
+        "intake-forms/template/<int:template_id>/questions/add/",
+        views.intake_question_add,
+        name="intake_question_add",
+    ),
+    path(
+        "intake-forms/template/<int:template_id>/questions/<int:question_id>/edit/",
+        views.intake_question_edit,
+        name="intake_question_edit",
+    ),
+    path(
+        "intake-forms/template/<int:template_id>/questions/<int:question_id>/delete/",
+        views.intake_question_delete,
+        name="intake_question_delete",
+    ),
     # --- API Endpoints ---
     path(
         "api/specialties/",
