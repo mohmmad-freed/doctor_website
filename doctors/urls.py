@@ -72,6 +72,12 @@ urlpatterns = [
         views.doctor_edit_profile_view,
         name="doctor_edit_profile",
     ),
+    # --- Doctor Schedule Management ---
+    path(
+        "my-schedule/",
+        views.my_schedule,
+        name="my_schedule",
+    ),
     # --- Doctor Appointment Types (self-service) ---
     path(
         "my-appointment-types/",

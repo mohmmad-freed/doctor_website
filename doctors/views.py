@@ -838,6 +838,121 @@ def doctor_upload_clinic_credential(request, credential_id):
 
 
 # ============================================
+# DOCTOR SCHEDULE MANAGEMENT
+# ============================================
+
+
+@login_required
+def my_schedule(request):
+    """Doctor manages their weekly availability schedule per clinic."""
+    user = request.user
+    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
+        messages.error(request, "هذه الصفحة متاحة للأطباء فقط.")
+        return redirect(reverse("accounts:home"))
+
+    # All active clinic memberships
+    memberships = (
+        ClinicStaff.objects.filter(user=user, is_active=True, revoked_at__isnull=True)
+        .select_related("clinic")
+        .order_by("clinic__name")
+    )
+
+    # Determine selected clinic (from GET or POST param)
+    clinic_id_param = request.GET.get("clinic_id") or request.POST.get("clinic_id")
+    selected_clinic = None
+
+    if memberships.exists():
+        if clinic_id_param:
+            try:
+                cid = int(clinic_id_param)
+                selected_clinic = next((m.clinic for m in memberships if m.clinic_id == cid), None)
+            except (ValueError, TypeError):
+                pass
+        if selected_clinic is None:
+            selected_clinic = memberships.first().clinic
+
+    # Handle POST: add or delete a slot
+    if request.method == "POST" and selected_clinic:
+        action = request.POST.get("action")
+        redirect_url = reverse("doctors:my_schedule") + f"?clinic_id={selected_clinic.id}"
+
+        if action == "add":
+            day_str = request.POST.get("day_of_week", "")
+            start_str = request.POST.get("start_time", "")
+            end_str = request.POST.get("end_time", "")
+            try:
+                slot = DoctorAvailability(
+                    doctor=user,
+                    clinic=selected_clinic,
+                    day_of_week=int(day_str),
+                    start_time=start_str,
+                    end_time=end_str,
+                    is_active=True,
+                )
+                slot.full_clean()
+                slot.save()
+                messages.success(request, "تمت إضافة وقت العمل بنجاح.")
+            except ValidationError as e:
+                if hasattr(e, "message_dict"):
+                    for errs in e.message_dict.values():
+                        for err in errs:
+                            messages.error(request, err)
+                else:
+                    for err in e.messages:
+                        messages.error(request, err)
+            except Exception as e:
+                messages.error(request, str(e))
+            return redirect(redirect_url)
+
+        elif action == "delete":
+            slot_id = request.POST.get("slot_id")
+            try:
+                slot = DoctorAvailability.objects.get(id=slot_id, doctor=user, clinic=selected_clinic)
+                slot.delete()
+                messages.success(request, "تم حذف وقت العمل.")
+            except DoctorAvailability.DoesNotExist:
+                messages.error(request, "الوقت غير موجود.")
+            return redirect(redirect_url)
+
+    # Build per-day data for the template
+    from clinics.models import ClinicWorkingHours
+    clinic_wh_map = {}
+    my_slots_map = {}
+
+    if selected_clinic:
+        for wh in ClinicWorkingHours.objects.filter(clinic=selected_clinic).order_by("weekday", "start_time"):
+            clinic_wh_map.setdefault(wh.weekday, []).append(wh)
+
+        for slot in DoctorAvailability.objects.filter(
+            doctor=user, clinic=selected_clinic
+        ).order_by("day_of_week", "start_time"):
+            my_slots_map.setdefault(slot.day_of_week, []).append(slot)
+
+    days_data = []
+    for day_num, day_name in DoctorAvailability.DAY_CHOICES:
+        whs = clinic_wh_map.get(day_num, [])
+        is_closed = bool(whs) and any(wh.is_closed for wh in whs)
+        open_ranges = [(wh.start_time, wh.end_time) for wh in whs if not wh.is_closed]
+        days_data.append({
+            "day_num": day_num,
+            "day_name": day_name,
+            "working_hours": whs,
+            "is_closed": is_closed,
+            "open_ranges": open_ranges,
+            "slots": my_slots_map.get(day_num, []),
+            "clinic_has_hours": bool(whs),
+        })
+
+    return render(request, "doctors/my_schedule.html", {
+        "memberships": memberships,
+        "selected_clinic": selected_clinic,
+        "selected_clinic_id": selected_clinic.id if selected_clinic else None,
+        "days_data": days_data,
+        "day_choices": DoctorAvailability.DAY_CHOICES,
+    })
+
+
+# ============================================
 # DOCTOR APPOINTMENT TYPES (self-service)
 # ============================================
 

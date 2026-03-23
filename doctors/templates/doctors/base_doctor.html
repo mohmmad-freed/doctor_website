@@ -229,6 +229,16 @@
                         <i class="fa-solid fa-users ml-1 text-xs opacity-70"></i>
                         مرضاي
                     </a>
+                    <a href="{% url 'doctors:my_schedule' %}"
+                       class="px-3 py-2 rounded-lg text-sm font-semibold transition-colors
+                              {% if request.resolver_match.url_name == 'my_schedule' %}
+                              text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20
+                              {% else %}
+                              text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-slate-800
+                              {% endif %}">
+                        <i class="fa-solid fa-calendar-week ml-1 text-xs opacity-70"></i>
+                        جدولي
+                    </a>
                     <a href="{% url 'doctors:my_appointment_types' %}"
                        class="px-3 py-2 rounded-lg text-sm font-semibold transition-colors
                               {% if request.resolver_match.url_name == 'my_appointment_types' %}
@@ -397,6 +407,10 @@
         <a href="{% url 'doctors:patients' %}" class="mob-item {% if request.resolver_match.url_name == 'patients' %}active{% endif %}">
             <i class="fa-solid fa-users"></i>
             <span>المرضى</span>
+        </a>
+        <a href="{% url 'doctors:my_schedule' %}" class="mob-item {% if request.resolver_match.url_name == 'my_schedule' %}active{% endif %}">
+            <i class="fa-solid fa-calendar-week"></i>
+            <span>جدولي</span>
         </a>
         <a href="{% url 'doctors:doctor_invitations_inbox' %}" class="mob-item {% if request.resolver_match.url_name == 'doctor_invitations_inbox' %}active{% endif %}" style="position:relative;">
             <i class="fa-regular fa-envelope"></i>
