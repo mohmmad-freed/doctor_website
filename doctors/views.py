@@ -7,7 +7,7 @@ from django.http import HttpResponse
 
 from appointments.models import Appointment, AppointmentType
 from clinics.models import ClinicStaff
-from .models import DoctorAvailability, DoctorProfile, DoctorVerification, ClinicDoctorCredential, DoctorIntakeFormTemplate, DoctorIntakeQuestion
+from .models import DoctorAvailability, DoctorProfile, DoctorVerification, ClinicDoctorCredential, DoctorIntakeFormTemplate, DoctorIntakeQuestion, DoctorIntakeRule
 from .services import generate_slots_for_date
 
 User = get_user_model()
@@ -970,17 +970,53 @@ def intake_form_builder(request, appointment_type_id):
             template.title_ar = title_ar
             template.title = title_ar  # keep in sync for display_title
             template.description = description
-            template.save(update_fields=["title", "title_ar", "description", "updated_at"])
+            template.show_reason_field = "show_reason_field" in request.POST
+            template.reason_field_label = request.POST.get("reason_field_label", "").strip()
+            template.reason_field_placeholder = request.POST.get("reason_field_placeholder", "").strip()
+            template.reason_field_required = "reason_field_required" in request.POST
+            template.save(update_fields=[
+                "title", "title_ar", "description",
+                "show_reason_field", "reason_field_label",
+                "reason_field_placeholder", "reason_field_required",
+                "updated_at",
+            ])
             _messages.success(request, "تم حفظ معلومات النموذج.")
         return redirect(_reverse("doctors:intake_form_builder", args=[appointment_type_id]))
 
-    questions = template.questions.order_by("order")
-    next_order = (questions.last().order + 1) if questions.exists() else 0
+    questions = list(template.questions.order_by("order"))
+
+    # Build follow-up structure: which questions are targets of SHOW rules
+    rules_qs = DoctorIntakeRule.objects.filter(
+        source_question__template=template,
+        action=DoctorIntakeRule.Action.SHOW,
+    ).select_related("target_question")
+
+    # Map source_question_id → list of rules (each with target question)
+    from collections import defaultdict as _dd
+    followups_by_source = _dd(list)
+    target_ids = set()
+    for rule in rules_qs:
+        followups_by_source[rule.source_question_id].append(rule)
+        target_ids.add(rule.target_question_id)
+
+    # Triggerable field types (can have follow-up questions)
+    triggerable_types = {
+        DoctorIntakeQuestion.FieldType.CHECKBOX,
+        DoctorIntakeQuestion.FieldType.SELECT,
+        DoctorIntakeQuestion.FieldType.MULTISELECT,
+    }
+
+    # Only top-level questions (not follow-up targets) shown in main list
+    top_questions = [q for q in questions if q.id not in target_ids]
+
+    next_order = (max(q.order for q in questions) + 1) if questions else 0
 
     return render(request, "doctors/intake_form_builder.html", {
         "appointment_type": appointment_type,
         "template": template,
-        "questions": questions,
+        "questions": top_questions,
+        "followups_by_source": dict(followups_by_source),
+        "triggerable_types": triggerable_types,
         "next_order": next_order,
         "field_types": DoctorIntakeQuestion.FieldType.choices,
     })
@@ -1108,5 +1144,113 @@ def intake_question_delete(request, template_id, question_id):
     if request.method == "POST":
         question.delete()
         _messages.success(request, "تم حذف السؤال.")
+
+    return redirect(_reverse("doctors:intake_form_builder", args=[apt_type_id]))
+
+
+@login_required
+def intake_followup_add(request, template_id, question_id):
+    """Add a follow-up (conditional) question triggered when source has a specific answer."""
+    from django.contrib import messages as _messages
+    from django.urls import reverse as _reverse
+    from django.db import transaction
+
+    denied = _doctor_required(request)
+    if denied:
+        return denied
+
+    template = get_object_or_404(DoctorIntakeFormTemplate, pk=template_id, doctor=request.user)
+    source_question = get_object_or_404(DoctorIntakeQuestion, pk=question_id, template=template)
+    apt_type_id = template.appointment_type_id
+
+    if request.method != "POST":
+        return redirect(_reverse("doctors:intake_form_builder", args=[apt_type_id]))
+
+    triggerable_types = (
+        DoctorIntakeQuestion.FieldType.CHECKBOX,
+        DoctorIntakeQuestion.FieldType.SELECT,
+        DoctorIntakeQuestion.FieldType.MULTISELECT,
+    )
+    if source_question.field_type not in triggerable_types:
+        _messages.error(request, "لا يمكن إضافة سؤال فرعي لهذا النوع من الأسئلة.")
+        return redirect(_reverse("doctors:intake_form_builder", args=[apt_type_id]))
+
+    trigger_value = request.POST.get("trigger_value", "").strip()
+    followup_text = request.POST.get("followup_text_ar", "").strip()
+    followup_type = request.POST.get("followup_field_type", DoctorIntakeQuestion.FieldType.TEXT)
+    followup_required = request.POST.get("followup_is_required") == "on"
+    followup_placeholder = request.POST.get("followup_placeholder", "").strip()
+
+    if not trigger_value:
+        _messages.error(request, "يجب تحديد قيمة المشغّل.")
+        return redirect(_reverse("doctors:intake_form_builder", args=[apt_type_id]))
+
+    if not followup_text:
+        _messages.error(request, "نص السؤال الفرعي مطلوب.")
+        return redirect(_reverse("doctors:intake_form_builder", args=[apt_type_id]))
+
+    followup_choices = []
+    if followup_type in (DoctorIntakeQuestion.FieldType.SELECT, DoctorIntakeQuestion.FieldType.MULTISELECT):
+        raw = request.POST.get("followup_choices_raw", "")
+        followup_choices = [c.strip() for c in raw.splitlines() if c.strip()]
+        if len(followup_choices) < 2:
+            _messages.error(request, "يجب إضافة خيارَين على الأقل للحقول القائمة.")
+            return redirect(_reverse("doctors:intake_form_builder", args=[apt_type_id]))
+
+    try:
+        with transaction.atomic():
+            existing_max = template.questions.order_by("-order").values_list("order", flat=True).first()
+            order = (existing_max + 1) if existing_max is not None else 0
+
+            followup_question = DoctorIntakeQuestion.objects.create(
+                template=template,
+                question_text=followup_text,
+                question_text_ar=followup_text,
+                field_type=followup_type,
+                is_required=followup_required,
+                order=order,
+                placeholder=followup_placeholder,
+                choices=followup_choices,
+            )
+
+            DoctorIntakeRule.objects.create(
+                source_question=source_question,
+                expected_value=trigger_value,
+                operator=DoctorIntakeRule.Operator.EQUALS,
+                target_question=followup_question,
+                action=DoctorIntakeRule.Action.SHOW,
+            )
+
+        _messages.success(request, "تمت إضافة السؤال الفرعي.")
+    except Exception as e:
+        _messages.error(request, f"خطأ أثناء الإضافة: {e}")
+
+    return redirect(_reverse("doctors:intake_form_builder", args=[apt_type_id]))
+
+
+@login_required
+def intake_rule_delete(request, template_id, rule_id):
+    """Delete a follow-up rule and its orphaned target question."""
+    from django.contrib import messages as _messages
+    from django.urls import reverse as _reverse
+
+    denied = _doctor_required(request)
+    if denied:
+        return denied
+
+    template = get_object_or_404(DoctorIntakeFormTemplate, pk=template_id, doctor=request.user)
+    rule = get_object_or_404(
+        DoctorIntakeRule,
+        pk=rule_id,
+        source_question__template=template,
+    )
+    apt_type_id = template.appointment_type_id
+
+    if request.method == "POST":
+        target_question = rule.target_question
+        rule.delete()
+        if not target_question.rules_as_target.exists():
+            target_question.delete()
+        _messages.success(request, "تم حذف السؤال الفرعي.")
 
     return redirect(_reverse("doctors:intake_form_builder", args=[apt_type_id]))

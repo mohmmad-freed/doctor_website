@@ -105,6 +105,13 @@ def book_appointment_view(request, clinic_id):
             appointment_time_str = request.POST.get("appointment_time", "").strip()
             reason = request.POST.get("reason", "").strip()
 
+            # Validate reason field against template settings
+            template_check, _ = get_active_intake_template(doctor_id, appointment_type_id)
+            if template_check and template_check.show_reason_field and template_check.reason_field_required and not reason:
+                reason_label = template_check.reason_field_label or "وصف الحالة الطبية"
+                messages.error(request, f"حقل '{reason_label}' مطلوب.")
+                return redirect(f"/appointments/book/{clinic_id}/?doctor_id={doctor_id}")
+
             # Validate description length
             if len(reason) > 1000:
                 messages.error(request, "ط¸ث†ط·آµط¸ظ¾ ط·آ§ط¸â€‍ط·آ­ط·آ§ط¸â€‍ط·آ© ط·آ§ط¸â€‍ط·آ·ط·آ¨ط¸ظ¹ط·آ© ط¸ظ¹ط·آ¬ط·آ¨ ط·آ£ط¸â€  ط¸â€‍ط·آ§ ط¸ظ¹ط·ع¾ط·آ¬ط·آ§ط¸ث†ط·آ² 1000 ط·آ­ط·آ±ط¸ظ¾.")

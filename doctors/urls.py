@@ -99,6 +99,16 @@ urlpatterns = [
         views.intake_question_delete,
         name="intake_question_delete",
     ),
+    path(
+        "intake-forms/template/<int:template_id>/questions/<int:question_id>/followup/add/",
+        views.intake_followup_add,
+        name="intake_followup_add",
+    ),
+    path(
+        "intake-forms/template/<int:template_id>/rules/<int:rule_id>/delete/",
+        views.intake_rule_delete,
+        name="intake_rule_delete",
+    ),
     # --- API Endpoints ---
     path(
         "api/specialties/",

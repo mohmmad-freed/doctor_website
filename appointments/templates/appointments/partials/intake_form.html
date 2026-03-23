@@ -130,15 +130,24 @@
     </div>
     {% endfor %}
 
-    <!-- Reason / medical description (always shown) -->
+    {% if form_template.show_reason_field %}
+    <!-- Reason / medical description (controlled by template settings) -->
     <div class="pt-3 border-t border-gray-100 dark:border-slate-700">
         <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-            وصف الحالة الطبية <span class="text-gray-400 text-xs font-normal">(اختياري)</span>
+            {% if form_template.reason_field_label %}{{ form_template.reason_field_label }}{% else %}وصف الحالة الطبية{% endif %}
+            {% if form_template.reason_field_required %}
+            <span class="text-red-500 mr-1">*</span>
+            {% else %}
+            <span class="text-gray-400 text-xs font-normal">(اختياري)</span>
+            {% endif %}
         </label>
-        <textarea name="reason" rows="3" maxlength="1000" placeholder="صف حالتك الطبية أو سبب زيارتك باختصار..."
+        <textarea name="reason" rows="3" maxlength="1000"
+                  placeholder="{% if form_template.reason_field_placeholder %}{{ form_template.reason_field_placeholder }}{% else %}صف حالتك الطبية أو سبب زيارتك باختصار...{% endif %}"
+                  {% if form_template.reason_field_required %}required{% endif %}
                   class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors resize-none text-sm"></textarea>
         <p class="text-xs text-gray-400 mt-1">الحد الأقصى 1000 حرف</p>
     </div>
+    {% endif %}
 </div>
 
 <!-- Dated Files Widget JS -->

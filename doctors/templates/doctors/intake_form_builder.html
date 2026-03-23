@@ -61,6 +61,68 @@
                   class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-400 dark:focus:ring-primary-500 transition resize-none">{{ template.description }}</textarea>
       </div>
 
+      {# ── Built-in "Reason" question settings ── #}
+      <div class="rounded-xl border border-gray-200 dark:border-slate-600 overflow-hidden">
+        <div class="flex items-center justify-between gap-3 px-4 py-3 bg-gray-50 dark:bg-slate-700/40 border-b border-gray-200 dark:border-slate-600">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-comment-medical text-emerald-500 text-sm"></i>
+            <span class="text-sm font-bold text-gray-700 dark:text-gray-200">سؤال ثابت: وصف الحالة الطبية</span>
+            <span class="text-xs text-gray-400 dark:text-slate-500">(مدمج في النموذج)</span>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer select-none">
+            <input type="checkbox" name="show_reason_field" id="show-reason-toggle"
+                   {% if template.show_reason_field %}checked{% endif %}
+                   class="sr-only peer">
+            <div class="w-10 h-5 bg-gray-300 dark:bg-slate-600 rounded-full peer
+                        peer-checked:bg-emerald-500 transition-colors
+                        after:content-[''] after:absolute after:top-0.5 after:right-5
+                        after:bg-white after:rounded-full after:h-4 after:w-4
+                        after:transition-all peer-checked:after:right-0.5"></div>
+            <span class="mr-2 text-xs font-semibold text-gray-600 dark:text-gray-300 peer-checked:text-emerald-600 dark:peer-checked:text-emerald-400" id="reason-toggle-label">
+              {% if template.show_reason_field %}مفعّل{% else %}معطّل{% endif %}
+            </span>
+          </label>
+        </div>
+
+        <div id="reason-field-settings" class="px-4 py-4 space-y-3 {% if not template.show_reason_field %}hidden{% endif %}">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                نص التسمية
+                <span class="font-normal text-gray-400">(اختياري)</span>
+              </label>
+              <input type="text" name="reason_field_label"
+                     value="{{ template.reason_field_label }}"
+                     placeholder="وصف الحالة الطبية"
+                     class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-400 transition">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                نص التلميح
+                <span class="font-normal text-gray-400">(اختياري)</span>
+              </label>
+              <input type="text" name="reason_field_placeholder"
+                     value="{{ template.reason_field_placeholder }}"
+                     placeholder="صف حالتك الطبية أو سبب زيارتك باختصار..."
+                     class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-400 transition">
+            </div>
+          </div>
+          <label class="flex items-center gap-2.5 cursor-pointer select-none">
+            <input type="checkbox" name="reason_field_required"
+                   {% if template.reason_field_required %}checked{% endif %}
+                   class="w-4 h-4 rounded accent-emerald-500 cursor-pointer">
+            <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">إلزامي</span>
+          </label>
+        </div>
+
+        <div id="reason-field-disabled-msg" class="px-4 py-3 {% if template.show_reason_field %}hidden{% endif %}">
+          <p class="text-xs text-gray-400 dark:text-slate-500">
+            <i class="fa-solid fa-eye-slash ml-1"></i>
+            لن يُعرض هذا السؤال للمريض.
+          </p>
+        </div>
+      </div>
+
       <div class="flex justify-end">
         <button type="submit"
                 class="inline-flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white font-semibold text-sm px-5 py-2 rounded-lg transition-all shadow-sm">
@@ -86,57 +148,219 @@
     {% if questions %}
     <div class="divide-y divide-gray-100 dark:divide-slate-700/60" id="questions-list">
       {% for q in questions %}
-      <div class="flex items-start gap-3 px-5 py-4 hover:bg-gray-50/50 dark:hover:bg-slate-700/20 transition-colors group">
+      {# ── Main question row ── #}
+      <div class="px-5 py-4 hover:bg-gray-50/50 dark:hover:bg-slate-700/20 transition-colors group">
+        <div class="flex items-start gap-3">
 
-        {# Order badge #}
-        <div class="w-7 h-7 rounded-lg bg-gray-100 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-gray-500 dark:text-slate-400 flex-shrink-0 mt-0.5">
-          {{ forloop.counter }}
+          {# Order badge #}
+          <div class="w-7 h-7 rounded-lg bg-gray-100 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-gray-500 dark:text-slate-400 flex-shrink-0 mt-0.5">
+            {{ forloop.counter }}
+          </div>
+
+          {# Question content #}
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">{{ q.display_text }}</p>
+              {% if q.is_required %}
+              <span class="text-red-500 text-xs font-bold">مطلوب</span>
+              {% endif %}
+            </div>
+            <div class="flex items-center gap-2 mt-1 flex-wrap">
+              <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium
+                {% if q.field_type == 'TEXT' %}bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300
+                {% elif q.field_type == 'TEXTAREA' %}bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300
+                {% elif q.field_type == 'SELECT' or q.field_type == 'MULTISELECT' %}bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300
+                {% elif q.field_type == 'CHECKBOX' %}bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300
+                {% elif q.field_type == 'DATE' %}bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300
+                {% else %}bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300{% endif %}">
+                {{ q.get_field_type_display }}
+              </span>
+              {% if q.choices %}
+              <span class="text-xs text-gray-400 dark:text-slate-500">{{ q.choices|length }} خيار</span>
+              {% endif %}
+              {% if q.placeholder %}
+              <span class="text-xs text-gray-400 dark:text-slate-500 truncate max-w-[200px]">تلميح: {{ q.placeholder }}</span>
+              {% endif %}
+            </div>
+          </div>
+
+          {# Actions #}
+          <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+            <a href="{% url 'doctors:intake_question_edit' template.id q.id %}"
+               class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 dark:hover:text-primary-400 transition-colors"
+               title="تعديل">
+              <i class="fa-solid fa-pen text-xs"></i>
+            </a>
+            <form method="post" action="{% url 'doctors:intake_question_delete' template.id q.id %}"
+                  onsubmit="return confirm('هل تريد حذف هذا السؤال؟')">
+              {% csrf_token %}
+              <button type="submit"
+                      class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-colors"
+                      title="حذف">
+                <i class="fa-solid fa-trash-can text-xs"></i>
+              </button>
+            </form>
+          </div>
+
         </div>
 
-        {# Question content #}
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center gap-2 flex-wrap">
-            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">{{ q.display_text }}</p>
-            {% if q.is_required %}
-            <span class="text-red-500 text-xs font-bold">مطلوب</span>
-            {% endif %}
-          </div>
-          <div class="flex items-center gap-2 mt-1 flex-wrap">
-            <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium
-              {% if q.field_type == 'TEXT' %}bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300
-              {% elif q.field_type == 'TEXTAREA' %}bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300
-              {% elif q.field_type == 'SELECT' or q.field_type == 'MULTISELECT' %}bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300
-              {% elif q.field_type == 'CHECKBOX' %}bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300
-              {% elif q.field_type == 'DATE' %}bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300
-              {% else %}bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300{% endif %}">
-              {{ q.get_field_type_display }}
-            </span>
-            {% if q.choices %}
-            <span class="text-xs text-gray-400 dark:text-slate-500">{{ q.choices|length }} خيار</span>
-            {% endif %}
-            {% if q.placeholder %}
-            <span class="text-xs text-gray-400 dark:text-slate-500 truncate max-w-[200px]">تلميح: {{ q.placeholder }}</span>
-            {% endif %}
-          </div>
-        </div>
+        {# ── Follow-up questions (conditional) ── #}
+        {% if q.field_type in triggerable_types %}
+        <div class="mr-10 mt-3 space-y-2">
 
-        {# Actions #}
-        <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-          <a href="{% url 'doctors:intake_question_edit' template.id q.id %}"
-             class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 dark:hover:text-primary-400 transition-colors"
-             title="تعديل">
-            <i class="fa-solid fa-pen text-xs"></i>
-          </a>
-          <form method="post" action="{% url 'doctors:intake_question_delete' template.id q.id %}"
-                onsubmit="return confirm('هل تريد حذف هذا السؤال؟')">
-            {% csrf_token %}
-            <button type="submit"
-                    class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-colors"
-                    title="حذف">
-              <i class="fa-solid fa-trash-can text-xs"></i>
+          {# Existing follow-up rules #}
+          {% for rule in q.rules_as_source.all %}
+          {% if rule.action == "SHOW" %}
+          <div class="flex items-start gap-2 p-3 rounded-xl border border-dashed border-amber-300 dark:border-amber-700/50 bg-amber-50/50 dark:bg-amber-900/10">
+            <div class="flex-shrink-0 mt-0.5">
+              <div class="flex items-center gap-1.5">
+                <i class="fa-solid fa-code-branch text-amber-500 text-xs rotate-90"></i>
+                <span class="text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 rounded">
+                  إذا: {{ rule.expected_value }}
+                </span>
+              </div>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <p class="text-xs font-semibold text-gray-700 dark:text-gray-200">{{ rule.target_question.display_text }}</p>
+                {% if rule.target_question.is_required %}
+                <span class="text-red-500 text-[10px] font-bold">مطلوب</span>
+                {% else %}
+                <span class="text-gray-400 text-[10px]">اختياري</span>
+                {% endif %}
+                <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400">
+                  {{ rule.target_question.get_field_type_display }}
+                </span>
+              </div>
+            </div>
+            <form method="post" action="{% url 'doctors:intake_rule_delete' template.id rule.id %}"
+                  onsubmit="return confirm('هل تريد حذف هذا السؤال الفرعي؟')"
+                  class="flex-shrink-0">
+              {% csrf_token %}
+              <button type="submit"
+                      class="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-colors"
+                      title="حذف">
+                <i class="fa-solid fa-trash-can text-[10px]"></i>
+              </button>
+            </form>
+          </div>
+          {% endif %}
+          {% endfor %}
+
+          {# Add follow-up button + inline form #}
+          <div>
+            <button type="button" onclick="toggleFollowupForm({{ q.id }})"
+                    class="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 px-2.5 py-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors border border-dashed border-amber-300 dark:border-amber-700/40">
+              <i class="fa-solid fa-plus text-[10px]"></i>
+              إضافة سؤال فرعي
             </button>
-          </form>
+
+            <div id="followup-form-{{ q.id }}" class="hidden mt-3 p-4 rounded-xl border border-amber-200 dark:border-amber-800/40 bg-amber-50/80 dark:bg-amber-900/10 space-y-3">
+              <p class="text-xs font-bold text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-code-branch rotate-90"></i>
+                سؤال فرعي — يظهر عند إجابة محددة
+              </p>
+
+              <form method="post" action="{% url 'doctors:intake_followup_add' template.id q.id %}" class="space-y-3">
+                {% csrf_token %}
+
+                {# Trigger value #}
+                <div>
+                  <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    اعرض السؤال الفرعي عند اختيار: <span class="text-red-500">*</span>
+                  </label>
+                  {% if q.field_type == "CHECKBOX" %}
+                  <div class="flex items-center gap-3">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="trigger_value" value="نعم" required
+                             class="w-3.5 h-3.5 text-amber-500 border-gray-300">
+                      <span class="text-xs text-gray-700 dark:text-gray-300">نعم</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="trigger_value" value="لا"
+                             class="w-3.5 h-3.5 text-amber-500 border-gray-300">
+                      <span class="text-xs text-gray-700 dark:text-gray-300">لا</span>
+                    </label>
+                  </div>
+                  {% else %}
+                  <select name="trigger_value" required
+                          class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 transition">
+                    <option value="">-- اختر القيمة المشغّلة --</option>
+                    {% for choice in q.choices %}
+                    <option value="{{ choice }}">{{ choice }}</option>
+                    {% endfor %}
+                  </select>
+                  {% endif %}
+                </div>
+
+                {# Follow-up question text #}
+                <div>
+                  <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    نص السؤال الفرعي <span class="text-red-500">*</span>
+                  </label>
+                  <input type="text" name="followup_text_ar" required
+                         placeholder="مثال: اذكر اسم الدواء الذي تحسّس منه"
+                         class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 transition">
+                </div>
+
+                {# Follow-up field type + required #}
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">نوع الحقل</label>
+                    <select name="followup_field_type" id="followup-type-{{ q.id }}"
+                            class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 transition">
+                      {% for val, label in field_types %}
+                      <option value="{{ val }}">{{ label }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="flex items-end pb-0.5">
+                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                      <input type="checkbox" name="followup_is_required"
+                             class="w-3.5 h-3.5 rounded accent-amber-500 cursor-pointer">
+                      <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">سؤال إلزامي</span>
+                    </label>
+                  </div>
+                </div>
+
+                {# Choices for SELECT/MULTISELECT follow-up (hidden by default) #}
+                <div id="followup-choices-{{ q.id }}" class="hidden">
+                  <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    الخيارات <span class="text-red-500">*</span>
+                    <span class="text-[10px] font-normal text-gray-400 mr-1">(كل خيار في سطر)</span>
+                  </label>
+                  <textarea name="followup_choices_raw" id="followup-choices-raw-{{ q.id }}" rows="3"
+                            placeholder="خيار أول&#10;خيار ثانٍ&#10;خيار ثالث"
+                            class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 transition resize-none font-mono"></textarea>
+                </div>
+
+                {# Placeholder (optional) #}
+                <div>
+                  <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    نص تلميح <span class="text-[10px] font-normal text-gray-400">(اختياري)</span>
+                  </label>
+                  <input type="text" name="followup_placeholder"
+                         placeholder="مثال: اكتب إجابتك هنا..."
+                         class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 transition">
+                </div>
+
+                <div class="flex items-center gap-2 pt-1">
+                  <button type="submit"
+                          class="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-semibold text-xs px-4 py-2 rounded-lg transition-all shadow-sm">
+                    <i class="fa-solid fa-plus text-[10px]"></i>
+                    إضافة
+                  </button>
+                  <button type="button" onclick="toggleFollowupForm({{ q.id }})"
+                          class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
+                    إلغاء
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
         </div>
+        {% endif %}
 
       </div>
       {% endfor %}
@@ -241,7 +465,7 @@
 
 {% block scripts %}
 <script>
-  // Show/hide choices textarea based on field type
+  // ── Main "Add question" form: show/hide choices section ──
   const fieldTypeSelect = document.getElementById('field-type-select');
   const choicesSection = document.getElementById('choices-section');
   const choicesTextarea = document.getElementById('choices-textarea');
@@ -257,5 +481,42 @@
     fieldTypeSelect.addEventListener('change', toggleChoices);
     toggleChoices();
   }
+
+  // ── Reason field toggle ──
+  var reasonToggle = document.getElementById('show-reason-toggle');
+  var reasonSettings = document.getElementById('reason-field-settings');
+  var reasonDisabledMsg = document.getElementById('reason-field-disabled-msg');
+  var reasonToggleLabel = document.getElementById('reason-toggle-label');
+
+  if (reasonToggle) {
+    reasonToggle.addEventListener('change', function() {
+      var on = reasonToggle.checked;
+      reasonSettings.classList.toggle('hidden', !on);
+      reasonDisabledMsg.classList.toggle('hidden', on);
+      reasonToggleLabel.textContent = on ? 'مفعّل' : 'معطّل';
+    });
+  }
+
+  // ── Toggle follow-up inline form visibility ──
+  function toggleFollowupForm(qId) {
+    var form = document.getElementById('followup-form-' + qId);
+    if (form) form.classList.toggle('hidden');
+  }
+
+  // ── Follow-up forms: show/hide choices section per question ──
+  document.querySelectorAll('[id^="followup-type-"]').forEach(function(sel) {
+    var qId = sel.id.replace('followup-type-', '');
+    var choicesSec = document.getElementById('followup-choices-' + qId);
+    var choicesRaw = document.getElementById('followup-choices-raw-' + qId);
+
+    function toggleFollowupChoices() {
+      var needsChoices = sel.value === 'SELECT' || sel.value === 'MULTISELECT';
+      if (choicesSec) choicesSec.classList.toggle('hidden', !needsChoices);
+      if (choicesRaw) choicesRaw.required = needsChoices;
+    }
+
+    sel.addEventListener('change', toggleFollowupChoices);
+    toggleFollowupChoices();
+  });
 </script>
 {% endblock %}

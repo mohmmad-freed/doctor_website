@@ -301,6 +301,25 @@ class DoctorIntakeFormTemplate(models.Model):
     title_ar = models.CharField(max_length=200, blank=True, default="")
     description = models.TextField(blank=True, help_text="Instructions displayed before the form.")
     is_active = models.BooleanField(default=True)
+
+    # ── Reason / medical description built-in field settings ──
+    show_reason_field = models.BooleanField(
+        default=True,
+        help_text="Show the 'describe your condition' textarea at the bottom of the form.",
+    )
+    reason_field_label = models.CharField(
+        max_length=200, blank=True, default="",
+        help_text="Override label. Leave blank for default.",
+    )
+    reason_field_placeholder = models.CharField(
+        max_length=300, blank=True, default="",
+        help_text="Override placeholder. Leave blank for default.",
+    )
+    reason_field_required = models.BooleanField(
+        default=False,
+        help_text="Make the reason field required.",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
