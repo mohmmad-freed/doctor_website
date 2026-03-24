@@ -21,7 +21,8 @@
       <h1 class="font-bold text-gray-800 dark:text-white">تعديل السؤال</h1>
     </div>
 
-    <form method="post" class="px-5 py-5 space-y-4">
+    <form method="post" class="px-5 py-5 space-y-4"
+          onsubmit="collectChoices('edit-choices-list', 'edit-choices-raw')">
       {% csrf_token %}
 
       {# Question text #}
@@ -56,14 +57,46 @@
         </div>
       </div>
 
-      {# Choices #}
+      {# ── Choices builder ── #}
       <div id="choices-section" class="{% if question.field_type != 'SELECT' and question.field_type != 'MULTISELECT' %}hidden{% endif %}">
-        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
           الخيارات <span class="text-red-500">*</span>
-          <span class="text-xs font-normal text-gray-400 mr-1">(كل خيار في سطر مستقل)</span>
         </label>
-        <textarea name="choices_raw" id="choices-textarea" rows="4"
-                  class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-400 transition resize-none font-mono">{{ choices_raw }}</textarea>
+        <div class="space-y-2" id="edit-choices-list">
+          {% if question.choices %}
+            {% for choice in question.choices %}
+            <div class="choice-row flex items-center gap-2">
+              <div class="w-6 h-6 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-xs font-bold text-indigo-600 dark:text-indigo-400 flex-shrink-0 choice-num">{{ forloop.counter }}</div>
+              <input type="text" class="choice-input flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition" value="{{ choice }}">
+              <button type="button" class="remove-choice w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors {% if question.choices|length <= 2 %}hidden{% endif %}" onclick="removeChoice(this)" title="حذف">
+                <i class="fa-solid fa-xmark text-xs"></i>
+              </button>
+            </div>
+            {% endfor %}
+          {% else %}
+            {# No choices yet (type was just changed to SELECT/MULTISELECT) #}
+            <div class="choice-row flex items-center gap-2">
+              <div class="w-6 h-6 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-xs font-bold text-indigo-600 dark:text-indigo-400 flex-shrink-0 choice-num">1</div>
+              <input type="text" class="choice-input flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition" placeholder="الخيار الأول">
+              <button type="button" class="remove-choice w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors hidden" onclick="removeChoice(this)" title="حذف">
+                <i class="fa-solid fa-xmark text-xs"></i>
+              </button>
+            </div>
+            <div class="choice-row flex items-center gap-2">
+              <div class="w-6 h-6 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-xs font-bold text-indigo-600 dark:text-indigo-400 flex-shrink-0 choice-num">2</div>
+              <input type="text" class="choice-input flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition" placeholder="الخيار الثاني">
+              <button type="button" class="remove-choice w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors hidden" onclick="removeChoice(this)" title="حذف">
+                <i class="fa-solid fa-xmark text-xs"></i>
+              </button>
+            </div>
+          {% endif %}
+        </div>
+        <button type="button" onclick="addChoice('edit-choices-list', 'indigo')"
+                class="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 px-2.5 py-1.5 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors border border-dashed border-indigo-300 dark:border-indigo-700/40">
+          <i class="fa-solid fa-plus text-[10px]"></i>
+          إضافة خيار
+        </button>
+        <textarea name="choices_raw" id="edit-choices-raw" class="hidden"></textarea>
       </div>
 
       {# Placeholder #}
@@ -108,15 +141,71 @@
 
 {% block scripts %}
 <script>
+  // ── Choices builder helpers ──
+  function addChoice(listId, color) {
+    const list = document.getElementById(listId);
+    const rows = list.querySelectorAll('.choice-row');
+    const num  = rows.length + 1;
+    const isAmber = color === 'amber';
+    const numBg   = isAmber
+      ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
+      : 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400';
+    const ring    = isAmber ? 'focus:ring-amber-400' : 'focus:ring-indigo-400';
+
+    const div = document.createElement('div');
+    div.className = 'choice-row flex items-center gap-2';
+    div.innerHTML =
+      `<div class="w-6 h-6 rounded-lg ${numBg} flex items-center justify-center text-xs font-bold flex-shrink-0 choice-num">${num}</div>` +
+      `<input type="text" class="choice-input flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 ${ring} transition" placeholder="خيار جديد">` +
+      `<button type="button" class="remove-choice w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" onclick="removeChoice(this)" title="حذف">` +
+        `<i class="fa-solid fa-xmark text-xs"></i>` +
+      `</button>`;
+    list.appendChild(div);
+    updateRemoveButtons(listId);
+    div.querySelector('.choice-input').focus();
+  }
+
+  function removeChoice(btn) {
+    const row  = btn.closest('.choice-row');
+    const list = row.parentElement;
+    row.remove();
+    updateChoiceNumbers(list.id);
+    updateRemoveButtons(list.id);
+  }
+
+  function updateChoiceNumbers(listId) {
+    document.getElementById(listId).querySelectorAll('.choice-num').forEach((el, i) => {
+      el.textContent = i + 1;
+    });
+  }
+
+  function updateRemoveButtons(listId) {
+    const list = document.getElementById(listId);
+    const rows = list.querySelectorAll('.choice-row');
+    const show = rows.length > 2;
+    rows.forEach(row => {
+      const btn = row.querySelector('.remove-choice');
+      if (btn) btn.classList.toggle('hidden', !show);
+    });
+  }
+
+  function collectChoices(listId, textareaId) {
+    const list     = document.getElementById(listId);
+    const textarea = document.getElementById(textareaId);
+    if (!list || !textarea) return;
+    const values = Array.from(list.querySelectorAll('.choice-input'))
+      .map(inp => inp.value.trim())
+      .filter(v => v.length > 0);
+    textarea.value = values.join('\n');
+  }
+
+  // ── Field type → show/hide choices section ──
   const fieldTypeSelect = document.getElementById('field-type-select');
-  const choicesSection = document.getElementById('choices-section');
-  const choicesTextarea = document.getElementById('choices-textarea');
+  const choicesSection  = document.getElementById('choices-section');
 
   function toggleChoices() {
-    const val = fieldTypeSelect.value;
-    const needsChoices = val === 'SELECT' || val === 'MULTISELECT';
-    choicesSection.classList.toggle('hidden', !needsChoices);
-    if (choicesTextarea) choicesTextarea.required = needsChoices;
+    const needs = ['SELECT', 'MULTISELECT'].includes(fieldTypeSelect.value);
+    choicesSection.classList.toggle('hidden', !needs);
   }
 
   if (fieldTypeSelect) {

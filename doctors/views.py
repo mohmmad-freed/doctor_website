@@ -1257,8 +1257,27 @@ def intake_question_delete(request, template_id, question_id):
     apt_type_id = template.appointment_type_id
 
     if request.method == "POST":
+        # Collect every descendant question ID (BFS) so they are deleted too
+        descendant_ids = set()
+        queue = [question.id]
+        while queue:
+            current_id = queue.pop()
+            child_ids = list(
+                DoctorIntakeRule.objects.filter(
+                    source_question_id=current_id,
+                    action=DoctorIntakeRule.Action.SHOW,
+                ).values_list("target_question_id", flat=True)
+            )
+            for child_id in child_ids:
+                if child_id not in descendant_ids:
+                    descendant_ids.add(child_id)
+                    queue.append(child_id)
+
+        if descendant_ids:
+            DoctorIntakeQuestion.objects.filter(id__in=descendant_ids).delete()
+
         question.delete()
-        _messages.success(request, "تم حذف السؤال.")
+        _messages.success(request, "تم حذف السؤال وجميع أسئلته الفرعية.")
 
     return redirect(_reverse("doctors:intake_form_builder", args=[apt_type_id]))
 
@@ -1279,15 +1298,6 @@ def intake_followup_add(request, template_id, question_id):
     apt_type_id = template.appointment_type_id
 
     if request.method != "POST":
-        return redirect(_reverse("doctors:intake_form_builder", args=[apt_type_id]))
-
-    triggerable_types = (
-        DoctorIntakeQuestion.FieldType.CHECKBOX,
-        DoctorIntakeQuestion.FieldType.SELECT,
-        DoctorIntakeQuestion.FieldType.MULTISELECT,
-    )
-    if source_question.field_type not in triggerable_types:
-        _messages.error(request, "لا يمكن إضافة سؤال فرعي لهذا النوع من الأسئلة.")
         return redirect(_reverse("doctors:intake_form_builder", args=[apt_type_id]))
 
     trigger_value = request.POST.get("trigger_value", "").strip()
