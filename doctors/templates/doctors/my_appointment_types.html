@@ -1,52 +1,47 @@
 {% extends "doctors/base_doctor.html" %}
-{% block title %}أنواع مواعيدي{% endblock %}
+{% block title %}My Appointment Types | Doctor Portal{% endblock %}
 
 {% block content %}
-<div class="max-w-3xl mx-auto" dir="rtl">
+<div class="max-w-3xl mx-auto">
 
-  {# ── Header ── #}
   <div class="mb-6">
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">أنواع مواعيدي</h1>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">My Appointment Types</h1>
     <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">
-      حدّد أنواع المواعيد التي تقدمها في كل عيادة، وأنشئ نموذج استقبال مخصصاً لكل نوع.
+      Specify the appointment types you offer at each clinic, and create a custom intake form for each type.
     </p>
   </div>
 
   {% if not clinic_data %}
-  {# ── Empty state ── #}
   <div class="glass-card p-10 text-center">
     <div class="w-16 h-16 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center mx-auto mb-4">
       <i class="fa-solid fa-calendar-xmark text-2xl text-primary-400"></i>
     </div>
-    <h3 class="text-base font-semibold text-gray-800 dark:text-white mb-1">لا توجد عيادات مُعيَّن لها أنواع مواعيد</h3>
+    <h3 class="text-base font-semibold text-gray-800 dark:text-white mb-1">No clinics with appointment types assigned</h3>
     <p class="text-sm text-gray-500 dark:text-slate-400">
-      اطلب من صاحب العيادة إضافة أنواع مواعيد أولاً، ثم عُد هنا لتحديد ما تقدمه.
+      Ask the clinic owner to add appointment types first, then come back here to select what you offer.
     </p>
   </div>
 
   {% else %}
-  {# ── Per-clinic cards ── #}
   <div class="space-y-6">
     {% for item in clinic_data %}
     <div class="glass-card overflow-hidden">
 
-      {# Clinic header #}
       <div class="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/40">
         <div class="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
           <i class="fa-solid fa-hospital text-primary-600 dark:text-primary-400"></i>
         </div>
         <div class="flex-1">
           <p class="font-bold text-gray-900 dark:text-white">{{ item.clinic.name }}</p>
-          <p class="text-xs text-gray-500 dark:text-slate-400">{{ item.assignments|length }} نوع متاح</p>
+          <p class="text-xs text-gray-500 dark:text-slate-400">{{ item.assignments|length }} type(s) available</p>
         </div>
         <button type="submit" form="form-{{ item.clinic.id }}"
                 class="inline-flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white font-semibold text-xs px-4 py-2 rounded-lg transition-all shadow-sm">
           <i class="fa-solid fa-floppy-disk"></i>
-          حفظ الاختيارات
+          Save selections
         </button>
       </div>
 
-      {# Type list #}
       <form id="form-{{ item.clinic.id }}" method="post">
         {% csrf_token %}
         <input type="hidden" name="clinic_id" value="{{ item.clinic.id }}">
@@ -55,7 +50,6 @@
           {% for a in item.assignments %}
           <div class="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50/50 dark:hover:bg-slate-700/20 transition-colors">
 
-            {# Checkbox toggle #}
             <label class="flex items-center gap-3 flex-1 cursor-pointer min-w-0">
               <input type="checkbox"
                      name="type_ids"
@@ -65,20 +59,18 @@
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{{ a.appointment_type.display_name }}</p>
                 <p class="text-xs text-gray-500 dark:text-slate-400">
-                  <i class="fa-regular fa-clock ml-0.5 opacity-60"></i>{{ a.appointment_type.duration_minutes }} دقيقة
+                  <i class="fa-regular fa-clock mr-0.5 opacity-60"></i>{{ a.appointment_type.duration_minutes }} min
                   {% if a.appointment_type.price %}<span class="mx-1 opacity-40">·</span>₪{{ a.appointment_type.price }}{% endif %}
                 </p>
               </div>
             </label>
 
-            {# Status badge #}
             {% if a.is_active %}
-            <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex-shrink-0">مفعّل</span>
+            <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex-shrink-0">Active</span>
             {% else %}
-            <span class="text-xs text-gray-400 dark:text-slate-500 flex-shrink-0">معطّل</span>
+            <span class="text-xs text-gray-400 dark:text-slate-500 flex-shrink-0">Inactive</span>
             {% endif %}
 
-            {# Intake form button #}
             <a href="{% url 'doctors:intake_form_builder' a.appointment_type.id %}"
                class="flex-shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all
                       {% if a.question_count > 0 %}
@@ -87,7 +79,7 @@
                       bg-gray-50 dark:bg-slate-700/40 text-gray-500 dark:text-slate-400 border-gray-200 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-700
                       {% endif %}">
               <i class="fa-solid fa-clipboard-list text-[0.7rem]"></i>
-              النموذج
+              Form
               {% if a.question_count > 0 %}
               <span class="inline-flex items-center justify-center w-4 h-4 bg-indigo-600 dark:bg-indigo-500 text-white rounded-full text-[9px] font-bold">{{ a.question_count }}</span>
               {% endif %}
@@ -100,7 +92,7 @@
         <div class="px-5 py-3 border-t border-gray-100 dark:border-slate-700 bg-gray-50/60 dark:bg-slate-700/20">
           <p class="text-xs text-gray-400 dark:text-slate-500">
             <i class="fa-solid fa-circle-info me-1"></i>
-            إذا لم تحدد أي نوع، ستظهر <strong>جميع أنواع المواعيد النشطة</strong> للعيادة تلقائياً.
+            If no types are selected, <strong>all active appointment types</strong> for this clinic will appear automatically.
           </p>
         </div>
       </form>

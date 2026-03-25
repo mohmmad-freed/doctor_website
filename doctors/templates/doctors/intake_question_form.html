@@ -1,34 +1,33 @@
 {% extends "doctors/base_doctor.html" %}
-{% block title %}تعديل السؤال{% endblock %}
+{% block title %}Edit Question | Doctor Portal{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto" dir="rtl">
+<div class="max-w-2xl mx-auto">
 
   {# ── Breadcrumb ── #}
   <nav class="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400 mb-5">
-    <a href="{% url 'doctors:my_appointment_types' %}" class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">أنواع مواعيدي</a>
-    <i class="fa-solid fa-chevron-left text-[0.6rem] opacity-40"></i>
+    <a href="{% url 'doctors:my_appointment_types' %}" class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">My Appointment Types</a>
+    <i class="fa-solid fa-chevron-right text-[0.6rem] opacity-40"></i>
     <a href="{% url 'doctors:intake_form_builder' appointment_type.id %}" class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
-      نموذج {{ appointment_type.display_name }}
+      {{ appointment_type.display_name }} Form
     </a>
-    <i class="fa-solid fa-chevron-left text-[0.6rem] opacity-40"></i>
-    <span class="text-gray-800 dark:text-white font-semibold">تعديل السؤال</span>
+    <i class="fa-solid fa-chevron-right text-[0.6rem] opacity-40"></i>
+    <span class="text-gray-800 dark:text-white font-semibold">Edit Question</span>
   </nav>
 
   <div class="glass-card overflow-hidden">
     <div class="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/40">
       <i class="fa-solid fa-pen-to-square text-primary-500 text-sm"></i>
-      <h1 class="font-bold text-gray-800 dark:text-white">تعديل السؤال</h1>
+      <h1 class="font-bold text-gray-800 dark:text-white">Edit Question</h1>
     </div>
 
     <form method="post" class="px-5 py-5 space-y-4"
           onsubmit="collectChoices('edit-choices-list', 'edit-choices-raw')">
       {% csrf_token %}
 
-      {# Question text #}
       <div>
         <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-          نص السؤال <span class="text-red-500">*</span>
+          Question Text <span class="text-red-500">*</span>
         </label>
         <input type="text" name="question_text_ar"
                value="{{ question.display_text }}"
@@ -36,10 +35,9 @@
                class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-400 transition">
       </div>
 
-      {# Field type + required #}
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">نوع الحقل</label>
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Field Type</label>
           <select name="field_type" id="field-type-select"
                   class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 transition">
             {% for val, label in field_types %}
@@ -52,7 +50,7 @@
             <input type="checkbox" name="is_required"
                    {% if question.is_required %}checked{% endif %}
                    class="w-4 h-4 rounded accent-indigo-500 cursor-pointer">
-            <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">سؤال إلزامي</span>
+            <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Required question</span>
           </label>
         </div>
       </div>
@@ -60,7 +58,7 @@
       {# ── Choices builder ── #}
       <div id="choices-section" class="{% if question.field_type != 'SELECT' and question.field_type != 'MULTISELECT' %}hidden{% endif %}">
         <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-          الخيارات <span class="text-red-500">*</span>
+          Choices <span class="text-red-500">*</span>
         </label>
         <div class="space-y-2" id="edit-choices-list">
           {% if question.choices %}
@@ -68,24 +66,23 @@
             <div class="choice-row flex items-center gap-2">
               <div class="w-6 h-6 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-xs font-bold text-indigo-600 dark:text-indigo-400 flex-shrink-0 choice-num">{{ forloop.counter }}</div>
               <input type="text" class="choice-input flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition" value="{{ choice }}">
-              <button type="button" class="remove-choice w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors {% if question.choices|length <= 2 %}hidden{% endif %}" onclick="removeChoice(this)" title="حذف">
+              <button type="button" class="remove-choice w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors {% if question.choices|length <= 2 %}hidden{% endif %}" onclick="removeChoice(this)" title="Remove">
                 <i class="fa-solid fa-xmark text-xs"></i>
               </button>
             </div>
             {% endfor %}
           {% else %}
-            {# No choices yet (type was just changed to SELECT/MULTISELECT) #}
             <div class="choice-row flex items-center gap-2">
               <div class="w-6 h-6 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-xs font-bold text-indigo-600 dark:text-indigo-400 flex-shrink-0 choice-num">1</div>
-              <input type="text" class="choice-input flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition" placeholder="الخيار الأول">
-              <button type="button" class="remove-choice w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors hidden" onclick="removeChoice(this)" title="حذف">
+              <input type="text" class="choice-input flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition" placeholder="Option 1">
+              <button type="button" class="remove-choice w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors hidden" onclick="removeChoice(this)" title="Remove">
                 <i class="fa-solid fa-xmark text-xs"></i>
               </button>
             </div>
             <div class="choice-row flex items-center gap-2">
               <div class="w-6 h-6 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-xs font-bold text-indigo-600 dark:text-indigo-400 flex-shrink-0 choice-num">2</div>
-              <input type="text" class="choice-input flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition" placeholder="الخيار الثاني">
-              <button type="button" class="remove-choice w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors hidden" onclick="removeChoice(this)" title="حذف">
+              <input type="text" class="choice-input flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition" placeholder="Option 2">
+              <button type="button" class="remove-choice w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors hidden" onclick="removeChoice(this)" title="Remove">
                 <i class="fa-solid fa-xmark text-xs"></i>
               </button>
             </div>
@@ -94,43 +91,40 @@
         <button type="button" onclick="addChoice('edit-choices-list', 'indigo')"
                 class="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 px-2.5 py-1.5 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors border border-dashed border-indigo-300 dark:border-indigo-700/40">
           <i class="fa-solid fa-plus text-[10px]"></i>
-          إضافة خيار
+          Add option
         </button>
         <textarea name="choices_raw" id="edit-choices-raw" class="hidden"></textarea>
       </div>
 
-      {# Placeholder #}
       <div>
         <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-          نص تلميح (Placeholder)
-          <span class="text-xs font-normal text-gray-400 mr-1">(اختياري)</span>
+          Placeholder Text
+          <span class="text-xs font-normal text-gray-400 ml-1">(optional)</span>
         </label>
         <input type="text" name="placeholder"
                value="{{ question.placeholder }}"
                class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-400 transition">
       </div>
 
-      {# Help text #}
       <div>
         <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-          نص مساعدة
-          <span class="text-xs font-normal text-gray-400 mr-1">(اختياري)</span>
+          Help Text
+          <span class="text-xs font-normal text-gray-400 ml-1">(optional)</span>
         </label>
         <input type="text" name="help_text_content"
                value="{{ question.help_text_content }}"
                class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-400 transition">
       </div>
 
-      {# Actions #}
       <div class="flex items-center justify-between pt-2">
         <a href="{% url 'doctors:intake_form_builder' appointment_type.id %}"
            class="text-sm font-semibold text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 transition-colors px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700">
-          إلغاء
+          Cancel
         </a>
         <button type="submit"
                 class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white font-semibold text-sm px-5 py-2.5 rounded-lg transition-all shadow-sm">
           <i class="fa-solid fa-floppy-disk"></i>
-          حفظ التعديلات
+          Save Changes
         </button>
       </div>
     </form>
@@ -156,8 +150,8 @@
     div.className = 'choice-row flex items-center gap-2';
     div.innerHTML =
       `<div class="w-6 h-6 rounded-lg ${numBg} flex items-center justify-center text-xs font-bold flex-shrink-0 choice-num">${num}</div>` +
-      `<input type="text" class="choice-input flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 ${ring} transition" placeholder="خيار جديد">` +
-      `<button type="button" class="remove-choice w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" onclick="removeChoice(this)" title="حذف">` +
+      `<input type="text" class="choice-input flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 ${ring} transition" placeholder="New option">` +
+      `<button type="button" class="remove-choice w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" onclick="removeChoice(this)" title="Remove">` +
         `<i class="fa-solid fa-xmark text-xs"></i>` +
       `</button>`;
     list.appendChild(div);

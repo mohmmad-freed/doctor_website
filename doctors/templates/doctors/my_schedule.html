@@ -1,7 +1,7 @@
 {% extends "doctors/base_doctor.html" %}
 {% load static %}
 
-{% block title %}جدولي الأسبوعي | بوابة الأطباء{% endblock %}
+{% block title %}My Weekly Schedule | Doctor Portal{% endblock %}
 
 {% block content %}
 <div class="max-w-5xl mx-auto animate-fade-in-up">
@@ -11,10 +11,10 @@
         <div>
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <i class="fa-solid fa-calendar-week text-primary-500 text-xl"></i>
-                جدولي الأسبوعي
+                My Weekly Schedule
             </h1>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                حدد ساعات عملك في كل عيادة — يجب أن تقع ضمن أوقات عمل العيادة
+                Set your working hours at each clinic — must fall within the clinic's working hours
             </p>
         </div>
     </div>
@@ -25,9 +25,9 @@
         <div class="w-16 h-16 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center mx-auto mb-4">
             <i class="fa-solid fa-hospital text-3xl text-gray-400"></i>
         </div>
-        <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">لا توجد عيادات مرتبطة</h3>
+        <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">No linked clinics</h3>
         <p class="text-sm text-gray-500 dark:text-gray-400">
-            يجب أن تنضم إلى عيادة أولاً لإعداد جدولك.
+            You must join a clinic first to set up your schedule.
         </p>
     </div>
 
@@ -58,8 +58,8 @@
         </div>
         <div class="text-sm text-primary-700 dark:text-primary-300">
             <span class="font-bold">{{ selected_clinic.name }}</span> —
-            أوقات عملك أدناه يجب أن تقع ضمن أوقات عمل العيادة المعروضة باللون الرمادي.
-            يُسمح لطبيبَين مختلفَين بأوقات متطابقة في نفس العيادة.
+            Your hours below must fall within the clinic's working hours shown in gray.
+            Two different doctors can have overlapping hours at the same clinic.
         </div>
     </div>
 
@@ -77,17 +77,17 @@
                     {% if day.is_closed %}
                     <span class="dr-badge bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">
                         <i class="fa-solid fa-circle-xmark text-xs"></i>
-                        العيادة مغلقة
+                        Clinic closed
                     </span>
                     {% elif day.open_ranges %}
                     <span class="dr-badge bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
                         <i class="fa-solid fa-circle-check text-xs"></i>
-                        العيادة مفتوحة
+                        Clinic open
                     </span>
                     {% elif not day.clinic_has_hours %}
                     <span class="dr-badge bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
                         <i class="fa-solid fa-circle-question text-xs"></i>
-                        لم تُحدد أوقات العيادة
+                        Clinic hours not set
                     </span>
                     {% endif %}
                 </div>
@@ -123,7 +123,7 @@
                             {{ slot.start_time|time:"H:i" }} – {{ slot.end_time|time:"H:i" }}
                         </span>
                         <!-- Delete button -->
-                        <form method="post" class="inline" onsubmit="return confirm('هل تريد حذف هذا الوقت؟')">
+                        <form method="post" class="inline" onsubmit="return confirm('Delete this time slot?')">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="delete">
                             <input type="hidden" name="clinic_id" value="{{ selected_clinic.id }}">
@@ -132,7 +132,7 @@
                                     class="w-5 h-5 rounded-full flex items-center justify-center
                                            text-red-400 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30
                                            transition-colors"
-                                    title="حذف هذا الوقت">
+                                    title="Delete this slot">
                                 <i class="fa-solid fa-xmark text-xs"></i>
                             </button>
                         </form>
@@ -151,7 +151,7 @@
                                      group-open:bg-gray-200 dark:group-open:bg-slate-600 transition-colors flex-shrink-0">
                             <i class="fa-solid fa-plus text-xs group-open:rotate-45 transition-transform"></i>
                         </span>
-                        إضافة وقت عمل
+                        Add working hours
                     </summary>
 
                     <form method="post" class="mt-3 flex flex-wrap items-end gap-3
@@ -162,7 +162,7 @@
                         <input type="hidden" name="day_of_week" value="{{ day.day_num }}">
 
                         <div class="flex flex-col gap-1">
-                            <label class="text-xs font-semibold text-gray-600 dark:text-gray-400">من</label>
+                            <label class="text-xs font-semibold text-gray-600 dark:text-gray-400">From</label>
                             <input type="time"
                                    name="start_time"
                                    required
@@ -175,7 +175,7 @@
                         </div>
 
                         <div class="flex flex-col gap-1">
-                            <label class="text-xs font-semibold text-gray-600 dark:text-gray-400">إلى</label>
+                            <label class="text-xs font-semibold text-gray-600 dark:text-gray-400">To</label>
                             <input type="time"
                                    name="end_time"
                                    required
@@ -186,30 +186,30 @@
 
                         {% if day.open_ranges %}
                         <div class="text-xs text-gray-400 dark:text-gray-500 self-end pb-2">
-                            <i class="fa-solid fa-circle-info ml-1"></i>
-                            العيادة مفتوحة:
+                            <i class="fa-solid fa-circle-info mr-1"></i>
+                            Clinic open:
                             {% for start, end in day.open_ranges %}
-                            <span dir="ltr" class="font-mono">{{ start|time:"H:i" }}–{{ end|time:"H:i" }}</span>{% if not forloop.last %}، {% endif %}
+                            <span dir="ltr" class="font-mono">{{ start|time:"H:i" }}–{{ end|time:"H:i" }}</span>{% if not forloop.last %}, {% endif %}
                             {% endfor %}
                         </div>
                         {% endif %}
 
                         <button type="submit"
                                 class="px-5 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-bold transition-colors shadow-sm">
-                            <i class="fa-solid fa-plus ml-1 text-xs"></i>
-                            إضافة
+                            <i class="fa-solid fa-plus mr-1 text-xs"></i>
+                            Add
                         </button>
                     </form>
                 </details>
                 {% else %}
                 <p class="text-sm text-red-500 dark:text-red-400">
-                    لا يمكن إضافة أوقات عمل في يوم إغلاق العيادة.
+                    Cannot add working hours on a clinic closure day.
                 </p>
                 {% endif %}
 
                 {% if not day.slots and not day.is_closed %}
                 <p class="text-sm text-gray-400 dark:text-gray-500 mt-2 {% if day.slots %}hidden{% endif %}">
-                    لم تُضف أي وقت عمل لهذا اليوم بعد.
+                    No working hours added for this day yet.
                 </p>
                 {% endif %}
             </div>

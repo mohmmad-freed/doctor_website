@@ -1,13 +1,11 @@
 {% extends "doctors/base_doctor.html" %}
 
-{% block title %}لوحة التحكم | بوابة الأطباء{% endblock %}
+{% block title %}Dashboard | Doctor Portal{% endblock %}
 
 {% block content %}
 <div class="max-w-5xl mx-auto space-y-7 animate-fade-in-up">
 
-    <!-- ══════════════════════════════════════════════ -->
-    <!-- Welcome Header                                 -->
-    <!-- ══════════════════════════════════════════════ -->
+    <!-- Welcome Header -->
     <div class="glass-card p-6 md:p-7 relative overflow-hidden">
         <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary-500 via-primary-400 to-accent-500"></div>
         <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
@@ -16,11 +14,10 @@
             </div>
             <div class="flex-grow min-w-0">
                 <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-                    مرحباً، د. {{ request.user.name }} 👋
+                    Welcome, Dr. {{ request.user.name }} 👋
                 </h1>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                    {% now "Y-m-d" as today_str %}
-                    اليوم {{ today|date:"d/m/Y" }} — لوحة التحكم الطبية الخاصة بك
+                    Today is {{ today|date:"d/m/Y" }} &mdash; Your medical dashboard
                 </p>
             </div>
 
@@ -31,22 +28,19 @@
                       dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-700
                       hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors">
                 <i class="fa-solid fa-triangle-exclamation"></i>
-                التحقق مطلوب
+                Verification Required
             </a>
             {% endif %}
         </div>
     </div>
 
-    <!-- ══════════════════════════════════════════════ -->
-    <!-- Stats Row                                      -->
-    <!-- ══════════════════════════════════════════════ -->
+    <!-- Stats Row -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
 
-        <!-- Today's appointments -->
         <div class="glass-card p-5">
             <div class="flex items-start justify-between">
                 <div>
-                    <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">مواعيد اليوم</p>
+                    <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Today's Appointments</p>
                     <p class="text-3xl font-bold text-gray-900 dark:text-white mt-1">{{ todays_appointments|length }}</p>
                 </div>
                 <div class="w-10 h-10 rounded-xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
@@ -56,39 +50,36 @@
             <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">{{ today|date:"d/m/Y" }}</p>
         </div>
 
-        <!-- Upcoming this week -->
         <div class="glass-card p-5">
             <div class="flex items-start justify-between">
                 <div>
-                    <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">هذا الأسبوع</p>
+                    <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">This Week</p>
                     <p class="text-3xl font-bold text-gray-900 dark:text-white mt-1">{{ upcoming_count }}</p>
                 </div>
                 <div class="w-10 h-10 rounded-xl bg-accent-50 dark:bg-teal-900/30 flex items-center justify-center flex-shrink-0">
                     <i class="fa-regular fa-calendar-check text-accent-600 dark:text-teal-400 text-base"></i>
                 </div>
             </div>
-            <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">موعد قادم</p>
+            <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">Upcoming appointment</p>
         </div>
 
-        <!-- Total patients -->
         <div class="glass-card p-5">
             <div class="flex items-start justify-between">
                 <div>
-                    <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">إجمالي المرضى</p>
+                    <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Patients</p>
                     <p class="text-3xl font-bold text-gray-900 dark:text-white mt-1">{{ total_patients_count }}</p>
                 </div>
                 <div class="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center flex-shrink-0">
                     <i class="fa-solid fa-users text-purple-500 dark:text-purple-400 text-base"></i>
                 </div>
             </div>
-            <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">مريض فريد</p>
+            <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">Unique patients</p>
         </div>
 
-        <!-- Pending invitations -->
         <a href="{% url 'doctors:doctor_invitations_inbox' %}" class="glass-card p-5 block hover:shadow-md transition-shadow group">
             <div class="flex items-start justify-between">
                 <div>
-                    <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">دعوات معلقة</p>
+                    <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Pending Invitations</p>
                     <p class="text-3xl font-bold mt-1
                                {% if pending_invitations_count > 0 %}text-red-600 dark:text-red-400{% else %}text-gray-900 dark:text-white{% endif %}">
                         {{ pending_invitations_count }}
@@ -99,71 +90,67 @@
                 </div>
             </div>
             <p class="text-xs text-primary-500 dark:text-primary-400 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                عرض الدعوات ←
+                View invitations →
             </p>
         </a>
     </div>
 
-    <!-- ══════════════════════════════════════════════ -->
-    <!-- Verification Banner (if not verified)          -->
-    <!-- ══════════════════════════════════════════════ -->
+    <!-- Verification Banner -->
     {% if not verification or verification.identity_status == "IDENTITY_UNVERIFIED" %}
-    <div class="glass-card p-4 border-r-4 border-amber-400 bg-amber-50/50 dark:bg-amber-900/10">
+    <div class="glass-card p-4 border-l-4 border-amber-400 bg-amber-50/50 dark:bg-amber-900/10">
         <div class="flex items-center gap-3 flex-wrap">
             <div class="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
                 <i class="fa-solid fa-shield-exclamation text-amber-600 dark:text-amber-400"></i>
             </div>
             <div class="flex-grow min-w-0">
-                <p class="font-bold text-sm text-amber-800 dark:text-amber-300">التحقق من الهوية مطلوب</p>
-                <p class="text-xs text-amber-700 dark:text-amber-400 mt-0.5">لن تظهر للمرضى حتى يتم التحقق من هويتك ومؤهلاتك.</p>
+                <p class="font-bold text-sm text-amber-800 dark:text-amber-300">Identity Verification Required</p>
+                <p class="text-xs text-amber-700 dark:text-amber-400 mt-0.5">You won't be visible to patients until your identity and credentials are verified.</p>
             </div>
             <a href="{% url 'doctors:upload_credentials' %}"
                class="flex-shrink-0 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold rounded-xl transition-colors">
-                رفع المستندات
+                Upload Documents
             </a>
         </div>
     </div>
     {% elif verification.identity_status == "IDENTITY_PENDING_REVIEW" %}
-    <div class="glass-card p-4 border-r-4 border-blue-400 bg-blue-50/50 dark:bg-blue-900/10">
+    <div class="glass-card p-4 border-l-4 border-blue-400 bg-blue-50/50 dark:bg-blue-900/10">
         <div class="flex items-center gap-3">
             <i class="fa-solid fa-clock text-blue-500 text-xl flex-shrink-0"></i>
             <div>
-                <p class="font-bold text-sm text-blue-800 dark:text-blue-300">مستنداتك قيد المراجعة</p>
-                <p class="text-xs text-blue-600 dark:text-blue-400 mt-0.5">سيتم إشعارك فور اكتمال مراجعة مستنداتك.</p>
+                <p class="font-bold text-sm text-blue-800 dark:text-blue-300">Documents Under Review</p>
+                <p class="text-xs text-blue-600 dark:text-blue-400 mt-0.5">You will be notified once your documents are reviewed.</p>
             </div>
         </div>
     </div>
     {% elif verification.identity_status == "IDENTITY_REJECTED" %}
-    <div class="glass-card p-4 border-r-4 border-red-400 bg-red-50/50 dark:bg-red-900/10">
+    <div class="glass-card p-4 border-l-4 border-red-400 bg-red-50/50 dark:bg-red-900/10">
         <div class="flex items-center gap-3 flex-wrap">
             <i class="fa-solid fa-circle-xmark text-red-500 text-xl flex-shrink-0"></i>
             <div class="flex-grow min-w-0">
-                <p class="font-bold text-sm text-red-800 dark:text-red-300">تم رفض المستندات</p>
+                <p class="font-bold text-sm text-red-800 dark:text-red-300">Documents Rejected</p>
                 {% if verification.identity_rejection_reason %}
-                <p class="text-xs text-red-600 dark:text-red-400 mt-0.5">السبب: {{ verification.identity_rejection_reason }}</p>
+                <p class="text-xs text-red-600 dark:text-red-400 mt-0.5">Reason: {{ verification.identity_rejection_reason }}</p>
                 {% endif %}
             </div>
             <a href="{% url 'doctors:upload_credentials' %}"
                class="flex-shrink-0 px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-bold rounded-xl transition-colors">
-                إعادة الرفع
+                Re-upload
             </a>
         </div>
     </div>
     {% endif %}
 
-    <!-- ══════════════════════════════════════════════ -->
-    <!-- Today's Appointments                           -->
-    <!-- ══════════════════════════════════════════════ -->
+    <!-- Today's Appointments -->
     <div class="glass-card overflow-hidden">
         <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700">
             <h2 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <i class="fa-solid fa-calendar-day text-primary-500 text-sm"></i>
-                مواعيد اليوم
-                <span class="text-xs font-normal text-gray-400 dark:text-gray-500 mr-1">{{ today|date:"d/m/Y" }}</span>
+                Today's Appointments
+                <span class="text-xs font-normal text-gray-400 dark:text-gray-500 ml-1">{{ today|date:"d/m/Y" }}</span>
             </h2>
             <a href="{% url 'doctors:appointments' %}" class="text-xs font-semibold text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1">
-                كل المواعيد
-                <i class="fa-solid fa-arrow-left text-[10px]"></i>
+                All Appointments
+                <i class="fa-solid fa-arrow-right text-[10px]"></i>
             </a>
         </div>
 
@@ -173,40 +160,38 @@
             <a href="{% url 'doctors:appointment_detail' appt.id %}"
                class="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors group">
 
-                <!-- Time bubble -->
                 <div class="flex-shrink-0 w-14 text-center">
                     <span class="block text-lg font-bold text-gray-900 dark:text-white tabular-nums">{{ appt.appointment_time|time:"H:i" }}</span>
                 </div>
 
-                <!-- Divider line -->
                 <div class="flex-shrink-0 w-px h-10 bg-gray-200 dark:bg-slate-600"></div>
 
-                <!-- Patient info -->
                 <div class="flex-grow min-w-0">
                     <p class="font-bold text-sm text-gray-900 dark:text-white truncate">{{ appt.patient.name }}</p>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-                        {{ appt.clinic.name }}{% if appt.appointment_type %} · {{ appt.appointment_type.display_name }}{% endif %}
+                        {{ appt.clinic.name }}{% if appt.appointment_type %} &middot; {{ appt.appointment_type.display_name }}{% endif %}
                     </p>
                 </div>
 
-                <!-- Status badge -->
                 <div class="flex-shrink-0">
-                    {% if appt.status == "CONFIRMED" %}
-                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400">مؤكد</span>
-                    {% elif appt.status == "PENDING" %}
-                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">قيد الانتظار</span>
-                    {% elif appt.status == "CHECKED_IN" %}
-                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400">وصل المريض</span>
-                    {% elif appt.status == "IN_PROGRESS" %}
-                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400">جارٍ</span>
-                    {% elif appt.status == "COMPLETED" %}
-                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-gray-300">مكتمل</span>
-                    {% elif appt.status == "CANCELLED" %}
-                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400">ملغى</span>
+                    {% with s=appt.status|lower %}
+                    {% if s == 'confirmed' %}
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400">Confirmed</span>
+                    {% elif s == 'pending' %}
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">Pending</span>
+                    {% elif s == 'checked_in' %}
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400">Checked In</span>
+                    {% elif s == 'in_progress' %}
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400">In Progress</span>
+                    {% elif s == 'completed' %}
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-gray-300">Completed</span>
+                    {% elif s == 'cancelled' %}
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400">Cancelled</span>
                     {% endif %}
+                    {% endwith %}
                 </div>
 
-                <i class="fa-solid fa-arrow-left text-gray-300 dark:text-slate-600 text-xs flex-shrink-0 group-hover:text-primary-500 transition-colors"></i>
+                <i class="fa-solid fa-arrow-right text-gray-300 dark:text-slate-600 text-xs flex-shrink-0 group-hover:text-primary-500 transition-colors"></i>
             </a>
             {% endfor %}
         </div>
@@ -215,27 +200,25 @@
             <div class="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center mx-auto mb-3">
                 <i class="fa-regular fa-calendar-xmark text-gray-400 dark:text-slate-500 text-2xl"></i>
             </div>
-            <p class="text-sm font-semibold text-gray-600 dark:text-gray-400">لا توجد مواعيد اليوم</p>
-            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">يومك خالٍ — استمتع بوقتك 😊</p>
+            <p class="text-sm font-semibold text-gray-600 dark:text-gray-400">No appointments today</p>
+            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Your day is free &mdash; enjoy! 😊</p>
         </div>
         {% endif %}
     </div>
 
-    <!-- ══════════════════════════════════════════════ -->
-    <!-- Clinic Memberships                             -->
-    <!-- ══════════════════════════════════════════════ -->
+    <!-- Clinic Memberships -->
     <div class="glass-card overflow-hidden">
         <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700">
             <h2 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <i class="fa-solid fa-hospital text-primary-500 text-sm"></i>
-                عياداتي
+                My Clinics
                 {% if clinic_cards %}
                 <span class="inline-flex items-center justify-center w-5 h-5 bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 text-[11px] font-bold rounded-full">{{ clinic_cards|length }}</span>
                 {% endif %}
             </h2>
             <a href="{% url 'doctors:verification_status' %}" class="text-xs font-semibold text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1">
-                المؤهلات
-                <i class="fa-solid fa-arrow-left text-[10px]"></i>
+                Credentials
+                <i class="fa-solid fa-arrow-right text-[10px]"></i>
             </a>
         </div>
 
@@ -243,7 +226,6 @@
         <div class="grid sm:grid-cols-2 gap-4 p-5">
             {% for cc in clinic_cards %}
             <div class="rounded-xl border border-gray-100 dark:border-slate-700 overflow-hidden hover:border-primary-300 dark:hover:border-primary-600 transition-colors">
-                <!-- Clinic header -->
                 <div class="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-slate-700/50">
                     <div class="flex items-center gap-2.5 min-w-0">
                         <div class="w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center flex-shrink-0">
@@ -252,33 +234,32 @@
                         <span class="font-bold text-sm text-gray-900 dark:text-white truncate">{{ cc.clinic.name }}</span>
                     </div>
                     {% if cc.role == "MAIN_DOCTOR" %}
-                    <span class="flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-teal-50 text-teal-700 dark:bg-teal-900/20 dark:text-teal-400">رئيس الأطباء</span>
+                    <span class="flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-teal-50 text-teal-700 dark:bg-teal-900/20 dark:text-teal-400">Head Doctor</span>
                     {% else %}
-                    <span class="flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">طبيب</span>
+                    <span class="flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">Doctor</span>
                     {% endif %}
                 </div>
 
-                <!-- Credentials -->
                 {% if cc.credentials %}
                 <div class="px-4 py-2.5 space-y-1.5">
                     {% for cred in cc.credentials %}
                     <div class="flex items-center justify-between text-xs">
-                        <span class="text-gray-600 dark:text-gray-400">{{ cred.specialty.name_ar|default:"عام" }}</span>
+                        <span class="text-gray-600 dark:text-gray-400">{{ cred.specialty.name|default:"General" }}</span>
                         {% if cred.credential_status == "CREDENTIALS_VERIFIED" %}
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 font-semibold"><i class="fa-solid fa-check text-[9px]"></i>مُعتمد</span>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 font-semibold"><i class="fa-solid fa-check text-[9px]"></i>Approved</span>
                         {% elif cred.credential_status == "CREDENTIALS_PENDING" %}
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 font-semibold"><i class="fa-solid fa-clock text-[9px]"></i>مراجعة</span>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 font-semibold"><i class="fa-solid fa-clock text-[9px]"></i>Under Review</span>
                         {% elif cred.credential_status == "CREDENTIALS_REJECTED" %}
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 font-semibold"><i class="fa-solid fa-times text-[9px]"></i>مرفوض</span>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 font-semibold"><i class="fa-solid fa-times text-[9px]"></i>Rejected</span>
                         {% else %}
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-gray-400 font-semibold">—</span>
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-gray-400 font-semibold">&mdash;</span>
                         {% endif %}
                     </div>
                     {% endfor %}
                 </div>
                 {% else %}
                 <div class="px-4 py-3">
-                    <p class="text-xs text-gray-400 dark:text-gray-500">لا توجد مؤهلات مسجلة</p>
+                    <p class="text-xs text-gray-400 dark:text-gray-500">No credentials registered</p>
                 </div>
                 {% endif %}
             </div>
@@ -289,20 +270,18 @@
             <div class="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center mx-auto mb-3">
                 <i class="fa-regular fa-face-meh text-gray-400 dark:text-slate-500 text-2xl"></i>
             </div>
-            <p class="text-sm font-semibold text-gray-600 dark:text-gray-400">لم تنضم إلى أي عيادة بعد</p>
+            <p class="text-sm font-semibold text-gray-600 dark:text-gray-400">You haven't joined any clinic yet</p>
             {% if pending_invitations_count > 0 %}
             <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                لديك <span class="font-bold text-primary-600 dark:text-primary-400">{{ pending_invitations_count }}</span> دعوة معلقة —
-                <a href="{% url 'doctors:doctor_invitations_inbox' %}" class="text-primary-600 dark:text-primary-400 hover:underline">عرضها</a>
+                You have <span class="font-bold text-primary-600 dark:text-primary-400">{{ pending_invitations_count }}</span> pending invitation(s) &mdash;
+                <a href="{% url 'doctors:doctor_invitations_inbox' %}" class="text-primary-600 dark:text-primary-400 hover:underline">view them</a>
             </p>
             {% endif %}
         </div>
         {% endif %}
     </div>
 
-    <!-- ══════════════════════════════════════════════ -->
-    <!-- Quick Actions                                  -->
-    <!-- ══════════════════════════════════════════════ -->
+    <!-- Quick Actions -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
 
         <a href="{% url 'doctors:doctor_profile' %}"
@@ -310,17 +289,17 @@
             <div class="w-11 h-11 rounded-xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center group-hover:bg-primary-100 dark:group-hover:bg-primary-900/30 transition-colors">
                 <i class="fa-solid fa-user-doctor text-primary-500 text-lg"></i>
             </div>
-            <span class="text-sm font-bold text-gray-700 dark:text-gray-300">الملف الشخصي</span>
-            {% if not profile_complete %}<span class="text-[10px] font-semibold text-amber-600 dark:text-amber-400">غير مكتمل!</span>{% endif %}
+            <span class="text-sm font-bold text-gray-700 dark:text-gray-300">My Profile</span>
+            {% if not profile_complete %}<span class="text-[10px] font-semibold text-amber-600 dark:text-amber-400">Incomplete!</span>{% endif %}
         </a>
 
         <a href="{% url 'doctors:verification_status' %}"
            class="glass-card p-5 flex flex-col items-center gap-2.5 text-center group hover:shadow-md hover:-translate-y-0.5 transition-all border-b-4 border-transparent hover:border-teal-400">
             <div class="w-11 h-11 rounded-xl bg-teal-50 dark:bg-teal-900/20 flex items-center justify-center group-hover:bg-teal-100 dark:group-hover:bg-teal-900/30 transition-colors">
-                <i class="fa-solid fa-shield-check text-teal-500 text-lg"></i>
+                <i class="fa-solid fa-shield-halved text-teal-500 text-lg"></i>
             </div>
-            <span class="text-sm font-bold text-gray-700 dark:text-gray-300">حالة التحقق</span>
-            {% if identity_verified %}<span class="text-[10px] font-semibold text-green-600 dark:text-green-400">مُعتمد ✓</span>{% endif %}
+            <span class="text-sm font-bold text-gray-700 dark:text-gray-300">Verification</span>
+            {% if identity_verified %}<span class="text-[10px] font-semibold text-green-600 dark:text-green-400">Verified ✓</span>{% endif %}
         </a>
 
         <a href="{% url 'doctors:doctor_invitations_inbox' %}"
@@ -328,9 +307,9 @@
             <div class="w-11 h-11 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center group-hover:bg-orange-100 dark:group-hover:bg-orange-900/30 transition-colors">
                 <i class="fa-regular fa-envelope text-orange-500 text-lg"></i>
             </div>
-            <span class="text-sm font-bold text-gray-700 dark:text-gray-300">الدعوات</span>
+            <span class="text-sm font-bold text-gray-700 dark:text-gray-300">Invitations</span>
             {% if pending_invitations_count > 0 %}
-            <span class="absolute top-3 left-3 min-w-[20px] h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">{{ pending_invitations_count }}</span>
+            <span class="absolute top-3 right-3 min-w-[20px] h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">{{ pending_invitations_count }}</span>
             {% endif %}
         </a>
 
@@ -339,7 +318,7 @@
             <div class="w-11 h-11 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center group-hover:bg-purple-100 dark:group-hover:bg-purple-900/30 transition-colors">
                 <i class="fa-solid fa-file-arrow-up text-purple-500 text-lg"></i>
             </div>
-            <span class="text-sm font-bold text-gray-700 dark:text-gray-300">رفع المستندات</span>
+            <span class="text-sm font-bold text-gray-700 dark:text-gray-300">Upload Documents</span>
         </a>
 
     </div>

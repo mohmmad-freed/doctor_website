@@ -1,39 +1,36 @@
 {% extends "doctors/base_doctor.html" %}
-{% block title %}تعديل الملف الشخصي{% endblock %}
+{% block title %}Edit Profile | Doctor Portal{% endblock %}
 
 {% block content %}
-<div class="max-w-xl mx-auto px-4 py-8" dir="rtl">
+<div class="max-w-xl mx-auto px-4 py-8">
 
-  {# ── Header ── #}
   <div class="flex items-center justify-between mb-7">
     <div class="flex items-center gap-3">
       <div class="w-11 h-11 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
         <i class="fa-solid fa-user-pen text-indigo-600 dark:text-indigo-400 text-lg"></i>
       </div>
-      <h1 class="text-xl font-bold text-gray-900 dark:text-white">تعديل الملف الشخصي</h1>
+      <h1 class="text-xl font-bold text-gray-900 dark:text-white">Edit Profile</h1>
     </div>
     <a href="{% url 'doctors:doctor_profile' %}"
        class="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 transition-colors">
-      <i class="fa-solid fa-arrow-right"></i>
-      الملف الشخصي
+      <i class="fa-solid fa-arrow-left"></i>
+      My Profile
     </a>
   </div>
 
-  {# ── Edit form ── #}
   <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
     <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
       <i class="fa-solid fa-pen-to-square text-indigo-500 text-sm"></i>
-      <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">تعديل المعلومات</span>
+      <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">Edit Information</span>
     </div>
     <div class="px-5 py-5">
       <form method="post" novalidate class="space-y-5">
         {% csrf_token %}
 
-        {# Email #}
         <div>
           <label for="id_email" class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
-            البريد الإلكتروني
-            <span class="text-xs font-normal text-gray-400 mr-1">(اختياري)</span>
+            Email
+            <span class="text-xs font-normal text-gray-400 ml-1">(optional)</span>
           </label>
           <input type="email" id="id_email" name="email"
                  value="{{ request.user.email|default:'' }}"
@@ -41,11 +38,10 @@
                  class="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
           <div class="mt-2 flex items-start gap-2 bg-blue-50/60 dark:bg-blue-900/20 border border-blue-200/60 dark:border-blue-700/40 rounded-xl px-3 py-2.5 text-xs text-gray-600 dark:text-gray-300">
             <i class="fa-solid fa-circle-info text-blue-500 flex-shrink-0 mt-0.5"></i>
-            <span>تغيير البريد الإلكتروني يتطلب التحقق عبر رابط يُرسل إلى العنوان الجديد.</span>
+            <span>Changing your email requires verification via a link sent to the new address.</span>
           </div>
         </div>
 
-        {# Bio #}
         <div>
           <label for="id_bio" class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
             {{ form.bio.label }}
@@ -58,7 +54,6 @@
           {% endif %}
         </div>
 
-        {# Years of experience #}
         <div>
           <label for="id_years_of_experience" class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
             {{ form.years_of_experience.label }}
@@ -71,16 +66,15 @@
           {% endif %}
         </div>
 
-        {# Actions #}
         <div class="flex items-center gap-3 pt-2">
           <button type="submit"
                   class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-semibold text-sm px-6 py-2.5 rounded-xl transition-all shadow-sm">
             <i class="fa-solid fa-floppy-disk text-xs"></i>
-            حفظ التغييرات
+            Save Changes
           </button>
           <a href="{% url 'doctors:doctor_profile' %}"
              class="text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
-            إلغاء
+            Cancel
           </a>
         </div>
 

@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" class="scroll-smooth">
+<html lang="en" dir="ltr" class="scroll-smooth">
 {% load static %}
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}بوابة الأطباء | منصتي الطبية{% endblock %}</title>
+    <title>{% block title %}Doctor Portal | MedPortal{% endblock %}</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cairo:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- Tailwind CDN -->
@@ -19,7 +19,7 @@
             darkMode: 'class',
             theme: {
                 extend: {
-                    fontFamily: { sans: ['Cairo', 'sans-serif'] },
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
                     colors: {
                         primary: {
                             50:  '#eef2ff',
@@ -61,7 +61,7 @@
             from { opacity: 0; transform: translateY(16px); }
             to   { opacity: 1; transform: translateY(0); }
         }
-        body { font-family: 'Cairo', sans-serif; }
+        body { font-family: 'Inter', sans-serif; }
 
         /* ── Theme toggle ──────────────────────────── */
         .theme-toggle {
@@ -146,7 +146,7 @@
 
         /* ── User dropdown ────────────────────────── */
         #drUserMenu .dr-dropdown {
-            display: none; position: absolute; top: calc(100% + 8px); left: 0;
+            display: none; position: absolute; top: calc(100% + 8px); right: 0;
             min-width: 230px; background: white;
             border: 1px solid #e5e7eb; border-radius: 14px;
             box-shadow: 0 8px 28px rgba(0,0,0,0.12); z-index: 200; overflow: hidden;
@@ -193,8 +193,8 @@
                     <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white text-sm">
                         <i class="fa-solid fa-stethoscope"></i>
                     </div>
-                    <span class="font-bold text-xl text-gray-900 dark:text-white tracking-tight">منصتي الطبية</span>
-                    <span class="text-xs bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 px-2 py-0.5 rounded-full mr-1 hidden sm:inline-block">بوابة الأطباء</span>
+                    <span class="font-bold text-xl text-gray-900 dark:text-white tracking-tight">MedPortal</span>
+                    <span class="text-xs bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 px-2 py-0.5 rounded-full ml-1 hidden sm:inline-block">Doctor Portal</span>
                 </div>
 
                 <!-- Desktop nav links -->
@@ -206,8 +206,8 @@
                               {% else %}
                               text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-slate-800
                               {% endif %}">
-                        <i class="fa-solid fa-house-medical ml-1 text-xs opacity-70"></i>
-                        لوحة التحكم
+                        <i class="fa-solid fa-house-medical mr-1 text-xs opacity-70"></i>
+                        Dashboard
                     </a>
                     <a href="{% url 'doctors:appointments' %}"
                        class="px-3 py-2 rounded-lg text-sm font-semibold transition-colors
@@ -216,8 +216,8 @@
                               {% else %}
                               text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-slate-800
                               {% endif %}">
-                        <i class="fa-regular fa-calendar-check ml-1 text-xs opacity-70"></i>
-                        مواعيدي
+                        <i class="fa-regular fa-calendar-check mr-1 text-xs opacity-70"></i>
+                        Appointments
                     </a>
                     <a href="{% url 'doctors:patients' %}"
                        class="px-3 py-2 rounded-lg text-sm font-semibold transition-colors
@@ -226,8 +226,8 @@
                               {% else %}
                               text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-slate-800
                               {% endif %}">
-                        <i class="fa-solid fa-users ml-1 text-xs opacity-70"></i>
-                        مرضاي
+                        <i class="fa-solid fa-users mr-1 text-xs opacity-70"></i>
+                        My Patients
                     </a>
                     <a href="{% url 'doctors:my_schedule' %}"
                        class="px-3 py-2 rounded-lg text-sm font-semibold transition-colors
@@ -236,8 +236,8 @@
                               {% else %}
                               text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-slate-800
                               {% endif %}">
-                        <i class="fa-solid fa-calendar-week ml-1 text-xs opacity-70"></i>
-                        جدولي
+                        <i class="fa-solid fa-calendar-week mr-1 text-xs opacity-70"></i>
+                        My Schedule
                     </a>
                     <a href="{% url 'doctors:my_appointment_types' %}"
                        class="px-3 py-2 rounded-lg text-sm font-semibold transition-colors
@@ -246,8 +246,8 @@
                               {% else %}
                               text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-slate-800
                               {% endif %}">
-                        <i class="fa-solid fa-list-check ml-1 text-xs opacity-70"></i>
-                        أنواع مواعيدي
+                        <i class="fa-solid fa-list-check mr-1 text-xs opacity-70"></i>
+                        Appointment Types
                     </a>
                     <a href="{% url 'doctors:doctor_invitations_inbox' %}"
                        class="relative px-3 py-2 rounded-lg text-sm font-semibold transition-colors
@@ -256,10 +256,10 @@
                               {% else %}
                               text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-slate-800
                               {% endif %}">
-                        <i class="fa-regular fa-envelope ml-1 text-xs opacity-70"></i>
-                        الدعوات
+                        <i class="fa-regular fa-envelope mr-1 text-xs opacity-70"></i>
+                        Invitations
                         {% if pending_invitations_count > 0 %}
-                        <span class="absolute -top-0.5 -left-0.5 min-w-[17px] h-[17px] bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5 border-2 border-white dark:border-slate-900">
+                        <span class="absolute -top-0.5 -right-0.5 min-w-[17px] h-[17px] bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5 border-2 border-white dark:border-slate-900">
                             {{ pending_invitations_count }}
                         </span>
                         {% endif %}
@@ -273,7 +273,7 @@
                     <a href="{% url 'appointments:notifications_center' %}"
                        class="relative inline-flex items-center justify-center w-9 h-9 rounded-full
                               text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
-                       title="الإشعارات">
+                       title="Notifications">
                         <i class="fa-regular fa-bell text-lg"></i>
                         {% if unread_notification_count > 0 %}
                         <span class="absolute -top-0.5 -right-0.5 min-w-[17px] h-[17px] px-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900">
@@ -322,38 +322,38 @@
 
                             <a href="{% url 'doctors:doctor_profile' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
                                 <i class="fa-solid fa-user-doctor w-4 text-center text-gray-400"></i>
-                                ملفي الشخصي
+                                My Profile
                             </a>
                             <a href="{% url 'doctors:verification_status' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                                <i class="fa-solid fa-shield-check w-4 text-center text-gray-400"></i>
-                                حالة التحقق
+                                <i class="fa-solid fa-shield-halved w-4 text-center text-gray-400"></i>
+                                Verification Status
                             </a>
 
                             {% if request.user.roles|length > 1 %}
                             <div class="h-px bg-gray-100 dark:bg-slate-700"></div>
-                            <div class="px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">تبديل الدور</div>
+                            <div class="px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">Switch Role</div>
 
                             <a href="{% url 'doctors:dashboard' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-bold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20">
                                 <i class="fa-solid fa-stethoscope w-4 text-center text-primary-500"></i>
-                                طبيب
-                                <i class="fa-solid fa-check mr-auto text-primary-500" style="font-size:0.75rem;"></i>
+                                Doctor
+                                <i class="fa-solid fa-check ml-auto text-primary-500" style="font-size:0.75rem;"></i>
                             </a>
                             {% if "PATIENT" in request.user.roles %}
                             <a href="{% url 'patients:dashboard' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
                                 <i class="fa-solid fa-user-injured w-4 text-center text-gray-400"></i>
-                                مريض
+                                Patient
                             </a>
                             {% endif %}
                             {% if "MAIN_DOCTOR" in request.user.roles %}
                             <a href="{% url 'clinics:my_clinics' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
                                 <i class="fa-solid fa-hospital-user w-4 text-center text-gray-400"></i>
-                                صاحب عيادة
+                                Clinic Owner
                             </a>
                             {% endif %}
                             {% if "SECRETARY" in request.user.roles %}
                             <a href="{% url 'secretary:dashboard' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
                                 <i class="fa-solid fa-user-tie w-4 text-center text-gray-400"></i>
-                                سكرتير/ة
+                                Secretary
                             </a>
                             {% endif %}
                             {% endif %}
@@ -361,7 +361,7 @@
                             <div class="h-px bg-gray-100 dark:bg-slate-700"></div>
                             <a href="{% url 'accounts:logout' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
                                 <i class="fa-solid fa-right-from-bracket w-4 text-center"></i>
-                                تسجيل الخروج
+                                Log Out
                             </a>
                         </div>
                     </div>
@@ -398,30 +398,30 @@
     <nav class="mobile-nav-glass md:hidden">
         <a href="{% url 'doctors:dashboard' %}" class="mob-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
             <i class="fa-solid fa-house-medical"></i>
-            <span>الرئيسية</span>
+            <span>Home</span>
         </a>
         <a href="{% url 'doctors:appointments' %}" class="mob-item {% if request.resolver_match.url_name == 'appointments' or request.resolver_match.url_name == 'appointment_detail' %}active{% endif %}">
             <i class="fa-regular fa-calendar-check"></i>
-            <span>المواعيد</span>
+            <span>Appointments</span>
         </a>
         <a href="{% url 'doctors:patients' %}" class="mob-item {% if request.resolver_match.url_name == 'patients' %}active{% endif %}">
             <i class="fa-solid fa-users"></i>
-            <span>المرضى</span>
+            <span>Patients</span>
         </a>
         <a href="{% url 'doctors:my_schedule' %}" class="mob-item {% if request.resolver_match.url_name == 'my_schedule' %}active{% endif %}">
             <i class="fa-solid fa-calendar-week"></i>
-            <span>جدولي</span>
+            <span>Schedule</span>
         </a>
         <a href="{% url 'doctors:doctor_invitations_inbox' %}" class="mob-item {% if request.resolver_match.url_name == 'doctor_invitations_inbox' %}active{% endif %}" style="position:relative;">
             <i class="fa-regular fa-envelope"></i>
-            <span>الدعوات</span>
+            <span>Invitations</span>
             {% if pending_invitations_count > 0 %}
             <span class="mob-badge">{{ pending_invitations_count }}</span>
             {% endif %}
         </a>
         <a href="{% url 'appointments:notifications_center' %}" class="mob-item {% if request.resolver_match.namespace == 'appointments' and request.resolver_match.url_name == 'notifications_center' %}active{% endif %}" style="position:relative;">
             <i class="fa-regular fa-bell"></i>
-            <span>الإشعارات</span>
+            <span>Alerts</span>
             {% if unread_notification_count > 0 %}
             <span class="mob-badge">{% if unread_notification_count > 9 %}9+{% else %}{{ unread_notification_count }}{% endif %}</span>
             {% endif %}
@@ -431,7 +431,7 @@
     <!-- Footer -->
     <footer class="bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 py-5 mt-auto transition-colors duration-300">
         <div class="container mx-auto px-4 text-center text-sm text-gray-500 dark:text-gray-400">
-            &copy; {% now "Y" %} منصتي الطبية — بوابة الأطباء
+            &copy; {% now "Y" %} MedPortal &mdash; Doctor Portal
         </div>
     </footer>
 
