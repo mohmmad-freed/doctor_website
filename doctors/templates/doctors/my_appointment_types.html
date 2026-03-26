@@ -57,7 +57,7 @@
                      {% if a.is_active %}checked{% endif %}
                      class="w-4 h-4 rounded accent-indigo-500 cursor-pointer flex-shrink-0">
               <div class="flex-1 min-w-0">
-                <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{{ a.appointment_type.display_name }}</p>
+                <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{{ a.appointment_type.name }}</p>
                 <p class="text-xs text-gray-500 dark:text-slate-400">
                   <i class="fa-regular fa-clock mr-0.5 opacity-60"></i>{{ a.appointment_type.duration_minutes }} min
                   {% if a.appointment_type.price %}<span class="mx-1 opacity-40">·</span>₪{{ a.appointment_type.price }}{% endif %}

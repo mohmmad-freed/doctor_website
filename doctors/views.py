@@ -452,12 +452,12 @@ def accept_invitation_view(request, invitation_id):
     if request.method == "POST":
         try:
             staff = accept_invitation(invitation, request.user)
-            messages.success(request, f"تم الانضمام بنجاح إلى عيادة {staff.clinic.name}.")
+            messages.success(request, f"You have successfully joined {staff.clinic.name}.")
         except Exception as e:
             err_msg = str(e)
             if hasattr(e, 'messages'):
                 err_msg = " ".join(e.messages)
-            messages.error(request, f"خطأ: {err_msg}")
+            messages.error(request, f"Error: {err_msg}")
             
     return redirect(reverse("doctors:doctor_invitations_inbox"))
 
@@ -469,12 +469,12 @@ def reject_invitation_view(request, invitation_id):
     if request.method == "POST":
         try:
             reject_invitation(invitation, request.user)
-            messages.success(request, "تم رفض الدعوة.")
+            messages.success(request, "Invitation rejected.")
         except Exception as e:
             err_msg = str(e)
             if hasattr(e, 'messages'):
                 err_msg = " ".join(e.messages)
-            messages.error(request, f"خطأ: {err_msg}")
+            messages.error(request, f"Error: {err_msg}")
             
     return redirect(reverse("doctors:doctor_invitations_inbox"))
 
@@ -615,7 +615,7 @@ def doctor_verification_status(request):
     """Show the doctor's dual-layer verification status."""
     user = request.user
     if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
-        messages.error(request, "هذه الصفحة متاحة للأطباء فقط.")
+        messages.error(request, "This page is for doctors only.")
         return redirect(reverse("accounts:home"))
 
     verification = DoctorVerification.objects.filter(user=user).first()
@@ -634,7 +634,7 @@ def doctor_upload_credentials(request):
     """Upload identity documents for platform verification."""
     user = request.user
     if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
-        messages.error(request, "هذه الصفحة متاحة للأطباء فقط.")
+        messages.error(request, "This page is for doctors only.")
         return redirect(reverse("accounts:home"))
 
     verification, _ = DoctorVerification.objects.get_or_create(
@@ -657,9 +657,9 @@ def doctor_upload_credentials(request):
                 if verification.identity_status in ("IDENTITY_UNVERIFIED", "IDENTITY_REJECTED"):
                     verification.identity_status = "IDENTITY_PENDING_REVIEW"
                 verification.save()
-                messages.success(request, "تم رفع المستندات بنجاح. سيتم مراجعتها من قبل الإدارة.")
+                messages.success(request, "Documents uploaded successfully. They will be reviewed by the admin team.")
             else:
-                messages.warning(request, "يرجى اختيار ملف واحد على الأقل.")
+                messages.warning(request, "Please select at least one file.")
 
             return redirect(reverse("doctors:verification_status"))
     else:
@@ -679,22 +679,22 @@ def doctor_upload_credentials(request):
 class DoctorProfileForm(django_forms.Form):
     """Form for editing the doctor's public profile."""
     bio = django_forms.CharField(
-        label="نبذة عنك",
+        label="Bio",
         required=False,
         widget=django_forms.Textarea(attrs={
             "class": _TEXT_INPUT_CLASSES + " resize-none",
             "rows": 4,
-            "placeholder": "اكتب نبذة مختصرة عن خبرتك وتخصصاتك...",
+            "placeholder": "Write a short bio about your experience and specialties...",
         }),
     )
     years_of_experience = django_forms.IntegerField(
-        label="سنوات الخبرة",
+        label="Years of Experience",
         required=False,
         min_value=0,
         max_value=70,
         widget=django_forms.NumberInput(attrs={
             "class": _TEXT_INPUT_CLASSES,
-            "placeholder": "مثال: 10",
+            "placeholder": "e.g. 10",
         }),
     )
 
@@ -704,7 +704,7 @@ def doctor_profile_view(request):
     """Read-only view of the doctor's profile."""
     user = request.user
     if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
-        messages.error(request, "هذه الصفحة متاحة للأطباء فقط.")
+        messages.error(request, "This page is for doctors only.")
         return redirect(reverse("accounts:home"))
 
     profile, _ = DoctorProfile.objects.get_or_create(user=user)
@@ -726,7 +726,7 @@ def doctor_edit_profile_view(request):
     """Edit doctor's bio, experience, and email (email change via OTP)."""
     user = request.user
     if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
-        messages.error(request, "هذه الصفحة متاحة للأطباء فقط.")
+        messages.error(request, "This page is for doctors only.")
         return redirect(reverse("accounts:home"))
 
     profile, _ = DoctorProfile.objects.get_or_create(user=user)
@@ -745,7 +745,7 @@ def doctor_edit_profile_view(request):
             try:
                 _validate_email(email)
                 if _User.objects.filter(email__iexact=email).exclude(pk=user.pk).exists():
-                    messages.error(request, "البريد الإلكتروني هذا مسجل بالفعل.")
+                    messages.error(request, "This email is already registered.")
                     return render(request, "doctors/doctor_edit_profile.html", {
                         "form": form,
                         "profile": profile,
@@ -757,7 +757,7 @@ def doctor_edit_profile_view(request):
                 request.session["pending_email_change"] = email
                 return redirect(reverse("accounts:change_email_request"))
             except DjangoValidationError:
-                messages.error(request, "البريد الإلكتروني غير صحيح.")
+                messages.error(request, "Invalid email address.")
                 return render(request, "doctors/doctor_edit_profile.html", {
                     "form": form,
                     "profile": profile,
@@ -767,7 +767,7 @@ def doctor_edit_profile_view(request):
             profile.bio = form.cleaned_data.get("bio", "")
             profile.years_of_experience = form.cleaned_data.get("years_of_experience")
             profile.save()
-            messages.success(request, "تم تحديث الملف الشخصي بنجاح.")
+            messages.success(request, "Profile updated successfully.")
             return redirect(reverse("doctors:doctor_profile"))
 
     else:
@@ -790,7 +790,7 @@ def doctor_edit_profile_view(request):
 class ClinicCredentialUploadForm(django_forms.Form):
     """Form for uploading a specialty certificate for a specific clinic-credential."""
     specialty_certificate = django_forms.FileField(
-        label="شهادة التخصص",
+        label="Specialty Certificate",
         required=True,
         widget=django_forms.ClearableFileInput(attrs={
             "class": _FILE_INPUT_CLASSES,
@@ -822,10 +822,10 @@ def doctor_upload_clinic_credential(request, credential_id):
             if credential.credential_status in ("CREDENTIALS_PENDING", "CREDENTIALS_REJECTED"):
                 credential.credential_status = "CREDENTIALS_PENDING"
             credential.save()
-            spec_name = credential.specialty.name_ar if credential.specialty else "العام"
+            spec_name = credential.specialty.name if credential.specialty else "General"
             messages.success(
                 request,
-                f"تم رفع شهادة التخصص ({spec_name}) بنجاح. سيتم مراجعتها."
+                f"Specialty certificate ({spec_name}) uploaded successfully. It will be reviewed."
             )
             return redirect(reverse("doctors:verification_status"))
     else:
@@ -847,7 +847,7 @@ def my_schedule(request):
     """Doctor manages their weekly availability schedule per clinic."""
     user = request.user
     if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
-        messages.error(request, "هذه الصفحة متاحة للأطباء فقط.")
+        messages.error(request, "This page is for doctors only.")
         return redirect(reverse("accounts:home"))
 
     # All active clinic memberships
@@ -891,7 +891,7 @@ def my_schedule(request):
                 )
                 slot.full_clean()
                 slot.save()
-                messages.success(request, "تمت إضافة وقت العمل بنجاح.")
+                messages.success(request, "Working hours added successfully.")
             except ValidationError as e:
                 if hasattr(e, "message_dict"):
                     for errs in e.message_dict.values():
@@ -909,9 +909,9 @@ def my_schedule(request):
             try:
                 slot = DoctorAvailability.objects.get(id=slot_id, doctor=user, clinic=selected_clinic)
                 slot.delete()
-                messages.success(request, "تم حذف وقت العمل.")
+                messages.success(request, "Working hours deleted.")
             except DoctorAvailability.DoesNotExist:
-                messages.error(request, "الوقت غير موجود.")
+                messages.error(request, "Time slot not found.")
             return redirect(redirect_url)
 
     # Build per-day data for the template
@@ -970,7 +970,7 @@ def my_appointment_types(request):
 
     user = request.user
     if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
-        _messages.error(request, "هذه الصفحة متاحة للأطباء فقط.")
+        _messages.error(request, "This page is for doctors only.")
         return redirect(_reverse("accounts:home"))
 
     # All active clinics the doctor belongs to
@@ -989,11 +989,11 @@ def my_appointment_types(request):
                 # Verify doctor is in that clinic
                 membership = next((m for m in memberships if m.clinic_id == clinic_id), None)
                 if not membership:
-                    _messages.error(request, "لا تملك صلاحية تعديل هذه العيادة.")
+                    _messages.error(request, "You don't have permission to edit this clinic.")
                 else:
                     active_ids = request.POST.getlist("type_ids")
                     set_doctor_clinic_appointment_types(user.id, clinic_id, active_ids)
-                    _messages.success(request, f"تم حفظ أنواع مواعيدك في {membership.clinic.name}.")
+                    _messages.success(request, f"Appointment types saved for {membership.clinic.name}.")
             except (ValueError, DjangoValidationError) as e:
                 err = e.messages[0] if hasattr(e, "messages") else str(e)
                 _messages.error(request, err)
@@ -1064,14 +1064,14 @@ def intake_form_builder(request, appointment_type_id):
         revoked_at__isnull=True,
     ).first()
     if not membership:
-        _messages.error(request, "لا تملك صلاحية إدارة نماذج هذه العيادة.")
+        _messages.error(request, "You don't have permission to manage forms for this clinic.")
         return redirect(_reverse("doctors:my_appointment_types"))
 
     template, _ = DoctorIntakeFormTemplate.objects.get_or_create(
         doctor=user,
         appointment_type=appointment_type,
         defaults={
-            "title": f"نموذج {appointment_type.display_name}",
+            "title": f"{appointment_type.name} Form",
             "is_active": True,
         },
     )
@@ -1080,7 +1080,7 @@ def intake_form_builder(request, appointment_type_id):
         title_ar = request.POST.get("title_ar", "").strip()
         description = request.POST.get("description", "").strip()
         if not title_ar:
-            _messages.error(request, "عنوان النموذج مطلوب.")
+            _messages.error(request, "Form title is required.")
         else:
             template.title_ar = title_ar
             template.title = title_ar  # keep in sync for display_title
@@ -1095,7 +1095,7 @@ def intake_form_builder(request, appointment_type_id):
                 "reason_field_placeholder", "reason_field_required",
                 "updated_at",
             ])
-            _messages.success(request, "تم حفظ معلومات النموذج.")
+            _messages.success(request, "Form information saved.")
         return redirect(_reverse("doctors:intake_form_builder", args=[appointment_type_id]))
 
     questions = list(template.questions.order_by("order"))
@@ -1170,7 +1170,7 @@ def intake_question_add(request, template_id):
         raw = request.POST.get("choices_raw", "")
         choices = [c.strip() for c in raw.splitlines() if c.strip()]
         if len(choices) < 2:
-            _messages.error(request, "يجب إضافة خيارَيْن على الأقل للحقول القائمة.")
+            _messages.error(request, "Please add at least two choices for list fields.")
             return redirect(_reverse("doctors:intake_form_builder", args=[apt_type_id]))
 
     try:
@@ -1185,9 +1185,9 @@ def intake_question_add(request, template_id):
             help_text_content=help_text_content,
             choices=choices,
         )
-        _messages.success(request, "تمت إضافة السؤال.")
+        _messages.success(request, "Question added.")
     except Exception as e:
-        _messages.error(request, f"خطأ أثناء إضافة السؤال: {e}")
+        _messages.error(request, f"Error adding question: {e}")
 
     return redirect(_reverse("doctors:intake_form_builder", args=[apt_type_id]))
 
@@ -1218,7 +1218,7 @@ def intake_question_edit(request, template_id, question_id):
             raw = request.POST.get("choices_raw", "")
             choices = [c.strip() for c in raw.splitlines() if c.strip()]
             if len(choices) < 2:
-                _messages.error(request, "يجب إضافة خيارَيْن على الأقل للحقول القائمة.")
+                _messages.error(request, "Please add at least two choices for list fields.")
                 return redirect(_reverse("doctors:intake_question_edit", args=[template_id, question_id]))
 
         question.question_text = question_text_ar
@@ -1229,7 +1229,7 @@ def intake_question_edit(request, template_id, question_id):
         question.help_text_content = help_text_content
         question.choices = choices
         question.save()
-        _messages.success(request, "تم تحديث السؤال.")
+        _messages.success(request, "Question updated.")
         return redirect(_reverse("doctors:intake_form_builder", args=[apt_type_id]))
 
     return render(request, "doctors/intake_question_form.html", {
@@ -1277,7 +1277,7 @@ def intake_question_delete(request, template_id, question_id):
             DoctorIntakeQuestion.objects.filter(id__in=descendant_ids).delete()
 
         question.delete()
-        _messages.success(request, "تم حذف السؤال وجميع أسئلته الفرعية.")
+        _messages.success(request, "Question and all its sub-questions deleted.")
 
     return redirect(_reverse("doctors:intake_form_builder", args=[apt_type_id]))
 
@@ -1307,11 +1307,11 @@ def intake_followup_add(request, template_id, question_id):
     followup_placeholder = request.POST.get("followup_placeholder", "").strip()
 
     if not trigger_value:
-        _messages.error(request, "يجب تحديد قيمة المشغّل.")
+        _messages.error(request, "Trigger value is required.")
         return redirect(_reverse("doctors:intake_form_builder", args=[apt_type_id]))
 
     if not followup_text:
-        _messages.error(request, "نص السؤال الفرعي مطلوب.")
+        _messages.error(request, "Sub-question text is required.")
         return redirect(_reverse("doctors:intake_form_builder", args=[apt_type_id]))
 
     followup_choices = []
@@ -1319,7 +1319,7 @@ def intake_followup_add(request, template_id, question_id):
         raw = request.POST.get("followup_choices_raw", "")
         followup_choices = [c.strip() for c in raw.splitlines() if c.strip()]
         if len(followup_choices) < 2:
-            _messages.error(request, "يجب إضافة خيارَين على الأقل للحقول القائمة.")
+            _messages.error(request, "Please add at least two choices for list fields.")
             return redirect(_reverse("doctors:intake_form_builder", args=[apt_type_id]))
 
     try:
@@ -1346,9 +1346,9 @@ def intake_followup_add(request, template_id, question_id):
                 action=DoctorIntakeRule.Action.SHOW,
             )
 
-        _messages.success(request, "تمت إضافة السؤال الفرعي.")
+        _messages.success(request, "Sub-question added.")
     except Exception as e:
-        _messages.error(request, f"خطأ أثناء الإضافة: {e}")
+        _messages.error(request, f"Error: {e}")
 
     return redirect(_reverse("doctors:intake_form_builder", args=[apt_type_id]))
 
@@ -1376,6 +1376,6 @@ def intake_rule_delete(request, template_id, rule_id):
         rule.delete()
         if not target_question.rules_as_target.exists():
             target_question.delete()
-        _messages.success(request, "تم حذف السؤال الفرعي.")
+        _messages.success(request, "Sub-question deleted.")
 
     return redirect(_reverse("doctors:intake_form_builder", args=[apt_type_id]))
