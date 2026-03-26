@@ -489,12 +489,12 @@ def guest_accept_invitation_view(request, token):
         invitation = ClinicInvitation.objects.get(token=token)
     except ClinicInvitation.DoesNotExist:
         return render(request, "doctors/invalid_invitation.html", {
-            "error": "رابط الدعوة غير صالح أو قد تم استخدامه مسبقاً."
+            "error": "This invitation link is invalid or has already been used."
         })
 
     if invitation.status != "PENDING" or invitation.is_expired:
          return render(request, "doctors/invalid_invitation.html", {
-            "error": "انتهت صلاحية هذه الدعوة أو لم تعد متاحة."
+            "error": "This invitation has expired or is no longer available."
         })
 
     is_secretary_invite = (invitation.role == "SECRETARY")
@@ -509,7 +509,7 @@ def guest_accept_invitation_view(request, token):
         else:
             # Logged in as someone else (wrong phone)
             return render(request, "doctors/invalid_invitation.html", {
-               "error": "لا تملك الصلاحية للوصول إلى هذه الدعوة. يرجى تسجيل الدخول بالحساب الصحيح."
+               "error": "You don't have permission to access this invitation. Please log in with the correct account."
            })
 
     # Check if the invited phone belongs to an existing user.
@@ -529,12 +529,12 @@ def guest_accept_invitation_view(request, token):
         if is_secretary_invite:
             messages.info(
                 request,
-                f"مرحباً {invitation.doctor_name}، لديك حساب بالفعل. يرجى تسجيل الدخول لقبول الدعوة."
+                f"Welcome {invitation.doctor_name}, you already have an account. Please log in to accept the invitation."
             )
         else:
             messages.info(
                 request,
-                f"مرحباً د. {invitation.doctor_name}، لديك حساب بالفعل. يرجى تسجيل الدخول لقبول الدعوة."
+                f"Welcome Dr. {invitation.doctor_name}, you already have an account. Please log in to accept the invitation."
             )
         return redirect(login_url)
 
@@ -542,12 +542,12 @@ def guest_accept_invitation_view(request, token):
     if is_secretary_invite:
         messages.info(
             request,
-            f"مرحباً {invitation.doctor_name}، تلقّيت دعوة للانضمام كسكرتير/ة في {invitation.clinic.name}. يرجى إنشاء حساب جديد لقبول الدعوة."
+            f"Welcome {invitation.doctor_name}, you have been invited to join {invitation.clinic.name} as a secretary. Please create an account to accept the invitation."
         )
     else:
         messages.info(
             request,
-            f"مرحباً د. {invitation.doctor_name}، تلقّيت دعوة للانضمام إلى {invitation.clinic.name}. يرجى إنشاء حساب جديد لقبول الدعوة."
+            f"Welcome Dr. {invitation.doctor_name}, you have been invited to join {invitation.clinic.name}. Please create an account to accept the invitation."
         )
 
     # Store token for redirection after registration
@@ -583,12 +583,12 @@ _TEXT_INPUT_CLASSES = (
 class DoctorCredentialUploadForm(django_forms.Form):
     """Form for uploading doctor identity verification documents."""
     identity_document = django_forms.FileField(
-        label="وثيقة الهوية (بطاقة هوية / جواز سفر)",
+        label="Identity Document (National ID / Passport)",
         required=False,
         widget=django_forms.ClearableFileInput(attrs={"class": _FILE_INPUT_CLASSES, "accept": ".jpg,.jpeg,.png,.pdf"}),
     )
     medical_license = django_forms.FileField(
-        label="رخصة مزاولة المهنة الطبية",
+        label="Medical Practice License",
         required=False,
         widget=django_forms.ClearableFileInput(attrs={"class": _FILE_INPUT_CLASSES, "accept": ".jpg,.jpeg,.png,.pdf"}),
     )

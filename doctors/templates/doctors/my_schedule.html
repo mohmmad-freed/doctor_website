@@ -72,7 +72,15 @@
             <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-slate-700
                         {% if day.is_closed %}bg-red-50 dark:bg-red-900/10{% else %}bg-gray-50 dark:bg-slate-800/50{% endif %}">
                 <div class="flex items-center gap-3">
-                    <span class="font-bold text-gray-800 dark:text-white text-base">{{ day.day_name }}</span>
+                    <span class="font-bold text-gray-800 dark:text-white text-base">
+                        {% if day.day_num == 0 %}Monday
+                        {% elif day.day_num == 1 %}Tuesday
+                        {% elif day.day_num == 2 %}Wednesday
+                        {% elif day.day_num == 3 %}Thursday
+                        {% elif day.day_num == 4 %}Friday
+                        {% elif day.day_num == 5 %}Saturday
+                        {% else %}Sunday{% endif %}
+                    </span>
 
                     {% if day.is_closed %}
                     <span class="dr-badge bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">
