@@ -1,137 +1,426 @@
 {% extends "doctors/base_doctor.html" %}
 {% block title %}My Patients | Doctor Portal{% endblock %}
 
+{% block extra_head %}
+{# HTMX for live search / filter #}
+<script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5ViYgSibmK" crossorigin="anonymous"></script>
+
+{# Alpine.js for the actions dropdown #}
+<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+<style>
+    /* ── Sticky filter bar ─────────────────────────────────── */
+    #filter-bar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
+
+    /* ── Search input highlight ────────────────────────────── */
+    mark.hl {
+        background: #fef08a;
+        color: inherit;
+        border-radius: 2px;
+        padding: 0 1px;
+    }
+    .dark mark.hl {
+        background: #854d0e;
+        color: #fef9c3;
+    }
+
+    /* ── HTMX loading indicator ────────────────────────────── */
+    #patients-results.htmx-request {
+        opacity: 0.5;
+        transition: opacity 200ms ease;
+    }
+
+    /* ── Stat cards pulse on change ────────────────────────── */
+    .stat-card {
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px -4px rgba(0,0,0,0.08);
+    }
+
+    /* ── No hover flash on mobile ──────────────────────────── */
+    @media (hover: none) {
+        .stat-card:hover { transform: none; box-shadow: none; }
+    }
+
+    /* ── Custom scrollbar for filter bar ─────────────────── */
+    .filter-scroll { scrollbar-width: none; }
+    .filter-scroll::-webkit-scrollbar { display: none; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="max-w-5xl mx-auto px-4 pt-5 pb-8">
+<div class="max-w-7xl mx-auto" id="patients-page">
 
-  <div class="flex items-center justify-between mb-6">
-    <div>
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">My Patients</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-        All patients you have treated
-        {% if patient_stats %}<span class="font-medium text-indigo-600 dark:text-indigo-400">({{ patient_stats|length }})</span>{% endif %}
-      </p>
-    </div>
-    <a href="{% url 'doctors:dashboard' %}"
-       class="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 transition-colors">
-      <i class="fa-solid fa-arrow-left"></i>
-      Dashboard
-    </a>
-  </div>
-
-  {% if my_clinics %}
-  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-5">
-    <form method="get" class="flex flex-wrap gap-3 items-end">
-      <div class="flex flex-col gap-1 min-w-[180px]">
-        <label class="text-xs font-medium text-gray-500 dark:text-gray-400">Filter by Clinic</label>
-        <select name="clinic_id"
-                class="text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-          <option value="">All clinics</option>
-          {% for cid, cname in my_clinics %}
-          <option value="{{ cid }}" {% if cid|stringformat:"s" == current_clinic %}selected{% endif %}>{{ cname }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="flex items-end gap-2">
-        <button type="submit"
-                class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-          <i class="fa-solid fa-filter text-xs"></i>
-          Filter
-        </button>
-        {% if current_clinic %}
-        <a href="{% url 'doctors:patients' %}"
-           class="inline-flex items-center gap-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-          <i class="fa-solid fa-xmark text-xs"></i>
-          Clear
-        </a>
-        {% endif %}
-      </div>
-    </form>
-  </div>
-  {% endif %}
-
-  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-
-    {% if patient_stats %}
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="bg-gray-50 dark:bg-gray-700/60 border-b border-gray-200 dark:border-gray-700">
-            <th class="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-5 py-3">Patient</th>
-            <th class="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-5 py-3 hidden sm:table-cell">Phone</th>
-            <th class="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-5 py-3">Last Visit</th>
-            <th class="text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-5 py-3">Visits</th>
-            <th class="px-5 py-3"></th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-          {% for p in patient_stats %}
-          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors group">
-
-            <td class="px-5 py-4">
-              <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-                  <span class="text-white text-xs font-bold">{{ p.patient__name|slice:":1" }}</span>
+    {# ═══════════════════════════════════════════════════════════════════════ #}
+    {# PAGE HEADER                                                             #}
+    {# ═══════════════════════════════════════════════════════════════════════ #}
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6 pt-2">
+        <div>
+            <div class="flex items-center gap-3 mb-1">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white shadow-sm">
+                    <i class="fa-solid fa-users text-sm"></i>
                 </div>
-                <span class="font-semibold text-gray-800 dark:text-gray-100">{{ p.patient__name }}</span>
-              </div>
-            </td>
+                <h1 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">My Patients</h1>
+            </div>
+            <p class="text-sm text-slate-500 dark:text-slate-400 ml-12">
+                Patients across
+                <span class="font-semibold text-slate-700 dark:text-slate-300">{{ my_clinics|length }}</span>
+                clinic{% if my_clinics|length != 1 %}s{% endif %}
+            </p>
+        </div>
 
-            <td class="px-5 py-4 hidden sm:table-cell">
-              <span class="font-mono text-sm text-gray-500 dark:text-gray-400">{{ p.patient__phone }}</span>
-            </td>
-
-            <td class="px-5 py-4 text-gray-500 dark:text-gray-400 whitespace-nowrap">
-              {% if p.last_visit %}
-                <span class="inline-flex items-center gap-1.5">
-                  <i class="fa-regular fa-calendar-check text-emerald-500 text-xs"></i>
-                  {{ p.last_visit|date:"d/m/Y" }}
-                </span>
-              {% else %}
-                <span class="text-gray-300 dark:text-gray-600">—</span>
-              {% endif %}
-            </td>
-
-            <td class="px-5 py-4 text-center">
-              <span class="inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold
-                {% if p.total_visits >= 5 %}bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300
-                {% elif p.total_visits >= 2 %}bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300
-                {% else %}bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400{% endif %}">
-                {{ p.total_visits }}
-              </span>
-            </td>
-
-            <td class="px-5 py-4">
-              <a href="{% url 'doctors:appointments' %}?patient_id={{ p.patient_id }}{% if current_clinic %}&clinic_id={{ current_clinic }}{% endif %}"
-                 class="inline-flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                <i class="fa-solid fa-calendar-days text-xs"></i>
-                Appointments
-              </a>
-            </td>
-
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+        {# Keyboard hint #}
+        <div class="hidden sm:flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 mt-1">
+            <kbd class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 font-mono text-xs">/</kbd>
+            <span>to search</span>
+        </div>
     </div>
 
-    {% else %}
-    <div class="flex flex-col items-center justify-center py-16 px-6 text-center">
-      <div class="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-4">
-        <i class="fa-regular fa-user fa-2x text-gray-400 dark:text-gray-500"></i>
-      </div>
-      <p class="font-semibold text-gray-700 dark:text-gray-200 mb-1">No patients</p>
-      <p class="text-sm text-gray-500 dark:text-gray-400">
-        {% if current_clinic %}
-          No patients linked to this clinic yet.
-        {% else %}
-          No visits recorded yet.
-        {% endif %}
-      </p>
+    {# ═══════════════════════════════════════════════════════════════════════ #}
+    {# STAT CARDS                                                              #}
+    {# ═══════════════════════════════════════════════════════════════════════ #}
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+
+        {# Total #}
+        <button type="button"
+                onclick="setStatusFilter('')"
+                class="stat-card glass-card p-4 text-left cursor-pointer
+                       {% if not current_status %}ring-2 ring-primary-500/40 dark:ring-primary-400/30{% endif %}">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total</p>
+                    <p class="text-3xl font-extrabold text-slate-800 dark:text-white mt-1 leading-none">{{ total_count }}</p>
+                </div>
+                <div class="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-700/60 flex items-center justify-center flex-shrink-0">
+                    <i class="fa-solid fa-users text-slate-500 dark:text-slate-400 text-sm"></i>
+                </div>
+            </div>
+            <p class="text-xs text-slate-400 dark:text-slate-500 mt-2">all patients</p>
+        </button>
+
+        {# Active #}
+        <button type="button"
+                onclick="setStatusFilter('active')"
+                class="stat-card glass-card p-4 text-left cursor-pointer
+                       {% if current_status == 'active' %}ring-2 ring-emerald-500/40 dark:ring-emerald-400/30{% endif %}">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Active</p>
+                    <p class="text-3xl font-extrabold text-slate-800 dark:text-white mt-1 leading-none">{{ active_count }}</p>
+                </div>
+                <div class="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center flex-shrink-0">
+                    <i class="fa-solid fa-circle-check text-emerald-500 text-sm"></i>
+                </div>
+            </div>
+            <p class="text-xs text-slate-400 dark:text-slate-500 mt-2">seen ≤ 30 days</p>
+        </button>
+
+        {# Follow-up #}
+        <button type="button"
+                onclick="setStatusFilter('follow_up')"
+                class="stat-card glass-card p-4 text-left cursor-pointer
+                       {% if current_status == 'follow_up' %}ring-2 ring-amber-500/40 dark:ring-amber-400/30{% endif %}">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">Follow-up</p>
+                    <p class="text-3xl font-extrabold text-slate-800 dark:text-white mt-1 leading-none">{{ followup_count }}</p>
+                </div>
+                <div class="w-9 h-9 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center flex-shrink-0">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-500 text-sm"></i>
+                </div>
+            </div>
+            <p class="text-xs text-slate-400 dark:text-slate-500 mt-2">31–90 days ago</p>
+        </button>
+
+        {# Inactive #}
+        <button type="button"
+                onclick="setStatusFilter('inactive')"
+                class="stat-card glass-card p-4 text-left cursor-pointer
+                       {% if current_status == 'inactive' %}ring-2 ring-slate-400/40 dark:ring-slate-500/30{% endif %}">
+            <div class="flex items-start justify-between">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Inactive</p>
+                    <p class="text-3xl font-extrabold text-slate-800 dark:text-white mt-1 leading-none">{{ inactive_count }}</p>
+                </div>
+                <div class="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-700/60 flex items-center justify-center flex-shrink-0">
+                    <i class="fa-solid fa-clock text-slate-400 text-sm"></i>
+                </div>
+            </div>
+            <p class="text-xs text-slate-400 dark:text-slate-500 mt-2">&gt; 90 days ago</p>
+        </button>
+
     </div>
-    {% endif %}
 
-  </div>
+    {# ═══════════════════════════════════════════════════════════════════════ #}
+    {# STICKY FILTER / SEARCH BAR                                              #}
+    {# ═══════════════════════════════════════════════════════════════════════ #}
+    <div id="filter-bar"
+         class="bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-700/80 rounded-2xl shadow-sm mb-5 p-3">
 
-</div>
+        <form id="filter-form"
+              hx-get="{% url 'doctors:patients' %}"
+              hx-target="#patients-results"
+              hx-push-url="true"
+              hx-indicator="#patients-results"
+              class="flex flex-wrap gap-2.5 items-end filter-scroll overflow-x-auto">
+
+            {# ── Search ─────────────────────────────────────────────── #}
+            <div class="flex-1 min-w-[200px] relative">
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5 px-0.5">Search</label>
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 text-sm pointer-events-none"></i>
+                    <input type="text"
+                           id="patient-search"
+                           name="q"
+                           value="{{ current_q }}"
+                           placeholder="Name, phone, or ID number…"
+                           autocomplete="off"
+                           hx-get="{% url 'doctors:patients' %}"
+                           hx-target="#patients-results"
+                           hx-push-url="true"
+                           hx-trigger="input changed delay:300ms, search"
+                           hx-include="#filter-form"
+                           class="w-full pl-9 pr-9 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-600
+                                  bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100
+                                  placeholder:text-slate-400 dark:placeholder:text-slate-500
+                                  focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-400
+                                  transition-colors">
+                    {# Clear button #}
+                    {% if current_q %}
+                    <button type="button"
+                            onclick="document.getElementById('patient-search').value=''; document.getElementById('patient-search').dispatchEvent(new Event('input'));"
+                            class="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-slate-200 dark:bg-slate-600 text-slate-500 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-500 transition-colors text-xs">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# ── Clinic filter ───────────────────────────────────────── #}
+            {% if my_clinics %}
+            <div class="min-w-[170px]">
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5 px-0.5">Clinic</label>
+                <select name="clinic_id"
+                        hx-get="{% url 'doctors:patients' %}"
+                        hx-target="#patients-results"
+                        hx-push-url="true"
+                        hx-include="#filter-form"
+                        hx-trigger="change"
+                        class="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-600
+                               bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100
+                               focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-400 transition-colors">
+                    <option value="">All clinics</option>
+                    {% for m in my_clinics %}
+                    <option value="{{ m.clinic_id }}" {% if m.clinic_id|stringformat:"s" == current_clinic %}selected{% endif %}>
+                        {{ m.clinic.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            {# ── Status filter ───────────────────────────────────────── #}
+            <div class="min-w-[150px]">
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5 px-0.5">Status</label>
+                <select name="status"
+                        id="status-filter"
+                        hx-get="{% url 'doctors:patients' %}"
+                        hx-target="#patients-results"
+                        hx-push-url="true"
+                        hx-include="#filter-form"
+                        hx-trigger="change"
+                        class="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-600
+                               bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100
+                               focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-400 transition-colors">
+                    <option value="">All statuses</option>
+                    <option value="active"    {% if current_status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="follow_up" {% if current_status == 'follow_up' %}selected{% endif %}>Needs Follow-up</option>
+                    <option value="inactive"  {% if current_status == 'inactive' %}selected{% endif %}>Inactive</option>
+                </select>
+            </div>
+
+            {# ── Date range ──────────────────────────────────────────── #}
+            <div class="flex items-end gap-1.5">
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5 px-0.5">From</label>
+                    <input type="date"
+                           name="date_from"
+                           value="{{ date_from }}"
+                           hx-get="{% url 'doctors:patients' %}"
+                           hx-target="#patients-results"
+                           hx-push-url="true"
+                           hx-include="#filter-form"
+                           hx-trigger="change"
+                           class="px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-600
+                                  bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100
+                                  focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-400 transition-colors">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5 px-0.5">To</label>
+                    <input type="date"
+                           name="date_to"
+                           value="{{ date_to }}"
+                           hx-get="{% url 'doctors:patients' %}"
+                           hx-target="#patients-results"
+                           hx-push-url="true"
+                           hx-include="#filter-form"
+                           hx-trigger="change"
+                           class="px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-600
+                                  bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100
+                                  focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-400 transition-colors">
+                </div>
+            </div>
+
+            {# ── Sort ────────────────────────────────────────────────── #}
+            <div class="min-w-[170px]">
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5 px-0.5">Sort by</label>
+                <select name="sort"
+                        hx-get="{% url 'doctors:patients' %}"
+                        hx-target="#patients-results"
+                        hx-push-url="true"
+                        hx-include="#filter-form"
+                        hx-trigger="change"
+                        class="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-600
+                               bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100
+                               focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-400 transition-colors">
+                    <option value="-last_visit" {% if current_sort == '-last_visit' %}selected{% endif %}>Last Visit (newest)</option>
+                    <option value="last_visit"  {% if current_sort == 'last_visit' %}selected{% endif %}>Last Visit (oldest)</option>
+                    <option value="name"        {% if current_sort == 'name' %}selected{% endif %}>Name (A–Z)</option>
+                    <option value="-name"       {% if current_sort == '-name' %}selected{% endif %}>Name (Z–A)</option>
+                    <option value="-visits"     {% if current_sort == '-visits' %}selected{% endif %}>Most Visits</option>
+                </select>
+            </div>
+
+            {# ── Clear all link ──────────────────────────────────────── #}
+            {% if current_q or current_clinic or current_status or date_from or date_to %}
+            <div class="flex items-end pb-0.5">
+                <a href="{% url 'doctors:patients' %}"
+                   hx-get="{% url 'doctors:patients' %}"
+                   hx-target="#patients-results"
+                   hx-push-url="true"
+                   onclick="clearAllFilters()"
+                   class="inline-flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors whitespace-nowrap">
+                    <i class="fa-solid fa-xmark"></i>
+                    Clear all
+                </a>
+            </div>
+            {% endif %}
+
+        </form>
+    </div>
+
+    {# ═══════════════════════════════════════════════════════════════════════ #}
+    {# RESULTS (HTMX target)                                                   #}
+    {# ═══════════════════════════════════════════════════════════════════════ #}
+    <div id="patients-results">
+        {% include "doctors/partials/patients_table.html" %}
+    </div>
+
+</div>{# /max-w-7xl #}
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+(function () {
+    'use strict';
+
+    // ── Keyboard shortcut: "/" focuses search ──────────────────────────────
+    document.addEventListener('keydown', function (e) {
+        if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+            e.preventDefault();
+            var el = document.getElementById('patient-search');
+            if (el) { el.focus(); el.select(); }
+        }
+    });
+
+    // ── Stat card click → set status filter & submit ───────────────────────
+    window.setStatusFilter = function (value) {
+        var sel = document.getElementById('status-filter');
+        if (!sel) return;
+        sel.value = value;
+        sel.dispatchEvent(new Event('change'));      // triggers HTMX
+        // Also scroll to results
+        setTimeout(function () {
+            var results = document.getElementById('patients-results');
+            if (results) results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 150);
+    };
+
+    // ── Clear all filters helper ───────────────────────────────────────────
+    window.clearAllFilters = function () {
+        var form = document.getElementById('filter-form');
+        if (!form) return;
+        form.querySelectorAll('input[type=text], input[type=search], input[type=date]').forEach(function (el) {
+            el.value = '';
+        });
+        form.querySelectorAll('select').forEach(function (el) {
+            el.value = '';
+        });
+        // Reset sort to default
+        var sortSel = form.querySelector('select[name=sort]');
+        if (sortSel) sortSel.value = '-last_visit';
+    };
+
+    // ── Text highlight after HTMX swap ────────────────────────────────────
+    function highlightText(root, query) {
+        if (!query) return;
+        var terms = query.trim().split(/\s+/).filter(Boolean);
+        if (!terms.length) return;
+
+        // Build a pattern that matches any term
+        var escaped = terms.map(function (t) {
+            return t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        });
+        var regex = new RegExp('(' + escaped.join('|') + ')', 'gi');
+
+        function walk(node) {
+            if (node.nodeType === 3) {          // text node
+                var text = node.textContent;
+                if (!regex.test(text)) return;
+                regex.lastIndex = 0;
+                var span = document.createElement('span');
+                span.innerHTML = text.replace(regex, '<mark class="hl">$1</mark>');
+                node.parentNode.replaceChild(span, node);
+            } else if (
+                node.nodeType === 1 &&
+                !['SCRIPT', 'STYLE', 'MARK', 'INPUT', 'SELECT', 'BUTTON'].includes(node.tagName)
+            ) {
+                Array.from(node.childNodes).forEach(walk);
+            }
+        }
+
+        (root || document).querySelectorAll('.patient-name, .patient-phone, .patient-nid').forEach(walk);
+    }
+
+    // Highlight on initial page load and after each HTMX swap
+    document.addEventListener('DOMContentLoaded', function () {
+        var q = '{{ current_q|escapejs }}';
+        if (q) {
+            highlightText(document.getElementById('patients-results'), q);
+        }
+    });
+
+    document.body.addEventListener('htmx:afterSwap', function (evt) {
+        if (evt.detail.target && evt.detail.target.id === 'patients-results') {
+            var q = document.getElementById('patient-search');
+            if (q && q.value.trim()) {
+                highlightText(evt.detail.target, q.value.trim());
+            }
+        }
+    });
+
+    // ── Mobile: auto-submit on date changes via regular form submit ────────
+    // (HTMX handles this, this is just a fallback)
+
+})();
+</script>
 {% endblock %}

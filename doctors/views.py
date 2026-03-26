@@ -256,7 +256,7 @@ def appointment_detail(request, appointment_id):
 
 @login_required
 def patients_list(request):
-    """Doctor's unique patient list across all their clinics."""
+    """Doctor's patient management page — full clinical tool with search, filter, sort, pagination."""
     user = request.user
     if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
         from django.contrib import messages as _msg
@@ -264,33 +264,176 @@ def patients_list(request):
         _msg.error(request, "هذه الصفحة متاحة للأطباء فقط.")
         return redirect(_rev("accounts:home"))
 
+    from django.db.models import Max, Count, Q
+    from django.core.paginator import Paginator
+    from datetime import date, datetime
+    from patients.models import PatientProfile
+
+    # ── Query params ─────────────────────────────────────────
+    q             = request.GET.get("q", "").strip()
     clinic_filter = request.GET.get("clinic_id", "")
+    status_filter = request.GET.get("status", "")
+    date_from     = request.GET.get("date_from", "")
+    date_to       = request.GET.get("date_to", "")
+    sort          = request.GET.get("sort", "-last_visit")
+    page_num      = request.GET.get("page", "1")
 
-    qs = Appointment.objects.filter(doctor=user).exclude(
-        status=Appointment.Status.CANCELLED
-    )
-    if clinic_filter:
-        qs = qs.filter(clinic_id=clinic_filter)
-
-    # Distinct patients with their latest appointment date
-    from django.db.models import Max, Count
-    patient_stats = (
-        qs.values("patient_id", "patient__name", "patient__phone")
-        .annotate(last_visit=Max("appointment_date"), total_visits=Count("id"))
-        .order_by("-last_visit")
-    )
-
-    my_clinics = (
-        ClinicStaff.objects.filter(user=user, is_active=True)
+    # ── Doctor's active clinics ───────────────────────────────
+    my_clinics_qs = (
+        ClinicStaff.objects.filter(user=user, revoked_at__isnull=True)
         .select_related("clinic")
-        .values_list("clinic_id", "clinic__name")
+        .order_by("clinic__name")
+    )
+    my_clinics = list(my_clinics_qs)
+    clinic_ids = [m.clinic_id for m in my_clinics]
+
+    # ── Base appointment queryset ─────────────────────────────
+    qs = Appointment.objects.filter(
+        doctor=user,
+        clinic_id__in=clinic_ids,
+    ).exclude(status=Appointment.Status.CANCELLED)
+
+    if clinic_filter:
+        try:
+            qs = qs.filter(clinic_id=int(clinic_filter))
+        except (ValueError, TypeError):
+            clinic_filter = ""
+
+    if date_from:
+        try:
+            qs = qs.filter(appointment_date__gte=datetime.strptime(date_from, "%Y-%m-%d").date())
+        except ValueError:
+            date_from = ""
+
+    if date_to:
+        try:
+            qs = qs.filter(appointment_date__lte=datetime.strptime(date_to, "%Y-%m-%d").date())
+        except ValueError:
+            date_to = ""
+
+    if q:
+        phone_q = q.replace(" ", "").replace("-", "")
+        qs = qs.filter(
+            Q(patient__name__icontains=q)
+            | Q(patient__phone__icontains=phone_q)
+            | Q(patient__national_id__icontains=q)
+        )
+
+    # ── Aggregate per patient ─────────────────────────────────
+    SORT_MAP = {
+        "-last_visit": "-last_visit",
+        "last_visit":  "last_visit",
+        "name":        "patient__name",
+        "-name":       "-patient__name",
+        "-visits":     "-total_visits",
+        "visits":      "total_visits",
+    }
+    patient_stats = (
+        qs.values("patient_id", "patient__name", "patient__phone", "patient__national_id")
+        .annotate(last_visit=Max("appointment_date"), total_visits=Count("id"))
+        .order_by(SORT_MAP.get(sort, "-last_visit"))
     )
 
-    return render(request, "doctors/patients_list.html", {
-        "patient_stats": patient_stats,
-        "my_clinics": my_clinics,
-        "current_clinic": clinic_filter,
-    })
+    # ── Enrich with profile data ──────────────────────────────
+    today = date.today()
+    raw_list = list(patient_stats)
+    patient_ids = [p["patient_id"] for p in raw_list]
+
+    profiles = {
+        pp.user_id: pp
+        for pp in PatientProfile.objects.filter(user_id__in=patient_ids)
+    }
+
+    patient_clinic_rows = (
+        Appointment.objects.filter(
+            doctor=user,
+            patient_id__in=patient_ids,
+            clinic_id__in=clinic_ids,
+        )
+        .exclude(status=Appointment.Status.CANCELLED)
+        .values("patient_id", "clinic_id", "clinic__name")
+        .distinct()
+    )
+    patient_clinic_map = {}
+    for row in patient_clinic_rows:
+        pid = row["patient_id"]
+        entry = {"id": row["clinic_id"], "name": row["clinic__name"]}
+        if pid not in patient_clinic_map:
+            patient_clinic_map[pid] = []
+        if entry not in patient_clinic_map[pid]:
+            patient_clinic_map[pid].append(entry)
+
+    GENDER_MAP = {"M": "Male", "F": "Female", "O": "Other"}
+
+    enriched = []
+    for p in raw_list:
+        pid  = p["patient_id"]
+        prof = profiles.get(pid)
+
+        age = None
+        if prof and prof.date_of_birth:
+            dob = prof.date_of_birth
+            age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+
+        lv = p["last_visit"]
+        if lv:
+            days = (today - lv).days
+            if days <= 30:
+                p_status = "active"
+            elif days <= 90:
+                p_status = "follow_up"
+            else:
+                p_status = "inactive"
+        else:
+            p_status = "inactive"
+
+        enriched.append({
+            **p,
+            "age":            age,
+            "gender":         prof.gender if prof else "",
+            "gender_display": GENDER_MAP.get(prof.gender if prof else "", "—"),
+            "clinics":        patient_clinic_map.get(pid, []),
+            "patient_status": p_status,
+        })
+
+    # ── Status filter (post-aggregation) ─────────────────────
+    if status_filter:
+        enriched = [p for p in enriched if p["patient_status"] == status_filter]
+
+    # ── Summary counts ────────────────────────────────────────
+    total_count    = len(enriched)
+    active_count   = sum(1 for p in enriched if p["patient_status"] == "active")
+    followup_count = sum(1 for p in enriched if p["patient_status"] == "follow_up")
+    inactive_count = sum(1 for p in enriched if p["patient_status"] == "inactive")
+
+    # ── Pagination ────────────────────────────────────────────
+    paginator = Paginator(enriched, 25)
+    try:
+        page_obj = paginator.page(int(page_num))
+    except Exception:
+        page_obj = paginator.page(1)
+
+    ctx = {
+        "patient_page":    page_obj,
+        "total_count":     total_count,
+        "active_count":    active_count,
+        "followup_count":  followup_count,
+        "inactive_count":  inactive_count,
+        "my_clinics":      my_clinics,
+        "current_clinic":  clinic_filter,
+        "current_status":  status_filter,
+        "current_sort":    sort,
+        "current_q":       q,
+        "date_from":       date_from,
+        "date_to":         date_to,
+        "paginator":       paginator,
+    }
+
+    # HTMX partial request → return only the table section
+    if request.headers.get("HX-Request"):
+        return render(request, "doctors/partials/patients_table.html", ctx)
+
+    return render(request, "doctors/patients_list.html", ctx)
 
 
 # --- Patient-facing views ---
