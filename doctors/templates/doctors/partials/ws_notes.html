@@ -1,0 +1,192 @@
+<!-- Clinical Notes Tab -->
+{% if note_saved %}
+<div class="mb-4 flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700/40 text-emerald-700 dark:text-emerald-300 text-sm font-medium">
+  <i class="fa-solid fa-circle-check"></i> Note saved successfully.
+</div>
+{% endif %}
+
+<!-- Add Note Form -->
+<div class="ws-card mb-5" x-data="{ open: {{ request.GET.action|default:'false'|lower }} === 'add' || false }" id="note-form-section">
+  <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-slate-700 cursor-pointer select-none"
+       @click="open = !open">
+    <div class="flex items-center gap-2">
+      <i class="fa-solid fa-plus-circle text-primary-500 text-sm"></i>
+      <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">Add Clinical Note</span>
+    </div>
+    <i class="fa-solid fa-chevron-down text-xs text-slate-400 transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
+  </div>
+
+  <div x-show="open" x-collapse>
+    <form method="post"
+          action="{% url 'doctors:ws_note_add' patient.id %}"
+          hx-post="{% url 'doctors:ws_note_add' patient.id %}"
+          hx-target="#tab-content"
+          hx-swap="innerHTML"
+          class="px-5 py-5 space-y-4">
+      {% csrf_token %}
+
+      <!-- Clinic selector (if multiple) -->
+      {% if clinics|length > 1 %}
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Clinic</label>
+        <select name="clinic_id" class="ws-select">
+          {% for clinic in clinics %}
+          <option value="{{ clinic.id }}">{{ clinic.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% else %}
+      <input type="hidden" name="clinic_id" value="{{ clinics.0.id }}">
+      {% endif %}
+
+      <!-- SOAP Fields -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">S — Subjective</label>
+          <textarea name="subjective" rows="3" class="ws-textarea" placeholder="Patient's symptoms and complaints...">{% if edit_note %}{{ edit_note.subjective }}{% endif %}</textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">O — Objective</label>
+          <textarea name="objective" rows="3" class="ws-textarea" placeholder="Physical findings, vitals, labs...">{% if edit_note %}{{ edit_note.objective }}{% endif %}</textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">A — Assessment</label>
+          <textarea name="assessment" rows="3" class="ws-textarea" placeholder="Diagnosis or differential...">{% if edit_note %}{{ edit_note.assessment }}{% endif %}</textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">P — Plan</label>
+          <textarea name="plan" rows="3" class="ws-textarea" placeholder="Treatment plan, follow-up...">{% if edit_note %}{{ edit_note.plan }}{% endif %}</textarea>
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Free Text (optional)</label>
+        <textarea name="free_text" rows="2" class="ws-textarea" placeholder="Additional notes...">{% if edit_note %}{{ edit_note.free_text }}{% endif %}</textarea>
+      </div>
+
+      <div class="flex items-center gap-3 pt-1">
+        <button type="submit"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold transition-colors shadow-sm">
+          <i class="fa-solid fa-floppy-disk text-xs"></i> Save Note
+        </button>
+        <button type="button" @click="open = false"
+                class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Notes List -->
+{% if notes.object_list %}
+<div class="space-y-3">
+  {% for note in notes.object_list %}
+  <div class="ws-card overflow-hidden" id="note-{{ note.id }}">
+
+    <!-- Note header -->
+    <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40">
+      <div class="flex items-center gap-3">
+        <div class="w-7 h-7 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center text-primary-600 dark:text-primary-300 text-xs font-bold flex-shrink-0">
+          {{ note.doctor.name|slice:":1"|upper }}
+        </div>
+        <div>
+          <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ note.doctor.name }}</span>
+          <span class="text-xs text-slate-400 ms-2">{{ note.clinic.name }}</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-xs text-slate-400 dark:text-slate-500">{{ note.created_at|date:"d M Y, H:i" }}</span>
+        {% if note.doctor == doctor %}
+        <div class="flex items-center gap-1" x-data="{}">
+          <a href="{% url 'doctors:ws_note_edit' patient.id note.id %}"
+             hx-get="{% url 'doctors:ws_note_edit' patient.id note.id %}"
+             hx-target="#tab-content"
+             class="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+            <i class="fa-solid fa-pen text-xs"></i>
+          </a>
+          <form method="post" action="{% url 'doctors:ws_note_delete' patient.id note.id %}"
+                hx-post="{% url 'doctors:ws_note_delete' patient.id note.id %}"
+                hx-target="#tab-content"
+                hx-confirm="Delete this note?">
+            {% csrf_token %}
+            <button type="submit"
+                    class="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+              <i class="fa-solid fa-trash text-xs"></i>
+            </button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Note body -->
+    <div class="px-5 py-4 space-y-3">
+      {% if note.subjective or note.objective or note.assessment or note.plan %}
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {% if note.subjective %}
+        <div class="p-3 rounded-lg bg-blue-50/60 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30">
+          <p class="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-1">Subjective</p>
+          <p class="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{{ note.subjective }}</p>
+        </div>
+        {% endif %}
+        {% if note.objective %}
+        <div class="p-3 rounded-lg bg-teal-50/60 dark:bg-teal-900/10 border border-teal-100 dark:border-teal-900/30">
+          <p class="text-xs font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wide mb-1">Objective</p>
+          <p class="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{{ note.objective }}</p>
+        </div>
+        {% endif %}
+        {% if note.assessment %}
+        <div class="p-3 rounded-lg bg-amber-50/60 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30">
+          <p class="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide mb-1">Assessment</p>
+          <p class="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{{ note.assessment }}</p>
+        </div>
+        {% endif %}
+        {% if note.plan %}
+        <div class="p-3 rounded-lg bg-emerald-50/60 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/30">
+          <p class="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-1">Plan</p>
+          <p class="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{{ note.plan }}</p>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+      {% if note.free_text %}
+      <p class="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{{ note.free_text }}</p>
+      {% endif %}
+      {% if note.updated_at != note.created_at %}
+      <p class="text-xs text-slate-400 dark:text-slate-500 italic">Edited {{ note.updated_at|date:"d M Y, H:i" }}</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if notes.has_other_pages %}
+<div class="flex items-center justify-center gap-2 mt-6">
+  {% if notes.has_previous %}
+  <a href="?tab=notes&notes_page={{ notes.previous_page_number }}"
+     hx-get="{% url 'doctors:patient_workspace' patient.id %}?tab=notes&notes_page={{ notes.previous_page_number }}"
+     hx-target="#tab-content"
+     class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+    <i class="fa-solid fa-chevron-left text-xs"></i>
+  </a>
+  {% endif %}
+  <span class="text-sm text-slate-500 dark:text-slate-400">Page {{ notes.number }} of {{ notes.paginator.num_pages }}</span>
+  {% if notes.has_next %}
+  <a href="?tab=notes&notes_page={{ notes.next_page_number }}"
+     hx-get="{% url 'doctors:patient_workspace' patient.id %}?tab=notes&notes_page={{ notes.next_page_number }}"
+     hx-target="#tab-content"
+     class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+    <i class="fa-solid fa-chevron-right text-xs"></i>
+  </a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="ws-card py-16 text-center">
+  <i class="fa-regular fa-file-lines fa-2x text-slate-300 dark:text-slate-600 mb-3 block"></i>
+  <p class="text-slate-500 dark:text-slate-400 font-medium">No clinical notes yet</p>
+  <p class="text-sm text-slate-400 dark:text-slate-500 mt-1">Click "Add Clinical Note" above to write the first note.</p>
+</div>
+{% endif %}

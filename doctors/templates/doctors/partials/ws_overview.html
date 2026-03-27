@@ -1,0 +1,245 @@
+<!-- Overview Tab -->
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+  <!-- ── Left column (2/3): Timeline ─────────────────────────────────────── -->
+  <div class="xl:col-span-2 space-y-4">
+
+    <!-- Recent Notes -->
+    <div class="ws-card overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-slate-700">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-file-medical text-primary-500 text-sm"></i>
+          <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">Recent Clinical Notes</span>
+        </div>
+        <button class="text-xs text-primary-600 dark:text-primary-400 font-medium hover:underline"
+                onclick="switchTab('notes')">View all</button>
+      </div>
+      {% if recent_notes %}
+      <div class="divide-y divide-slate-100 dark:divide-slate-700">
+        {% for note in recent_notes %}
+        <div class="px-5 py-4">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <div class="w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center text-primary-600 dark:text-primary-300 text-xs font-bold flex-shrink-0">
+                {{ note.doctor.name|slice:":1"|upper }}
+              </div>
+              <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ note.doctor.name }}</span>
+              <span class="text-xs text-slate-400">·</span>
+              <span class="text-xs text-slate-400 dark:text-slate-500">{{ note.clinic.name }}</span>
+            </div>
+            <span class="text-xs text-slate-400 dark:text-slate-500">{{ note.created_at|date:"d M Y, H:i" }}</span>
+          </div>
+          {% if note.assessment %}
+          <p class="text-sm text-slate-700 dark:text-slate-300"><span class="font-semibold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wide me-1">A:</span>{{ note.assessment|truncatechars:200 }}</p>
+          {% endif %}
+          {% if note.plan %}
+          <p class="text-sm text-slate-700 dark:text-slate-300 mt-1"><span class="font-semibold text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wide me-1">P:</span>{{ note.plan|truncatechars:200 }}</p>
+          {% endif %}
+          {% if note.free_text and not note.assessment %}
+          <p class="text-sm text-slate-700 dark:text-slate-300">{{ note.free_text|truncatechars:250 }}</p>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="px-5 py-8 text-center text-slate-400 dark:text-slate-500 text-sm">
+        <i class="fa-regular fa-file-lines fa-lg mb-2 block"></i>No clinical notes yet
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Active Orders -->
+    {% if active_orders %}
+    <div class="ws-card overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-slate-700">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-flask text-amber-500 text-sm"></i>
+          <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">Active Orders</span>
+          <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 text-xs font-bold">{{ active_orders|length }}</span>
+        </div>
+        <button class="text-xs text-primary-600 dark:text-primary-400 font-medium hover:underline"
+                onclick="switchTab('orders')">View all</button>
+      </div>
+      <div class="divide-y divide-slate-100 dark:divide-slate-700">
+        {% for order in active_orders %}
+        <div class="px-5 py-3 flex items-center gap-3">
+          <span class="flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-bold
+            {% if order.order_type == 'DRUG' %}bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300
+            {% elif order.order_type == 'LAB' %}bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300
+            {% elif order.order_type == 'RADIOLOGY' %}bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300
+            {% elif order.order_type == 'MICROBIOLOGY' %}bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300
+            {% else %}bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300{% endif %}">
+            {{ order.get_order_type_display }}
+          </span>
+          <span class="text-sm text-slate-700 dark:text-slate-200 flex-1 min-w-0 truncate">{{ order.title }}</span>
+          {% if order.dosage %}<span class="text-xs text-slate-400 flex-shrink-0">{{ order.dosage }}</span>{% endif %}
+          <span class="text-xs text-slate-400 dark:text-slate-500 flex-shrink-0">{{ order.created_at|date:"d M" }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- ── Right column (1/3): Latest Rx + Records ──────────────────────────── -->
+  <div class="space-y-4">
+
+    <!-- Latest Prescription -->
+    <div class="ws-card overflow-hidden">
+      <div class="flex items-center justify-between px-4 py-3.5 border-b border-slate-100 dark:border-slate-700">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-prescription text-emerald-500 text-sm"></i>
+          <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">Latest Prescription</span>
+        </div>
+        <button class="text-xs text-primary-600 dark:text-primary-400 font-medium hover:underline"
+                onclick="switchTab('prescriptions')">View all</button>
+      </div>
+      {% if latest_rx %}
+      <div class="px-4 py-4">
+        <p class="text-xs text-slate-400 dark:text-slate-500 mb-3">{{ latest_rx.created_at|date:"d M Y" }} · {{ latest_rx.clinic.name }}</p>
+        <div class="space-y-2">
+          {% for item in latest_rx.items.all %}
+          <div class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60">
+            <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">{{ item.medication_name }}</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{{ item.dosage }} · {{ item.frequency }}{% if item.duration %} · {{ item.duration }}{% endif %}</p>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% else %}
+      <div class="px-4 py-8 text-center text-slate-400 dark:text-slate-500 text-sm">
+        <i class="fa-solid fa-prescription fa-lg mb-2 block"></i>No prescriptions yet
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Recent Records -->
+    <div class="ws-card overflow-hidden">
+      <div class="flex items-center justify-between px-4 py-3.5 border-b border-slate-100 dark:border-slate-700">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-folder-open text-slate-500 text-sm"></i>
+          <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">Recent Records</span>
+        </div>
+        <button class="text-xs text-primary-600 dark:text-primary-400 font-medium hover:underline"
+                onclick="switchTab('records')">View all</button>
+      </div>
+      {% if recent_records %}
+      <ul class="divide-y divide-slate-100 dark:divide-slate-700">
+        {% for rec in recent_records %}
+        <li class="px-4 py-2.5 flex items-center gap-3">
+          <div class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center
+            {% if rec.category == 'LAB' %}bg-purple-50 dark:bg-purple-900/30
+            {% elif rec.category == 'RADIOLOGY' %}bg-indigo-50 dark:bg-indigo-900/30
+            {% else %}bg-slate-100 dark:bg-slate-700{% endif %}">
+            <i class="fa-regular fa-file-lines text-sm
+              {% if rec.category == 'LAB' %}text-purple-600 dark:text-purple-400
+              {% elif rec.category == 'RADIOLOGY' %}text-indigo-600 dark:text-indigo-400
+              {% else %}text-slate-500 dark:text-slate-400{% endif %}"></i>
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">{{ rec.title }}</p>
+            <p class="text-xs text-slate-400 dark:text-slate-500">{{ rec.uploaded_at|date:"d M Y" }}</p>
+          </div>
+          <a href="{{ rec.file.url }}" target="_blank" class="flex-shrink-0 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
+            <i class="fa-solid fa-download text-xs"></i>
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="px-4 py-8 text-center text-slate-400 dark:text-slate-500 text-sm">
+        <i class="fa-solid fa-folder-open fa-lg mb-2 block"></i>No records yet
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Activity Timeline ──────────────────────────────────────────────────── -->
+{% if timeline_events %}
+<div class="mt-6 ws-card overflow-hidden">
+  <div class="flex items-center gap-2 px-5 py-3.5 border-b border-slate-100 dark:border-slate-700">
+    <i class="fa-solid fa-timeline text-primary-500 text-sm"></i>
+    <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">Activity Timeline</span>
+    <span class="ml-auto text-xs text-slate-400 dark:text-slate-500">Most recent first</span>
+  </div>
+  <div class="px-5 py-4">
+    <ol class="relative border-s border-slate-200 dark:border-slate-700 ms-3 space-y-0">
+      {% for event in timeline_events %}
+      <li class="mb-5 ms-6">
+        <!-- Icon dot -->
+        <span class="absolute -start-3 flex items-center justify-center w-6 h-6 rounded-full ring-4 ring-white dark:ring-slate-900
+          {% if event.kind == 'note' %}bg-primary-100 dark:bg-primary-900/40
+          {% elif event.kind == 'order' %}bg-amber-100 dark:bg-amber-900/40
+          {% elif event.kind == 'prescription' %}bg-emerald-100 dark:bg-emerald-900/40
+          {% else %}bg-slate-100 dark:bg-slate-700{% endif %}">
+          <i class="text-[10px]
+            {% if event.kind == 'note' %}fa-solid fa-file-medical text-primary-600 dark:text-primary-300
+            {% elif event.kind == 'order' %}fa-solid fa-flask text-amber-600 dark:text-amber-300
+            {% elif event.kind == 'prescription' %}fa-solid fa-prescription text-emerald-600 dark:text-emerald-300
+            {% else %}fa-solid fa-folder-open text-slate-500 dark:text-slate-400{% endif %}"></i>
+        </span>
+
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0 flex-1">
+            {% if event.kind == 'note' %}
+              <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                Clinical Note
+                <span class="font-normal text-slate-500 dark:text-slate-400">by {{ event.obj.doctor.name }}</span>
+              </p>
+              {% if event.obj.assessment %}
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate"><span class="font-medium">A:</span> {{ event.obj.assessment|truncatechars:100 }}</p>
+              {% elif event.obj.free_text %}
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">{{ event.obj.free_text|truncatechars:100 }}</p>
+              {% endif %}
+
+            {% elif event.kind == 'order' %}
+              <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                {{ event.obj.get_order_type_display }} Order:
+                <span class="font-normal text-slate-700 dark:text-slate-300">{{ event.obj.title }}</span>
+              </p>
+              <p class="text-xs mt-0.5">
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold
+                  {% if event.obj.status == 'PENDING' %}badge-pending
+                  {% elif event.obj.status == 'COMPLETED' %}badge-completed
+                  {% else %}badge-cancelled{% endif %}">
+                  {{ event.obj.get_status_display }}
+                </span>
+                {% if event.obj.order_type == 'DRUG' and event.obj.dosage %}
+                <span class="text-slate-400 dark:text-slate-500 ms-1">{{ event.obj.dosage }}{% if event.obj.frequency %} · {{ event.obj.frequency }}{% endif %}</span>
+                {% endif %}
+              </p>
+
+            {% elif event.kind == 'prescription' %}
+              <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                Prescription
+                <span class="font-normal text-slate-500 dark:text-slate-400">by {{ event.obj.doctor.name }}</span>
+              </p>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                {{ event.obj.items.count }} medication{{ event.obj.items.count|pluralize }} ·
+                {% for item in event.obj.items.all|slice:":2" %}{{ item.medication_name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% if event.obj.items.count > 2 %}…{% endif %}
+              </p>
+
+            {% else %}
+              <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                Record Uploaded:
+                <span class="font-normal text-slate-700 dark:text-slate-300">{{ event.obj.title }}</span>
+              </p>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                {{ event.obj.get_category_display }} · by {{ event.obj.uploaded_by.name }}
+              </p>
+            {% endif %}
+          </div>
+
+          <time class="flex-shrink-0 text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap pt-0.5">
+            {{ event.ts|date:"d M Y" }}
+          </time>
+        </div>
+      </li>
+      {% endfor %}
+    </ol>
+  </div>
+</div>
+{% endif %}

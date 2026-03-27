@@ -31,15 +31,24 @@ def dashboard(request):
     # Identity verification
     verification = DoctorVerification.objects.filter(user=user).first()
 
-    # Clinic memberships + credential status
+    # Clinic memberships + credential status (deduplicated by clinic)
+    # A doctor may have multiple ClinicStaff rows for the same clinic
+    # (e.g. DOCTOR + SECRETARY). Show each clinic only once, preferring
+    # the highest-privilege role: MAIN_DOCTOR > DOCTOR > SECRETARY.
+    _role_priority = {"MAIN_DOCTOR": 0, "DOCTOR": 1, "SECRETARY": 2}
     memberships = (
         ClinicStaff.objects.filter(user=user, revoked_at__isnull=True)
         .select_related("clinic")
         .order_by("added_at")
     )
+    _best: dict = {}
+    for m in memberships:
+        cid = m.clinic_id
+        if cid not in _best or _role_priority.get(m.role, 99) < _role_priority.get(_best[cid].role, 99):
+            _best[cid] = m
 
     clinic_cards = []
-    for m in memberships:
+    for m in _best.values():
         credentials = ClinicDoctorCredential.objects.filter(
             doctor=user, clinic=m.clinic
         ).select_related("specialty")
@@ -1566,3 +1575,568 @@ def intake_rule_delete(request, template_id, rule_id):
         _messages.success(request, "Sub-question deleted.")
 
     return redirect(_reverse("doctors:intake_form_builder", args=[apt_type_id]))
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PATIENT WORKSPACE
+# ══════════════════════════════════════════════════════════════════════════════
+
+from patients.models import (
+    ClinicalNote, Order, Prescription, PrescriptionItem, MedicalRecord,
+    ClinicPatient, PatientProfile,
+)
+
+
+def _ws_access(request, patient_id):
+    """
+    Verify the doctor can access this patient.
+    Returns a context dict or None if access denied.
+    """
+    user = request.user
+    if not (user.is_authenticated and (
+        "DOCTOR" in (user.roles or []) or "MAIN_DOCTOR" in (user.roles or [])
+    )):
+        return None
+
+    doctor_clinic_ids = set(
+        ClinicStaff.objects.filter(user=user, revoked_at__isnull=True)
+        .values_list("clinic_id", flat=True)
+    )
+
+    cp_qs = ClinicPatient.objects.filter(
+        patient_id=patient_id, clinic_id__in=doctor_clinic_ids
+    ).select_related("clinic")
+    if not cp_qs.exists():
+        return None
+
+    patient = get_object_or_404(User, pk=patient_id)
+    shared_clinics = [cp.clinic for cp in cp_qs]
+    shared_clinic_ids = [c.id for c in shared_clinics]
+    profile = getattr(patient, "patient_profile", None)
+
+    from datetime import date as _date
+    age = None
+    if profile and profile.date_of_birth:
+        today = _date.today()
+        dob = profile.date_of_birth
+        age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+
+    return {
+        "doctor": user,
+        "patient": patient,
+        "profile": profile,
+        "age": age,
+        "shared_clinic_ids": shared_clinic_ids,
+        "clinics": shared_clinics,
+    }
+
+
+def _ws_last_visit(patient_id, doctor):
+    return (
+        Appointment.objects.filter(doctor=doctor, patient_id=patient_id)
+        .exclude(status=Appointment.Status.CANCELLED)
+        .order_by("-appointment_date")
+        .values_list("appointment_date", flat=True)
+        .first()
+    )
+
+
+@login_required
+def patient_workspace(request, patient_id):
+    ctx = _ws_access(request, patient_id)
+    if ctx is None:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("Access denied.")
+
+    tab = request.GET.get("tab", "overview")
+    if tab not in {"overview", "notes", "orders", "prescriptions", "records"}:
+        tab = "overview"
+
+    ctx["active_tab"] = tab
+    ctx["last_visit"] = _ws_last_visit(patient_id, ctx["doctor"])
+    ctx["tabs"] = [
+        ("overview",      "Overview",       "fa-solid fa-chart-pie"),
+        ("notes",         "Clinical Notes", "fa-solid fa-file-medical"),
+        ("orders",        "Orders",         "fa-solid fa-flask"),
+        ("prescriptions", "Prescriptions",  "fa-solid fa-prescription"),
+        ("records",       "Records",        "fa-solid fa-folder-open"),
+    ]
+    patient = ctx["patient"]
+    cids = ctx["shared_clinic_ids"]
+
+    if tab == "overview":
+        ctx.update(_ws_overview_data(patient, cids))
+    elif tab == "notes":
+        ctx.update(_ws_notes_data(patient, cids, request))
+    elif tab == "orders":
+        ctx.update(_ws_orders_data(patient, cids, request))
+    elif tab == "prescriptions":
+        ctx.update(_ws_prescriptions_data(patient, cids))
+    elif tab == "records":
+        ctx.update(_ws_records_data(patient, cids, request))
+
+    if request.headers.get("HX-Request"):
+        template_map = {
+            "overview":      "doctors/partials/ws_overview.html",
+            "notes":         "doctors/partials/ws_notes.html",
+            "orders":        "doctors/partials/ws_orders.html",
+            "prescriptions": "doctors/partials/ws_prescriptions.html",
+            "records":       "doctors/partials/ws_records.html",
+        }
+        return render(request, template_map[tab], ctx)
+
+    return render(request, "doctors/patient_workspace.html", ctx)
+
+
+# ── Tab data helpers ──────────────────────────────────────────────────────────
+
+def _ws_overview_data(patient, cids):
+    recent_notes   = list(ClinicalNote.objects.filter(patient=patient, clinic_id__in=cids).select_related("doctor", "clinic")[:3])
+    active_orders  = list(Order.objects.filter(patient=patient, clinic_id__in=cids, status=Order.Status.PENDING).select_related("doctor")[:8])
+    latest_rx      = Prescription.objects.filter(patient=patient, clinic_id__in=cids).prefetch_related("items").first()
+    recent_records = list(MedicalRecord.objects.filter(patient=patient, clinic_id__in=cids)[:5])
+
+    # Build unified activity timeline (most recent 15 events across all types)
+    tl_notes   = list(ClinicalNote.objects.filter(patient=patient, clinic_id__in=cids).select_related("doctor", "clinic").order_by("-created_at")[:6])
+    tl_orders  = list(Order.objects.filter(patient=patient, clinic_id__in=cids).select_related("doctor", "clinic").order_by("-created_at")[:6])
+    tl_rxs     = list(Prescription.objects.filter(patient=patient, clinic_id__in=cids).select_related("doctor", "clinic").prefetch_related("items").order_by("-created_at")[:6])
+    tl_records = list(MedicalRecord.objects.filter(patient=patient, clinic_id__in=cids).select_related("uploaded_by").order_by("-uploaded_at")[:6])
+
+    events = (
+        [{"kind": "note",         "obj": n, "ts": n.created_at}  for n in tl_notes]
+        + [{"kind": "order",      "obj": o, "ts": o.created_at}  for o in tl_orders]
+        + [{"kind": "prescription","obj": r, "ts": r.created_at} for r in tl_rxs]
+        + [{"kind": "record",     "obj": rec, "ts": rec.uploaded_at} for rec in tl_records]
+    )
+    events.sort(key=lambda x: x["ts"], reverse=True)
+
+    return {
+        "recent_notes":   recent_notes,
+        "active_orders":  active_orders,
+        "latest_rx":      latest_rx,
+        "recent_records": recent_records,
+        "timeline_events": events[:15],
+    }
+
+
+def _ws_notes_data(patient, cids, request):
+    from django.core.paginator import Paginator
+    qs = ClinicalNote.objects.filter(patient=patient, clinic_id__in=cids).select_related("doctor", "clinic")
+    paginator = Paginator(qs, 10)
+    notes_page = paginator.get_page(request.GET.get("notes_page", 1))
+    return {"notes": notes_page, "notes_paginator": paginator}
+
+
+def _ws_orders_data(patient, cids, request):
+    type_filter = request.GET.get("order_type", "")
+    qs = Order.objects.filter(patient=patient, clinic_id__in=cids).select_related("doctor", "clinic")
+    if type_filter:
+        qs = qs.filter(order_type=type_filter)
+    return {
+        "orders": list(qs[:50]),
+        "order_type_filter": type_filter,
+        "order_types": Order.OrderType.choices,
+    }
+
+
+def _ws_prescriptions_data(patient, cids):
+    return {
+        "prescriptions": list(
+            Prescription.objects.filter(patient=patient, clinic_id__in=cids)
+            .select_related("doctor", "clinic")
+            .prefetch_related("items")
+        )
+    }
+
+
+def _ws_records_data(patient, cids, request):
+    cat_filter = request.GET.get("record_cat", "")
+    qs = MedicalRecord.objects.filter(patient=patient, clinic_id__in=cids).select_related("uploaded_by")
+    if cat_filter:
+        qs = qs.filter(category=cat_filter)
+    return {
+        "records": list(qs[:50]),
+        "record_cat_filter": cat_filter,
+        "record_categories": MedicalRecord.Category.choices,
+    }
+
+
+# ── Clinical Notes CRUD ───────────────────────────────────────────────────────
+
+@login_required
+def ws_note_add(request, patient_id):
+    ctx = _ws_access(request, patient_id)
+    if ctx is None:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden()
+
+    if request.method == "POST":
+        clinic_id = request.POST.get("clinic_id")
+        try:
+            clinic_id = int(clinic_id)
+            if clinic_id not in ctx["shared_clinic_ids"]:
+                clinic_id = ctx["shared_clinic_ids"][0]
+        except (TypeError, ValueError):
+            clinic_id = ctx["shared_clinic_ids"][0]
+
+        ClinicalNote.objects.create(
+            patient=ctx["patient"],
+            clinic_id=clinic_id,
+            doctor=ctx["doctor"],
+            subjective=request.POST.get("subjective", "").strip(),
+            objective=request.POST.get("objective", "").strip(),
+            assessment=request.POST.get("assessment", "").strip(),
+            plan=request.POST.get("plan", "").strip(),
+            free_text=request.POST.get("free_text", "").strip(),
+        )
+        ctx.update(_ws_notes_data(ctx["patient"], ctx["shared_clinic_ids"], request))
+        ctx["note_saved"] = True
+        return render(request, "doctors/partials/ws_notes.html", ctx)
+
+    return redirect("doctors:patient_workspace", patient_id=patient_id)
+
+
+@login_required
+def ws_note_edit(request, patient_id, note_id):
+    ctx = _ws_access(request, patient_id)
+    if ctx is None:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden()
+
+    note = get_object_or_404(ClinicalNote, pk=note_id, patient_id=patient_id, doctor=ctx["doctor"])
+
+    if request.method == "POST":
+        note.subjective = request.POST.get("subjective", "").strip()
+        note.objective  = request.POST.get("objective", "").strip()
+        note.assessment = request.POST.get("assessment", "").strip()
+        note.plan       = request.POST.get("plan", "").strip()
+        note.free_text  = request.POST.get("free_text", "").strip()
+        note.save()
+        ctx.update(_ws_notes_data(ctx["patient"], ctx["shared_clinic_ids"], request))
+        ctx["note_saved"] = True
+        return render(request, "doctors/partials/ws_notes.html", ctx)
+
+    ctx["edit_note"] = note
+    ctx.update(_ws_notes_data(ctx["patient"], ctx["shared_clinic_ids"], request))
+    return render(request, "doctors/partials/ws_notes.html", ctx)
+
+
+@login_required
+def ws_note_delete(request, patient_id, note_id):
+    ctx = _ws_access(request, patient_id)
+    if ctx is None:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden()
+
+    if request.method == "POST":
+        note = get_object_or_404(ClinicalNote, pk=note_id, patient_id=patient_id, doctor=ctx["doctor"])
+        note.delete()
+        ctx.update(_ws_notes_data(ctx["patient"], ctx["shared_clinic_ids"], request))
+        return render(request, "doctors/partials/ws_notes.html", ctx)
+
+    return redirect("doctors:patient_workspace", patient_id=patient_id)
+
+
+# ── Orders CRUD ───────────────────────────────────────────────────────────────
+
+@login_required
+def ws_order_add(request, patient_id):
+    ctx = _ws_access(request, patient_id)
+    if ctx is None:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden()
+
+    if request.method == "POST":
+        clinic_id = request.POST.get("clinic_id")
+        try:
+            clinic_id = int(clinic_id)
+            if clinic_id not in ctx["shared_clinic_ids"]:
+                clinic_id = ctx["shared_clinic_ids"][0]
+        except (TypeError, ValueError):
+            clinic_id = ctx["shared_clinic_ids"][0]
+
+        order_type = request.POST.get("order_type", "").upper()
+        valid_types = [c[0] for c in Order.OrderType.choices]
+        if order_type not in valid_types:
+            order_type = Order.OrderType.LAB
+
+        Order.objects.create(
+            patient=ctx["patient"],
+            clinic_id=clinic_id,
+            doctor=ctx["doctor"],
+            order_type=order_type,
+            title=request.POST.get("title", "").strip(),
+            notes=request.POST.get("notes", "").strip(),
+            dosage=request.POST.get("dosage", "").strip(),
+            frequency=request.POST.get("frequency", "").strip(),
+            duration=request.POST.get("duration", "").strip(),
+        )
+        ctx.update(_ws_orders_data(ctx["patient"], ctx["shared_clinic_ids"], request))
+        ctx["order_saved"] = True
+        return render(request, "doctors/partials/ws_orders.html", ctx)
+
+    return redirect("doctors:patient_workspace", patient_id=patient_id)
+
+
+@login_required
+def ws_order_update(request, patient_id, order_id):
+    ctx = _ws_access(request, patient_id)
+    if ctx is None:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden()
+
+    if request.method == "POST":
+        order = get_object_or_404(
+            Order, pk=order_id, patient_id=patient_id,
+            clinic_id__in=ctx["shared_clinic_ids"]
+        )
+        new_status = request.POST.get("status", "").upper()
+        if new_status in [c[0] for c in Order.Status.choices]:
+            order.status = new_status
+            order.save(update_fields=["status", "updated_at"])
+        ctx.update(_ws_orders_data(ctx["patient"], ctx["shared_clinic_ids"], request))
+        return render(request, "doctors/partials/ws_orders.html", ctx)
+
+    return redirect("doctors:patient_workspace", patient_id=patient_id)
+
+
+@login_required
+def ws_order_edit(request, patient_id, order_id):
+    ctx = _ws_access(request, patient_id)
+    if ctx is None:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden()
+
+    order = get_object_or_404(
+        Order, pk=order_id, patient_id=patient_id,
+        clinic_id__in=ctx["shared_clinic_ids"]
+    )
+
+    if request.method == "POST":
+        order_type = request.POST.get("order_type", order.order_type).upper()
+        valid_types = [c[0] for c in Order.OrderType.choices]
+        if order_type not in valid_types:
+            order_type = order.order_type
+        order.order_type = order_type
+        title = request.POST.get("title", "").strip()
+        if title:
+            order.title = title
+        order.notes = request.POST.get("notes", "").strip()
+        order.dosage = request.POST.get("dosage", "").strip()
+        order.frequency = request.POST.get("frequency", "").strip()
+        order.duration = request.POST.get("duration", "").strip()
+        order.save()
+        ctx.update(_ws_orders_data(ctx["patient"], ctx["shared_clinic_ids"], request))
+        ctx["order_saved"] = True
+        return render(request, "doctors/partials/ws_orders.html", ctx)
+
+    ctx["edit_order"] = order
+    ctx.update(_ws_orders_data(ctx["patient"], ctx["shared_clinic_ids"], request))
+    return render(request, "doctors/partials/ws_orders.html", ctx)
+
+
+@login_required
+def ws_order_delete(request, patient_id, order_id):
+    ctx = _ws_access(request, patient_id)
+    if ctx is None:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden()
+
+    if request.method == "POST":
+        order = get_object_or_404(
+            Order, pk=order_id, patient_id=patient_id,
+            clinic_id__in=ctx["shared_clinic_ids"]
+        )
+        order.delete()
+        ctx.update(_ws_orders_data(ctx["patient"], ctx["shared_clinic_ids"], request))
+        return render(request, "doctors/partials/ws_orders.html", ctx)
+
+    return redirect("doctors:patient_workspace", patient_id=patient_id)
+
+
+# ── Prescriptions ─────────────────────────────────────────────────────────────
+
+@login_required
+def ws_prescription_add(request, patient_id):
+    ctx = _ws_access(request, patient_id)
+    if ctx is None:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden()
+
+    if request.method == "POST":
+        clinic_id = request.POST.get("clinic_id")
+        try:
+            clinic_id = int(clinic_id)
+            if clinic_id not in ctx["shared_clinic_ids"]:
+                clinic_id = ctx["shared_clinic_ids"][0]
+        except (TypeError, ValueError):
+            clinic_id = ctx["shared_clinic_ids"][0]
+
+        rx = Prescription.objects.create(
+            patient=ctx["patient"],
+            clinic_id=clinic_id,
+            doctor=ctx["doctor"],
+            notes=request.POST.get("rx_notes", "").strip(),
+        )
+
+        i = 1
+        while True:
+            med = request.POST.get(f"med_name_{i}", "").strip()
+            if not med:
+                break
+            PrescriptionItem.objects.create(
+                prescription=rx,
+                medication_name=med,
+                dosage=request.POST.get(f"dosage_{i}", "").strip(),
+                frequency=request.POST.get(f"frequency_{i}", "").strip(),
+                duration=request.POST.get(f"duration_{i}", "").strip(),
+                instructions=request.POST.get(f"instructions_{i}", "").strip(),
+            )
+            i += 1
+
+        if rx.items.count() == 0:
+            rx.delete()
+            ctx.update(_ws_prescriptions_data(ctx["patient"], ctx["shared_clinic_ids"]))
+            ctx["rx_error"] = "Please add at least one medication."
+            return render(request, "doctors/partials/ws_prescriptions.html", ctx)
+
+        ctx.update(_ws_prescriptions_data(ctx["patient"], ctx["shared_clinic_ids"]))
+        ctx["rx_saved"] = True
+        return render(request, "doctors/partials/ws_prescriptions.html", ctx)
+
+    return redirect("doctors:patient_workspace", patient_id=patient_id)
+
+
+@login_required
+def ws_prescription_print(request, patient_id, rx_id):
+    ctx = _ws_access(request, patient_id)
+    if ctx is None:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden()
+
+    rx = get_object_or_404(
+        Prescription.objects.prefetch_related("items").select_related("doctor", "clinic"),
+        pk=rx_id, patient_id=patient_id, clinic_id__in=ctx["shared_clinic_ids"]
+    )
+    ctx["rx"] = rx
+    return render(request, "doctors/ws_prescription_print.html", ctx)
+
+
+@login_required
+def ws_prescription_delete(request, patient_id, rx_id):
+    ctx = _ws_access(request, patient_id)
+    if ctx is None:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden()
+
+    if request.method == "POST":
+        rx = get_object_or_404(
+            Prescription, pk=rx_id, patient_id=patient_id,
+            clinic_id__in=ctx["shared_clinic_ids"]
+        )
+        rx.delete()
+        ctx.update(_ws_prescriptions_data(ctx["patient"], ctx["shared_clinic_ids"]))
+        return render(request, "doctors/partials/ws_prescriptions.html", ctx)
+
+    return redirect("doctors:patient_workspace", patient_id=patient_id)
+
+
+@login_required
+def ws_prescription_from_order(request, patient_id, order_id):
+    ctx = _ws_access(request, patient_id)
+    if ctx is None:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden()
+
+    if request.method == "POST":
+        order = get_object_or_404(
+            Order, pk=order_id, patient_id=patient_id,
+            order_type=Order.OrderType.DRUG,
+            clinic_id__in=ctx["shared_clinic_ids"]
+        )
+        rx = Prescription.objects.create(
+            patient=ctx["patient"],
+            clinic_id=order.clinic_id,
+            doctor=ctx["doctor"],
+            notes="",
+        )
+        PrescriptionItem.objects.create(
+            prescription=rx,
+            medication_name=order.title,
+            dosage=order.dosage or "",
+            frequency=order.frequency or "",
+            duration=order.duration or "",
+            instructions=order.notes or "",
+        )
+        ctx.update(_ws_prescriptions_data(ctx["patient"], ctx["shared_clinic_ids"]))
+        ctx["rx_saved"] = True
+        # Return prescriptions tab so the doctor can review/print
+        return render(request, "doctors/partials/ws_prescriptions.html", ctx)
+
+    return redirect("doctors:patient_workspace", patient_id=patient_id)
+
+
+# ── Medical Records ───────────────────────────────────────────────────────────
+
+@login_required
+def ws_record_upload(request, patient_id):
+    ctx = _ws_access(request, patient_id)
+    if ctx is None:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden()
+
+    if request.method == "POST":
+        clinic_id = request.POST.get("clinic_id")
+        try:
+            clinic_id = int(clinic_id)
+            if clinic_id not in ctx["shared_clinic_ids"]:
+                clinic_id = ctx["shared_clinic_ids"][0]
+        except (TypeError, ValueError):
+            clinic_id = ctx["shared_clinic_ids"][0]
+
+        uploaded_file = request.FILES.get("record_file")
+        if not uploaded_file:
+            ctx.update(_ws_records_data(ctx["patient"], ctx["shared_clinic_ids"], request))
+            ctx["record_error"] = "Please select a file to upload."
+            return render(request, "doctors/partials/ws_records.html", ctx)
+
+        title = request.POST.get("title", "").strip() or uploaded_file.name
+        category = request.POST.get("category", MedicalRecord.Category.GENERAL)
+        if category not in [c[0] for c in MedicalRecord.Category.choices]:
+            category = MedicalRecord.Category.GENERAL
+
+        MedicalRecord.objects.create(
+            patient=ctx["patient"],
+            clinic_id=clinic_id,
+            uploaded_by=ctx["doctor"],
+            title=title,
+            category=category,
+            file=uploaded_file,
+            original_name=uploaded_file.name,
+            file_size=uploaded_file.size,
+            notes=request.POST.get("record_notes", "").strip(),
+        )
+        ctx.update(_ws_records_data(ctx["patient"], ctx["shared_clinic_ids"], request))
+        ctx["record_saved"] = True
+        return render(request, "doctors/partials/ws_records.html", ctx)
+
+    return redirect("doctors:patient_workspace", patient_id=patient_id)
+
+
+@login_required
+def ws_record_delete(request, patient_id, record_id):
+    ctx = _ws_access(request, patient_id)
+    if ctx is None:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden()
+
+    if request.method == "POST":
+        record = get_object_or_404(
+            MedicalRecord, pk=record_id, patient_id=patient_id,
+            clinic_id__in=ctx["shared_clinic_ids"]
+        )
+        record.file.delete(save=False)
+        record.delete()
+        ctx.update(_ws_records_data(ctx["patient"], ctx["shared_clinic_ids"], request))
+        return render(request, "doctors/partials/ws_records.html", ctx)
+
+    return redirect("doctors:patient_workspace", patient_id=patient_id)

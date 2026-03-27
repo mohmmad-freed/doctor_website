@@ -78,7 +78,8 @@
 
                     {# ── Patient identity ─────────────────────────────── #}
                     <td class="px-5 py-4">
-                        <div class="flex items-center gap-3">
+                        <a href="{% url 'doctors:patient_workspace' p.patient_id %}"
+                           class="flex items-center gap-3 group/name">
                             {# Avatar initials #}
                             <div class="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-bold shadow-sm
                                 {% if p.patient_status == 'active' %}bg-gradient-to-br from-emerald-400 to-teal-600
@@ -87,11 +88,11 @@
                                 {{ p.patient__name|slice:":1"|upper }}
                             </div>
                             <div class="min-w-0">
-                                <p class="font-semibold text-slate-800 dark:text-slate-100 truncate patient-name">{{ p.patient__name }}</p>
+                                <p class="font-semibold text-slate-800 dark:text-slate-100 truncate patient-name group-hover/name:text-primary-600 dark:group-hover/name:text-primary-400 transition-colors">{{ p.patient__name }}</p>
                                 {# Phone visible on small screens (below md) #}
                                 <p class="text-xs text-slate-400 dark:text-slate-500 font-mono md:hidden mt-0.5">{{ p.patient__phone }}</p>
                             </div>
-                        </div>
+                        </a>
                     </td>
 
                     {# ── Age / Gender ─────────────────────────────────── #}
@@ -188,8 +189,14 @@
 
                     {# ── Quick Actions ─────────────────────────────────── #}
                     <td class="px-4 py-4 text-right">
-                        <div class="relative inline-block" x-data="{ open: false }" @click.outside="open = false">
-                            <button @click="open = !open"
+                        <div class="inline-block"
+                             x-data="{ open: false, top: 0, right: 0 }"
+                             @click.outside="open = false">
+                            <button @click="
+                                    let r = $el.getBoundingClientRect();
+                                    top = r.bottom + window.scrollY + 4;
+                                    right = window.innerWidth - r.right;
+                                    open = !open;"
                                     class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                                 <i class="fa-solid fa-ellipsis-vertical"></i>
                             </button>
@@ -200,8 +207,14 @@
                                  x-transition:leave="transition ease-in duration-75"
                                  x-transition:leave-start="opacity-100 scale-100"
                                  x-transition:leave-end="opacity-0 scale-95"
-                                 class="absolute right-0 bottom-full mb-1 w-52 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg z-30 overflow-hidden"
+                                 :style="`position:fixed; top:${top}px; right:${right}px;`"
+                                 class="w-52 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg z-50 overflow-hidden"
                                  style="display:none;">
+                                <a href="{% url 'doctors:patient_workspace' p.patient_id %}"
+                                   class="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors font-semibold">
+                                    <i class="fa-solid fa-stethoscope w-4 text-center text-indigo-500"></i>
+                                    Open Workspace
+                                </a>
                                 <a href="{% url 'doctors:appointments' %}?patient_id={{ p.patient_id }}"
                                    class="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                                     <i class="fa-regular fa-calendar-check w-4 text-center text-primary-500"></i>

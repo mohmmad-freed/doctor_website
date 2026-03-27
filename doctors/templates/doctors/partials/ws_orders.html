@@ -1,0 +1,307 @@
+<!-- Orders Tab -->
+{% if order_saved %}
+<div class="mb-4 flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700/40 text-emerald-700 dark:text-emerald-300 text-sm font-medium">
+  <i class="fa-solid fa-circle-check"></i> Order saved.
+</div>
+{% endif %}
+
+<!-- Edit Order Form (shown when edit_order is in context) -->
+{% if edit_order %}
+<div class="ws-card mb-5 ring-2 ring-amber-400 dark:ring-amber-500"
+     x-data="{ orderType: '{{ edit_order.order_type }}' }">
+  <div class="flex items-center gap-2 px-5 py-3.5 border-b border-amber-200 dark:border-amber-700/60 bg-amber-50/60 dark:bg-amber-900/10">
+    <i class="fa-solid fa-pen text-amber-500 text-sm"></i>
+    <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">Edit Order</span>
+  </div>
+  <form method="post"
+        action="{% url 'doctors:ws_order_edit' patient.id edit_order.id %}"
+        hx-post="{% url 'doctors:ws_order_edit' patient.id edit_order.id %}"
+        hx-target="#tab-content"
+        hx-swap="innerHTML"
+        class="px-5 py-5 space-y-4">
+    {% csrf_token %}
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Order Type *</label>
+        <select name="order_type" x-model="orderType" class="ws-select">
+          {% for val, label in order_types %}
+          <option value="{{ val }}" {% if edit_order.order_type == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Title / Name *</label>
+        <input type="text" name="title" required value="{{ edit_order.title }}" class="ws-input">
+      </div>
+    </div>
+
+    <!-- Drug-specific fields -->
+    <div x-show="orderType === 'DRUG'" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Dosage</label>
+        <input type="text" name="dosage" value="{{ edit_order.dosage }}" class="ws-input" placeholder="e.g. 500mg">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Frequency</label>
+        <input type="text" name="frequency" value="{{ edit_order.frequency }}" class="ws-input" placeholder="e.g. 3x daily">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Duration</label>
+        <input type="text" name="duration" value="{{ edit_order.duration }}" class="ws-input" placeholder="e.g. 7 days">
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Notes</label>
+      <textarea name="notes" rows="2" class="ws-textarea">{{ edit_order.notes }}</textarea>
+    </div>
+
+    <div class="flex items-center gap-3 pt-1">
+      <button type="submit"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-colors shadow-sm">
+        <i class="fa-solid fa-floppy-disk text-xs"></i> Save Changes
+      </button>
+      <a href="{% url 'doctors:patient_workspace' patient.id %}?tab=orders"
+         hx-get="{% url 'doctors:patient_workspace' patient.id %}?tab=orders"
+         hx-target="#tab-content"
+         hx-swap="innerHTML"
+         class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer">
+        Cancel
+      </a>
+    </div>
+  </form>
+</div>
+{% endif %}
+
+<!-- Add Order Form -->
+<div class="ws-card mb-5" x-data="{ open: false, orderType: 'LAB' }">
+  <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-slate-700 cursor-pointer select-none"
+       @click="open = !open">
+    <div class="flex items-center gap-2">
+      <i class="fa-solid fa-plus-circle text-amber-500 text-sm"></i>
+      <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">New Order</span>
+    </div>
+    <i class="fa-solid fa-chevron-down text-xs text-slate-400 transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
+  </div>
+
+  <div x-show="open" x-collapse>
+    <form method="post"
+          action="{% url 'doctors:ws_order_add' patient.id %}"
+          hx-post="{% url 'doctors:ws_order_add' patient.id %}"
+          hx-target="#tab-content"
+          hx-swap="innerHTML"
+          class="px-5 py-5 space-y-4">
+      {% csrf_token %}
+      {% if clinics|length > 1 %}
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Clinic</label>
+        <select name="clinic_id" class="ws-select">
+          {% for clinic in clinics %}<option value="{{ clinic.id }}">{{ clinic.name }}</option>{% endfor %}
+        </select>
+      </div>
+      {% else %}
+      <input type="hidden" name="clinic_id" value="{{ clinics.0.id }}">
+      {% endif %}
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Order Type *</label>
+          <select name="order_type" x-model="orderType" class="ws-select">
+            {% for val, label in order_types %}
+            <option value="{{ val }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Title / Name *</label>
+          <input type="text" name="title" required class="ws-input" placeholder="e.g. CBC, Chest X-Ray, Amoxicillin...">
+        </div>
+      </div>
+
+      <!-- Drug-specific fields -->
+      <div x-show="orderType === 'DRUG'" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Dosage</label>
+          <input type="text" name="dosage" class="ws-input" placeholder="e.g. 500mg">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Frequency</label>
+          <input type="text" name="frequency" class="ws-input" placeholder="e.g. 3x daily">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Duration</label>
+          <input type="text" name="duration" class="ws-input" placeholder="e.g. 7 days">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Notes</label>
+        <textarea name="notes" rows="2" class="ws-textarea" placeholder="Special instructions or context..."></textarea>
+      </div>
+
+      <div class="flex items-center gap-3 pt-1">
+        <button type="submit"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-colors shadow-sm">
+          <i class="fa-solid fa-flask text-xs"></i> Create Order
+        </button>
+        <button type="button" @click="open = false"
+                class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Type filter -->
+<div class="flex items-center gap-2 mb-4 flex-wrap">
+  <span class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Filter:</span>
+  <a href="?tab=orders"
+     hx-get="{% url 'doctors:patient_workspace' patient.id %}?tab=orders"
+     hx-target="#tab-content"
+     class="px-3 py-1 rounded-full text-xs font-semibold transition-colors {% if not order_type_filter %}bg-primary-600 text-white{% else %}bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600{% endif %}">
+    All
+  </a>
+  {% for val, label in order_types %}
+  <a href="?tab=orders&order_type={{ val }}"
+     hx-get="{% url 'doctors:patient_workspace' patient.id %}?tab=orders&order_type={{ val }}"
+     hx-target="#tab-content"
+     class="px-3 py-1 rounded-full text-xs font-semibold transition-colors {% if order_type_filter == val %}bg-primary-600 text-white{% else %}bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600{% endif %}">
+    {{ label }}
+  </a>
+  {% endfor %}
+</div>
+
+<!-- Orders list -->
+{% if orders %}
+<div class="ws-card overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700">
+          <th class="text-left px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Type</th>
+          <th class="text-left px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Order</th>
+          <th class="text-left px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 hidden md:table-cell">Details</th>
+          <th class="text-left px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Status</th>
+          <th class="text-left px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 hidden sm:table-cell">Date</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+        {% for order in orders %}
+        <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors {% if edit_order and edit_order.id == order.id %}bg-amber-50/40 dark:bg-amber-900/10{% endif %}" id="order-{{ order.id }}">
+          <td class="px-5 py-3">
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold
+              {% if order.order_type == 'DRUG' %}bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300
+              {% elif order.order_type == 'LAB' %}bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300
+              {% elif order.order_type == 'RADIOLOGY' %}bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300
+              {% elif order.order_type == 'MICROBIOLOGY' %}bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300
+              {% else %}bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300{% endif %}">
+              {{ order.get_order_type_display }}
+            </span>
+          </td>
+          <td class="px-4 py-3">
+            <p class="font-semibold text-slate-800 dark:text-slate-100">{{ order.title }}</p>
+            {% if order.notes %}<p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5 truncate max-w-xs">{{ order.notes }}</p>{% endif %}
+          </td>
+          <td class="px-4 py-3 hidden md:table-cell">
+            {% if order.order_type == 'DRUG' and order.dosage %}
+            <p class="text-xs text-slate-600 dark:text-slate-300">{{ order.dosage }}{% if order.frequency %} · {{ order.frequency }}{% endif %}{% if order.duration %} · {{ order.duration }}{% endif %}</p>
+            {% else %}
+            <span class="text-slate-300 dark:text-slate-600">—</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
+              {% if order.status == 'PENDING' %}badge-pending
+              {% elif order.status == 'COMPLETED' %}badge-completed
+              {% else %}badge-cancelled{% endif %}">
+              {{ order.get_status_display }}
+            </span>
+          </td>
+          <td class="px-4 py-3 hidden sm:table-cell text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
+            {{ order.created_at|date:"d M Y" }}
+          </td>
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-1">
+              {% if order.status == 'PENDING' %}
+              <!-- Mark done -->
+              <form method="post" action="{% url 'doctors:ws_order_update' patient.id order.id %}"
+                    hx-post="{% url 'doctors:ws_order_update' patient.id order.id %}"
+                    hx-target="#tab-content"
+                    hx-include="[name='status']">
+                {% csrf_token %}
+                <input type="hidden" name="status" value="COMPLETED">
+                <button type="submit" title="Mark completed"
+                        class="text-xs px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 font-semibold transition-colors border border-emerald-200 dark:border-emerald-700/40">
+                  ✓
+                </button>
+              </form>
+              <!-- Cancel -->
+              <form method="post" action="{% url 'doctors:ws_order_update' patient.id order.id %}"
+                    hx-post="{% url 'doctors:ws_order_update' patient.id order.id %}"
+                    hx-target="#tab-content"
+                    hx-include="[name='status']">
+                {% csrf_token %}
+                <input type="hidden" name="status" value="CANCELLED">
+                <button type="submit" title="Cancel order"
+                        class="text-xs px-2 py-1 rounded-lg text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 font-semibold transition-colors">
+                  ✕
+                </button>
+              </form>
+              <!-- Edit -->
+              <a href="{% url 'doctors:ws_order_edit' patient.id order.id %}"
+                 hx-get="{% url 'doctors:ws_order_edit' patient.id order.id %}"
+                 hx-target="#tab-content"
+                 hx-swap="innerHTML"
+                 title="Edit order"
+                 class="text-xs px-2 py-1 rounded-lg text-slate-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
+                <i class="fa-solid fa-pen text-[11px]"></i>
+              </a>
+              {% endif %}
+
+              {% if order.order_type == 'DRUG' %}
+              <!-- Prescribe from this order -->
+              <form method="post"
+                    action="{% url 'doctors:ws_prescription_from_order' patient.id order.id %}"
+                    hx-post="{% url 'doctors:ws_prescription_from_order' patient.id order.id %}"
+                    hx-target="#tab-content"
+                    hx-swap="innerHTML"
+                    title="Create prescription from this order">
+                {% csrf_token %}
+                <button type="submit"
+                        class="text-xs px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 font-semibold transition-colors border border-emerald-200 dark:border-emerald-700/40 whitespace-nowrap">
+                  <i class="fa-solid fa-prescription text-[10px]"></i> Rx
+                </button>
+              </form>
+              {% endif %}
+
+              <!-- Delete -->
+              <form method="post"
+                    action="{% url 'doctors:ws_order_delete' patient.id order.id %}"
+                    hx-post="{% url 'doctors:ws_order_delete' patient.id order.id %}"
+                    hx-target="#tab-content"
+                    hx-swap="innerHTML"
+                    hx-confirm="Delete this order? This cannot be undone."
+                    title="Delete order">
+                {% csrf_token %}
+                <button type="submit"
+                        class="text-xs px-2 py-1 rounded-lg text-slate-300 dark:text-slate-600 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 dark:hover:text-red-400 transition-colors">
+                  <i class="fa-solid fa-trash text-[11px]"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="ws-card py-16 text-center">
+  <i class="fa-solid fa-flask fa-2x text-slate-300 dark:text-slate-600 mb-3 block"></i>
+  <p class="text-slate-500 dark:text-slate-400 font-medium">No orders{% if order_type_filter %} of this type{% endif %}</p>
+</div>
+{% endif %}

@@ -1,0 +1,289 @@
+{% extends "doctors/base_doctor.html" %}
+{% block title %}{{ patient.name }} – Workspace | MedPortal{% endblock %}
+
+{% block extra_head %}
+<script src="https://unpkg.com/htmx.org@1.9.10" crossorigin="anonymous"></script>
+<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<style>
+  /* ── Sticky workspace header ─────────────────────────────────────────── */
+  .ws-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: var(--ws-bg, #fff);
+    border-bottom: 1px solid #e2e8f0;
+    transition: box-shadow .15s;
+  }
+  .dark .ws-header { background: #0f172a; border-color: #1e293b; }
+  .ws-header.scrolled { box-shadow: 0 4px 16px -4px rgba(0,0,0,.12); }
+
+  /* ── Tab bar ─────────────────────────────────────────────────────────── */
+  .ws-tab {
+    position: relative;
+    padding: .625rem 1rem;
+    font-size: .875rem;
+    font-weight: 500;
+    color: #64748b;
+    border-radius: .5rem .5rem 0 0;
+    cursor: pointer;
+    transition: color .15s, background .15s;
+    white-space: nowrap;
+  }
+  .ws-tab:hover { color: #4f46e5; background: #eef2ff; }
+  .dark .ws-tab:hover { color: #818cf8; background: #1e1b4b; }
+  .ws-tab.active {
+    color: #4f46e5;
+    font-weight: 600;
+  }
+  .ws-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; left: 0; right: 0;
+    height: 2px;
+    background: #4f46e5;
+    border-radius: 2px 2px 0 0;
+  }
+  .dark .ws-tab.active { color: #818cf8; }
+  .dark .ws-tab.active::after { background: #818cf8; }
+
+  /* ── Quick action buttons ─────────────────────────────────────────────── */
+  .qa-btn {
+    display: inline-flex; align-items: center; gap: .375rem;
+    padding: .4rem .875rem;
+    font-size: .8rem; font-weight: 600;
+    border-radius: .5rem;
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .qa-btn-primary {
+    background: #4f46e5; color: #fff;
+    border: 1px solid #4f46e5;
+  }
+  .qa-btn-primary:hover { background: #4338ca; }
+  .qa-btn-outline {
+    background: transparent; color: #4f46e5;
+    border: 1px solid #c7d2fe;
+  }
+  .qa-btn-outline:hover { background: #eef2ff; }
+  .dark .qa-btn-outline { color: #818cf8; border-color: #3730a3; }
+  .dark .qa-btn-outline:hover { background: #1e1b4b; }
+
+  /* ── Alert badges ─────────────────────────────────────────────────────── */
+  .alert-pill {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .2rem .6rem;
+    font-size: .72rem; font-weight: 600;
+    border-radius: 999px;
+    background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca;
+  }
+  .dark .alert-pill { background: #450a0a; color: #fca5a5; border-color: #7f1d1d; }
+
+  /* ── HTMX loading state ─────────────────────────────────────────────── */
+  #tab-content.htmx-request { opacity: .5; pointer-events: none; transition: opacity .2s; }
+
+  /* ── Glass card ─────────────────────────────────────────────────────── */
+  .ws-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: .875rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,.05);
+  }
+  .dark .ws-card { background: #1e293b; border-color: #334155; }
+
+  /* ── Form inputs ─────────────────────────────────────────────────────── */
+  .ws-input, .ws-select, .ws-textarea {
+    width: 100%;
+    padding: .5rem .75rem;
+    font-size: .875rem;
+    border: 1px solid #d1d5db;
+    border-radius: .5rem;
+    background: #fff;
+    color: #111827;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+    font-family: inherit;
+  }
+  .ws-input:focus, .ws-select:focus, .ws-textarea:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99,102,241,.12);
+  }
+  .dark .ws-input, .dark .ws-select, .dark .ws-textarea {
+    background: #0f172a; border-color: #334155; color: #f1f5f9;
+  }
+  .ws-textarea { resize: vertical; min-height: 80px; }
+
+  /* ── Status badge ─────────────────────────────────────────────────────── */
+  .badge-pending  { background:#fef9c3; color:#854d0e; border:1px solid #fef08a; }
+  .badge-completed{ background:#dcfce7; color:#166534; border:1px solid #bbf7d0; }
+  .badge-cancelled{ background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; }
+  .dark .badge-pending  { background:#422006; color:#fde68a; border-color:#713f12; }
+  .dark .badge-completed{ background:#052e16; color:#86efac; border-color:#14532d; }
+  .dark .badge-cancelled{ background:#1e293b; color:#94a3b8; border-color:#334155; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="workspace-root -mx-4 sm:-mx-6 lg:-mx-8" id="workspace">
+
+  <!-- ═══════════════════════ STICKY PATIENT HEADER ═══════════════════════ -->
+  <div class="ws-header px-4 sm:px-6 lg:px-8" id="ws-header">
+    <div class="py-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+
+      <!-- Left: Patient Identity -->
+      <div class="flex items-center gap-4 min-w-0">
+        <!-- Back -->
+        <a href="{% url 'doctors:patients' %}"
+           class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+           title="Back to My Patients">
+          <i class="fa-solid fa-arrow-left text-sm"></i>
+        </a>
+
+        <!-- Avatar -->
+        <div class="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
+          {{ patient.name|slice:":1"|upper }}
+        </div>
+
+        <!-- Name + meta -->
+        <div class="min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-lg font-bold text-slate-800 dark:text-slate-100 truncate">{{ patient.name }}</h1>
+            {% if profile.gender %}
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-full {% if profile.gender == 'M' %}bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300{% elif profile.gender == 'F' %}bg-pink-50 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300{% else %}bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300{% endif %}">
+              {{ profile.get_gender_display }}
+            </span>
+            {% endif %}
+            {% if age %}<span class="text-sm text-slate-500 dark:text-slate-400">{{ age }} yrs</span>{% endif %}
+          </div>
+          <div class="flex items-center gap-3 mt-0.5 flex-wrap text-xs text-slate-500 dark:text-slate-400">
+            <span class="font-mono">{{ patient.phone }}</span>
+            {% if last_visit %}
+            <span class="flex items-center gap-1">
+              <i class="fa-regular fa-calendar-check text-emerald-500"></i>
+              Last visit: {{ last_visit|date:"d M Y" }}
+            </span>
+            {% else %}
+            <span class="text-amber-500 flex items-center gap-1">
+              <i class="fa-solid fa-clock-rotate-left"></i>
+              No visits yet
+            </span>
+            {% endif %}
+            {% for clinic in clinics %}
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-300 border border-primary-100 dark:border-primary-800/40 font-semibold">
+              <i class="fa-solid fa-hospital text-[9px]"></i>{{ clinic.name }}
+            </span>
+            {% endfor %}
+          </div>
+
+          <!-- Alerts (allergies / medical history) -->
+          {% if profile.allergies %}
+          <div class="mt-1 flex flex-wrap gap-1.5">
+            <span class="alert-pill"><i class="fa-solid fa-triangle-exclamation text-[10px]"></i>Allergies: {{ profile.allergies|truncatechars:60 }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Right: Quick Actions -->
+      <div class="flex items-center gap-2 flex-wrap flex-shrink-0">
+        <button onclick="switchTab('notes', true)"
+                class="qa-btn qa-btn-primary">
+          <i class="fa-solid fa-file-medical text-xs"></i> Add Note
+        </button>
+        <button onclick="switchTab('orders', true)"
+                class="qa-btn qa-btn-outline">
+          <i class="fa-solid fa-flask text-xs"></i> Add Order
+        </button>
+        <button onclick="switchTab('prescriptions', true)"
+                class="qa-btn qa-btn-outline">
+          <i class="fa-solid fa-prescription text-xs"></i> Prescribe
+        </button>
+        <button onclick="switchTab('records', true)"
+                class="qa-btn qa-btn-outline">
+          <i class="fa-solid fa-upload text-xs"></i> Upload
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Tab Bar ── -->
+    <div class="flex items-center gap-1 overflow-x-auto -mb-px pb-0 scrollbar-none">
+      {% for tab_id, tab_label, tab_icon in tabs %}
+      <button
+        id="tab-btn-{{ tab_id }}"
+        class="ws-tab {% if active_tab == tab_id %}active{% endif %}"
+        hx-get="{% url 'doctors:patient_workspace' patient.id %}?tab={{ tab_id }}"
+        hx-target="#tab-content"
+        hx-push-url="true"
+        hx-indicator="#tab-content"
+        onclick="setActiveTab('{{ tab_id }}')"
+      >
+        <i class="{{ tab_icon }} me-1.5 text-xs"></i>{{ tab_label }}
+      </button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ TAB CONTENT AREA ═══════════════════════════ -->
+  <div id="tab-content" class="px-4 sm:px-6 lg:px-8 py-6">
+    {% if active_tab == "overview" %}
+      {% include "doctors/partials/ws_overview.html" %}
+    {% elif active_tab == "notes" %}
+      {% include "doctors/partials/ws_notes.html" %}
+    {% elif active_tab == "orders" %}
+      {% include "doctors/partials/ws_orders.html" %}
+    {% elif active_tab == "prescriptions" %}
+      {% include "doctors/partials/ws_prescriptions.html" %}
+    {% elif active_tab == "records" %}
+      {% include "doctors/partials/ws_records.html" %}
+    {% endif %}
+  </div>
+
+</div>
+
+<script>
+  // ── Tab state management ──────────────────────────────────────────────
+  const PATIENT_ID = {{ patient.id }};
+
+  function setActiveTab(tabId) {
+    document.querySelectorAll('.ws-tab').forEach(btn => {
+      btn.classList.toggle('active', btn.id === 'tab-btn-' + tabId);
+    });
+  }
+
+  // switchTab: programmatic tab switch (from quick-action buttons)
+  function switchTab(tabId, openForm) {
+    const btn = document.getElementById('tab-btn-' + tabId);
+    if (btn) {
+      setActiveTab(tabId);
+      // Trigger HTMX request on the button
+      const url = btn.getAttribute('hx-get');
+      const fullUrl = openForm ? url + '&action=add' : url;
+      htmx.ajax('GET', fullUrl, { target: '#tab-content', swap: 'innerHTML', pushUrl: true });
+    }
+  }
+
+  // Sticky header shadow on scroll
+  (function () {
+    const hdr = document.getElementById('ws-header');
+    if (!hdr) return;
+    window.addEventListener('scroll', function () {
+      hdr.classList.toggle('scrolled', window.scrollY > 4);
+    }, { passive: true });
+  })();
+
+  // After HTMX tab swap, re-sync active indicator
+  document.body.addEventListener('htmx:afterSwap', function (e) {
+    if (e.detail.target.id === 'tab-content') {
+      const url = new URL(window.location.href);
+      const tab = url.searchParams.get('tab') || 'overview';
+      setActiveTab(tab);
+    }
+  });
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Pass tabs data to template context via view
+</script>
+{% endblock %}
