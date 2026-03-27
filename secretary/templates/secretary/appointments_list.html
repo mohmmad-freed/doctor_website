@@ -1,143 +1,158 @@
-{% extends "accounts/base.html" %}
-
+{% extends "secretary/base_secretary.html" %}
 {% block title %}قائمة المواعيد — السكرتارية{% endblock %}
 
 {% block extra_css %}
 <style>
-.appt-badge { display:inline-block; padding:2px 10px; border-radius:10px; font-size:0.78rem; font-weight:700; white-space:nowrap; }
-.appt-badge-confirmed  { background:#d1fae5; color:#065f46; }
-.appt-badge-checked_in { background:#dbeafe; color:#1e40af; }
-.appt-badge-in_progress{ background:#ede9fe; color:#5b21b6; }
-.appt-badge-completed  { background:#f3f4f6; color:#374151; }
-.appt-badge-cancelled  { background:#fee2e2; color:#991b1b; }
-.appt-badge-no_show    { background:#fef3c7; color:#92400e; }
-.appt-badge-pending    { background:#f0fdf4; color:#166534; }
-[data-theme="dark"] .appt-badge-confirmed  { background:#064e3b; color:#6ee7b7; }
-[data-theme="dark"] .appt-badge-checked_in { background:#1e3a5f; color:#93c5fd; }
-[data-theme="dark"] .appt-badge-in_progress{ background:#2e1065; color:#c4b5fd; }
-[data-theme="dark"] .appt-badge-completed  { background:#1f2937; color:#9ca3af; }
-[data-theme="dark"] .appt-badge-cancelled  { background:#450a0a; color:#fca5a5; }
-[data-theme="dark"] .appt-badge-no_show    { background:#451a03; color:#fcd34d; }
-[data-theme="dark"] .appt-badge-pending    { background:#14532d; color:#86efac; }
+  .status-badge { display:inline-flex; align-items:center; padding:2px 10px; border-radius:9999px; font-size:0.75rem; font-weight:700; white-space:nowrap; }
+  .status-confirmed   { background:#d1fae5; color:#065f46; }
+  .status-checked_in  { background:#dbeafe; color:#1e40af; }
+  .status-in_progress { background:#ede9fe; color:#5b21b6; }
+  .status-completed   { background:#f3f4f6; color:#374151; }
+  .status-cancelled   { background:#fee2e2; color:#991b1b; }
+  .status-no_show     { background:#fef3c7; color:#92400e; }
+  .status-pending     { background:#fefce8; color:#713f12; }
+  .dark .status-confirmed   { background:#064e3b; color:#6ee7b7; }
+  .dark .status-checked_in  { background:#1e3a5f; color:#93c5fd; }
+  .dark .status-in_progress { background:#2e1065; color:#c4b5fd; }
+  .dark .status-completed   { background:#1f2937; color:#9ca3af; }
+  .dark .status-cancelled   { background:#450a0a; color:#fca5a5; }
+  .dark .status-no_show     { background:#451a03; color:#fcd34d; }
+  .dark .status-pending     { background:#1c1917; color:#fde68a; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container py-4">
+<div dir="rtl">
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="mb-0">قائمة المواعيد</h2>
-            <small class="text-muted">{{ clinic.name }}</small>
-        </div>
-        <a href="{% url 'secretary:create_appointment' %}" class="btn btn-primary">
-            <i class="fa-solid fa-plus me-1"></i> حجز موعد جديد
+  {# ── Header ── #}
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">قائمة المواعيد</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ clinic.name }}</p>
+    </div>
+    <a href="{% url 'secretary:create_appointment' %}"
+       class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 active:scale-95 text-white text-sm font-semibold transition-all shadow-sm self-start sm:self-auto">
+      <i class="fa-solid fa-plus text-xs"></i> حجز موعد جديد
+    </a>
+  </div>
+
+  {# ── Filters ── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm px-5 py-4 mb-4">
+    <form method="get" class="flex flex-wrap items-end gap-3">
+      <div class="flex flex-col gap-1 min-w-[140px]">
+        <label class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">الحالة</label>
+        <select name="status"
+                class="text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
+          <option value="">كل الحالات</option>
+          {% for val, label in status_choices %}
+          <option value="{{ val }}" {% if val == current_status %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">التاريخ</label>
+        <input type="date" name="date" value="{{ current_date }}"
+               class="text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
+      </div>
+      <div class="flex items-center gap-2">
+        <button type="submit"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold transition-colors">
+          <i class="fa-solid fa-filter text-xs"></i> تصفية
+        </button>
+        {% if current_status or current_date %}
+        <a href="{% url 'secretary:appointments' %}"
+           class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm font-medium transition-colors">
+          <i class="fa-solid fa-xmark text-xs"></i> إلغاء
         </a>
-    </div>
+        {% endif %}
+      </div>
+    </form>
+  </div>
 
-    {# Filters #}
-    <div class="card shadow-sm mb-3">
-        <div class="card-body py-2">
-            <form method="get" class="row g-2 align-items-end">
-                <div class="col-sm-auto">
-                    <label class="form-label form-label-sm mb-1 text-muted">الحالة</label>
-                    <select name="status" class="form-select form-select-sm">
-                        <option value="">كل الحالات</option>
-                        {% for val, label in status_choices %}
-                        <option value="{{ val }}" {% if val == current_status %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-sm-auto">
-                    <label class="form-label form-label-sm mb-1 text-muted">التاريخ</label>
-                    <input type="date" name="date" class="form-control form-control-sm" value="{{ current_date }}">
-                </div>
-                <div class="col-sm-auto d-flex align-items-end gap-1">
-                    <button type="submit" class="btn btn-sm btn-primary">
-                        <i class="fa-solid fa-filter me-1"></i>تصفية
-                    </button>
-                    {% if current_status or current_date %}
-                    <a href="{% url 'secretary:appointments' %}" class="btn btn-sm btn-outline-secondary">
-                        <i class="fa-solid fa-xmark me-1"></i>إلغاء التصفية
-                    </a>
-                    {% endif %}
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div class="card shadow-sm">
-        <div class="card-body p-0">
-            {% if appointments %}
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>التاريخ</th>
-                            <th>الوقت</th>
-                            <th>المريض</th>
-                            <th>الطبيب</th>
-                            <th>نوع الموعد</th>
-                            <th>الحالة</th>
-                            <th class="text-end">إجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for appt in appointments %}
-                        <tr>
-                            <td>{{ appt.appointment_date|date:"d/m/Y" }}</td>
-                            <td style="font-variant-numeric:tabular-nums;">{{ appt.appointment_time|time:"H:i" }}</td>
-                            <td class="fw-semibold">{{ appt.patient.name }}</td>
-                            <td>{{ appt.doctor.name|default:"—" }}</td>
-                            <td>{{ appt.appointment_type.display_name|default:"—" }}</td>
-                            <td>
-                                <span class="appt-badge appt-badge-{{ appt.status|lower }}">
-                                    {{ appt.get_status_display }}
-                                </span>
-                            </td>
-                            <td class="text-end">
-                                {% if appt.status not in terminal_statuses %}
-                                <div class="d-flex justify-content-end gap-1">
-                                    <a href="{% url 'secretary:edit_appointment' appt.id %}"
-                                       class="btn btn-sm btn-outline-secondary" title="تعديل">
-                                        <i class="fa-solid fa-pen-to-square"></i>
-                                    </a>
-                                    <form method="post" action="{% url 'secretary:cancel_appointment' appt.id %}" class="d-inline">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="إلغاء"
-                                            onclick="return confirm('هل أنت متأكد من إلغاء هذا الموعد؟')">
-                                            <i class="fa-solid fa-xmark"></i>
-                                        </button>
-                                    </form>
-                                </div>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <div class="text-center py-5">
-                <i class="fa-regular fa-calendar-xmark fa-2x text-muted mb-2 d-block"></i>
-                <p class="text-muted mb-1 fw-semibold">لا توجد مواعيد</p>
-                <p class="text-muted small mb-3">
-                    {% if current_status or current_date %}
-                        لا توجد نتائج تطابق معايير التصفية المحددة.
-                    {% else %}
-                        لا توجد مواعيد مسجلة في العيادة بعد.
-                    {% endif %}
-                </p>
-                {% if current_status or current_date %}
-                <a href="{% url 'secretary:appointments' %}" class="btn btn-sm btn-outline-secondary me-2">إلغاء التصفية</a>
-                {% endif %}
-                <a href="{% url 'secretary:create_appointment' %}" class="btn btn-sm btn-primary">
-                    <i class="fa-solid fa-plus me-1"></i> حجز موعد جديد
+  {# ── Table ── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+    {% if appointments %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+            <th class="px-5 py-3 text-right">التاريخ</th>
+            <th class="px-5 py-3 text-right">الوقت</th>
+            <th class="px-5 py-3 text-right">المريض</th>
+            <th class="px-5 py-3 text-right hidden sm:table-cell">الطبيب</th>
+            <th class="px-5 py-3 text-right hidden md:table-cell">نوع الموعد</th>
+            <th class="px-5 py-3 text-right">الحالة</th>
+            <th class="px-5 py-3 text-left">إجراءات</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          {% for appt in appointments %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+            <td class="px-5 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">
+              {{ appt.appointment_date|date:"d/m/Y" }}
+            </td>
+            <td class="px-5 py-3 font-mono font-semibold text-gray-800 dark:text-gray-100 whitespace-nowrap">
+              {{ appt.appointment_time|time:"H:i" }}
+            </td>
+            <td class="px-5 py-3 font-semibold text-gray-800 dark:text-gray-100">{{ appt.patient.name }}</td>
+            <td class="px-5 py-3 text-gray-600 dark:text-gray-300 hidden sm:table-cell">{{ appt.doctor.name|default:"—" }}</td>
+            <td class="px-5 py-3 text-gray-600 dark:text-gray-300 hidden md:table-cell">{{ appt.appointment_type.display_name|default:"—" }}</td>
+            <td class="px-5 py-3">
+              <span class="status-badge status-{{ appt.status|lower }}">{{ appt.get_status_display }}</span>
+            </td>
+            <td class="px-5 py-3">
+              {% if appt.status not in terminal_statuses %}
+              <div class="flex items-center gap-1.5">
+                <a href="{% url 'secretary:edit_appointment' appt.id %}"
+                   class="p-1.5 rounded-lg text-gray-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors" title="تعديل">
+                  <i class="fa-solid fa-pen-to-square text-xs"></i>
                 </a>
-            </div>
-            {% endif %}
-        </div>
+                <form method="post" action="{% url 'secretary:cancel_appointment' appt.id %}">
+                  {% csrf_token %}
+                  <button type="submit"
+                          class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          title="إلغاء"
+                          onclick="return confirm('هل أنت متأكد من إلغاء هذا الموعد؟')">
+                    <i class="fa-solid fa-xmark text-xs"></i>
+                  </button>
+                </form>
+              </div>
+              {% else %}
+              <span class="text-xs text-gray-300 dark:text-gray-600">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+    {% else %}
+    <div class="flex flex-col items-center py-16 gap-3 text-center px-4">
+      <div class="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+        <i class="fa-regular fa-calendar-xmark text-gray-400 dark:text-gray-500 text-xl"></i>
+      </div>
+      <div>
+        <p class="font-semibold text-gray-700 dark:text-gray-200">لا توجد مواعيد</p>
+        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+          {% if current_status or current_date %}لا توجد نتائج تطابق معايير التصفية.
+          {% else %}لا توجد مواعيد مسجلة في العيادة بعد.{% endif %}
+        </p>
+      </div>
+      <div class="flex items-center gap-2 mt-1">
+        {% if current_status or current_date %}
+        <a href="{% url 'secretary:appointments' %}"
+           class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+          إلغاء التصفية
+        </a>
+        {% endif %}
+        <a href="{% url 'secretary:create_appointment' %}"
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold transition-colors">
+          <i class="fa-solid fa-plus text-xs"></i> حجز موعد جديد
+        </a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
 
 </div>
 {% endblock %}

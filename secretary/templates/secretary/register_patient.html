@@ -1,0 +1,309 @@
+{% extends "secretary/base_secretary.html" %}
+{% block title %}تسجيل مريض جديد{% endblock %}
+
+{% block extra_css %}
+<script src="https://unpkg.com/htmx.org@1.9.12"></script>
+<style>
+  /* Step indicator */
+  .step-dot {
+    width: 2rem; height: 2rem;
+    border-radius: 9999px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8rem; font-weight: 700;
+    transition: background-color 0.25s, color 0.25s, box-shadow 0.25s;
+  }
+  .step-dot.active {
+    background-color: #9333ea;
+    color: #fff;
+    box-shadow: 0 0 0 4px rgba(147, 51, 234, 0.18);
+  }
+  .step-dot.done {
+    background-color: #10b981;
+    color: #fff;
+  }
+  .step-dot.idle {
+    background-color: #e5e7eb;
+    color: #9ca3af;
+  }
+  .dark .step-dot.idle {
+    background-color: #374151;
+    color: #6b7280;
+  }
+  .step-line {
+    flex: 1; height: 2px;
+    background-color: #e5e7eb;
+    transition: background-color 0.3s;
+  }
+  .dark .step-line { background-color: #374151; }
+  .step-line.done { background-color: #10b981; }
+
+  /* Search input */
+  .search-input {
+    width: 100%;
+    padding: 0.875rem 3rem 0.875rem 1.25rem;
+    border-radius: 0.75rem;
+    border: 2px solid #e5e7eb;
+    font-size: 1rem;
+    font-family: 'Cairo', sans-serif;
+    background: #fff;
+    color: #111827;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+  }
+  .dark .search-input {
+    background: #1f2937;
+    border-color: #374151;
+    color: #f9fafb;
+  }
+  .search-input:focus {
+    border-color: #9333ea;
+    box-shadow: 0 0 0 4px rgba(147, 51, 234, 0.12);
+  }
+  .dark .search-input:focus {
+    border-color: #a855f7;
+    box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.15);
+  }
+
+  /* Search spinner (htmx indicator) */
+  .htmx-indicator { display: none; }
+  .htmx-request .htmx-indicator { display: flex; }
+  .htmx-request.htmx-indicator { display: flex; }
+
+  /* Auto-fill badge */
+  .autofill-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 9999px;
+    background-color: #ede9fe;
+    color: #6d28d9;
+  }
+  .dark .autofill-badge {
+    background-color: #3b1878;
+    color: #c4b5fd;
+  }
+  .autofill-badge.missing {
+    background-color: #fef3c7;
+    color: #92400e;
+  }
+  .dark .autofill-badge.missing {
+    background-color: #451a03;
+    color: #fcd34d;
+  }
+
+  /* Form fields */
+  .reg-field {
+    width: 100%;
+    padding: 0.6rem 0.875rem;
+    border-radius: 0.5rem;
+    border: 1.5px solid #d1d5db;
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.9rem;
+    background: #fff;
+    color: #111827;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+  }
+  .dark .reg-field {
+    background: #1f2937;
+    border-color: #4b5563;
+    color: #f9fafb;
+  }
+  .reg-field:focus {
+    border-color: #9333ea;
+    box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.10);
+  }
+  .reg-field[data-autofilled="true"] {
+    border-color: #8b5cf6;
+    background-color: #faf5ff;
+  }
+  .dark .reg-field[data-autofilled="true"] {
+    background-color: #1e1333;
+    border-color: #7c3aed;
+  }
+  .reg-field.field-error-state {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.10) !important;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div dir="rtl" class="max-w-3xl mx-auto py-2 pb-24">
+
+  {# ── Page Header ── #}
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">تسجيل مريض في العيادة</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ clinic.name }}</p>
+  </div>
+
+  {# ── Step Indicator ── #}
+  <div class="flex items-center gap-2 mb-8" id="step-indicator">
+    {# Step 1 #}
+    <div class="flex flex-col items-center gap-1 min-w-0">
+      <div class="step-dot active" id="dot-1">1</div>
+      <span class="text-xs font-medium text-purple-600 dark:text-purple-400 whitespace-nowrap">البحث</span>
+    </div>
+    <div class="step-line" id="line-1"></div>
+    {# Step 2 #}
+    <div class="flex flex-col items-center gap-1 min-w-0">
+      <div class="step-dot idle" id="dot-2">2</div>
+      <span class="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap" id="label-2">تأكيد الهوية</span>
+    </div>
+    <div class="step-line" id="line-2"></div>
+    {# Step 3 #}
+    <div class="flex flex-col items-center gap-1 min-w-0">
+      <div class="step-dot idle" id="dot-3">3</div>
+      <span class="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap" id="label-3">التسجيل</span>
+    </div>
+  </div>
+
+  <!-- STEP 1: Patient Search -->
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 mb-4">
+    <div class="flex items-center gap-2 mb-4">
+      <span class="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+      <span class="font-semibold text-gray-800 dark:text-gray-100">البحث عن مريض</span>
+    </div>
+
+    <div class="relative">
+      <input
+        type="text"
+        id="patient-search-input"
+        name="q"
+        autocomplete="off"
+        placeholder="ابحث بالاسم أو رقم الهاتف أو رقم الهوية..."
+        class="search-input"
+        hx-get="{% url 'secretary:patient_search' %}"
+        hx-target="#search-results"
+        hx-trigger="input changed delay:300ms, keyup[key=='Enter']"
+        hx-indicator="#search-spinner"
+      >
+      {# Search icon #}
+      <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+        <i class="fa-solid fa-magnifying-glass"></i>
+      </span>
+      {# Spinner #}
+      <span id="search-spinner" class="htmx-indicator absolute left-4 top-1/2 -translate-y-1/2 items-center">
+        <svg class="animate-spin w-4 h-4 text-purple-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+        </svg>
+      </span>
+    </div>
+
+    <p class="text-xs text-gray-400 dark:text-gray-500 mt-2 flex items-center gap-1.5">
+      <i class="fa-solid fa-keyboard text-[10px]"></i>
+      اكتب حرفين على الأقل للبحث — يمكن البحث بالاسم أو الهاتف (059... أو +97059...) أو رقم الهوية
+    </p>
+
+    {# Search Results (HTMX target) #}
+    <div id="search-results" class="mt-3"></div>
+  </div>
+
+  <!-- STEPS 2 & 3: Patient Card + Form (loaded by HTMX) -->
+  <div id="patient-detail-section"></div>
+
+  <!-- Recently Registered (bottom section) -->
+  {% if recently_registered %}
+  <div class="mt-8 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+      <i class="fa-solid fa-clock-rotate-left text-gray-400 text-sm"></i>
+      <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">آخر المسجلين في العيادة</span>
+    </div>
+    <ul class="divide-y divide-gray-100 dark:divide-gray-700">
+      {% for cp in recently_registered %}
+      <li class="flex items-center justify-between px-5 py-3 text-sm">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center text-purple-700 dark:text-purple-300 font-bold text-sm flex-shrink-0">
+            {{ cp.patient.name|slice:":1" }}
+          </div>
+          <div>
+            <div class="font-medium text-gray-800 dark:text-gray-100">{{ cp.patient.name }}</div>
+            <div class="text-xs text-gray-400">{{ cp.patient.phone }}</div>
+          </div>
+        </div>
+        <div class="text-xs text-gray-400 dark:text-gray-500 text-left">
+          {{ cp.registered_at|date:"d/m/Y" }}<br>
+          <span class="text-[11px]">بواسطة {{ cp.registered_by.name|default:"—" }}</span>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+  // Keyboard shortcut: / to focus search
+  document.addEventListener('keydown', function (e) {
+    if ((e.key === '/' || e.key === 'k' && (e.ctrlKey || e.metaKey)) && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+      e.preventDefault();
+      document.getElementById('patient-search-input').focus();
+    }
+  });
+
+  // Step indicator state management
+  function setStep(n) {
+    const dots = [null,
+      document.getElementById('dot-1'),
+      document.getElementById('dot-2'),
+      document.getElementById('dot-3'),
+    ];
+    const lines = [null,
+      document.getElementById('line-1'),
+      document.getElementById('line-2'),
+    ];
+    const labels = [null, null,
+      document.getElementById('label-2'),
+      document.getElementById('label-3'),
+    ];
+    const activeColors = ['', 'text-purple-600 dark:text-purple-400', 'text-purple-600 dark:text-purple-400', 'text-purple-600 dark:text-purple-400'];
+    const idleColors = 'text-gray-400 dark:text-gray-500';
+
+    for (let i = 1; i <= 3; i++) {
+      dots[i].className = 'step-dot ' + (i < n ? 'done' : i === n ? 'active' : 'idle');
+      if (labels[i]) {
+        labels[i].className = 'text-xs whitespace-nowrap ' + (i <= n ? 'font-medium text-purple-600 dark:text-purple-400' : 'text-gray-400 dark:text-gray-500');
+      }
+    }
+    for (let i = 1; i <= 2; i++) {
+      if (lines[i]) lines[i].className = 'step-line ' + (i < n ? 'done' : '');
+    }
+  }
+
+  // Highlight matching text in search results
+  function highlightQuery(containerEl, query) {
+    if (!query || query.length < 2) return;
+    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    containerEl.querySelectorAll('[data-highlight]').forEach(function (el) {
+      el.innerHTML = el.textContent.replace(regex, '<mark class="bg-yellow-200 dark:bg-yellow-700/60 text-inherit rounded px-0.5">$1</mark>');
+    });
+  }
+
+  // Listen for HTMX events
+  document.addEventListener('htmx:afterSwap', function (e) {
+    const target = e.detail.target;
+
+    if (target.id === 'search-results') {
+      const q = document.getElementById('patient-search-input').value.trim();
+      highlightQuery(target, q);
+      setStep(1);
+    }
+
+    if (target.id === 'patient-detail-section') {
+      const hasContent = target.children.length > 0;
+      if (hasContent) {
+        setStep(2);
+        // Clear search results now that the card has loaded
+        document.getElementById('search-results').innerHTML = '';
+      }
+      // Scroll to the card smoothly
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+
+  // Called by patient_card.html once registration form becomes visible
+  function onFormReady() { setStep(3); }
+</script>
+{% endblock %}

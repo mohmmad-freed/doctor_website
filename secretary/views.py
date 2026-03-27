@@ -4,9 +4,11 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
 from django.contrib import messages
-from django.http import HttpResponseForbidden
+from django.db.models import Q
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 
 from appointments.models import Appointment, AppointmentType
+from patients.models import ClinicPatient, PatientProfile
 
 User = get_user_model()
 
@@ -442,3 +444,175 @@ def guest_accept_invitation_view(request, token):
     
     messages.info(request, "يرجى تسجيل الدخول أو إنشاء حساب جديد لقبول دعوة الانضمام للعيادة كـ سكرتير/ة.")
     return redirect(reverse("accounts:login"))
+
+
+# ============================================
+# PATIENT REGISTRATION FLOW
+# ============================================
+
+def _is_patient_user(user):
+    return user.role == "PATIENT" or "PATIENT" in (user.roles or [])
+
+
+def _compute_age(date_of_birth):
+    if not date_of_birth:
+        return None
+    today = date.today()
+    return (
+        today.year
+        - date_of_birth.year
+        - ((today.month, today.day) < (date_of_birth.month, date_of_birth.day))
+    )
+
+
+@login_required
+def register_patient(request):
+    """Secretary patient registration landing page."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+
+    clinic = staff.clinic
+    recently_registered = (
+        ClinicPatient.objects.filter(clinic=clinic)
+        .select_related("patient", "registered_by")
+        .order_by("-registered_at")[:5]
+    )
+    return render(request, "secretary/register_patient.html", {
+        "clinic": clinic,
+        "recently_registered": recently_registered,
+    })
+
+
+@login_required
+def patient_search_htmx(request):
+    """HTMX endpoint: search patients by name / phone / national ID."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+
+    q = request.GET.get("q", "").strip()
+    patients = []
+
+    if len(q) >= 2:
+        normalized_q = PhoneNumberAuthBackend.normalize_phone_number(q)
+        patients = (
+            User.objects.filter(
+                Q(name__icontains=q)
+                | Q(phone__icontains=normalized_q)
+                | Q(national_id__icontains=q)
+            )
+            .filter(Q(role="PATIENT") | Q(roles__contains=["PATIENT"]))
+            .select_related("patient_profile")
+            .order_by("name")[:10]
+        )
+
+    return render(request, "secretary/htmx/patient_search_results.html", {
+        "patients": patients,
+        "query": q,
+        "clinic_id": staff.clinic_id,
+    })
+
+
+@login_required
+def patient_detail_htmx(request, patient_id):
+    """HTMX endpoint: load patient summary card + registration form."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+
+    clinic = staff.clinic
+    patient = get_object_or_404(User, id=patient_id)
+
+    if not _is_patient_user(patient):
+        return HttpResponse(
+            '<p class="text-red-500 text-sm p-4">المستخدم المحدد ليس مريضاً.</p>',
+            status=400,
+        )
+
+    profile = getattr(patient, "patient_profile", None)
+    already_registered = ClinicPatient.objects.filter(
+        clinic=clinic, patient=patient
+    ).exists()
+    age = _compute_age(profile.date_of_birth if profile else None)
+    other_clinics = (
+        ClinicPatient.objects.filter(patient=patient)
+        .exclude(clinic=clinic)
+        .select_related("clinic")
+    )
+
+    return render(request, "secretary/htmx/patient_card.html", {
+        "patient": patient,
+        "profile": profile,
+        "age": age,
+        "already_registered": already_registered,
+        "clinic": clinic,
+        "other_clinics": other_clinics,
+    })
+
+
+@login_required
+def register_patient_submit(request):
+    """POST: register a patient in the secretary's clinic, optionally filling profile gaps."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+
+    if request.method != "POST":
+        return redirect("secretary:register_patient")
+
+    clinic = staff.clinic
+    patient_id = request.POST.get("patient_id", "").strip()
+    if not patient_id:
+        messages.error(request, "لم يتم تحديد مريض.")
+        return redirect("secretary:register_patient")
+
+    patient = get_object_or_404(User, id=patient_id)
+
+    if not _is_patient_user(patient):
+        messages.error(request, "المستخدم المحدد ليس مريضاً.")
+        return redirect("secretary:register_patient")
+
+    if ClinicPatient.objects.filter(clinic=clinic, patient=patient).exists():
+        messages.warning(request, f"المريض {patient.name} مسجل بالفعل في هذه العيادة.")
+        return redirect("secretary:register_patient")
+
+    # --- Fill gaps in PatientProfile (never overwrite non-blank existing values) ---
+    profile, _ = PatientProfile.objects.get_or_create(user=patient)
+    profile_dirty = []
+    user_dirty = []
+
+    dob_str = request.POST.get("date_of_birth", "").strip()
+    if dob_str and not profile.date_of_birth:
+        from datetime import datetime as _dt
+        try:
+            profile.date_of_birth = _dt.strptime(dob_str, "%Y-%m-%d").date()
+            profile_dirty.append("date_of_birth")
+        except ValueError:
+            pass
+
+    gender = request.POST.get("gender", "").strip()
+    if gender and not profile.gender:
+        profile.gender = gender
+        profile_dirty.append("gender")
+
+    national_id = request.POST.get("national_id", "").strip()
+    if national_id and not patient.national_id:
+        patient.national_id = national_id
+        user_dirty.append("national_id")
+
+    if user_dirty:
+        patient.save(update_fields=user_dirty)
+    if profile_dirty:
+        profile.save(update_fields=profile_dirty)
+
+    # --- Register ---
+    ClinicPatient.objects.create(
+        clinic=clinic,
+        patient=patient,
+        registered_by=request.user,
+        notes=request.POST.get("notes", "").strip(),
+    )
+
+    messages.success(request, f"تم تسجيل المريض {patient.name} في عيادة {clinic.name} بنجاح.")
+    return redirect("secretary:register_patient")

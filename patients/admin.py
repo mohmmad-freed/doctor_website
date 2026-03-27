@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import PatientProfile
+from .models import PatientProfile, ClinicPatient
 
 
 @admin.register(PatientProfile)
@@ -22,3 +22,12 @@ class PatientProfileAdmin(admin.ModelAdmin):
             'fields': ('emergency_contact_name', 'emergency_contact_phone')
         }),
     )
+
+
+@admin.register(ClinicPatient)
+class ClinicPatientAdmin(admin.ModelAdmin):
+    list_display = ['patient', 'clinic', 'registered_by', 'registered_at']
+    list_filter = ['clinic']
+    search_fields = ['patient__name', 'patient__phone', 'clinic__name']
+    raw_id_fields = ['patient', 'clinic', 'registered_by']
+    readonly_fields = ['registered_at']

@@ -267,7 +267,7 @@ def patients_list(request):
     from django.db.models import Max, Count, Q
     from django.core.paginator import Paginator
     from datetime import date, datetime
-    from patients.models import PatientProfile
+    from patients.models import PatientProfile, ClinicPatient
 
     # ── Query params ─────────────────────────────────────────
     q             = request.GET.get("q", "").strip()
@@ -278,104 +278,130 @@ def patients_list(request):
     sort          = request.GET.get("sort", "-last_visit")
     page_num      = request.GET.get("page", "1")
 
-    # ── Doctor's active clinics ───────────────────────────────
+    # ── Doctor's active clinics (deduplicated by clinic) ─────
+    # A multi-role user (MAIN_DOCTOR + DOCTOR) may have several
+    # ClinicStaff rows for the same clinic — deduplicate here.
     my_clinics_qs = (
         ClinicStaff.objects.filter(user=user, revoked_at__isnull=True)
         .select_related("clinic")
         .order_by("clinic__name")
     )
-    my_clinics = list(my_clinics_qs)
-    clinic_ids = [m.clinic_id for m in my_clinics]
+    seen_clinic_ids: set = set()
+    my_clinics = []
+    for staff in my_clinics_qs:
+        if staff.clinic_id not in seen_clinic_ids:
+            seen_clinic_ids.add(staff.clinic_id)
+            my_clinics.append(staff)
+    clinic_ids = list(seen_clinic_ids)
 
-    # ── Base appointment queryset ─────────────────────────────
-    qs = Appointment.objects.filter(
-        doctor=user,
-        clinic_id__in=clinic_ids,
-    ).exclude(status=Appointment.Status.CANCELLED)
-
+    # ── Determine effective clinic IDs for this request ──────
     if clinic_filter:
         try:
-            qs = qs.filter(clinic_id=int(clinic_filter))
+            _fid = int(clinic_filter)
+            effective_clinic_ids = [_fid] if _fid in clinic_ids else clinic_ids
+            if _fid not in clinic_ids:
+                clinic_filter = ""
         except (ValueError, TypeError):
             clinic_filter = ""
+            effective_clinic_ids = clinic_ids
+    else:
+        effective_clinic_ids = clinic_ids
 
-    if date_from:
-        try:
-            qs = qs.filter(appointment_date__gte=datetime.strptime(date_from, "%Y-%m-%d").date())
-        except ValueError:
-            date_from = ""
-
-    if date_to:
-        try:
-            qs = qs.filter(appointment_date__lte=datetime.strptime(date_to, "%Y-%m-%d").date())
-        except ValueError:
-            date_to = ""
+    # ── Base: all patients registered in the doctor's clinics ─
+    # Use ClinicPatient as the source so secretary-registered
+    # patients appear even before their first appointment.
+    cp_qs = (
+        ClinicPatient.objects.filter(clinic_id__in=effective_clinic_ids)
+        .select_related("patient")
+    )
 
     if q:
         phone_q = q.replace(" ", "").replace("-", "")
-        qs = qs.filter(
+        cp_qs = cp_qs.filter(
             Q(patient__name__icontains=q)
             | Q(patient__phone__icontains=phone_q)
             | Q(patient__national_id__icontains=q)
         )
 
-    # ── Aggregate per patient ─────────────────────────────────
-    SORT_MAP = {
-        "-last_visit": "-last_visit",
-        "last_visit":  "last_visit",
-        "name":        "patient__name",
-        "-name":       "-patient__name",
-        "-visits":     "-total_visits",
-        "visits":      "total_visits",
-    }
-    patient_stats = (
-        qs.values("patient_id", "patient__name", "patient__phone", "patient__national_id")
-        .annotate(last_visit=Max("appointment_date"), total_visits=Count("id"))
-        .order_by(SORT_MAP.get(sort, "-last_visit"))
-    )
+    # Deduplicate patients (same patient may be in multiple clinics)
+    seen_pids: set = set()
+    cp_list = []
+    for cp in cp_qs:
+        if cp.patient_id not in seen_pids:
+            seen_pids.add(cp.patient_id)
+            cp_list.append(cp)
 
-    # ── Enrich with profile data ──────────────────────────────
-    today = date.today()
-    raw_list = list(patient_stats)
-    patient_ids = [p["patient_id"] for p in raw_list]
+    patient_ids = list(seen_pids)
 
-    profiles = {
-        pp.user_id: pp
-        for pp in PatientProfile.objects.filter(user_id__in=patient_ids)
-    }
-
-    patient_clinic_rows = (
+    # ── Appointment stats for those patients (with this doctor) ─
+    appt_qs = (
         Appointment.objects.filter(
             doctor=user,
             patient_id__in=patient_ids,
-            clinic_id__in=clinic_ids,
-        )
-        .exclude(status=Appointment.Status.CANCELLED)
-        .values("patient_id", "clinic_id", "clinic__name")
-        .distinct()
+            clinic_id__in=effective_clinic_ids,
+        ).exclude(status=Appointment.Status.CANCELLED)
     )
-    patient_clinic_map = {}
-    for row in patient_clinic_rows:
-        pid = row["patient_id"]
-        entry = {"id": row["clinic_id"], "name": row["clinic__name"]}
+
+    if date_from:
+        try:
+            appt_qs = appt_qs.filter(
+                appointment_date__gte=datetime.strptime(date_from, "%Y-%m-%d").date()
+            )
+        except ValueError:
+            date_from = ""
+
+    if date_to:
+        try:
+            appt_qs = appt_qs.filter(
+                appointment_date__lte=datetime.strptime(date_to, "%Y-%m-%d").date()
+            )
+        except ValueError:
+            date_to = ""
+
+    appt_stats = {
+        s["patient_id"]: s
+        for s in appt_qs.values("patient_id").annotate(
+            last_visit=Max("appointment_date"), total_visits=Count("id")
+        )
+    }
+
+    # ── Patient → clinic tags (from ClinicPatient) ────────────
+    patient_clinic_map: dict = {}
+    for cp in ClinicPatient.objects.filter(
+        patient_id__in=patient_ids,
+        clinic_id__in=clinic_ids,
+    ).select_related("clinic"):
+        pid = cp.patient_id
+        entry = {"id": cp.clinic_id, "name": cp.clinic.name}
         if pid not in patient_clinic_map:
             patient_clinic_map[pid] = []
         if entry not in patient_clinic_map[pid]:
             patient_clinic_map[pid].append(entry)
 
-    GENDER_MAP = {"M": "Male", "F": "Female", "O": "Other"}
+    # ── Profiles ──────────────────────────────────────────────
+    profiles = {
+        pp.user_id: pp
+        for pp in PatientProfile.objects.filter(user_id__in=patient_ids)
+    }
 
+    GENDER_MAP = {"M": "Male", "F": "Female", "O": "Other"}
+    today = date.today()
+
+    # ── Build enriched list ───────────────────────────────────
     enriched = []
-    for p in raw_list:
-        pid  = p["patient_id"]
-        prof = profiles.get(pid)
+    for cp in cp_list:
+        pid   = cp.patient_id
+        prof  = profiles.get(pid)
+        stats = appt_stats.get(pid, {})
 
         age = None
         if prof and prof.date_of_birth:
             dob = prof.date_of_birth
             age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
 
-        lv = p["last_visit"]
+        lv           = stats.get("last_visit")
+        total_visits = stats.get("total_visits", 0)
+
         if lv:
             days = (today - lv).days
             if days <= 30:
@@ -385,18 +411,36 @@ def patients_list(request):
             else:
                 p_status = "inactive"
         else:
-            p_status = "inactive"
+            p_status = "inactive"   # registered but no appointments yet
 
         enriched.append({
-            **p,
-            "age":            age,
-            "gender":         prof.gender if prof else "",
-            "gender_display": GENDER_MAP.get(prof.gender if prof else "", "—"),
-            "clinics":        patient_clinic_map.get(pid, []),
-            "patient_status": p_status,
+            "patient_id":         pid,
+            "patient__name":      cp.patient.name,
+            "patient__phone":     cp.patient.phone,
+            "patient__national_id": cp.patient.national_id,
+            "last_visit":         lv,
+            "total_visits":       total_visits,
+            "age":                age,
+            "gender":             prof.gender if prof else "",
+            "gender_display":     GENDER_MAP.get(prof.gender if prof else "", "—"),
+            "clinics":            patient_clinic_map.get(pid, []),
+            "patient_status":     p_status,
         })
 
-    # ── Status filter (post-aggregation) ─────────────────────
+    # ── Sort (Python-level, nullable last_visit safe) ─────────
+    _min_date = date.min
+    SORT_CONFIGS = {
+        "-last_visit": (lambda p: p["last_visit"] or _min_date, True),
+        "last_visit":  (lambda p: p["last_visit"] or _min_date, False),
+        "name":        (lambda p: p["patient__name"].lower(), False),
+        "-name":       (lambda p: p["patient__name"].lower(), True),
+        "-visits":     (lambda p: p["total_visits"], True),
+        "visits":      (lambda p: p["total_visits"], False),
+    }
+    sort_fn, reverse = SORT_CONFIGS.get(sort, SORT_CONFIGS["-last_visit"])
+    enriched.sort(key=sort_fn, reverse=reverse)
+
+    # ── Status filter (post-enrichment) ──────────────────────
     if status_filter:
         enriched = [p for p in enriched if p["patient_status"] == status_filter]
 
@@ -665,7 +709,7 @@ def guest_accept_invitation_view(request, token):
 
     if existing_user:
         # Store token for redirection after login
-        request.session["pending_invitation_token"] = token
+        request.session["pending_invitation_token"] = str(token)
         request.session["pending_invitation_app"] = app_slug
         login_url = reverse("accounts:login")
 
@@ -694,7 +738,7 @@ def guest_accept_invitation_view(request, token):
         )
 
     # Store token for redirection after registration
-    request.session["pending_invitation_token"] = token
+    request.session["pending_invitation_token"] = str(token)
     request.session["pending_invitation_app"] = app_slug
     return redirect(reverse("accounts:register"))
 

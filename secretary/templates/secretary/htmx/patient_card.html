@@ -1,0 +1,310 @@
+{% load static %}
+{# Rendered inside #patient-detail-section via HTMX #}
+
+<!-- STEP 2: Patient Identity Card -->
+<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-4">
+
+  {# Card header #}
+  <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+    <div class="flex items-center gap-2">
+      <span class="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+      <span class="font-semibold text-gray-800 dark:text-gray-100 text-sm">تأكيد هوية المريض</span>
+    </div>
+    <button type="button"
+      onclick="document.getElementById('patient-detail-section').innerHTML=''; document.getElementById('patient-search-input').value=''; document.getElementById('patient-search-input').focus();"
+      class="text-xs text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors flex items-center gap-1">
+      <i class="fa-solid fa-xmark"></i> تغيير
+    </button>
+  </div>
+
+  <div class="px-5 py-4">
+    {% if already_registered %}
+    {# ── Already registered warning ── #}
+    <div class="flex items-start gap-3 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 mb-4">
+      <i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5 flex-shrink-0"></i>
+      <div>
+        <p class="font-semibold text-amber-800 dark:text-amber-300 text-sm">هذا المريض مسجل بالفعل في عيادة {{ clinic.name }}</p>
+        <p class="text-xs text-amber-600 dark:text-amber-400 mt-0.5">لا يمكن تسجيله مرة أخرى في نفس العيادة.</p>
+      </div>
+    </div>
+    {% endif %}
+
+    {# Patient Summary #}
+    <div class="flex items-start gap-4">
+      {# Avatar #}
+      <div class="w-14 h-14 rounded-full bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center text-purple-700 dark:text-purple-300 font-bold text-2xl flex-shrink-0">
+        {{ patient.name|slice:":1" }}
+      </div>
+      {# Info grid #}
+      <div class="flex-1 min-w-0">
+        <h3 class="text-lg font-bold text-gray-900 dark:text-white leading-tight">{{ patient.name }}</h3>
+        <div class="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+          <div class="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+            <i class="fa-solid fa-phone text-xs text-gray-400 w-3.5"></i>
+            <span>{{ patient.phone }}</span>
+          </div>
+          {% if patient.national_id %}
+          <div class="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+            <i class="fa-solid fa-id-card text-xs text-gray-400 w-3.5"></i>
+            <span>{{ patient.national_id|slice:":4" }}****</span>
+          </div>
+          {% else %}
+          <div class="flex items-center gap-2 text-amber-500 text-xs">
+            <i class="fa-solid fa-id-card text-xs w-3.5"></i>
+            <span>رقم الهوية غير متوفر</span>
+          </div>
+          {% endif %}
+          {% if age %}
+          <div class="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+            <i class="fa-solid fa-cake-candles text-xs text-gray-400 w-3.5"></i>
+            <span>{{ age }} سنة</span>
+          </div>
+          {% elif profile.date_of_birth %}
+          <div class="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+            <i class="fa-solid fa-calendar text-xs text-gray-400 w-3.5"></i>
+            <span>{{ profile.date_of_birth|date:"Y/m/d" }}</span>
+          </div>
+          {% else %}
+          <div class="flex items-center gap-2 text-gray-400 text-xs">
+            <i class="fa-solid fa-calendar text-xs w-3.5"></i>
+            <span>تاريخ الميلاد غير متوفر</span>
+          </div>
+          {% endif %}
+          {% if profile.gender %}
+          <div class="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+            <i class="fa-solid fa-venus-mars text-xs text-gray-400 w-3.5"></i>
+            <span>{{ profile.get_gender_display }}</span>
+          </div>
+          {% endif %}
+        </div>
+
+        {# Other clinics this patient is registered in #}
+        {% if other_clinics %}
+        <div class="mt-3 flex flex-wrap gap-1.5 items-center">
+          <span class="text-xs text-gray-400">مسجل في:</span>
+          {% for cp in other_clinics %}
+          <span class="inline-flex items-center gap-1 text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full border border-blue-100 dark:border-blue-700/30">
+            <i class="fa-solid fa-hospital text-[9px]"></i>
+            {{ cp.clinic.name }}
+          </span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 3: Registration Form -->
+{% if not already_registered %}
+<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+  <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+    <span class="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+    <span class="font-semibold text-gray-800 dark:text-gray-100 text-sm">بيانات التسجيل</span>
+  </div>
+
+  <div class="px-5 py-5">
+    <form method="post" action="{% url 'secretary:register_patient_submit' %}" id="registration-form" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="patient_id" value="{{ patient.id }}">
+
+      {# Auto-fill notice #}
+      <div class="flex items-center gap-2 mb-5 p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/40 text-xs text-purple-700 dark:text-purple-300">
+        <i class="fa-solid fa-circle-info flex-shrink-0"></i>
+        <span>الحقول المميزة بـ <span class="font-bold">مُعبَّأ تلقائياً</span> مأخوذة من ملف المريض. يمكنك تعديلها وستُحفظ عند التسجيل. الحقول الفارغة تحتاج تعبئة يدوية.</span>
+      </div>
+
+      <div class="space-y-4">
+
+        {# Full Name — read-only (primary identity field) #}
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">الاسم الكامل</label>
+            <span class="autofill-badge">مُعبَّأ تلقائياً <i class="fa-solid fa-lock text-[9px] ms-0.5"></i></span>
+          </div>
+          <input
+            type="text"
+            value="{{ patient.name }}"
+            class="reg-field bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+            readonly
+            tabindex="-1"
+          >
+          <p class="text-xs text-gray-400 mt-1">الاسم مرتبط بحساب المريض ولا يمكن تغييره من هنا.</p>
+        </div>
+
+        {# Phone — read-only #}
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">رقم الهاتف</label>
+            <span class="autofill-badge">مُعبَّأ تلقائياً <i class="fa-solid fa-lock text-[9px] ms-0.5"></i></span>
+          </div>
+          <input
+            type="text"
+            value="{{ patient.phone }}"
+            class="reg-field bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+            readonly
+            tabindex="-1"
+          >
+        </div>
+
+        {# National ID — editable if missing #}
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="field-nid" class="text-sm font-medium text-gray-700 dark:text-gray-300">
+              رقم الهوية
+              {% if not patient.national_id %}<span class="text-red-500 ms-0.5">*</span>{% endif %}
+            </label>
+            {% if patient.national_id %}
+            <span class="autofill-badge">مُعبَّأ تلقائياً</span>
+            {% else %}
+            <span class="autofill-badge missing">مطلوب — غير متوفر</span>
+            {% endif %}
+          </div>
+          <input
+            type="text"
+            id="field-nid"
+            name="national_id"
+            value="{{ patient.national_id|default:'' }}"
+            {% if patient.national_id %}data-autofilled="true"{% endif %}
+            placeholder="أدخل رقم الهوية"
+            class="reg-field"
+          >
+          {% if not patient.national_id %}
+          <p class="text-xs text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1">
+            <i class="fa-solid fa-triangle-exclamation text-[10px]"></i>
+            لم يُسجَّل رقم الهوية في الملف — يُرجى إدخاله
+          </p>
+          {% endif %}
+          <span class="field-error-msg text-red-500 text-xs mt-1 hidden" id="err-nid">
+            <i class="fa-solid fa-circle-exclamation me-1"></i>رقم الهوية مطلوب
+          </span>
+        </div>
+
+        {# Date of Birth — editable if missing #}
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="field-dob" class="text-sm font-medium text-gray-700 dark:text-gray-300">تاريخ الميلاد</label>
+            {% if profile.date_of_birth %}
+            <span class="autofill-badge">مُعبَّأ تلقائياً</span>
+            {% else %}
+            <span class="autofill-badge missing">غير متوفر</span>
+            {% endif %}
+          </div>
+          <input
+            type="date"
+            id="field-dob"
+            name="date_of_birth"
+            value="{{ profile.date_of_birth|date:'Y-m-d'|default:'' }}"
+            {% if profile.date_of_birth %}data-autofilled="true"{% endif %}
+            class="reg-field"
+          >
+        </div>
+
+        {# Gender — editable if missing #}
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="field-gender" class="text-sm font-medium text-gray-700 dark:text-gray-300">الجنس</label>
+            {% if profile.gender %}
+            <span class="autofill-badge">مُعبَّأ تلقائياً</span>
+            {% else %}
+            <span class="autofill-badge missing">غير متوفر</span>
+            {% endif %}
+          </div>
+          <select
+            id="field-gender"
+            name="gender"
+            {% if profile.gender %}data-autofilled="true"{% endif %}
+            class="reg-field"
+          >
+            <option value="">-- اختر --</option>
+            <option value="M" {% if profile.gender == "M" %}selected{% endif %}>ذكر</option>
+            <option value="F" {% if profile.gender == "F" %}selected{% endif %}>أنثى</option>
+            <option value="O" {% if profile.gender == "O" %}selected{% endif %}>أخرى</option>
+          </select>
+        </div>
+
+        {# Notes — always optional #}
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="field-notes" class="text-sm font-medium text-gray-700 dark:text-gray-300">ملاحظات (اختياري)</label>
+          </div>
+          <textarea
+            id="field-notes"
+            name="notes"
+            rows="2"
+            placeholder="أي ملاحظات إضافية للسجل الطبي..."
+            class="reg-field resize-none"
+          ></textarea>
+        </div>
+
+      </div>
+
+      {# ── Action Buttons ── #}
+      <div class="flex items-center gap-3 mt-6 pt-5 border-t border-gray-100 dark:border-gray-700">
+        <button
+          type="submit"
+          id="submit-btn"
+          class="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white font-semibold text-sm transition-colors shadow-sm"
+        >
+          <i class="fa-solid fa-user-plus"></i>
+          تسجيل المريض في العيادة
+        </button>
+        <button
+          type="button"
+          onclick="document.getElementById('patient-detail-section').innerHTML=''; document.getElementById('patient-search-input').value=''; document.getElementById('patient-search-input').focus();"
+          class="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 font-medium text-sm transition-colors"
+        >
+          إلغاء
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<script>
+  // Trigger step 3 in the parent page
+  if (typeof onFormReady === 'function') {
+    onFormReady();
+  }
+
+  // Client-side validation
+  document.getElementById('registration-form') && document.getElementById('registration-form').addEventListener('submit', function (e) {
+    let valid = true;
+    const nidField = document.getElementById('field-nid');
+    const nidErr = document.getElementById('err-nid');
+
+    // NID is only required if it was not pre-filled (empty value)
+    if (nidField && !nidField.value.trim()) {
+      nidField.classList.add('field-error-state');
+      if (nidErr) { nidErr.classList.remove('hidden'); }
+      valid = false;
+    } else if (nidField) {
+      nidField.classList.remove('field-error-state');
+      if (nidErr) { nidErr.classList.add('hidden'); }
+    }
+
+    if (!valid) {
+      e.preventDefault();
+      return;
+    }
+
+    // Loading state on submit button
+    const btn = document.getElementById('submit-btn');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<svg class="animate-spin w-4 h-4 me-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg> جاري التسجيل...';
+    }
+  });
+
+  // Clear error on input
+  const nidField = document.getElementById('field-nid');
+  if (nidField) {
+    nidField.addEventListener('input', function () {
+      this.classList.remove('field-error-state');
+      const err = document.getElementById('err-nid');
+      if (err) err.classList.add('hidden');
+    });
+  }
+</script>

@@ -1,38 +1,36 @@
-{% extends "accounts/base.html" %}
-
-{% block title %}دعوة غير صالحة - السكرتارية{% endblock %}
+{% extends "secretary/base_secretary.html" %}
+{% block title %}دعوة غير صالحة{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-6 offset-md-3 text-center mt-5">
-        <div class="card shadow-sm border-0 bg-light">
-            <div class="card-body p-5">
-                <i class="fas fa-exclamation-triangle fa-5x text-warning mb-4"></i>
-                <h3 class="mb-3">عذراً، هذه الدعوة غير صالحة</h3>
-                
-                <p class="lead text-muted mb-4">
-                    {{ error|default:"رابط الدعوة غير صالح أو انتهت صلاحيته." }}
-                </p>
-                
-                <hr class="mb-4">
-                
-                <p class="text-muted">
-                    إذا كنت تعتقد أن هذا خطأ، يرجى التواصل مع مالك العيادة لإرسال دعوة جديدة.
-                </p>
-                
-                <div class="mt-4">
-                    {% if user.is_authenticated %}
-                        <a href="{% url 'accounts:home' %}" class="btn btn-primary">
-                            <i class="fas fa-home me-2"></i> العودة للرئيسية
-                        </a>
-                    {% else %}
-                        <a href="{% url 'accounts:login' %}" class="btn btn-primary">
-                            <i class="fas fa-sign-in-alt me-2"></i> تسجيل الدخول
-                        </a>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
+<div class="max-w-md mx-auto mt-16 text-center px-4" dir="rtl">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-8">
+
+    <div class="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mx-auto mb-5">
+      <i class="fa-solid fa-triangle-exclamation text-amber-500 text-2xl"></i>
     </div>
+
+    <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-2">عذراً، هذه الدعوة غير صالحة</h2>
+    <p class="text-gray-500 dark:text-gray-400 text-sm mb-6">
+      {{ error|default:"رابط الدعوة غير صالح أو انتهت صلاحيته." }}
+    </p>
+
+    <div class="border-t border-gray-100 dark:border-gray-700 pt-5">
+      <p class="text-xs text-gray-400 dark:text-gray-500 mb-4">
+        إذا كنت تعتقد أن هذا خطأ، يرجى التواصل مع مالك العيادة لإرسال دعوة جديدة.
+      </p>
+      {% if user.is_authenticated %}
+      <a href="{% url 'secretary:dashboard' %}"
+         class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold transition-colors">
+        <i class="fa-solid fa-gauge-high text-xs"></i> لوحة التحكم
+      </a>
+      {% else %}
+      <a href="{% url 'accounts:login' %}"
+         class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold transition-colors">
+        <i class="fa-solid fa-right-to-bracket text-xs"></i> تسجيل الدخول
+      </a>
+      {% endif %}
+    </div>
+
+  </div>
 </div>
 {% endblock %}

@@ -579,22 +579,19 @@ def accept_invitation(invitation, user):
         if current_doctors >= subscription.max_doctors:
             raise ValidationError(f"لقد وصلت العيادة للحد الأقصى لعدد الأطباء ({subscription.max_doctors}).")
 
-    # Handle membership — check for revoked membership (re-activation)
+    # Handle membership — match by (clinic, user, role) so a person can hold
+    # multiple roles at the same clinic (e.g. DOCTOR + SECRETARY).
     existing_staff = ClinicStaff.objects.filter(
-        clinic=invitation.clinic, user=user,
+        clinic=invitation.clinic, user=user, role=invitation.role,
     ).first()
 
     if existing_staff:
         if existing_staff.revoked_at:
-            # Re-activate revoked membership
+            # Re-activate a previously revoked role
             existing_staff.revoked_at = None
             existing_staff.is_active = True
-            existing_staff.role = invitation.role
-            existing_staff.save()
-            staff = existing_staff
-        else:
-            # Already active — keep existing role
-            staff = existing_staff
+            existing_staff.save(update_fields=["revoked_at", "is_active"])
+        staff = existing_staff
     else:
         staff = ClinicStaff.objects.create(
             clinic=invitation.clinic,

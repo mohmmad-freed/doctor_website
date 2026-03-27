@@ -81,9 +81,9 @@ class ClinicStaff(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["clinic", "user"],
+                fields=["clinic", "user", "role"],
                 condition=models.Q(revoked_at__isnull=True),
-                name="unique_active_staff_per_clinic",
+                name="unique_active_staff_role_per_clinic",
             )
         ]
         verbose_name = "Clinic Staff"

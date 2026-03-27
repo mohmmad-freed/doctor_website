@@ -57,3 +57,36 @@ class PatientProfile(models.Model):
     class Meta:
         verbose_name = "Patient Profile"
         verbose_name_plural = "Patient Profiles"
+
+
+class ClinicPatient(models.Model):
+    """Tracks which patients are registered in which clinics."""
+
+    clinic = models.ForeignKey(
+        "clinics.Clinic",
+        on_delete=models.CASCADE,
+        related_name="clinic_patients",
+    )
+    patient = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="clinic_registrations",
+    )
+    registered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="patients_registered",
+    )
+    registered_at = models.DateTimeField(auto_now_add=True)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        unique_together = [("clinic", "patient")]
+        verbose_name = "Clinic Patient"
+        verbose_name_plural = "Clinic Patients"
+        ordering = ["-registered_at"]
+
+    def __str__(self):
+        return f"{self.patient.name} @ {self.clinic.name}"
