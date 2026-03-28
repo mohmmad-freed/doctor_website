@@ -161,13 +161,13 @@ def book_appointment_view(request, clinic_id):
                 reason=reason,
             )
 
-            # أ¢â€‌â‚¬أ¢â€‌â‚¬ Save structured AppointmentAnswer records أ¢â€‌â‚¬أ¢â€‌â‚¬
+            # == Save structured AppointmentAnswer records ==
             if questions:
                 save_intake_answers(appointment, questions, answers_dict, file_data, request.user)
 
             messages.success(
                 request,
-                f"ط·ع¾ط¸â€¦ ط·آ­ط·آ¬ط·آ² ط¸â€¦ط¸ث†ط·آ¹ط·آ¯ط¸ئ’ ط·آ¨ط¸â€ ط·آ¬ط·آ§ط·آ­! ط·آ±ط¸â€ڑط¸â€¦ ط·آ§ط¸â€‍ط·آ­ط·آ¬ط·آ²: #{appointment.id}"
+                f"تم حجز موعدك بنجاح! رقم الحجز: #{appointment.id}"
             )
             return redirect("appointments:booking_confirmation", appointment_id=appointment.id)
 

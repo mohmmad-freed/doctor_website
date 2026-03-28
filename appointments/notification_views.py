@@ -63,18 +63,27 @@ def notifications_center(request):
     for notif in notifications:
         notif.target_url = _resolve_appointment_url(notif, request.user)
 
-    # If the user has a PATIENT role, always show the patient-portal layout.
-    # Multi-role users (e.g. PATIENT + MAIN_DOCTOR) are treated as patients
-    # here because the notification bell lives in the patient dashboard navbar.
-    if request.user.has_role("PATIENT"):
+    # Doctor/secretary roles take priority over patient role, since MAIN_DOCTOR
+    # users also hold the PATIENT role and must see their own portal layout.
+    if request.user.has_role("DOCTOR") or request.user.has_role("MAIN_DOCTOR"):
+        template = "appointments/notifications_center_staff.html"
+        base_template = "doctors/base_doctor.html"
+    elif request.user.has_role("SECRETARY"):
+        template = "appointments/notifications_center_staff.html"
+        base_template = "secretary/base_secretary.html"
+    elif request.user.has_role("PATIENT"):
         template = "appointments/notifications_center_patient.html"
+        base_template = None
     else:
         template = "appointments/notifications_center_staff.html"
+        base_template = "accounts/base.html"
 
     context = {
         "notifications": notifications,
         "unread_count": unread_count,
         "total_count": total_count,
+        "read_count": total_count - unread_count,
+        "base_template": base_template,
     }
     return render(request, template, context)
 

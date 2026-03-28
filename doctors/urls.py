@@ -28,6 +28,9 @@ urlpatterns = [
     path("patients/<int:patient_id>/prescriptions/from-order/<int:order_id>/", views.ws_prescription_from_order, name="ws_prescription_from_order"),
     path("patients/<int:patient_id>/records/upload/", views.ws_record_upload, name="ws_record_upload"),
     path("patients/<int:patient_id>/records/<int:record_id>/delete/", views.ws_record_delete, name="ws_record_delete"),
+    # --- Schedule Follow-up (doctor-side appointment creation) ---
+    path("patients/<int:patient_id>/schedule-followup/", views.ws_schedule_followup, name="ws_schedule_followup"),
+    path("patients/<int:patient_id>/schedule-followup/slots/", views.htmx_followup_slots, name="htmx_followup_slots"),
     # --- Patient-facing template views ---
     path(
         "<int:doctor_id>/availability/",

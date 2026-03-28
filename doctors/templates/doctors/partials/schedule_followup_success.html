@@ -1,0 +1,92 @@
+{#
+  Schedule Follow-up — Success Partial
+  ──────────────────────────────────────
+  Swapped into #followup-modal-root after a successful POST.
+  Auto-closes after 3 s and optionally reloads the workspace overview.
+#}
+<div id="followup-success-modal"
+     x-data="{ open: false }"
+     x-init="$nextTick(() => {
+       open = true;
+       setTimeout(() => {
+         open = false;
+         setTimeout(() => {
+           const root = document.getElementById('followup-modal-root');
+           if (root) root.innerHTML = '';
+         }, 250);
+       }, 3200);
+     })"
+     x-show="open"
+     x-cloak
+     x-transition:enter="transition ease-out duration-200"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     x-transition:leave="transition ease-in duration-200"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0"
+     class="fixed inset-0 z-[60] flex items-center justify-center px-4">
+
+  <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm"></div>
+
+  <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm z-10 overflow-hidden"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0 scale-95"
+       x-transition:enter-end="opacity-100 scale-100">
+
+    {# ── Success content ── #}
+    <div class="px-6 py-8 flex flex-col items-center text-center">
+
+      {# Animated check icon #}
+      <div class="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-4 shadow-sm">
+        <i class="fa-solid fa-calendar-check text-emerald-600 dark:text-emerald-400 text-2xl"></i>
+      </div>
+
+      <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-1">Follow-up Scheduled</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">
+        The appointment has been created successfully.
+      </p>
+
+      {# ── Appointment summary ── #}
+      <div class="w-full bg-slate-50 dark:bg-slate-700/50 rounded-xl border border-slate-200 dark:border-slate-600/60 divide-y divide-slate-200 dark:divide-slate-600/60 text-left text-sm mb-5">
+        <div class="flex items-center gap-3 px-4 py-3">
+          <i class="fa-regular fa-user w-4 text-center text-slate-400"></i>
+          <span class="text-slate-600 dark:text-slate-300 font-medium">{{ patient.name }}</span>
+        </div>
+        <div class="flex items-center gap-3 px-4 py-3">
+          <i class="fa-regular fa-calendar w-4 text-center text-indigo-400"></i>
+          <span class="text-slate-700 dark:text-slate-200 font-semibold">
+            {{ appointment.appointment_date|date:"l, d F Y" }}
+          </span>
+        </div>
+        <div class="flex items-center gap-3 px-4 py-3">
+          <i class="fa-regular fa-clock w-4 text-center text-indigo-400"></i>
+          <span class="text-slate-700 dark:text-slate-200 font-semibold">
+            {{ appointment.appointment_time|time:"H:i" }}
+          </span>
+        </div>
+        <div class="flex items-center gap-3 px-4 py-3">
+          <i class="fa-solid fa-hospital w-4 text-center text-slate-400"></i>
+          <span class="text-slate-600 dark:text-slate-300">{{ appointment.clinic.name }}</span>
+        </div>
+        {% if appointment.appointment_type %}
+        <div class="flex items-center gap-3 px-4 py-3">
+          <i class="fa-solid fa-tag w-4 text-center text-slate-400"></i>
+          <span class="text-slate-600 dark:text-slate-300">{{ appointment.appointment_type.display_name }}</span>
+        </div>
+        {% endif %}
+      </div>
+
+      {# ── Dismiss button ── #}
+      <button type="button"
+              @click="open = false; setTimeout(() => { const r = document.getElementById('followup-modal-root'); if(r) r.innerHTML=''; }, 250);"
+              class="w-full px-4 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors shadow-sm">
+        Done
+      </button>
+
+      <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-3">
+        Closes automatically in a moment…
+      </p>
+
+    </div>
+  </div>
+</div>

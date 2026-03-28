@@ -1046,18 +1046,24 @@ def my_schedule(request):
         messages.error(request, "This page is for doctors only.")
         return redirect(reverse("accounts:home"))
 
-    # All active clinic memberships
-    memberships = (
+    # All active clinic memberships (deduplicated by clinic)
+    _all_memberships = list(
         ClinicStaff.objects.filter(user=user, is_active=True, revoked_at__isnull=True)
         .select_related("clinic")
         .order_by("clinic__name")
     )
+    seen_clinic_ids = set()
+    memberships = []
+    for _m in _all_memberships:
+        if _m.clinic_id not in seen_clinic_ids:
+            seen_clinic_ids.add(_m.clinic_id)
+            memberships.append(_m)
 
     # Determine selected clinic (from GET or POST param)
     clinic_id_param = request.GET.get("clinic_id") or request.POST.get("clinic_id")
     selected_clinic = None
 
-    if memberships.exists():
+    if memberships:
         if clinic_id_param:
             try:
                 cid = int(clinic_id_param)
@@ -1065,7 +1071,7 @@ def my_schedule(request):
             except (ValueError, TypeError):
                 pass
         if selected_clinic is None:
-            selected_clinic = memberships.first().clinic
+            selected_clinic = memberships[0].clinic
 
     # Handle POST: add or delete a slot
     if request.method == "POST" and selected_clinic:
@@ -1169,12 +1175,18 @@ def my_appointment_types(request):
         _messages.error(request, "This page is for doctors only.")
         return redirect(_reverse("accounts:home"))
 
-    # All active clinics the doctor belongs to
-    memberships = (
+    # All active clinics the doctor belongs to (deduplicated by clinic)
+    _all_memberships = list(
         ClinicStaff.objects.filter(user=user, is_active=True, revoked_at__isnull=True)
         .select_related("clinic")
         .order_by("clinic__name")
     )
+    seen_clinic_ids = set()
+    memberships = []
+    for _m in _all_memberships:
+        if _m.clinic_id not in seen_clinic_ids:
+            seen_clinic_ids.add(_m.clinic_id)
+            memberships.append(_m)
 
     # Handle POST: update types for a specific clinic
     if request.method == "POST":
@@ -2140,3 +2152,198 @@ def ws_record_delete(request, patient_id, record_id):
         return render(request, "doctors/partials/ws_records.html", ctx)
 
     return redirect("doctors:patient_workspace", patient_id=patient_id)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SCHEDULE FOLLOW-UP (doctor-side appointment creation)
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+@login_required
+def ws_schedule_followup(request, patient_id):
+    """
+    GET  → Return the schedule follow-up modal partial (HTMX target).
+    POST → Validate and create the follow-up appointment, return
+           success or error fragment in-place (no page reload).
+    """
+    ctx = _ws_access(request, patient_id)
+    if ctx is None:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("Access denied.")
+
+    doctor  = ctx["doctor"]
+    patient = ctx["patient"]
+    clinics = ctx["clinics"]
+
+    from appointments.services.appointment_type_service import (
+        get_appointment_types_for_doctor_in_clinic,
+    )
+
+    if request.method == "GET":
+        default_clinic = clinics[0] if clinics else None
+        appointment_types = []
+        if default_clinic:
+            appointment_types = get_appointment_types_for_doctor_in_clinic(
+                doctor_id=doctor.id,
+                clinic_id=default_clinic.id,
+            )
+        return render(request, "doctors/partials/schedule_followup_modal.html", {
+            "patient":           patient,
+            "doctor":            doctor,
+            "clinics":           clinics,
+            "default_clinic":    default_clinic,
+            "appointment_types": appointment_types,
+            "today":             date.today().isoformat(),
+        })
+
+    # ── POST ──────────────────────────────────────────────────
+    from datetime import datetime as _dt
+    from appointments.services.doctor_booking_service import (
+        schedule_followup, DoctorSchedulingError,
+    )
+
+    clinic_id_raw   = request.POST.get("clinic_id", "")
+    date_str        = request.POST.get("appointment_date", "")
+    time_str        = request.POST.get("appointment_time", "")
+    type_id_str     = request.POST.get("appointment_type_id", "")
+    notes           = request.POST.get("notes", "").strip()
+    allow_override  = request.POST.get("allow_conflict") == "1"
+
+    errors = {}
+
+    try:
+        clinic_id = int(clinic_id_raw)
+    except (ValueError, TypeError):
+        clinic_id = None
+        errors["clinic"] = "Please select a clinic."
+
+    try:
+        appt_date = _dt.strptime(date_str, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        appt_date = None
+        errors["date"] = "Please select a valid date."
+
+    try:
+        appt_time = _dt.strptime(time_str, "%H:%M").time()
+    except (ValueError, TypeError):
+        appt_time = None
+        errors["time"] = "Please select or enter a valid time."
+
+    type_id = None
+    if type_id_str:
+        try:
+            type_id = int(type_id_str)
+        except (ValueError, TypeError):
+            pass
+
+    def _modal_ctx(extra=None):
+        apt = []
+        if clinic_id:
+            apt = get_appointment_types_for_doctor_in_clinic(
+                doctor_id=doctor.id, clinic_id=clinic_id
+            )
+        base = {
+            "patient":           patient,
+            "doctor":            doctor,
+            "clinics":           clinics,
+            "default_clinic_id": clinic_id,
+            "appointment_types": apt,
+            "today":             date.today().isoformat(),
+            "post_data":         request.POST,
+        }
+        if extra:
+            base.update(extra)
+        return base
+
+    if errors:
+        return render(
+            request,
+            "doctors/partials/schedule_followup_modal.html",
+            _modal_ctx({"errors": errors}),
+        )
+
+    try:
+        appointment = schedule_followup(
+            doctor=doctor,
+            patient_id=patient_id,
+            clinic_id=clinic_id,
+            appointment_date=appt_date,
+            appointment_time=appt_time,
+            appointment_type_id=type_id,
+            notes=notes,
+            allow_conflict=allow_override,
+        )
+        return render(request, "doctors/partials/schedule_followup_success.html", {
+            "appointment": appointment,
+            "patient":     patient,
+        })
+    except DoctorSchedulingError as exc:
+        return render(
+            request,
+            "doctors/partials/schedule_followup_modal.html",
+            _modal_ctx({
+                "booking_error":      exc.message,
+                "booking_error_code": exc.code,
+            }),
+        )
+
+
+@login_required
+def htmx_followup_slots(request, patient_id):
+    """
+    HTMX endpoint: returns available time-slot buttons for a given
+    doctor / clinic / date / appointment-type combination.
+
+    Used by the Schedule Follow-up modal's date/clinic selectors.
+
+    Query params:
+        clinic_id            – required
+        appointment_date     – YYYY-MM-DD, required
+        appointment_type_id  – optional (drives duration)
+    """
+    ctx = _ws_access(request, patient_id)
+    if ctx is None:
+        from django.http import HttpResponse as _HR
+        return _HR("", status=403)
+
+    doctor        = ctx["doctor"]
+    clinic_id_str = request.GET.get("clinic_id", "")
+    date_str      = request.GET.get("appointment_date", "")
+    type_id_str   = request.GET.get("appointment_type_id", "")
+
+    try:
+        clinic_id = int(clinic_id_str)
+    except (ValueError, TypeError):
+        return render(request, "doctors/partials/schedule_followup_slots.html", {
+            "slots": [], "error": "Please select a clinic first.",
+        })
+
+    try:
+        from datetime import datetime as _dt2
+        target_date = _dt2.strptime(date_str, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        return render(request, "doctors/partials/schedule_followup_slots.html", {
+            "slots": [], "error": "Please select a date first.",
+        })
+
+    duration_minutes = 30  # sensible default when no type chosen
+    if type_id_str:
+        try:
+            apt_type = AppointmentType.objects.get(
+                id=int(type_id_str), clinic_id=clinic_id, is_active=True,
+            )
+            duration_minutes = apt_type.duration_minutes
+        except (AppointmentType.DoesNotExist, ValueError, TypeError):
+            pass
+
+    slots = generate_slots_for_date(
+        doctor_id=doctor.id,
+        clinic_id=clinic_id,
+        target_date=target_date,
+        duration_minutes=duration_minutes,
+    )
+
+    return render(request, "doctors/partials/schedule_followup_slots.html", {
+        "slots":       slots,
+        "target_date": target_date,
+    })

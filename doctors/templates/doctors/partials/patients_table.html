@@ -220,13 +220,15 @@
                                     <i class="fa-regular fa-calendar-check w-4 text-center text-primary-500"></i>
                                     View Appointments
                                 </a>
-                                {% if p.clinics %}
-                                <a href="{% url 'appointments:book_appointment' p.clinics.0.id %}"
-                                   class="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                                    <i class="fa-solid fa-calendar-plus w-4 text-center text-emerald-500"></i>
-                                    New Appointment
-                                </a>
-                                {% endif %}
+                                <button type="button"
+                                        hx-get="{% url 'doctors:ws_schedule_followup' p.patient_id %}"
+                                        hx-target="#followup-modal-root"
+                                        hx-swap="innerHTML"
+                                        @click="open = false"
+                                        class="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors w-full text-left">
+                                    <i class="fa-solid fa-calendar-plus w-4 text-center text-indigo-500"></i>
+                                    Schedule Follow-up
+                                </button>
                                 <div class="h-px bg-slate-100 dark:bg-slate-700 mx-2"></div>
                                 <div class="px-4 py-2">
                                     <p class="text-xs text-slate-400 dark:text-slate-500">

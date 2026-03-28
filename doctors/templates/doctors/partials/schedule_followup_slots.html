@@ -1,0 +1,91 @@
+{#
+  Schedule Follow-up — Slots Partial
+  ─────────────────────────────────────
+  Loaded via HTMX into #followup-slots when the doctor selects a date.
+  Always provides exactly one input[name="appointment_time"] so the
+  parent form captures it on submit.
+#}
+
+{% if error %}
+{# ── Error (missing clinic / date) ── #}
+<p class="text-xs text-slate-400 dark:text-slate-500 italic py-1">{{ error }}</p>
+
+{% elif not slots %}
+{# ── No schedule on this day → free time input ── #}
+<div>
+  <p class="text-xs text-amber-600 dark:text-amber-400 mb-2.5 flex items-center gap-1.5">
+    <i class="fa-solid fa-circle-info text-[11px]"></i>
+    No schedule set for this day. Enter a time manually.
+  </p>
+  <input type="time"
+         name="appointment_time"
+         id="followup-time-input"
+         required
+         class="px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-colors w-36">
+</div>
+
+{% else %}
+{# ── Slot grid ── #}
+<div>
+  <div class="flex flex-wrap gap-1.5 mb-2" id="followup-slot-grid">
+    {% for slot in slots %}
+    <button type="button"
+            data-time="{{ slot.time|time:'H:i' }}"
+            onclick="selectFollowupSlot(this)"
+            class="followup-slot-btn px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all
+                   {% if slot.is_available %}
+                   bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600
+                   text-slate-700 dark:text-slate-200
+                   hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20
+                   cursor-pointer
+                   {% else %}
+                   bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700
+                   text-slate-400 dark:text-slate-500
+                   {% endif %}"
+            {% if not slot.is_available %}
+            title="Already booked — click to override"
+            {% endif %}>
+      {{ slot.time|time:"H:i" }}
+      {% if not slot.is_available %}
+      <i class="fa-solid fa-lock ml-1 opacity-50" style="font-size:9px;"></i>
+      {% endif %}
+    </button>
+    {% endfor %}
+  </div>
+
+  {# Hidden input carries the selected time to the form #}
+  <input type="hidden" name="appointment_time" id="followup-time-hidden" value="">
+  <p id="followup-slot-hint" class="text-xs text-slate-400 dark:text-slate-500 hidden">
+    <i class="fa-regular fa-clock mr-1"></i>
+    <span id="followup-slot-hint-text"></span>
+  </p>
+</div>
+
+<script>
+(function () {
+  function selectFollowupSlot(btn) {
+    // Deselect all
+    document.querySelectorAll('.followup-slot-btn').forEach(function (b) {
+      b.classList.remove('ring-2', 'ring-indigo-500', 'bg-indigo-50', 'dark:bg-indigo-900/30',
+                          'text-indigo-700', 'dark:text-indigo-300', 'border-indigo-400');
+    });
+    // Select clicked
+    btn.classList.add('ring-2', 'ring-indigo-500', 'bg-indigo-50', 'dark:bg-indigo-900/30',
+                       'text-indigo-700', 'dark:text-indigo-300', 'border-indigo-400');
+
+    var t = btn.dataset.time;
+    var hidden = document.getElementById('followup-time-hidden');
+    if (hidden) hidden.value = t;
+
+    var hint = document.getElementById('followup-slot-hint');
+    var hintText = document.getElementById('followup-slot-hint-text');
+    if (hint && hintText) {
+      hintText.textContent = t + ' selected';
+      hint.classList.remove('hidden');
+    }
+  }
+  // Expose globally so inline onclick works
+  window.selectFollowupSlot = selectFollowupSlot;
+})();
+</script>
+{% endif %}

@@ -202,6 +202,13 @@
                 class="qa-btn qa-btn-outline">
           <i class="fa-solid fa-upload text-xs"></i> Upload
         </button>
+        <button hx-get="{% url 'doctors:ws_schedule_followup' patient.id %}"
+                hx-target="#followup-modal-root"
+                hx-swap="innerHTML"
+                class="qa-btn qa-btn-outline"
+                style="color:#4f46e5; border-color:#c7d2fe;">
+          <i class="fa-solid fa-calendar-plus text-xs"></i> Schedule Follow-up
+        </button>
       </div>
     </div>
 
@@ -237,6 +244,9 @@
       {% include "doctors/partials/ws_records.html" %}
     {% endif %}
   </div>
+
+{# ── Follow-up modal mount point (outside sticky header, always present) ── #}
+<div id="followup-modal-root"></div>
 
 </div>
 

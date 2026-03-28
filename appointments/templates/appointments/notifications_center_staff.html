@@ -1,325 +1,125 @@
-{% extends "accounts/base.html" %}
+{% extends base_template %}
 {% load static %}
 
-{% block title %}مركز الإشعارات{% endblock %}
-
-{% block extra_css %}
-<style>
-/* ── Notification center layout ───────────────────────────── */
-.notif-page {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 2rem 1rem;
-}
-.notif-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-}
-.notif-header h1 {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: var(--color-text-main);
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin: 0;
-}
-.notif-header p {
-    font-size: 0.88rem;
-    color: var(--color-text-muted);
-    margin: 0.25rem 0 0;
-}
-.notif-mark-all-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.45rem 1rem;
-    background: rgba(37, 99, 235, 0.08);
-    color: var(--color-primary-500, #2563eb);
-    border: 1px solid rgba(37, 99, 235, 0.25);
-    border-radius: 8px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.15s;
-    font-family: inherit;
-}
-.notif-mark-all-btn:hover {
-    background: rgba(37, 99, 235, 0.14);
-}
-/* ── Notification card ─────────────────────────────────────── */
-.notif-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-.notif-card {
-    display: flex;
-    gap: 1rem;
-    position: relative;
-    padding: 1rem 1.25rem;
-    background: var(--color-surface-card, #fff);
-    border: 1px solid var(--color-surface-border, #e5e7eb);
-    border-radius: 12px;
-    transition: box-shadow 0.15s;
-}
-.notif-card:hover {
-    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-}
-.notif-card.unread {
-    border-right: 3px solid var(--color-primary-500, #2563eb);
-    background: rgba(37, 99, 235, 0.03);
-}
-[data-theme="dark"] .notif-card.unread {
-    background: rgba(59, 143, 217, 0.06);
-}
-.notif-unread-dot {
-    position: absolute;
-    top: 1rem;
-    left: 1rem;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--color-primary-500, #2563eb);
-}
-/* ── Icon ──────────────────────────────────────────────────── */
-.notif-icon {
-    flex-shrink: 0;
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.1rem;
-    margin-top: 0.1rem;
-}
-.notif-icon-booked   { background: #f0fdf4; color: #16a34a; }
-.notif-icon-cancel   { background: #fef2f2; color: #dc2626; }
-.notif-icon-reschedule { background: #fff7ed; color: #ea580c; }
-.notif-icon-edited   { background: #eff6ff; color: #2563eb; }
-.notif-icon-reminder { background: #fefce8; color: #ca8a04; }
-.notif-icon-default  { background: #f5f3ff; color: #7c3aed; }
-[data-theme="dark"] .notif-icon-booked   { background: #052e16; color: #4ade80; }
-[data-theme="dark"] .notif-icon-cancel   { background: #450a0a; color: #f87171; }
-[data-theme="dark"] .notif-icon-reschedule { background: #431407; color: #fb923c; }
-[data-theme="dark"] .notif-icon-edited   { background: #1e3a5f; color: #60a5fa; }
-[data-theme="dark"] .notif-icon-reminder { background: #422006; color: #fbbf24; }
-[data-theme="dark"] .notif-icon-default  { background: #2e1065; color: #c4b5fd; }
-/* ── Content ───────────────────────────────────────────────── */
-.notif-body {
-    flex-grow: 1;
-    min-width: 0;
-}
-.notif-top {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-.notif-title {
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: var(--color-text-main);
-    line-height: 1.35;
-    margin: 0;
-}
-.notif-time {
-    font-size: 0.78rem;
-    color: var(--color-text-muted);
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-.notif-message {
-    font-size: 0.85rem;
-    color: var(--color-text-body);
-    margin: 0.3rem 0 0.75rem;
-    line-height: 1.6;
-}
-.notif-footer {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-}
-.notif-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--color-primary-500, #2563eb);
-    text-decoration: none;
-}
-.notif-link:hover { text-decoration: underline; }
-.notif-read-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: var(--color-text-muted);
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    font-family: inherit;
-    transition: color 0.15s;
-}
-.notif-read-btn:hover { color: var(--color-text-main); }
-.notif-read-badge {
-    font-size: 0.78rem;
-    color: var(--color-text-muted);
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-}
-/* ── Empty state ───────────────────────────────────────────── */
-.notif-empty {
-    text-align: center;
-    padding: 4rem 1rem;
-    background: var(--color-surface-card);
-    border: 1px solid var(--color-surface-border);
-    border-radius: 14px;
-}
-.notif-empty-icon {
-    width: 64px;
-    height: 64px;
-    background: var(--color-surface-ground, #f9fafb);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.75rem;
-    color: var(--color-text-muted);
-    margin: 0 auto 1rem;
-}
-.notif-empty h3 {
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--color-text-body);
-    margin: 0 0 0.35rem;
-}
-.notif-empty p {
-    font-size: 0.88rem;
-    color: var(--color-text-muted);
-    margin: 0;
-}
-</style>
-{% endblock %}
+{% block title %}Notifications | Doctor Portal{% endblock %}
 
 {% block content %}
-<div class="notif-page">
+<div class="max-w-3xl mx-auto animate-fade-in-up">
 
-    <!-- Header -->
-    <div class="notif-header">
+    <!-- Page Header -->
+    <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1>
-                <i class="fa-regular fa-bell"></i>
-                مركز الإشعارات
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2.5">
+                <span class="w-9 h-9 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
+                    <i class="fa-regular fa-bell text-primary-600 dark:text-primary-400"></i>
+                </span>
+                Notification Center
             </h1>
-            <p>
+            <p class="text-sm text-gray-500 dark:text-slate-400 mt-1.5 ml-11">
                 {% if unread_count > 0 %}
-                لديك <strong>{{ unread_count }}</strong> إشعار غير مقروء
+                    You have <strong class="font-bold text-gray-800 dark:text-gray-200">{{ unread_count }}</strong>
+                    unread notification{{ unread_count|pluralize }}
                 {% else %}
-                كل إشعاراتك مقروءة
+                    You're all caught up &mdash; no unread notifications
                 {% endif %}
             </p>
         </div>
 
         {% if unread_count > 0 %}
-        <form method="post" action="{% url 'appointments:mark_all_notifications_read' %}">
+        <form method="post" action="{% url 'appointments:mark_all_notifications_read' %}" class="flex-shrink-0">
             {% csrf_token %}
-            <button type="submit" class="notif-mark-all-btn">
-                <i class="fa-solid fa-check-double" style="font-size:0.8rem;"></i>
-                تحديد الكل كمقروء
+            <button type="submit"
+                    class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold
+                           bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300
+                           border border-primary-200 dark:border-primary-800
+                           hover:bg-primary-100 dark:hover:bg-primary-900/40 active:scale-95 transition-all">
+                <i class="fa-solid fa-check-double text-xs"></i>
+                Mark All as Read
             </button>
         </form>
         {% endif %}
     </div>
 
-    <!-- List -->
-    {% if notifications %}
-    <div class="notif-list">
-        {% for notif in notifications %}
-        <div class="notif-card {% if not notif.is_read %}unread{% endif %}">
+    <!-- Stats Strip -->
+    <div class="grid grid-cols-3 gap-3 mb-6">
 
-            {% if not notif.is_read %}
-            <span class="notif-unread-dot"></span>
-            {% endif %}
-
-            <!-- Icon -->
-            <div class="notif-icon
-                {% if notif.notification_type == 'APPOINTMENT_BOOKED' %}notif-icon-booked
-                {% elif notif.notification_type == 'APPOINTMENT_CANCELLED' %}notif-icon-cancel
-                {% elif notif.notification_type == 'APPOINTMENT_RESCHEDULED' %}notif-icon-reschedule
-                {% elif notif.notification_type == 'APPOINTMENT_EDITED' %}notif-icon-edited
-                {% elif notif.notification_type == 'APPOINTMENT_REMINDER' %}notif-icon-reminder
-                {% else %}notif-icon-default{% endif %}">
-                {% if notif.notification_type == 'APPOINTMENT_BOOKED' %}
-                    <i class="fa-regular fa-calendar-check"></i>
-                {% elif notif.notification_type == 'APPOINTMENT_CANCELLED' %}
-                    <i class="fa-regular fa-calendar-xmark"></i>
-                {% elif notif.notification_type == 'APPOINTMENT_RESCHEDULED' %}
-                    <i class="fa-solid fa-calendar-day"></i>
-                {% elif notif.notification_type == 'APPOINTMENT_EDITED' %}
-                    <i class="fa-regular fa-calendar-pen"></i>
-                {% elif notif.notification_type == 'APPOINTMENT_REMINDER' %}
-                    <i class="fa-regular fa-bell"></i>
-                {% else %}
-                    <i class="fa-solid fa-circle-info"></i>
-                {% endif %}
+        <div class="glass-card px-4 py-3.5 flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+                <i class="fa-solid fa-inbox text-slate-500 dark:text-slate-400 text-sm"></i>
             </div>
-
-            <!-- Body -->
-            <div class="notif-body">
-                <div class="notif-top">
-                    <p class="notif-title">{{ notif.title }}</p>
-                    <span class="notif-time">{{ notif.created_at|timesince }} مضت</span>
-                </div>
-                <p class="notif-message">{{ notif.message }}</p>
-
-                <div class="notif-footer">
-                    {% if notif.target_url %}
-                    <a href="{{ notif.target_url }}" class="notif-link">
-                        <i class="fa-solid fa-arrow-left" style="font-size:0.7rem;"></i>
-                        عرض المواعيد
-                    </a>
-                    {% endif %}
-
-                    {% if not notif.is_read %}
-                    <form method="post" action="{% url 'appointments:mark_notification_read' notif.pk %}" style="margin:0;">
-                        {% csrf_token %}
-                        <input type="hidden" name="next" value="{{ request.path }}">
-                        <button type="submit" class="notif-read-btn">
-                            <i class="fa-regular fa-circle-check" style="font-size:0.78rem;"></i>
-                            تحديد كمقروء
-                        </button>
-                    </form>
-                    {% else %}
-                    <span class="notif-read-badge">
-                        <i class="fa-solid fa-check" style="font-size:0.7rem;"></i>
-                        مقروء
-                    </span>
-                    {% endif %}
-                </div>
+            <div>
+                <p class="text-xl font-bold text-gray-900 dark:text-white leading-none">{{ total_count }}</p>
+                <p class="text-xs text-gray-400 dark:text-slate-500 mt-0.5 font-medium">Total</p>
             </div>
         </div>
+
+        <div class="glass-card px-4 py-3.5 flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-primary-50 dark:bg-primary-900/25 flex items-center justify-center flex-shrink-0">
+                <i class="fa-regular fa-bell text-primary-500 dark:text-primary-400 text-sm"></i>
+            </div>
+            <div>
+                <p class="text-xl font-bold text-primary-600 dark:text-primary-400 leading-none">{{ unread_count }}</p>
+                <p class="text-xs text-gray-400 dark:text-slate-500 mt-0.5 font-medium">Unread</p>
+            </div>
+        </div>
+
+        <div class="glass-card px-4 py-3.5 flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center flex-shrink-0">
+                <i class="fa-solid fa-check text-emerald-600 dark:text-emerald-400 text-sm"></i>
+            </div>
+            <div>
+                <p class="text-xl font-bold text-gray-900 dark:text-white leading-none">{{ read_count }}</p>
+                <p class="text-xs text-gray-400 dark:text-slate-500 mt-0.5 font-medium">Read</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Notification List -->
+    {% if notifications %}
+    <div class="space-y-3">
+        {% for notif in notifications %}
+
+        {# Resolve icon + color classes based on type #}
+        {% if notif.notification_type == 'APPOINTMENT_BOOKED' %}
+            {% with icon_class="fa-regular fa-calendar-check" color_bg="bg-emerald-100 dark:bg-emerald-900/30" color_text="text-emerald-600 dark:text-emerald-400" badge_bg="bg-emerald-50 dark:bg-emerald-900/20" badge_text="text-emerald-700 dark:text-emerald-400" label="Booked" %}
+            {% include "appointments/partials/notif_card_doctor.html" %}
+            {% endwith %}
+        {% elif notif.notification_type == 'APPOINTMENT_CANCELLED' %}
+            {% with icon_class="fa-regular fa-calendar-xmark" color_bg="bg-red-100 dark:bg-red-900/30" color_text="text-red-600 dark:text-red-400" badge_bg="bg-red-50 dark:bg-red-900/20" badge_text="text-red-700 dark:text-red-400" label="Cancelled" %}
+            {% include "appointments/partials/notif_card_doctor.html" %}
+            {% endwith %}
+        {% elif notif.notification_type == 'APPOINTMENT_RESCHEDULED' %}
+            {% with icon_class="fa-solid fa-calendar-day" color_bg="bg-orange-100 dark:bg-orange-900/30" color_text="text-orange-600 dark:text-orange-400" badge_bg="bg-orange-50 dark:bg-orange-900/20" badge_text="text-orange-700 dark:text-orange-400" label="Rescheduled" %}
+            {% include "appointments/partials/notif_card_doctor.html" %}
+            {% endwith %}
+        {% elif notif.notification_type == 'APPOINTMENT_EDITED' %}
+            {% with icon_class="fa-regular fa-calendar-pen" color_bg="bg-blue-100 dark:bg-blue-900/30" color_text="text-blue-600 dark:text-blue-400" badge_bg="bg-blue-50 dark:bg-blue-900/20" badge_text="text-blue-700 dark:text-blue-400" label="Edited" %}
+            {% include "appointments/partials/notif_card_doctor.html" %}
+            {% endwith %}
+        {% elif notif.notification_type == 'APPOINTMENT_REMINDER' %}
+            {% with icon_class="fa-regular fa-bell" color_bg="bg-amber-100 dark:bg-amber-900/30" color_text="text-amber-600 dark:text-amber-400" badge_bg="bg-amber-50 dark:bg-amber-900/20" badge_text="text-amber-700 dark:text-amber-400" label="Reminder" %}
+            {% include "appointments/partials/notif_card_doctor.html" %}
+            {% endwith %}
+        {% else %}
+            {% with icon_class="fa-solid fa-circle-info" color_bg="bg-violet-100 dark:bg-violet-900/30" color_text="text-violet-600 dark:text-violet-400" badge_bg="bg-violet-50 dark:bg-violet-900/20" badge_text="text-violet-700 dark:text-violet-400" label="Notification" %}
+            {% include "appointments/partials/notif_card_doctor.html" %}
+            {% endwith %}
+        {% endif %}
+
         {% endfor %}
     </div>
 
     {% else %}
-    <div class="notif-empty">
-        <div class="notif-empty-icon">
-            <i class="fa-regular fa-bell-slash"></i>
+    <!-- Empty State -->
+    <div class="glass-card p-16 text-center">
+        <div class="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center mx-auto mb-4">
+            <i class="fa-regular fa-bell-slash text-2xl text-slate-400 dark:text-slate-500"></i>
         </div>
-        <h3>لا توجد إشعارات بعد</h3>
-        <p>ستظهر هنا إشعارات المواعيد عند وجودها.</p>
+        <h3 class="text-base font-bold text-gray-700 dark:text-gray-300 mb-1.5">No notifications yet</h3>
+        <p class="text-sm text-gray-500 dark:text-slate-400">
+            Appointment notifications will appear here when they arrive.
+        </p>
     </div>
     {% endif %}
 
