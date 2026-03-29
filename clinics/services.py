@@ -709,6 +709,7 @@ def cancel_invitation(invitation, owner):
     _log_invitation_action(invitation, "CANCELLED", performed_by=owner)
 
 
+
 def reject_invitation(invitation, user):
     """Invited user rejects a pending invitation."""
     if invitation.status != "PENDING":

@@ -76,12 +76,12 @@ def home_redirect(request):
                     return redirect(next_step)
         return redirect("clinics:my_clinics")
 
-    # 2. Doctor — has a doctor profile
-    if hasattr(user, "doctor_profile"):
+    # 2. Doctor — has been explicitly granted the DOCTOR role by a clinic owner
+    if user.has_role("DOCTOR"):
         return redirect("doctors:dashboard")
 
-    # 3. Secretary — active staff member in any clinic as secretary
-    if user.clinic_employments.filter(role="SECRETARY", is_active=True).exists():
+    # 3. Secretary — has been explicitly granted the SECRETARY role by a clinic owner
+    if user.has_role("SECRETARY"):
         return redirect("secretary:dashboard")
 
     # 4. Default: patient dashboard

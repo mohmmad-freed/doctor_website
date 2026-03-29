@@ -276,7 +276,7 @@ from .services import create_invitation, cancel_invitation
 def invitations_list(request, clinic_id):
     clinic = get_owner_clinic_or_404(request, clinic_id)
     invitations = ClinicInvitation.objects.filter(clinic=clinic).select_related('invited_by').prefetch_related('specialties').order_by('-created_at')
-    
+
     return render(request, "clinics/invitations_list.html", {
         "clinic": clinic,
         "invitations": invitations,
@@ -361,6 +361,7 @@ def cancel_invitation_view(request, clinic_id, invitation_id):
 
     # Redirecting back to invitations list since this might be an HTMX call or normal POST
     return redirect(reverse("clinics:invitations_list", kwargs={"clinic_id": clinic_id}))
+
 
 
 # ============================================

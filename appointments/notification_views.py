@@ -45,6 +45,12 @@ def _resolve_appointment_url(notification, user):
 @login_required
 def notifications_center(request):
     """Paginated notification inbox for the current user."""
+    # Notifications are only available for staff roles (DOCTOR, MAIN_DOCTOR, SECRETARY).
+    # Pure patients have their notification feature removed from the patient portal.
+    user = request.user
+    if not (user.has_role("DOCTOR") or user.has_role("MAIN_DOCTOR") or user.has_role("SECRETARY")):
+        return redirect("patients:dashboard")
+
     notifications_qs = (
         AppointmentNotification.objects.filter(patient=request.user)
         .select_related(

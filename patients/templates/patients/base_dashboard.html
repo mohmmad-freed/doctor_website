@@ -264,24 +264,6 @@
                 <!-- User Menu -->
                 <div class="flex items-center gap-3">
 
-                    <!-- Notification Bell -->
-                    {% if user.is_authenticated %}
-                    <a href="{% url 'appointments:notifications_center' %}"
-                       class="relative inline-flex items-center justify-center w-9 h-9 rounded-full
-                              text-gray-500 dark:text-gray-400
-                              hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
-                       title="الإشعارات">
-                        <i class="fa-regular fa-bell text-lg"></i>
-                        {% if unread_notification_count > 0 %}
-                        <span class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-0.5
-                                     bg-red-500 text-white text-[10px] font-bold rounded-full
-                                     flex items-center justify-center leading-none">
-                            {% if unread_notification_count > 9 %}9+{% else %}{{ unread_notification_count }}{% endif %}
-                        </span>
-                        {% endif %}
-                    </a>
-                    {% endif %}
-
                     <!-- Theme Toggle -->
                     <button class="theme-toggle" id="theme-toggle" aria-label="Toggle Dark Mode">
                         <span class="toggle-background">
@@ -418,20 +400,6 @@
         <a href="{% url 'patients:my_appointments' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'my_appointments' %}active{% endif %}">
             <i class="fa-regular fa-calendar-check"></i>
             <span class="text">مواعيدي</span>
-        </a>
-        <a href="{% url 'appointments:notifications_center' %}"
-           class="mobile-nav-item {% if request.resolver_match.namespace == 'appointments' and request.resolver_match.url_name == 'notifications_center' %}active{% endif %}"
-           style="position:relative;">
-            <i class="fa-regular fa-bell"></i>
-            <span class="text">الإشعارات</span>
-            {% if unread_notification_count > 0 %}
-            <span style="position:absolute;top:4px;right:4px;min-width:16px;height:16px;
-                         background:#ef4444;color:#fff;font-size:10px;font-weight:700;
-                         border-radius:999px;display:flex;align-items:center;
-                         justify-content:center;padding:0 3px;line-height:1;">
-                {% if unread_notification_count > 9 %}9+{% else %}{{ unread_notification_count }}{% endif %}
-            </span>
-            {% endif %}
         </a>
         {% if "MAIN_DOCTOR" in request.user.roles %}
         <a href="{% url 'clinics:my_clinics' %}" class="mobile-nav-item">
