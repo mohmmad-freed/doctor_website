@@ -98,6 +98,10 @@ def my_clinic(request, clinic_id):
     doctors = [s for s in staff_qs if s.role == "DOCTOR"]
     secretaries = [s for s in staff_qs if s.role == "SECRETARY"]
 
+    # Is the owner also listed as a doctor / secretary in this clinic?
+    owner_is_doctor = any(s.user_id == request.user.id for s in doctors)
+    owner_is_secretary = any(s.user_id == request.user.id for s in secretaries)
+
     # Appointments — default to current month
     today = _date.today()
     month = request.GET.get("month", today.month)
@@ -110,6 +114,8 @@ def my_clinic(request, clinic_id):
         "clinic_owner": clinic_owner,
         "doctors": doctors,
         "secretaries": secretaries,
+        "owner_is_doctor": owner_is_doctor,
+        "owner_is_secretary": owner_is_secretary,
         **appt_ctx,
     })
 
@@ -260,8 +266,105 @@ def add_staff(request, clinic_id):
 
 @login_required
 def remove_staff(request, clinic_id, staff_id):
-    get_owner_clinic_or_404(request, clinic_id)
-    return HttpResponse(f"Remove Staff {staff_id} - Coming Soon!")
+    if request.method != "POST":
+        return redirect("clinics:my_clinic", clinic_id=clinic_id)
+
+    clinic = get_owner_clinic_or_404(request, clinic_id)
+    staff = get_object_or_404(ClinicStaff, id=staff_id, clinic=clinic, is_active=True)
+
+    if staff.role == "MAIN_DOCTOR":
+        messages.error(request, "لا يمكن إزالة مالك العيادة من الكادر.")
+        return redirect("clinics:my_clinic", clinic_id=clinic_id)
+
+    removed_role = staff.role
+    removed_user = staff.user
+
+    staff.revoked_at = timezone.now()
+    staff.is_active = False
+    staff.save(update_fields=["revoked_at", "is_active"])
+
+    # If the removed user has no remaining active memberships with this role
+    # in ANY clinic, strip the role from their account entirely.
+    still_has_role = ClinicStaff.objects.filter(
+        user=removed_user,
+        role=removed_role,
+        is_active=True,
+    ).exists()
+
+    if not still_has_role:
+        updated_roles = [r for r in (removed_user.roles or []) if r != removed_role]
+
+        # Always keep PATIENT
+        if "PATIENT" not in updated_roles:
+            updated_roles.append("PATIENT")
+
+        # Recalculate the primary role
+        _ROLE_PRIORITY = ["MAIN_DOCTOR", "DOCTOR", "SECRETARY", "PATIENT"]
+        new_primary = next((r for r in _ROLE_PRIORITY if r in updated_roles), "PATIENT")
+
+        removed_user.roles = updated_roles
+        removed_user.role = new_primary
+        removed_user.save(update_fields=["roles", "role"])
+
+    messages.success(request, "تم إزالة العضو من الكادر بنجاح.")
+    return redirect("clinics:my_clinic", clinic_id=clinic_id)
+
+
+@login_required
+def add_self_as_staff(request, clinic_id):
+    if request.method != "POST":
+        return redirect("clinics:my_clinic", clinic_id=clinic_id)
+
+    clinic = get_owner_clinic_or_404(request, clinic_id)
+    role = request.POST.get("role")
+
+    if role not in ("DOCTOR", "SECRETARY"):
+        messages.error(request, "دور غير صحيح.")
+        return redirect("clinics:my_clinic", clinic_id=clinic_id)
+
+    # Already an active member with this role?
+    if ClinicStaff.objects.filter(clinic=clinic, user=request.user, role=role, is_active=True).exists():
+        messages.error(request, "أنت مضاف بالفعل بهذا الدور.")
+        return redirect("clinics:my_clinic", clinic_id=clinic_id)
+
+    # Subscription capacity check
+    subscription = getattr(clinic, "subscription", None)
+    if subscription:
+        if role == "DOCTOR" and not subscription.can_add_doctor():
+            messages.error(request, "لقد وصلت للحد الأقصى من الأطباء وفق خطة الاشتراك.")
+            return redirect("clinics:my_clinic", clinic_id=clinic_id)
+        if role == "SECRETARY" and not subscription.can_add_secretary():
+            messages.error(request, "لقد وصلت للحد الأقصى من السكرتارية وفق خطة الاشتراك.")
+            return redirect("clinics:my_clinic", clinic_id=clinic_id)
+
+    # Reactivate a previously revoked entry or create a new one
+    existing = ClinicStaff.objects.filter(clinic=clinic, user=request.user, role=role).first()
+    if existing:
+        existing.revoked_at = None
+        existing.is_active = True
+        existing.save(update_fields=["revoked_at", "is_active"])
+    else:
+        ClinicStaff.objects.create(
+            clinic=clinic,
+            user=request.user,
+            role=role,
+            added_by=request.user,
+        )
+
+    # Ensure the role is in user.roles
+    user = request.user
+    if role not in (user.roles or []):
+        user.roles = list(user.roles or []) + [role]
+        user.save(update_fields=["roles"])
+
+    # For DOCTOR: ensure a DoctorProfile exists
+    if role == "DOCTOR":
+        from doctors.models import DoctorProfile
+        DoctorProfile.objects.get_or_create(user=request.user)
+
+    label = "طبيب" if role == "DOCTOR" else "سكرتير/ة"
+    messages.success(request, f"تمت إضافتك كـ{label} في هذه العيادة.")
+    return redirect("clinics:my_clinic", clinic_id=clinic_id)
 
 
 # ============================================

@@ -374,6 +374,34 @@
 .staff-empty a { color: var(--color-primary-500); text-decoration: none; font-weight: 600; }
 .staff-empty a:hover { text-decoration: underline; }
 
+.staff-add-self-btn {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    font-size: 0.75rem; font-weight: 700;
+    color: var(--color-primary-500);
+    background: transparent;
+    border: 1px solid var(--color-primary-500);
+    border-radius: 7px;
+    padding: 3px 9px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.staff-add-self-btn:hover { background: color-mix(in srgb, var(--color-primary-500) 10%, transparent); }
+
+.staff-remove-btn {
+    display: inline-flex; align-items: center; gap: 0.25rem;
+    font-size: 0.7rem; font-weight: 700;
+    color: #dc2626;
+    background: transparent;
+    border: 1px solid #fca5a5;
+    border-radius: 7px;
+    padding: 2px 8px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+.staff-remove-btn:hover { background: #fef2f2; border-color: #dc2626; }
+[data-theme="dark"] .staff-remove-btn { border-color: #7f1d1d; color: #f87171; }
+[data-theme="dark"] .staff-remove-btn:hover { background: rgba(220,38,38,0.1); border-color: #f87171; }
+
 /* ─── Quick Links ─────────────────────────────────────────────────── */
 .quick-grid {
     display: grid;
@@ -855,27 +883,33 @@
             </p>
             {% if clinic_owner %}
             <div class="staff-grid" style="margin-bottom:1.75rem;">
-                <div class="staff-card staff-card-clickable"
-                     hx-get="{% url 'clinics:doctor_schedule_panel' clinic_id=clinic.id staff_id=clinic_owner.id %}"
-                     hx-target="#schedule-drawer-content"
-                     hx-swap="innerHTML"
-                     hx-indicator=".drawer-loading">
+                <div class="staff-card">
                     <div class="avatar av-owner">{{ clinic_owner.user.name|first }}</div>
                     <span class="staff-name">{{ clinic_owner.user.name }}</span>
                     <span class="role-pill rp-owner">مالك</span>
                     {% if clinic_owner.user.phone %}
                     <span class="staff-sub">{{ clinic_owner.user.phone }}</span>
                     {% endif %}
-                    <span class="schedule-hint"><i class="fa-regular fa-calendar-days"></i> جدول العمل</span>
                 </div>
             </div>
             {% endif %}
 
             <!-- Doctors -->
-            <p class="staff-group-lbl">
-                <i class="fa-solid fa-stethoscope"></i> الأطباء
-                <span class="staff-count-pill">{{ doctors|length }}{% if subscription %} / {% if subscription.max_doctors == 0 %}∞{% else %}{{ subscription.max_doctors }}{% endif %}{% endif %}</span>
-            </p>
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem;flex-wrap:wrap;">
+                <p class="staff-group-lbl" style="margin-bottom:0;">
+                    <i class="fa-solid fa-stethoscope"></i> الأطباء
+                    <span class="staff-count-pill">{{ doctors|length }}{% if subscription %} / {% if subscription.max_doctors == 0 %}∞{% else %}{{ subscription.max_doctors }}{% endif %}{% endif %}</span>
+                </p>
+                {% if not owner_is_doctor %}
+                <form method="post" action="{% url 'clinics:add_self_as_staff' clinic_id=clinic.id %}" style="margin:0;">
+                    {% csrf_token %}
+                    <input type="hidden" name="role" value="DOCTOR">
+                    <button type="submit" class="staff-add-self-btn" title="إضافة نفسك كطبيب في هذه العيادة">
+                        <i class="fa-solid fa-user-plus"></i> إضافة نفسك كطبيب
+                    </button>
+                </form>
+                {% endif %}
+            </div>
             {% if doctors %}
             <div class="staff-grid">
                 {% for staff_member in doctors %}
@@ -898,6 +932,15 @@
                         {% endif %}
                     {% endwith %}
                     <span class="schedule-hint"><i class="fa-regular fa-calendar-days"></i> جدول العمل</span>
+                    <form method="post" action="{% url 'clinics:remove_staff' clinic_id=clinic.id staff_id=staff_member.id %}"
+                          style="margin-top:0.35rem;" onclick="event.stopPropagation();">
+                        {% csrf_token %}
+                        <button type="submit" class="staff-remove-btn"
+                                onclick="return confirm('هل أنت متأكد من إزالة هذا الطبيب من الكادر؟')"
+                                title="إزالة من الكادر">
+                            <i class="fa-solid fa-user-minus"></i> إزالة
+                        </button>
+                    </form>
                 </div>
                 {% endfor %}
             </div>
@@ -910,10 +953,21 @@
             {% endif %}
 
             <!-- Secretaries -->
-            <p class="staff-group-lbl" style="margin-top:0.5rem;">
-                <i class="fa-solid fa-user-tie"></i> السكرتارية
-                <span class="staff-count-pill">{{ secretaries|length }}{% if subscription %} / {% if subscription.max_secretaries == 0 %}∞{% else %}{{ subscription.max_secretaries }}{% endif %}{% endif %}</span>
-            </p>
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem;margin-bottom:0.6rem;flex-wrap:wrap;">
+                <p class="staff-group-lbl" style="margin-bottom:0;">
+                    <i class="fa-solid fa-user-tie"></i> السكرتارية
+                    <span class="staff-count-pill">{{ secretaries|length }}{% if subscription %} / {% if subscription.max_secretaries == 0 %}∞{% else %}{{ subscription.max_secretaries }}{% endif %}{% endif %}</span>
+                </p>
+                {% if not owner_is_secretary %}
+                <form method="post" action="{% url 'clinics:add_self_as_staff' clinic_id=clinic.id %}" style="margin:0;">
+                    {% csrf_token %}
+                    <input type="hidden" name="role" value="SECRETARY">
+                    <button type="submit" class="staff-add-self-btn" title="إضافة نفسك كسكرتير/ة في هذه العيادة">
+                        <i class="fa-solid fa-user-plus"></i> إضافة نفسك كسكرتير/ة
+                    </button>
+                </form>
+                {% endif %}
+            </div>
             {% if secretaries %}
             <div class="staff-grid">
                 {% for staff_member in secretaries %}
@@ -924,6 +978,15 @@
                     {% if staff_member.user.phone %}
                     <span class="staff-sub">{{ staff_member.user.phone }}</span>
                     {% endif %}
+                    <form method="post" action="{% url 'clinics:remove_staff' clinic_id=clinic.id staff_id=staff_member.id %}"
+                          style="margin-top:0.35rem;">
+                        {% csrf_token %}
+                        <button type="submit" class="staff-remove-btn"
+                                onclick="return confirm('هل أنت متأكد من إزالة هذا السكرتير/ة من الكادر؟')"
+                                title="إزالة من الكادر">
+                            <i class="fa-solid fa-user-minus"></i> إزالة
+                        </button>
+                    </form>
                 </div>
                 {% endfor %}
             </div>
