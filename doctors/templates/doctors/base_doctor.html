@@ -44,6 +44,8 @@
 
     <style type="text/tailwindcss">
         @layer utilities {
+            .scrollbar-none::-webkit-scrollbar { display: none; }
+            .scrollbar-none { scrollbar-width: none; }
             .glass-card {
                 @apply bg-white border border-gray-100 shadow-sm rounded-2xl;
             }
@@ -173,6 +175,10 @@
             padding: 0 3px; border: 1.5px solid white;
         }
         .dark .mob-badge { border-color: rgba(30,41,59,0.9); }
+
+        /* ── Sidebar nav scrollbar hide ──────────────── */
+        #sidebar nav::-webkit-scrollbar { display: none; }
+        #sidebar nav { scrollbar-width: none; }
 
         /* ── User popup menu ───────────────────────── */
         #sidebarUserMenu .dr-dropdown {

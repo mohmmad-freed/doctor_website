@@ -103,7 +103,11 @@ class ClinicInvitationForm(forms.Form):
     )
     doctor_email = forms.EmailField(
         label="البريد الإلكتروني للطبيب",
-        widget=forms.EmailInput(attrs={"placeholder": "doctor@example.com", "class": "form-control"})
+        widget=forms.EmailInput(attrs={"placeholder": "doctor@example.com", "class": "form-control"}),
+        error_messages={
+            "required": "هذا الحقل مطلوب.",
+            "invalid": "أدخل بريداً إلكترونياً صحيحاً.",
+        },
     )
     doctor_national_id = forms.CharField(
         max_length=20,
@@ -139,7 +143,11 @@ class SecretaryInvitationForm(forms.Form):
     )
     secretary_email = forms.EmailField(
         label="البريد الإلكتروني للسكرتير/ة",
-        widget=forms.EmailInput(attrs={"placeholder": "secretary@example.com", "class": "form-control"})
+        widget=forms.EmailInput(attrs={"placeholder": "secretary@example.com", "class": "form-control"}),
+        error_messages={
+            "required": "هذا الحقل مطلوب.",
+            "invalid": "أدخل بريداً إلكترونياً صحيحاً.",
+        },
     )
     secretary_national_id = forms.CharField(
         max_length=20,

@@ -293,7 +293,7 @@ class ClinicSubscription(models.Model):
         from clinics.models import ClinicStaff
         return ClinicStaff.objects.filter(
             clinic=self.clinic,
-            role__in=["DOCTOR", "MAIN_DOCTOR"],
+            role="DOCTOR",
             revoked_at__isnull=True,
         ).count()
 
