@@ -198,11 +198,39 @@ def appointment_detail(request, appointment_id):
         doctor=user,
     )
 
-    from appointments.models import AppointmentAnswer
+    from appointments.models import AppointmentAnswer, AppointmentAttachment
+
     intake_answers = (
         AppointmentAnswer.objects.filter(appointment=appointment)
         .select_related("question")
-        .order_by("question__order", "id")
+    )
+    intake_attachments = (
+        AppointmentAttachment.objects.filter(appointment=appointment)
+        .select_related("question")
+        .order_by("question__order", "file_group_date", "uploaded_at")
+    )
+
+    # Merge text answers and file attachments into one ordered list per question
+    _combined = {}
+    for ans in intake_answers:
+        _combined[ans.question_id] = {
+            "question": ans.question,
+            "answer_text": ans.answer_text,
+            "attachments": [],
+        }
+    for att in intake_attachments:
+        q_id = att.question_id
+        if q_id not in _combined:
+            _combined[q_id] = {
+                "question": att.question,
+                "answer_text": "",
+                "attachments": [],
+            }
+        _combined[q_id]["attachments"].append(att)
+
+    intake_data = sorted(
+        _combined.values(),
+        key=lambda x: x["question"].order if x["question"] else 0,
     )
 
     # Status transitions the doctor can trigger — as (value, label) tuples for template use
@@ -258,7 +286,7 @@ def appointment_detail(request, appointment_id):
 
     return render(request, "doctors/appointment_detail.html", {
         "appointment": appointment,
-        "intake_answers": intake_answers,
+        "intake_data": intake_data,
         "allowed_transitions": allowed_transitions,
     })
 
