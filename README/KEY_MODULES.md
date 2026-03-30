@@ -63,7 +63,7 @@ via `accounts/api_views.py` + SimpleJWT.
 **Key Logic**:
 - Clinic creation seeded from `ClinicActivationCode`
 - Post-signup 4-step verification wizard (owner phone, owner email, clinic phone, clinic email)
-- Per-clinic dashboard (`my_clinic`), multi-clinic list (`my_clinics`)
+- Per-clinic dashboard (`my_clinic`) with real-time operational metrics (today's revenue, pending actions alerts), multi-clinic list (`my_clinics`)
 - Clinic switching — `switch_clinic` view sets `selected_clinic_id` in session
 - `ClinicWorkingHours` — defines operating days/times per clinic with overlap prevention
 - `ClinicHoliday` — clinic-level closure periods; blocks all bookings on covered dates
@@ -76,7 +76,7 @@ via `accounts/api_views.py` + SimpleJWT.
 - `InvitationAuditLog` — audit trail for every invitation lifecycle event
 - Compliance settings management (`ClinicComplianceSettings`)
 - Doctor credential review (approve/reject per-clinic specialty certificates)
-- Reports dashboard (`reports_view`)
+- Reports dashboard (`reports_view`) — aggregates data across multiple clinics, supports granular filtering by date range, specific clinic, and specific doctor
 - Appointment types management (via `appointment_types_views.py`)
 - `create_clinic_for_main_doctor` service — atomically creates Clinic, ClinicStaff (MAIN_DOCTOR),
   ClinicSubscription (seeded from activation code), and ClinicVerification
@@ -180,6 +180,7 @@ doctor availability list, available slots, appointment types.
 - `created_by` — FK to the user who created the record (patient or secretary)
 
 **`AppointmentNotification` key fields**:
+- `context_role` — `CharField` representing the target portal (`PATIENT`, `DOCTOR`, `SECRETARY`, `CLINIC_OWNER`).
 - `notification_type` — one of 6 `Type` choices (see below)
 - `sent_via_email` — `BooleanField(default=False)`; `True` if email was successfully sent
 - `is_delivered` — always `True` for in-app notifications

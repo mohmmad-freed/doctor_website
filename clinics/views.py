@@ -108,6 +108,149 @@ def my_clinic(request, clinic_id):
     year = request.GET.get("year", today.year)
     appt_ctx = _get_appointments_context(clinic, month, year)
 
+    # ── SaaS Metrics ──────────────────────────────────────────────────
+    from appointments.models import Appointment
+    from doctors.models import ClinicDoctorCredential, DoctorVerification
+    from django.db.models import Sum, Count, Q
+    from django.utils import timezone
+    import json
+    from datetime import timedelta
+
+    now = timezone.now()
+
+    # Today's snapshot
+    today_qs = Appointment.objects.filter(clinic=clinic, appointment_date=today)
+    today_appointments = today_qs.count()
+    today_revenue = today_qs.filter(status="COMPLETED").aggregate(
+        total=Sum("appointment_type__price")
+    )["total"] or 0
+
+    # Pending actions
+    pending_appointments = Appointment.objects.filter(clinic=clinic, status="PENDING").count()
+    pending_credentials = ClinicDoctorCredential.objects.filter(
+        clinic=clinic, credential_status="CREDENTIALS_PENDING"
+    ).count()
+
+    # ── Subscription expiry warning ───────────────────────────────────
+    sub_days_remaining = None
+    if subscription and subscription.expires_at:
+        sub_days_remaining = (subscription.expires_at - now).days
+
+    # ── No-show & cancellation rates (current month) ─────────────────
+    month_start = today.replace(day=1)
+    month_qs = Appointment.objects.filter(
+        clinic=clinic,
+        appointment_date__gte=month_start,
+        appointment_date__lte=today,
+    )
+    month_total = month_qs.count()
+    noshow_count = month_qs.filter(status="NO_SHOW").count()
+    cancel_count = month_qs.filter(status="CANCELLED").count()
+    noshow_rate_month = round((noshow_count / month_total * 100), 1) if month_total else 0
+    cancellation_rate_month = round((cancel_count / month_total * 100), 1) if month_total else 0
+
+    # ── Today's appointment timeline ──────────────────────────────────
+    today_timeline = list(
+        today_qs.select_related("doctor", "patient", "appointment_type")
+        .order_by("appointment_time")
+        .values(
+            "id", "appointment_time", "status",
+            "doctor__name", "patient__name",
+            "appointment_type__name",
+        )
+    )
+
+    # ── Week-at-a-glance (Mon–Sun density) ────────────────────────────
+    # Find current week's Monday
+    days_since_monday = today.weekday()
+    week_start = today - timedelta(days=days_since_monday)
+    week_days = []
+    day_labels = ["اثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت", "أحد"]
+    for i in range(7):
+        d = week_start + timedelta(days=i)
+        count = Appointment.objects.filter(clinic=clinic, appointment_date=d).count()
+        week_days.append({
+            "label": day_labels[i],
+            "date": d.strftime("%d/%m"),
+            "count": count,
+            "is_today": d == today,
+        })
+    week_max = max((wd["count"] for wd in week_days), default=1) or 1
+
+    # ── Doctor overview cards ─────────────────────────────────────────
+    doctor_cards = []
+    for staff_member in doctors:
+        doc_user = staff_member.user
+        doc_today_count = Appointment.objects.filter(
+            clinic=clinic, doctor=doc_user, appointment_date=today,
+        ).count()
+        # Credential status for this clinic
+        cred = ClinicDoctorCredential.objects.filter(
+            clinic=clinic, doctor=doc_user,
+        ).first()
+        cred_status = cred.credential_status if cred else "NO_CREDENTIAL"
+        # Identity verification
+        verification = getattr(doc_user, "doctor_verification", None)
+        id_status = verification.identity_status if verification else "IDENTITY_UNVERIFIED"
+        doctor_cards.append({
+            "name": doc_user.name,
+            "initial": doc_user.name[0] if doc_user.name else "?",
+            "today_count": doc_today_count,
+            "cred_status": cred_status,
+            "id_status": id_status,
+        })
+
+    # ── 7-day revenue trend (sparkline data) ──────────────────────────
+    revenue_7d = []
+    for i in range(6, -1, -1):
+        d = today - timedelta(days=i)
+        day_rev = Appointment.objects.filter(
+            clinic=clinic, appointment_date=d, status="COMPLETED",
+        ).aggregate(total=Sum("appointment_type__price"))["total"] or 0
+        revenue_7d.append({"date": d.strftime("%d/%m"), "amount": float(day_rev)})
+    revenue_7d_json = json.dumps(revenue_7d)
+    revenue_max = max((r["amount"] for r in revenue_7d), default=1) or 1
+
+    # ── Pending invitations ───────────────────────────────────────────
+    from clinics.models import ClinicInvitation, ClinicHoliday
+    pending_invitations = ClinicInvitation.objects.filter(
+        clinic=clinic, status="PENDING",
+    ).count()
+
+    # ── Next upcoming holiday ─────────────────────────────────────────
+    next_holiday = ClinicHoliday.objects.filter(
+        clinic=clinic, is_active=True, start_date__gte=today,
+    ).order_by("start_date").first()
+
+    # ── Unverified doctors ────────────────────────────────────────────
+    doctor_user_ids = [s.user_id for s in doctors]
+    unverified_doctors = []
+    if doctor_user_ids:
+        unverified_doctors = list(
+            DoctorVerification.objects.filter(
+                user_id__in=doctor_user_ids,
+                identity_status="IDENTITY_PENDING_REVIEW",
+            ).select_related("user").values_list("user__name", flat=True)
+        )
+
+    # ── Blocked patients ──────────────────────────────────────────────
+    from compliance.models import PatientClinicCompliance
+    blocked_patients_count = PatientClinicCompliance.objects.filter(
+        clinic=clinic, status="BLOCKED",
+    ).count()
+
+    # ── Recent activity feed (last 10 appointment events) ─────────────
+    recent_activity = list(
+        Appointment.objects.filter(clinic=clinic)
+        .select_related("doctor", "patient", "appointment_type")
+        .order_by("-created_at")[:10]
+        .values(
+            "id", "status", "created_at",
+            "appointment_date", "appointment_time",
+            "doctor__name", "patient__name",
+        )
+    )
+
     return render(request, "clinics/my_clinic.html", {
         "clinic": clinic,
         "subscription": subscription,
@@ -116,6 +259,26 @@ def my_clinic(request, clinic_id):
         "secretaries": secretaries,
         "owner_is_doctor": owner_is_doctor,
         "owner_is_secretary": owner_is_secretary,
+        "today_appointments": today_appointments,
+        "today_revenue": today_revenue,
+        "pending_appointments": pending_appointments,
+        "pending_credentials": pending_credentials,
+        # New dashboard data
+        "sub_days_remaining": sub_days_remaining,
+        "noshow_rate_month": noshow_rate_month,
+        "cancellation_rate_month": cancellation_rate_month,
+        "today_timeline": today_timeline,
+        "week_days": week_days,
+        "week_max": week_max,
+        "doctor_cards": doctor_cards,
+        "revenue_7d": revenue_7d,
+        "revenue_7d_json": revenue_7d_json,
+        "revenue_max": revenue_max,
+        "pending_invitations": pending_invitations,
+        "next_holiday": next_holiday,
+        "unverified_doctors": unverified_doctors,
+        "blocked_patients_count": blocked_patients_count,
+        "recent_activity": recent_activity,
         **appt_ctx,
     })
 
@@ -1041,7 +1204,48 @@ def reports_view(request):
     if not clinic_ids:
         return render(request, "clinics/reports.html", {"no_clinics": True, "clinics": clinics})
 
+    # ── Filters ──────────────────────────────────────────────────────────────
+    selected_clinic = request.GET.get("clinic_id", "")
+    selected_doctor = request.GET.get("doctor_id", "")
+    date_range = request.GET.get("date_range", "all_time")
+
     base_qs = Appointment.objects.filter(clinic_id__in=clinic_ids)
+    
+    if selected_clinic:
+        try:
+            cid = int(selected_clinic)
+            if cid in clinic_ids:
+                base_qs = base_qs.filter(clinic_id=cid)
+        except ValueError:
+            pass
+
+    if selected_doctor:
+        try:
+            did = int(selected_doctor)
+            base_qs = base_qs.filter(doctor_id=did)
+        except ValueError:
+            pass
+
+    from datetime import timedelta
+    today_date = timezone.now().date()
+    if date_range == "today":
+        base_qs = base_qs.filter(appointment_date=today_date)
+    elif date_range == "this_week":
+        # simple week starting monday
+        start_of_week = today_date - timedelta(days=today_date.weekday())
+        base_qs = base_qs.filter(appointment_date__gte=start_of_week)
+    elif date_range == "this_month":
+        base_qs = base_qs.filter(appointment_date__year=today_date.year, appointment_date__month=today_date.month)
+    elif date_range == "last_month":
+        lm_month = today_date.month - 1 or 12
+        lm_year = today_date.year if today_date.month > 1 else today_date.year - 1
+        base_qs = base_qs.filter(appointment_date__year=lm_year, appointment_date__month=lm_month)
+    elif date_range == "ytd":
+        base_qs = base_qs.filter(appointment_date__year=today_date.year)
+    elif date_range == "all_time":
+        pass
+
+    all_doctors = ClinicStaff.objects.filter(clinic_id__in=clinic_ids, role="DOCTOR", is_active=True).select_related("user").order_by("user__name")
 
     # ── KPI totals ────────────────────────────────────────────────────────────
     total_appointments    = base_qs.count()
@@ -1202,7 +1406,11 @@ def reports_view(request):
 
     context = {
         "clinics": clinics,
+        "all_doctors": all_doctors,
         "no_clinics": False,
+        "selected_clinic": selected_clinic,
+        "selected_doctor": selected_doctor,
+        "date_range": date_range,
         # KPIs
         "total_appointments":    total_appointments,
         "total_unique_patients": total_unique_patients,

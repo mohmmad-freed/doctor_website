@@ -59,6 +59,8 @@ Used by the patient profile API and mobile clients.
 
 Roles: `PATIENT`, `SECRETARY`, `DOCTOR`, `MAIN_DOCTOR`
 
+`MAIN_DOCTOR` (Clinic Owner) portal includes a real-time dashboard with operational metrics (today's revenue, pending appointments) and a dedicated reports center with filtering by clinic, doctor, and date.
+
 `home_redirect` view routes users to the correct dashboard based on their actual data:
 clinic ownership > doctor profile > secretary membership > patient (default).
 
@@ -172,7 +174,10 @@ Released (deleted) when the invitation is accepted.
 `appointments/services/appointment_notification_service.py` is the **central notification service**.
 
 ### Rules
-- In-app `AppointmentNotification` is **always** created first.
+- **Context Isolation**: Every `AppointmentNotification` includes a `context_role` (`PATIENT`, `DOCTOR`, `SECRETARY`, `CLINIC_OWNER`) representing its target portal.
+- In-app `AppointmentNotification` is **always** created first and explicitly bound to this `context_role`.
+- Notification Centers are split into four strict endpoints (`appointments:patient_notifications`, `appointments:doctor_notifications`, `appointments:secretary_notifications`, `appointments:clinic_owner_notifications`) to prevent cross-context routing bugs for multi-role users.
+- The **Clinic Owner** (`MAIN_DOCTOR`) receives `CLINIC_OWNER`-context notifications for operational events (patient cancellations, patient edits) in their owned clinics. The owner bell in the `clinics` navbar routes exclusively to the owner endpoint, never to the doctor endpoint.
 - Email is sent only if `user.email` is set AND `user.email_verified = True`.
 - Email failures are caught and logged — never raised to callers.
 - `notification.sent_via_email = True` is set after successful email delivery.

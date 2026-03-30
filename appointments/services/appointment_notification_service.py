@@ -20,17 +20,21 @@ logger = logging.getLogger(__name__)
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
 
-def _create_notification(patient, appointment, notification_type, title, message, cancelled_by_staff=None):
+def _create_notification(patient, appointment, notification_type, title, message, cancelled_by_staff=None, context_role=None):
     """
     Create and persist an in-app AppointmentNotification.
 
     Returns the created notification, or None if creation fails.
     Failures are logged and never raised.
     """
+    if context_role is None:
+        context_role = AppointmentNotification.ContextRole.PATIENT
+
     try:
         notification = AppointmentNotification.objects.create(
             patient=patient,
             appointment=appointment,
+            context_role=context_role,
             notification_type=notification_type,
             title=title,
             message=message,
@@ -230,19 +234,28 @@ def notify_staff_patient_cancelled(appointment):
             f"في {appointment.clinic.name}."
         )
 
-        recipients = set()
+        recipients = []
         if appointment.doctor_id:
-            recipients.add(appointment.doctor_id)
+            recipients.append((appointment.doctor_id, AppointmentNotification.ContextRole.DOCTOR))
         secretary_ids = ClinicStaff.objects.filter(
             clinic=appointment.clinic, role="SECRETARY", is_active=True,
         ).values_list("user_id", flat=True)
-        recipients.update(secretary_ids)
+        for s_id in secretary_ids:
+            recipients.append((s_id, AppointmentNotification.ContextRole.SECRETARY))
 
-        for user_id in recipients:
+        # Notify the Clinic Owner (MAIN_DOCTOR) under CLINIC_OWNER context,
+        # but only if they are not already the doctor on this appointment
+        # (to avoid sending them a duplicate DOCTOR + CLINIC_OWNER pair).
+        owner_id = appointment.clinic.main_doctor_id
+        if owner_id and owner_id != appointment.doctor_id:
+            recipients.append((owner_id, AppointmentNotification.ContextRole.CLINIC_OWNER))
+
+        for user_id, ctx_role in recipients:
             try:
                 AppointmentNotification.objects.create(
                     patient_id=user_id,
                     appointment=appointment,
+                    context_role=ctx_role,
                     notification_type=AppointmentNotification.Type.APPOINTMENT_CANCELLED,
                     title=title,
                     message=message,
@@ -282,19 +295,26 @@ def notify_staff_patient_edited(appointment, old_date, old_time, old_type):
             f"في {appointment.clinic.name}."
         )
 
-        recipients = set()
+        recipients = []
         if appointment.doctor_id:
-            recipients.add(appointment.doctor_id)
+            recipients.append((appointment.doctor_id, AppointmentNotification.ContextRole.DOCTOR))
         secretary_ids = ClinicStaff.objects.filter(
             clinic=appointment.clinic, role="SECRETARY", is_active=True,
         ).values_list("user_id", flat=True)
-        recipients.update(secretary_ids)
+        for s_id in secretary_ids:
+            recipients.append((s_id, AppointmentNotification.ContextRole.SECRETARY))
 
-        for user_id in recipients:
+        # Notify the Clinic Owner under CLINIC_OWNER context.
+        owner_id = appointment.clinic.main_doctor_id
+        if owner_id and owner_id != appointment.doctor_id:
+            recipients.append((owner_id, AppointmentNotification.ContextRole.CLINIC_OWNER))
+
+        for user_id, ctx_role in recipients:
             try:
                 AppointmentNotification.objects.create(
                     patient_id=user_id,
                     appointment=appointment,
+                    context_role=ctx_role,
                     notification_type=AppointmentNotification.Type.APPOINTMENT_EDITED,
                     title=title,
                     message=message,

@@ -321,6 +321,12 @@ class AppointmentNotification(models.Model):
         APPOINTMENT_RESCHEDULED = "APPOINTMENT_RESCHEDULED", "Appointment Rescheduled"
         APPOINTMENT_STATUS_CHANGED = "APPOINTMENT_STATUS_CHANGED", "Appointment Status Changed"
 
+    class ContextRole(models.TextChoices):
+        PATIENT = "PATIENT", "Patient Context"
+        DOCTOR = "DOCTOR", "Doctor Context"
+        SECRETARY = "SECRETARY", "Secretary Context"
+        CLINIC_OWNER = "CLINIC_OWNER", "Clinic Owner Context"
+
     patient = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -332,6 +338,12 @@ class AppointmentNotification(models.Model):
         null=True,
         blank=True,
         related_name="notifications",
+    )
+    context_role = models.CharField(
+        max_length=20,
+        choices=ContextRole.choices,
+        default=ContextRole.PATIENT,
+        help_text="The portal context this notification belongs to.",
     )
     notification_type = models.CharField(
         max_length=60,

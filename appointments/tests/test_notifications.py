@@ -72,7 +72,7 @@ class NotificationVisibilityTests(TestCase):
 
     def test_patient_sees_own_notifications_only(self):
         self.client.force_login(self.patient)
-        response = self.client.get(reverse("appointments:notifications_center"))
+        response = self.client.get(reverse("appointments:patient_notifications"))
         self.assertEqual(response.status_code, 200)
         notifications = response.context["notifications"]
         ids = [n.pk for n in notifications]
@@ -82,18 +82,18 @@ class NotificationVisibilityTests(TestCase):
 
     def test_unread_count_correct(self):
         self.client.force_login(self.patient)
-        response = self.client.get(reverse("appointments:notifications_center"))
+        response = self.client.get(reverse("appointments:patient_notifications"))
         self.assertEqual(response.context["unread_count"], 1)
 
     def test_read_notification_still_visible(self):
         self.client.force_login(self.patient)
-        response = self.client.get(reverse("appointments:notifications_center"))
+        response = self.client.get(reverse("appointments:patient_notifications"))
         ids = [n.pk for n in response.context["notifications"]]
         # n2 is read but should still appear
         self.assertIn(self.n2.pk, ids)
 
     def test_unauthenticated_redirects(self):
-        response = self.client.get(reverse("appointments:notifications_center"))
+        response = self.client.get(reverse("appointments:patient_notifications"))
         self.assertEqual(response.status_code, 302)
         self.assertIn("/login", response["Location"])
 
@@ -134,8 +134,8 @@ class UnreadCountContextProcessorTests(TestCase):
 
     def test_unread_count_in_context(self):
         self.client.force_login(self.patient)
-        response = self.client.get(reverse("appointments:notifications_center"))
-        self.assertEqual(response.context["unread_notification_count"], 2)
+        response = self.client.get(reverse("appointments:patient_notifications"))
+        self.assertEqual(response.context["unread_patient_notification_count"], 2)
 
     def test_anonymous_unread_count_zero(self):
         response = self.client.get(reverse("patients:dashboard"), follow=True)
@@ -183,7 +183,7 @@ class MarkNotificationReadTests(TestCase):
         self.client.force_login(self.patient)
         response = self.client.post(
             reverse("appointments:mark_notification_read", args=[self.notif.pk]),
-            data={"next": reverse("appointments:notifications_center")},
+            data={"next": reverse("appointments:patient_notifications")},
         )
         self.assertEqual(response.status_code, 302)
         self.notif.refresh_from_db()
@@ -306,13 +306,13 @@ class NotificationLinkingTests(TestCase):
 
     def test_notifications_page_200(self):
         self.client.force_login(self.patient)
-        response = self.client.get(reverse("appointments:notifications_center"))
+        response = self.client.get(reverse("appointments:patient_notifications"))
         self.assertEqual(response.status_code, 200)
 
     def test_target_url_annotated(self):
         """Each notification with an appointment has a target_url set."""
         self.client.force_login(self.patient)
-        response = self.client.get(reverse("appointments:notifications_center"))
+        response = self.client.get(reverse("appointments:patient_notifications"))
         notifications = response.context["notifications"]
         self.assertTrue(len(notifications) > 0)
         for notif in notifications:
@@ -331,11 +331,12 @@ class NotificationLinkingTests(TestCase):
         AppointmentNotification.objects.create(
             patient=doctor,
             appointment=self.appointment,
+            context_role=AppointmentNotification.ContextRole.DOCTOR,
             notification_type=AppointmentNotification.Type.APPOINTMENT_CANCELLED,
             title="إلغاء من مريض",
             message="msg",
             is_read=False,
         )
         self.client.force_login(doctor)
-        response = self.client.get(reverse("appointments:notifications_center"))
+        response = self.client.get(reverse("appointments:doctor_notifications"))
         self.assertEqual(response.status_code, 200)

@@ -6,9 +6,24 @@ app_name = "appointments"
 urlpatterns = [
     # --- Notification Center ---
     path(
-        "notifications/",
-        notification_views.notifications_center,
-        name="notifications_center",
+        "notifications/patient/",
+        notification_views.patient_notifications,
+        name="patient_notifications",
+    ),
+    path(
+        "notifications/doctor/",
+        notification_views.doctor_notifications,
+        name="doctor_notifications",
+    ),
+    path(
+        "notifications/secretary/",
+        notification_views.secretary_notifications,
+        name="secretary_notifications",
+    ),
+    path(
+        "notifications/clinic-owner/",
+        notification_views.clinic_owner_notifications,
+        name="clinic_owner_notifications",
     ),
     path(
         "notifications/<int:pk>/read/",

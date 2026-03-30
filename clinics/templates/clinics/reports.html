@@ -253,11 +253,54 @@
 <div class="reports-wrapper">
 
     <!-- Page header -->
-    <div class="page-header">
+    <div class="page-header" style="margin-bottom:1.5rem;">
         <div>
             <h1><i class="fa-solid fa-chart-line" style="color:var(--color-primary-500);margin-left:0.5rem;"></i>التقارير والتحليلات</h1>
             <p class="page-subtitle">بيانات مجمّعة لجميع عياداتك — مفيدة لتحسين الجودة واتخاذ القرار</p>
         </div>
+    </div>
+
+    <!-- ── Interactive Filter Bar ────────────────────────────────────────── -->
+    <div class="filter-bar" style="background:var(--color-surface-card); padding:1.25rem 1.5rem; border-radius:14px; margin-bottom:2rem; box-shadow:0 1px 4px rgba(0,0,0,0.04); border:1px solid var(--color-surface-border);">
+        <form method="get" action="{% url 'clinics:reports' %}" style="display:flex; gap:1.25rem; flex-wrap:wrap; width:100%; align-items:flex-end;">
+            
+            <div style="flex:1; min-width:200px;">
+                <label for="date_range" style="display:block; font-size:0.85rem; font-weight:700; color:var(--color-text-main); margin-bottom:0.4rem;"><i class="fa-regular fa-calendar" style="color:var(--color-primary-500); margin-left:0.25rem;"></i>الفترة الزمنية</label>
+                <select name="date_range" id="date_range" class="form-control" style="width:100%; padding:0.65rem; border-radius:9px; border:1px solid var(--color-surface-border); background:var(--color-surface-ground); color:var(--color-text-body); font-family:inherit;">
+                    <option value="all_time" {% if date_range == 'all_time' %}selected{% endif %}>كل الوقت</option>
+                    <option value="today" {% if date_range == 'today' %}selected{% endif %}>اليوم</option>
+                    <option value="this_week" {% if date_range == 'this_week' %}selected{% endif %}>هذا الأسبوع</option>
+                    <option value="this_month" {% if date_range == 'this_month' %}selected{% endif %}>هذا الشهر</option>
+                    <option value="last_month" {% if date_range == 'last_month' %}selected{% endif %}>الشهر الماضي</option>
+                    <option value="ytd" {% if date_range == 'ytd' %}selected{% endif %}>هذا العام</option>
+                </select>
+            </div>
+
+            <div style="flex:1; min-width:200px;">
+                <label for="clinic_id" style="display:block; font-size:0.85rem; font-weight:700; color:var(--color-text-main); margin-bottom:0.4rem;"><i class="fa-solid fa-hospital" style="color:var(--color-primary-500); margin-left:0.25rem;"></i>العيادة</label>
+                <select name="clinic_id" id="clinic_id" class="form-control" style="width:100%; padding:0.65rem; border-radius:9px; border:1px solid var(--color-surface-border); background:var(--color-surface-ground); color:var(--color-text-body); font-family:inherit;">
+                    <option value="">جميع العيادات</option>
+                    {% for c in clinics %}
+                    <option value="{{ c.id }}" {% if selected_clinic == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="flex:1; min-width:200px;">
+                <label for="doctor_id" style="display:block; font-size:0.85rem; font-weight:700; color:var(--color-text-main); margin-bottom:0.4rem;"><i class="fa-solid fa-user-doctor" style="color:var(--color-primary-500); margin-left:0.25rem;"></i>الطبيب</label>
+                <select name="doctor_id" id="doctor_id" class="form-control" style="width:100%; padding:0.65rem; border-radius:9px; border:1px solid var(--color-surface-border); background:var(--color-surface-ground); color:var(--color-text-body); font-family:inherit;">
+                    <option value="">جميع الأطباء</option>
+                    {% for d in all_doctors %}
+                    <option value="{{ d.user.id }}" {% if selected_doctor == d.user.id|stringformat:"s" %}selected{% endif %}>د. {{ d.user.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+                <button type="submit" style="padding:0.65rem 1.25rem; border-radius:9px; background:var(--color-primary-500); color:#fff; border:none; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:0.4rem; transition:background 0.15s;" onmouseover="this.style.background='var(--color-primary-600)'" onmouseout="this.style.background='var(--color-primary-500)'"><i class="fa-solid fa-filter"></i> تطبيق</button>
+                <a href="{% url 'clinics:reports' %}" style="padding:0.65rem 1.25rem; border-radius:9px; background:var(--color-surface-ground); color:var(--color-text-muted); border:1px solid var(--color-surface-border); font-weight:700; text-decoration:none; display:flex; align-items:center; gap:0.4rem; transition:background 0.15s;" onmouseover="this.style.background='var(--color-surface-border)'" onmouseout="this.style.background='var(--color-surface-ground)'"><i class="fa-solid fa-rotate-left"></i> إعادة ضبط</a>
+            </div>
+        </form>
     </div>
 
     {% if no_clinics %}

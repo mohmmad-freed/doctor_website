@@ -294,13 +294,13 @@
                     </span>
                     {% endif %}
                 </a>
-                <a href="{% url 'appointments:notifications_center' %}"
-                   class="sidebar-link relative {% if request.resolver_match.namespace == 'appointments' and request.resolver_match.url_name == 'notifications_center' %}active{% endif %}">
+                <a href="{% url 'appointments:doctor_notifications' %}"
+                   class="sidebar-link relative {% if request.resolver_match.namespace == 'appointments' and request.resolver_match.url_name == 'doctor_notifications' %}active{% endif %}">
                     <i class="fa-regular fa-bell w-4 text-center flex-shrink-0"></i>
                     Notifications
-                    {% if unread_notification_count > 0 %}
+                    {% if unread_doctor_notification_count > 0 %}
                     <span class="ml-auto min-w-[20px] h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
-                        {% if unread_notification_count > 9 %}9+{% else %}{{ unread_notification_count }}{% endif %}
+                        {% if unread_doctor_notification_count > 9 %}9+{% else %}{{ unread_doctor_notification_count }}{% endif %}
                     </span>
                     {% endif %}
                 </a>
@@ -384,12 +384,12 @@
                     <span class="font-bold text-gray-900 dark:text-white">MedPortal</span>
                 </div>
                 <div class="flex items-center gap-2.5">
-                    <a href="{% url 'appointments:notifications_center' %}"
+                    <a href="{% url 'appointments:doctor_notifications' %}"
                        class="relative inline-flex items-center justify-center w-9 h-9 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
                         <i class="fa-regular fa-bell text-lg"></i>
-                        {% if unread_notification_count > 0 %}
+                        {% if unread_doctor_notification_count > 0 %}
                         <span class="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900">
-                            {% if unread_notification_count > 9 %}9+{% else %}{{ unread_notification_count }}{% endif %}
+                            {% if unread_doctor_notification_count > 9 %}9+{% else %}{{ unread_doctor_notification_count }}{% endif %}
                         </span>
                         {% endif %}
                     </a>
@@ -463,11 +463,11 @@
             <span class="mob-badge">{{ pending_invitations_count }}</span>
             {% endif %}
         </a>
-        <a href="{% url 'appointments:notifications_center' %}" class="mob-item {% if request.resolver_match.namespace == 'appointments' and request.resolver_match.url_name == 'notifications_center' %}active{% endif %}" style="position:relative;">
+        <a href="{% url 'appointments:doctor_notifications' %}" class="mob-item {% if request.resolver_match.namespace == 'appointments' and request.resolver_match.url_name == 'doctor_notifications' %}active{% endif %}" style="position:relative;">
             <i class="fa-regular fa-bell"></i>
             <span>Alerts</span>
-            {% if unread_notification_count > 0 %}
-            <span class="mob-badge">{% if unread_notification_count > 9 %}9+{% else %}{{ unread_notification_count }}{% endif %}</span>
+            {% if unread_doctor_notification_count > 0 %}
+            <span class="mob-badge">{% if unread_doctor_notification_count > 9 %}9+{% else %}{{ unread_doctor_notification_count }}{% endif %}</span>
             {% endif %}
         </a>
     </nav>

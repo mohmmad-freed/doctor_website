@@ -266,7 +266,7 @@
         </a>
 
         <ul class="navbar-menu">
-            {% if request.resolver_match.namespace == 'clinics' %}
+            {% if request.resolver_match.namespace == 'clinics' or request.resolver_match.url_name == 'clinic_owner_notifications' %}
             {# Clinic owner navigation #}
             <li><a href="{% url 'clinics:my_clinics' %}" class="navbar-link {% if request.resolver_match.url_name == 'my_clinics' or request.resolver_match.url_name == 'my_clinic' %}navbar-link-active{% endif %}">عياداتي</a></li>
             <li><a href="{% url 'clinics:reports' %}" class="navbar-link {% if request.resolver_match.url_name == 'reports' %}navbar-link-active{% endif %}">التقارير</a></li>
@@ -296,7 +296,29 @@
             {% if user.is_authenticated %}
 
             {# Notification bell #}
-            <a href="{% url 'appointments:notifications_center' %}"
+            {% if request.resolver_match.namespace == 'clinics' or request.resolver_match.url_name == 'clinic_owner_notifications' %}
+            <a href="{% url 'appointments:clinic_owner_notifications' %}"
+               style="position:relative;display:inline-flex;align-items:center;justify-content:center;
+                      width:36px;height:36px;border-radius:50%;
+                      color:var(--color-text-muted,#9ca3af);
+                      transition:background 0.15s,color 0.15s;text-decoration:none;"
+               onmouseover="this.style.background='var(--color-surface-ground,#f9fafb)';this.style.color='var(--color-text-main,#111827)';"
+               onmouseout="this.style.background='';this.style.color='var(--color-text-muted,#9ca3af)';"
+               title="الإشعارات (العيادة)"
+               aria-label="الإشعارات (العيادة)">
+                <i class="fa-regular fa-bell" style="font-size:1.05rem;"></i>
+                {% if unread_clinic_owner_notification_count > 0 %}
+                <span style="position:absolute;top:-2px;left:-2px;min-width:17px;height:17px;
+                             background:#ef4444;color:#fff;font-size:10px;font-weight:700;
+                             border-radius:999px;display:flex;align-items:center;
+                             justify-content:center;padding:0 3px;line-height:1;
+                             border:2px solid var(--color-surface-card,#fff);">
+                    {% if unread_clinic_owner_notification_count > 9 %}9+{% else %}{{ unread_clinic_owner_notification_count }}{% endif %}
+                </span>
+                {% endif %}
+            </a>
+            {% else %}
+            <a href="{% url 'appointments:patient_notifications' %}"
                style="position:relative;display:inline-flex;align-items:center;justify-content:center;
                       width:36px;height:36px;border-radius:50%;
                       color:var(--color-text-muted,#9ca3af);
@@ -306,19 +328,20 @@
                title="الإشعارات"
                aria-label="الإشعارات">
                 <i class="fa-regular fa-bell" style="font-size:1.05rem;"></i>
-                {% if unread_notification_count > 0 %}
+                {% if unread_patient_notification_count > 0 %}
                 <span style="position:absolute;top:-2px;left:-2px;min-width:17px;height:17px;
                              background:#ef4444;color:#fff;font-size:10px;font-weight:700;
                              border-radius:999px;display:flex;align-items:center;
                              justify-content:center;padding:0 3px;line-height:1;
                              border:2px solid var(--color-surface-card,#fff);">
-                    {% if unread_notification_count > 9 %}9+{% else %}{{ unread_notification_count }}{% endif %}
+                    {% if unread_patient_notification_count > 9 %}9+{% else %}{{ unread_patient_notification_count }}{% endif %}
                 </span>
                 {% endif %}
             </a>
+            {% endif %}
 
             {# Clinic switcher — only shown when owner has 2+ clinics #}
-            {% if request.resolver_match.namespace == 'clinics' and owned_clinics|length > 1 %}
+            {% if owned_clinics|length > 1 %}{% if request.resolver_match.namespace == 'clinics' or request.resolver_match.url_name == 'clinic_owner_notifications' %}
             <div class="clinic-switcher" id="clinicSwitcher">
                 <button class="clinic-switcher-btn"
                         onclick="document.getElementById('clinicSwitcher').classList.toggle('open')">
@@ -341,9 +364,9 @@
                     {% endfor %}
                 </div>
             </div>
-            {% endif %}
+            {% endif %}{% endif %}
 
-            {% if request.resolver_match.namespace != 'clinics' %}
+            {% if request.resolver_match.namespace != 'clinics' and request.resolver_match.url_name != 'clinic_owner_notifications' %}
             <a href="{% url 'accounts:home' %}" class="btn btn-primary">
                 لوحة التحكم
                 <i class="fa-solid fa-arrow-left"></i>
@@ -380,10 +403,10 @@
                     <div class="user-menu-section-label">تبديل الدور</div>
                     {% if "MAIN_DOCTOR" in user.roles %}
                     <a href="{% url 'clinics:my_clinics' %}"
-                       class="user-menu-item {% if request.resolver_match.namespace == 'clinics' %}user-menu-item-active{% endif %}">
+                        class="user-menu-item {% if request.resolver_match.namespace == 'clinics' or request.resolver_match.url_name == 'clinic_owner_notifications' %}user-menu-item-active{% endif %}">
                         <i class="fa-solid fa-hospital-user"></i>
                         صاحب عيادة
-                        {% if request.resolver_match.namespace == 'clinics' %}<i class="fa-solid fa-check user-menu-check"></i>{% endif %}
+                        {% if request.resolver_match.namespace == 'clinics' or request.resolver_match.url_name == 'clinic_owner_notifications' %}<i class="fa-solid fa-check user-menu-check"></i>{% endif %}
                     </a>
                     {% endif %}
                     {% if "PATIENT" in user.roles %}

@@ -1,0 +1,158 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}مركز إشعارات العيادة{% endblock %}
+
+{% block content %}
+<div style="max-width:720px;margin:0 auto;padding:2rem 1rem 5rem;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.75rem;">
+        <div>
+            <h1 style="font-size:1.5rem;font-weight:800;color:var(--color-text-main);display:flex;align-items:center;gap:0.5rem;margin:0;">
+                <span style="width:38px;height:38px;border-radius:12px;background:rgba(0,120,212,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="fa-regular fa-bell" style="color:var(--color-primary-500);font-size:1.05rem;"></i>
+                </span>
+                مركز إشعارات العيادة
+            </h1>
+            <p style="font-size:0.85rem;color:var(--color-text-muted);margin:0.4rem 0 0 3rem;">
+                {% if unread_count > 0 %}
+                لديك <strong style="color:var(--color-primary-500);font-weight:700;">{{ unread_count }}</strong> إشعار غير مقروء
+                {% else %}
+                كل إشعاراتك مقروءة ✓
+                {% endif %}
+            </p>
+        </div>
+
+        {% if unread_count > 0 %}
+        <form method="post" action="{% url 'appointments:mark_all_notifications_read' %}">
+            {% csrf_token %}
+            <input type="hidden" name="context_role" value="CLINIC_OWNER">
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <button type="submit"
+                style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.55rem 1.1rem;
+                       border-radius:10px;font-size:0.82rem;font-weight:700;border:1.5px solid var(--color-primary-200);
+                       background:rgba(0,120,212,0.05);color:var(--color-primary-600);cursor:pointer;
+                       transition:background 0.15s,transform 0.15s;"
+                onmouseover="this.style.background='rgba(0,120,212,0.12)'"
+                onmouseout="this.style.background='rgba(0,120,212,0.05)'"
+                onmousedown="this.style.transform='scale(0.97)'"
+                onmouseup="this.style.transform='none'">
+                <i class="fa-solid fa-check-double" style="font-size:0.75rem;"></i>
+                تحديد الكل كمقروء
+            </button>
+        </form>
+        {% endif %}
+    </div>
+
+    <!-- Notification List -->
+    {% if notifications %}
+    <div style="display:flex;flex-direction:column;gap:0.75rem;">
+        {% for notif in notifications %}
+        <div style="background:var(--color-surface-card);border:1.5px solid {% if not notif.is_read %}var(--color-primary-300){% else %}var(--color-surface-border){% endif %};
+                    border-radius:14px;padding:1.1rem 1.25rem;display:flex;gap:1rem;position:relative;
+                    {% if not notif.is_read %}box-shadow:0 0 0 2px rgba(0,120,212,0.08);background:rgba(0,120,212,0.02);{% endif %}
+                    transition:box-shadow 0.15s,transform 0.15s;"
+             onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.06)';this.style.transform='translateY(-1px)'"
+             onmouseout="this.style.boxShadow='{% if not notif.is_read %}0 0 0 2px rgba(0,120,212,0.08){% else %}none{% endif %}';this.style.transform='none'">
+
+            <!-- Unread dot -->
+            {% if not notif.is_read %}
+            <div style="position:absolute;top:14px;right:14px;width:8px;height:8px;border-radius:50%;background:var(--color-primary-500);"></div>
+            {% endif %}
+
+            <!-- Icon -->
+            <div style="flex-shrink:0;margin-top:2px;">
+                {% if notif.notification_type == 'APPOINTMENT_BOOKED' %}
+                <div style="width:42px;height:42px;border-radius:12px;background:rgba(16,185,129,0.1);display:flex;align-items:center;justify-content:center;">
+                    <i class="fa-regular fa-calendar-check" style="color:#10b981;font-size:1.1rem;"></i>
+                </div>
+                {% elif notif.notification_type == 'APPOINTMENT_CANCELLED' %}
+                <div style="width:42px;height:42px;border-radius:12px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;">
+                    <i class="fa-regular fa-calendar-xmark" style="color:#ef4444;font-size:1.1rem;"></i>
+                </div>
+                {% elif notif.notification_type == 'APPOINTMENT_RESCHEDULED' %}
+                <div style="width:42px;height:42px;border-radius:12px;background:rgba(249,115,22,0.1);display:flex;align-items:center;justify-content:center;">
+                    <i class="fa-solid fa-calendar-day" style="color:#f97316;font-size:1.1rem;"></i>
+                </div>
+                {% elif notif.notification_type == 'APPOINTMENT_EDITED' %}
+                <div style="width:42px;height:42px;border-radius:12px;background:rgba(59,130,246,0.1);display:flex;align-items:center;justify-content:center;">
+                    <i class="fa-regular fa-pen-to-square" style="color:#3b82f6;font-size:1.1rem;"></i>
+                </div>
+                {% elif notif.notification_type == 'APPOINTMENT_REMINDER' %}
+                <div style="width:42px;height:42px;border-radius:12px;background:rgba(245,158,11,0.1);display:flex;align-items:center;justify-content:center;">
+                    <i class="fa-regular fa-bell" style="color:#f59e0b;font-size:1.1rem;"></i>
+                </div>
+                {% else %}
+                <div style="width:42px;height:42px;border-radius:12px;background:rgba(124,58,237,0.1);display:flex;align-items:center;justify-content:center;">
+                    <i class="fa-solid fa-circle-info" style="color:#7c3aed;font-size:1.1rem;"></i>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Content -->
+            <div style="flex:1;min-width:0;">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;">
+                    <p style="margin:0;font-size:0.9rem;font-weight:700;color:var(--color-text-main);line-height:1.4;
+                              {% if not notif.is_read %}color:var(--color-primary-700);{% endif %}">
+                        {{ notif.title }}
+                    </p>
+                    <span style="font-size:0.72rem;color:var(--color-text-muted);white-space:nowrap;flex-shrink:0;">
+                        {{ notif.created_at|timesince }} مضت
+                    </span>
+                </div>
+
+                <p style="margin:0.35rem 0 0;font-size:0.84rem;color:var(--color-text-body);line-height:1.6;">
+                    {{ notif.message }}
+                </p>
+
+                <!-- Footer: link + mark-read -->
+                <div style="display:flex;align-items:center;gap:0.85rem;margin-top:0.75rem;flex-wrap:wrap;">
+                    {% if notif.target_url %}
+                    <a href="{{ notif.target_url }}"
+                       style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.78rem;font-weight:700;color:var(--color-primary-500);text-decoration:none;"
+                       onmouseover="this.style.textDecoration='underline'"
+                       onmouseout="this.style.textDecoration='none'">
+                        <i class="fa-solid fa-arrow-left" style="font-size:0.6rem;"></i>
+                        عرض التفاصيل
+                    </a>
+                    {% endif %}
+
+                    {% if not notif.is_read %}
+                    <form method="post" action="{% url 'appointments:mark_notification_read' notif.pk %}" style="margin:0;">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <button type="submit"
+                            style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.76rem;font-weight:600;
+                                   color:var(--color-text-muted);background:none;border:none;cursor:pointer;padding:0;
+                                   transition:color 0.15s;"
+                            onmouseover="this.style.color='var(--color-text-main)'"
+                            onmouseout="this.style.color='var(--color-text-muted)'">
+                            <i class="fa-regular fa-circle-check" style="font-size:0.72rem;"></i>
+                            تحديد كمقروء
+                        </button>
+                    </form>
+                    {% else %}
+                    <span style="display:inline-flex;align-items:center;gap:0.25rem;font-size:0.74rem;color:var(--color-text-muted);">
+                        <i class="fa-solid fa-check" style="font-size:0.6rem;"></i>
+                        مقروء
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <!-- Empty state -->
+    <div style="background:var(--color-surface-card);border:1.5px solid var(--color-surface-border);border-radius:16px;padding:3.5rem 2rem;text-align:center;">
+        <div style="width:64px;height:64px;border-radius:50%;background:var(--color-surface-ground);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+            <i class="fa-regular fa-bell-slash" style="font-size:1.5rem;color:var(--color-text-muted);opacity:0.5;"></i>
+        </div>
+        <h3 style="font-size:1.05rem;font-weight:700;color:var(--color-text-body);margin:0 0 0.35rem;">لا توجد إشعارات بعد</h3>
+        <p style="font-size:0.85rem;color:var(--color-text-muted);margin:0;">ستظهر هنا إشعارات العيادة عند وجودها.</p>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

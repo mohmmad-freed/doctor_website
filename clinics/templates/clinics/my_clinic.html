@@ -648,6 +648,192 @@
 }
 .drawer-loading i { font-size: 1.5rem; color: var(--color-primary-500); animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+/* ─── Quick Actions ────────────────────────────────────────────── */
+.quick-actions-bar {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+}
+.qa-btn {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.55rem 1rem;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-decoration: none;
+    border: 1.5px solid var(--color-surface-border);
+    background: var(--color-surface-card);
+    color: var(--color-text-body);
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.qa-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-color: var(--color-primary-400); color: var(--color-primary-600); }
+.qa-btn:active { transform: scale(0.97); }
+.qa-btn i { font-size: 0.85rem; color: var(--color-primary-500); }
+
+/* ─── Sub Expiry Banner ───────────────────────────────────────── */
+.sub-expiry-banner {
+    padding: 0.85rem 1.2rem;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+/* ─── Timeline ────────────────────────────────────────────────── */
+.timeline-section { margin-bottom: 1.5rem; }
+.timeline-list { padding: 0; margin: 0; list-style: none; }
+.timeline-item {
+    display: flex; align-items: center; gap: 0.85rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--color-surface-border);
+    transition: background 0.15s;
+}
+.timeline-item:last-child { border-bottom: none; }
+.timeline-item:hover { background: var(--color-surface-ground); }
+.timeline-time {
+    min-width: 52px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--color-primary-500);
+    font-variant-numeric: tabular-nums;
+    direction: ltr;
+    text-align: center;
+}
+.timeline-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.td-pending   { background: #f59e0b; }
+.td-confirmed { background: #3b82f6; }
+.td-completed { background: #10b981; }
+.td-cancelled { background: #ef4444; }
+.td-noshow    { background: #6b7280; }
+.timeline-info { flex: 1; min-width: 0; }
+.timeline-patient { font-size: 0.88rem; font-weight: 600; color: var(--color-text-main); }
+.timeline-meta { font-size: 0.75rem; color: var(--color-text-muted); }
+
+/* ─── Week Strip ──────────────────────────────────────────────── */
+.week-strip {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+.week-day {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 0.3rem;
+    padding: 0.6rem 0;
+    border-radius: 10px;
+    background: var(--color-surface-card);
+    border: 1.5px solid var(--color-surface-border);
+    transition: border-color 0.15s;
+}
+.week-day.wd-today { border-color: var(--color-primary-400); background: rgba(0,120,212,0.04); }
+.wd-label { font-size: 0.68rem; font-weight: 700; color: var(--color-text-muted); }
+.wd-bar-track { width: 6px; border-radius: 3px; background: var(--color-surface-border); height: 50px; position: relative; }
+.wd-bar-fill { position: absolute; bottom: 0; width: 100%; border-radius: 3px; background: var(--color-primary-400); transition: height 0.5s ease; }
+.week-day.wd-today .wd-bar-fill { background: var(--color-primary-600); }
+.wd-count { font-size: 0.72rem; font-weight: 800; color: var(--color-text-main); }
+.wd-date { font-size: 0.62rem; color: var(--color-text-muted); direction: ltr; }
+
+/* ─── Doctor Cards Grid ───────────────────────────────────────── */
+.doc-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 0.85rem;
+    margin-bottom: 1.5rem;
+}
+.doc-card {
+    background: var(--color-surface-card);
+    border: 1.5px solid var(--color-surface-border);
+    border-radius: 13px;
+    padding: 1rem 1.15rem;
+    display: flex; gap: 0.85rem; align-items: flex-start;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+.doc-card:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,0.07); }
+.doc-card-avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: #dbeafe; color: #1e40af;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 1rem; flex-shrink: 0;
+    border: 2px solid #bfdbfe;
+}
+[data-theme="dark"] .doc-card-avatar { background: #1e3a5f; color: #93c5fd; border-color: #1e40af; }
+.doc-card-body { flex: 1; min-width: 0; }
+.doc-card-name { font-size: 0.88rem; font-weight: 700; color: var(--color-text-main); margin-bottom: 0.3rem; }
+.doc-card-stats { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.doc-stat-pill {
+    display: inline-flex; align-items: center; gap: 0.25rem;
+    font-size: 0.7rem; font-weight: 700;
+    padding: 2px 8px; border-radius: 8px;
+}
+.dsp-appts   { background: rgba(0,120,212,0.08); color: #0078D4; }
+.dsp-pending  { background: #fef3c7; color: #92400e; }
+.dsp-verified { background: #dcfce7; color: #15803d; }
+.dsp-unverified { background: #fee2e2; color: #991b1b; }
+[data-theme="dark"] .dsp-appts   { background: rgba(59,143,217,0.12); }
+[data-theme="dark"] .dsp-pending  { background: #451a03; color: #fcd34d; }
+[data-theme="dark"] .dsp-verified { background: #052e16; color: #4ade80; }
+[data-theme="dark"] .dsp-unverified { background: #450a0a; color: #fca5a5; }
+
+/* ─── Revenue Sparkline ───────────────────────────────────────── */
+.spark-container {
+    display: flex; align-items: flex-end; gap: 4px;
+    height: 50px;
+    padding: 0.5rem 0;
+}
+.spark-bar {
+    flex: 1; border-radius: 3px 3px 0 0;
+    background: var(--color-primary-400);
+    transition: height 0.5s ease;
+    min-height: 3px;
+}
+
+/* ─── Activity Feed ───────────────────────────────────────────── */
+.activity-list { list-style: none; padding: 0; margin: 0; }
+.activity-item {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.65rem 1rem;
+    border-bottom: 1px solid var(--color-surface-border);
+    font-size: 0.82rem;
+    transition: background 0.15s;
+}
+.activity-item:last-child { border-bottom: none; }
+.activity-item:hover { background: var(--color-surface-ground); }
+.activity-icon {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; flex-shrink: 0;
+}
+.ai-booked    { background: #dcfce7; color: #15803d; }
+.ai-confirmed { background: #dbeafe; color: #1e40af; }
+.ai-completed { background: #d1fae5; color: #065f46; }
+.ai-cancelled { background: #fee2e2; color: #991b1b; }
+.ai-noshow    { background: #f3f4f6; color: #6b7280; }
+.ai-pending   { background: #fef3c7; color: #92400e; }
+[data-theme="dark"] .ai-booked    { background: #052e16; color: #4ade80; }
+[data-theme="dark"] .ai-confirmed { background: #1e3a5f; color: #93c5fd; }
+[data-theme="dark"] .ai-completed { background: #022c22; color: #6ee7b7; }
+[data-theme="dark"] .ai-cancelled { background: #450a0a; color: #fca5a5; }
+[data-theme="dark"] .ai-noshow    { background: #1f2937; color: #9ca3af; }
+[data-theme="dark"] .ai-pending   { background: #451a03; color: #fcd34d; }
+.activity-text { flex: 1; color: var(--color-text-body); }
+.activity-text strong { color: var(--color-text-main); }
+.activity-time { font-size: 0.72rem; color: var(--color-text-muted); white-space: nowrap; direction: ltr; }
+
+/* ─── Section Titles ──────────────────────────────────────────── */
+.dash-section-title {
+    font-size: 0.95rem; font-weight: 700;
+    color: var(--color-text-main);
+    display: flex; align-items: center; gap: 0.45rem;
+    margin: 0 0 0.85rem;
+}
+.dash-section-title i { color: var(--color-primary-500); font-size: 0.88rem; }
 </style>
 {% endblock %}
 
@@ -700,6 +886,26 @@
 
     <!-- ── Metric Tiles ────────────────────────────────────────────── -->
     <div class="metric-row">
+        <!-- Today's Appointments -->
+        <div class="metric-tile">
+            <div class="metric-icon mi-amber" style="background:rgba(217,119,6,0.1);color:#d97706;">
+                <i class="fa-solid fa-calendar-day"></i>
+            </div>
+            <div class="metric-body">
+                <div class="metric-num">{{ today_appointments }}</div>
+                <div class="metric-lbl">مواعيد اليوم</div>
+            </div>
+        </div>
+        <!-- Today's Revenue -->
+        <div class="metric-tile">
+            <div class="metric-icon" style="background:rgba(16,185,129,0.1);color:#10b981;">
+                <i class="fa-solid fa-coins"></i>
+            </div>
+            <div class="metric-body">
+                <div class="metric-num">{{ today_revenue|floatformat:0 }} <span class="metric-cap">ر.س</span></div>
+                <div class="metric-lbl">إيرادات اليوم</div>
+            </div>
+        </div>
         <!-- Doctors -->
         <div class="metric-tile">
             <div class="metric-icon mi-blue"><i class="fa-solid fa-stethoscope"></i></div>
@@ -747,6 +953,298 @@
         </div>
         {% endif %}
     </div>
+
+    <!-- ── Subscription Expiry Warning ──────────────────────────────── -->
+    {% if sub_days_remaining is not None and sub_days_remaining <= 14 %}
+    <div class="sub-expiry-banner"
+         style="{% if sub_days_remaining <= 3 %}background:#fef2f2;border:1px solid #fecaca;{% elif sub_days_remaining <= 7 %}background:#fff7ed;border:1px solid #ffedd5;{% else %}background:#fffbeb;border:1px solid #fde68a;{% endif %}">
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+            <div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;{% if sub_days_remaining <= 3 %}background:#fee2e2;color:#dc2626;{% elif sub_days_remaining <= 7 %}background:#ffedd5;color:#f97316;{% else %}background:#fef3c7;color:#d97706;{% endif %}">
+                <i class="fa-solid fa-clock" style="font-size:1rem;"></i>
+            </div>
+            <div>
+                <h3 style="margin:0;font-size:0.95rem;font-weight:700;{% if sub_days_remaining <= 3 %}color:#991b1b;{% elif sub_days_remaining <= 7 %}color:#9a3412;{% else %}color:#92400e;{% endif %}">
+                    {% if sub_days_remaining <= 0 %}⚠️ انتهى الاشتراك!{% elif sub_days_remaining <= 3 %}⚠️ الاشتراك ينتهي خلال {{ sub_days_remaining }} أيام{% else %}تنبيه: الاشتراك ينتهي خلال {{ sub_days_remaining }} يوماً{% endif %}
+                </h3>
+                <p style="margin:0.2rem 0 0;font-size:0.8rem;{% if sub_days_remaining <= 3 %}color:#dc2626;{% elif sub_days_remaining <= 7 %}color:#ea580c;{% else %}color:#d97706;{% endif %}">يرجى تجديد الاشتراك لضمان استمرارية الخدمة.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ── Quick Actions Bar ──────────────────────────────────────── -->
+    <div class="quick-actions-bar">
+        <a href="{% url 'clinics:create_invitation' clinic_id=clinic.id %}" class="qa-btn">
+            <i class="fa-solid fa-user-doctor"></i> دعوة طبيب
+        </a>
+        <a href="{% url 'clinics:create_secretary_invitation' clinic_id=clinic.id %}" class="qa-btn">
+            <i class="fa-solid fa-user-tie"></i> دعوة سكرتير/ة
+        </a>
+        <a href="{% url 'clinics:working_hours_list' clinic_id=clinic.id %}" class="qa-btn">
+            <i class="fa-solid fa-clock"></i> ساعات العمل
+        </a>
+        <a href="{% url 'clinics:appointment_types_list' clinic_id=clinic.id %}" class="qa-btn">
+            <i class="fa-solid fa-calendar-check"></i> أنواع المواعيد
+        </a>
+        <a href="{% url 'clinics:reports' %}" class="qa-btn">
+            <i class="fa-solid fa-chart-pie"></i> التقارير
+        </a>
+        <a href="{% url 'clinics:compliance_settings' clinic_id=clinic.id %}" class="qa-btn">
+            <i class="fa-solid fa-shield-halved"></i> الامتثال
+        </a>
+    </div>
+
+    <!-- ── Actionable Alerts ──────────────────────────────────────── -->
+    {% if pending_appointments > 0 or pending_credentials > 0 or pending_invitations > 0 or next_holiday or unverified_doctors or blocked_patients_count > 0 %}
+    <div style="margin-bottom:1.5rem;display:flex;flex-direction:column;gap:0.75rem;">
+        {% if pending_appointments > 0 %}
+        <div style="background:#fff7ed;border:1px solid #ffedd5;padding:0.85rem 1.2rem;border-radius:12px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+                <div style="width:36px;height:36px;border-radius:50%;background:#ffedd5;color:#f97316;display:flex;align-items:center;justify-content:center;">
+                    <i class="fa-solid fa-calendar-exclamation" style="font-size:1rem;"></i>
+                </div>
+                <div>
+                    <h3 style="margin:0;font-size:0.95rem;font-weight:700;color:#9a3412;">تنبيه: مواعيد معلقة</h3>
+                    <p style="margin:0.2rem 0 0;font-size:0.8rem;color:#c2410c;">يوجد {{ pending_appointments }} موعد بانتظار التأكيد.</p>
+                </div>
+            </div>
+            <a href="#appointments-section" style="padding:0.4rem 0.9rem;border-radius:8px;background:#f97316;color:white;font-size:0.8rem;font-weight:700;text-decoration:none;transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='none'">مراجعة</a>
+        </div>
+        {% endif %}
+        
+        {% if pending_credentials > 0 %}
+        <div style="background:#eff6ff;border:1px solid #dbeafe;padding:0.85rem 1.2rem;border-radius:12px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+                <div style="width:36px;height:36px;border-radius:50%;background:#dbeafe;color:#3b82f6;display:flex;align-items:center;justify-content:center;">
+                    <i class="fa-solid fa-file-signature" style="font-size:1rem;"></i>
+                </div>
+                <div>
+                    <h3 style="margin:0;font-size:0.95rem;font-weight:700;color:#1e40af;">تنبيه: مؤهلات تحتاج للمراجعة</h3>
+                    <p style="margin:0.2rem 0 0;font-size:0.8rem;color:#1d4ed8;">يوجد {{ pending_credentials }} طلب اعتماد مؤهلات لأطباء في العيادة.</p>
+                </div>
+            </div>
+            <a href="{% url 'clinics:credentials_list' clinic_id=clinic.id %}" style="padding:0.4rem 0.9rem;border-radius:8px;background:#3b82f6;color:white;font-size:0.8rem;font-weight:700;text-decoration:none;transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='none'">مراجعة</a>
+        </div>
+        {% endif %}
+
+        {% if pending_invitations > 0 %}
+        <div style="background:#f0fdf4;border:1px solid #dcfce7;padding:0.85rem 1.2rem;border-radius:12px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+                <div style="width:36px;height:36px;border-radius:50%;background:#dcfce7;color:#16a34a;display:flex;align-items:center;justify-content:center;">
+                    <i class="fa-solid fa-envelope-open-text" style="font-size:1rem;"></i>
+                </div>
+                <div>
+                    <h3 style="margin:0;font-size:0.95rem;font-weight:700;color:#15803d;">دعوات معلقة</h3>
+                    <p style="margin:0.2rem 0 0;font-size:0.8rem;color:#16a34a;">يوجد {{ pending_invitations }} دعوة بانتظار القبول.</p>
+                </div>
+            </div>
+            <a href="{% url 'clinics:invitations_list' clinic_id=clinic.id %}" style="padding:0.4rem 0.9rem;border-radius:8px;background:#16a34a;color:white;font-size:0.8rem;font-weight:700;text-decoration:none;transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='none'">عرض</a>
+        </div>
+        {% endif %}
+
+        {% if next_holiday %}
+        <div style="background:#faf5ff;border:1px solid #e9d5ff;padding:0.85rem 1.2rem;border-radius:12px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+                <div style="width:36px;height:36px;border-radius:50%;background:#e9d5ff;color:#7c3aed;display:flex;align-items:center;justify-content:center;">
+                    <i class="fa-solid fa-umbrella-beach" style="font-size:1rem;"></i>
+                </div>
+                <div>
+                    <h3 style="margin:0;font-size:0.95rem;font-weight:700;color:#6b21a8;">عطلة قادمة: {{ next_holiday.title }}</h3>
+                    <p style="margin:0.2rem 0 0;font-size:0.8rem;color:#7c3aed;">{{ next_holiday.start_date|date:'d/m/Y' }} — {{ next_holiday.end_date|date:'d/m/Y' }}</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if unverified_doctors %}
+        <div style="background:#fef2f2;border:1px solid #fecaca;padding:0.85rem 1.2rem;border-radius:12px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+                <div style="width:36px;height:36px;border-radius:50%;background:#fecaca;color:#dc2626;display:flex;align-items:center;justify-content:center;">
+                    <i class="fa-solid fa-user-shield" style="font-size:1rem;"></i>
+                </div>
+                <div>
+                    <h3 style="margin:0;font-size:0.95rem;font-weight:700;color:#991b1b;">أطباء بانتظار التحقق</h3>
+                    <p style="margin:0.2rem 0 0;font-size:0.8rem;color:#dc2626;">{{ unverified_doctors|join:', ' }}</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if blocked_patients_count > 0 %}
+        <div style="background:#fef2f2;border:1px solid #fecaca;padding:0.85rem 1.2rem;border-radius:12px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+                <div style="width:36px;height:36px;border-radius:50%;background:#fecaca;color:#dc2626;display:flex;align-items:center;justify-content:center;">
+                    <i class="fa-solid fa-ban" style="font-size:1rem;"></i>
+                </div>
+                <div>
+                    <h3 style="margin:0;font-size:0.95rem;font-weight:700;color:#991b1b;">مرضى محظورون</h3>
+                    <p style="margin:0.2rem 0 0;font-size:0.8rem;color:#dc2626;">يوجد {{ blocked_patients_count }} مريض محظور حالياً من الحجز.</p>
+                </div>
+            </div>
+            <a href="{% url 'clinics:compliance_settings' clinic_id=clinic.id %}" style="padding:0.4rem 0.9rem;border-radius:8px;background:#dc2626;color:white;font-size:0.8rem;font-weight:700;text-decoration:none;transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='none'">إدارة</a>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- ── Today's Timeline ───────────────────────────────────────── -->
+    <div class="p-card timeline-section">
+        <div class="p-card-head">
+            <h2 class="p-card-title"><i class="fa-solid fa-timeline"></i> جدول اليوم</h2>
+            <span style="font-size:0.78rem;font-weight:700;color:var(--color-text-muted);">{{ today_timeline|length }} موعد</span>
+        </div>
+        <div class="p-card-body" style="padding:0;">
+            {% if today_timeline %}
+            <ul class="timeline-list">
+                {% for item in today_timeline %}
+                <li class="timeline-item">
+                    <span class="timeline-time">{{ item.appointment_time|time:'H:i' }}</span>
+                    <span class="timeline-dot {% if item.status == 'PENDING' %}td-pending{% elif item.status == 'CONFIRMED' %}td-confirmed{% elif item.status == 'COMPLETED' %}td-completed{% elif item.status == 'CANCELLED' %}td-cancelled{% else %}td-noshow{% endif %}"></span>
+                    <div class="timeline-info">
+                        <div class="timeline-patient">{{ item.patient__name|default:'—' }}</div>
+                        <div class="timeline-meta">
+                            <i class="fa-solid fa-stethoscope" style="font-size:0.65rem;"></i> {{ item.doctor__name|default:'—' }}
+                            {% if item.appointment_type__name %} · {{ item.appointment_type__name }}{% endif %}
+                        </div>
+                    </div>
+                    <span class="s-badge {% if item.status == 'PENDING' %}s-pending{% elif item.status == 'COMPLETED' %}s-active{% elif item.status == 'CANCELLED' %}s-expired{% else %}s-suspended{% endif %}" style="font-size:0.68rem;">
+                        {% if item.status == 'PENDING' %}معلق{% elif item.status == 'CONFIRMED' %}مؤكد{% elif item.status == 'COMPLETED' %}مكتمل{% elif item.status == 'CANCELLED' %}ملغي{% elif item.status == 'NO_SHOW' %}لم يحضر{% else %}{{ item.status }}{% endif %}
+                    </span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div style="text-align:center;padding:2rem;color:var(--color-text-muted);font-size:0.88rem;">
+                <i class="fa-regular fa-calendar-check" style="font-size:1.5rem;opacity:0.4;display:block;margin-bottom:0.5rem;"></i>
+                لا توجد مواعيد مجدولة لهذا اليوم
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ── Week-at-a-Glance ───────────────────────────────────────── -->
+    <h3 class="dash-section-title"><i class="fa-solid fa-chart-simple"></i> نظرة على الأسبوع</h3>
+    <div class="week-strip">
+        {% for wd in week_days %}
+        <div class="week-day {% if wd.is_today %}wd-today{% endif %}">
+            <span class="wd-label">{{ wd.label }}</span>
+            <div class="wd-bar-track">
+                <div class="wd-bar-fill" style="height: {% widthratio wd.count week_max 100 %}%;"></div>
+            </div>
+            <span class="wd-count">{{ wd.count }}</span>
+            <span class="wd-date">{{ wd.date }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- ── Doctor Overview Cards ──────────────────────────────────── -->
+    {% if doctor_cards %}
+    <h3 class="dash-section-title"><i class="fa-solid fa-user-doctor"></i> أداء الأطباء اليوم</h3>
+    <div class="doc-cards-grid">
+        {% for dc in doctor_cards %}
+        <div class="doc-card">
+            <div class="doc-card-avatar">{{ dc.initial }}</div>
+            <div class="doc-card-body">
+                <div class="doc-card-name">{{ dc.name }}</div>
+                <div class="doc-card-stats">
+                    <span class="doc-stat-pill dsp-appts">
+                        <i class="fa-solid fa-calendar-day"></i> {{ dc.today_count }} موعد
+                    </span>
+                    {% if dc.cred_status == 'CREDENTIALS_VERIFIED' %}
+                    <span class="doc-stat-pill dsp-verified"><i class="fa-solid fa-circle-check"></i> معتمد</span>
+                    {% elif dc.cred_status == 'CREDENTIALS_PENDING' %}
+                    <span class="doc-stat-pill dsp-pending"><i class="fa-solid fa-hourglass-half"></i> قيد المراجعة</span>
+                    {% else %}
+                    <span class="doc-stat-pill dsp-unverified"><i class="fa-solid fa-triangle-exclamation"></i> بلا مؤهلات</span>
+                    {% endif %}
+                    {% if dc.id_status == 'IDENTITY_VERIFIED' %}
+                    <span class="doc-stat-pill dsp-verified"><i class="fa-solid fa-shield-check"></i> موثق</span>
+                    {% elif dc.id_status == 'IDENTITY_PENDING_REVIEW' %}
+                    <span class="doc-stat-pill dsp-pending"><i class="fa-solid fa-hourglass-half"></i> بانتظار التحقق</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- ── Revenue Sparkline (7 days) ─────────────────────────────── -->
+    <div class="info-pair">
+        <div class="p-card">
+            <div class="p-card-head">
+                <h2 class="p-card-title"><i class="fa-solid fa-chart-line"></i> إيرادات آخر 7 أيام</h2>
+            </div>
+            <div class="p-card-body">
+                <div class="spark-container">
+                    {% for r in revenue_7d %}
+                    <div class="spark-bar" style="height: {% widthratio r.amount revenue_max 100 %}%;" title="{{ r.date }}: {{ r.amount|floatformat:0 }} ر.س"></div>
+                    {% endfor %}
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:0.68rem;color:var(--color-text-muted);direction:ltr;margin-top:0.3rem;">
+                    {% for r in revenue_7d %}
+                    <span>{{ r.date }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- No-Show & Cancellation Rates -->
+        <div class="p-card">
+            <div class="p-card-head">
+                <h2 class="p-card-title"><i class="fa-solid fa-chart-pie"></i> معدلات الشهر الحالي</h2>
+            </div>
+            <div class="p-card-body">
+                <div style="display:flex;gap:1.5rem;">
+                    <div style="flex:1;text-align:center;">
+                        <div style="font-size:1.8rem;font-weight:800;color:{% if noshow_rate_month > 15 %}#dc2626{% elif noshow_rate_month > 5 %}#d97706{% else %}#059669{% endif %};line-height:1;">{{ noshow_rate_month }}%</div>
+                        <div style="font-size:0.75rem;font-weight:600;color:var(--color-text-muted);margin-top:0.3rem;">عدم الحضور</div>
+                    </div>
+                    <div style="width:1px;background:var(--color-surface-border);"></div>
+                    <div style="flex:1;text-align:center;">
+                        <div style="font-size:1.8rem;font-weight:800;color:{% if cancellation_rate_month > 20 %}#dc2626{% elif cancellation_rate_month > 10 %}#d97706{% else %}#059669{% endif %};line-height:1;">{{ cancellation_rate_month }}%</div>
+                        <div style="font-size:0.75rem;font-weight:600;color:var(--color-text-muted);margin-top:0.3rem;">الإلغاء</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Recent Activity Feed ───────────────────────────────────── -->
+    {% if recent_activity %}
+    <div class="p-card" style="margin-bottom:1.25rem;">
+        <div class="p-card-head">
+            <h2 class="p-card-title"><i class="fa-solid fa-clock-rotate-left"></i> آخر النشاطات</h2>
+        </div>
+        <div class="p-card-body" style="padding:0;">
+            <ul class="activity-list">
+                {% for act in recent_activity %}
+                <li class="activity-item">
+                    <div class="activity-icon {% if act.status == 'PENDING' %}ai-pending{% elif act.status == 'CONFIRMED' %}ai-confirmed{% elif act.status == 'COMPLETED' %}ai-completed{% elif act.status == 'CANCELLED' %}ai-cancelled{% elif act.status == 'NO_SHOW' %}ai-noshow{% else %}ai-booked{% endif %}">
+                        {% if act.status == 'PENDING' %}<i class="fa-solid fa-hourglass-half"></i>
+                        {% elif act.status == 'CONFIRMED' %}<i class="fa-solid fa-circle-check"></i>
+                        {% elif act.status == 'COMPLETED' %}<i class="fa-solid fa-check-double"></i>
+                        {% elif act.status == 'CANCELLED' %}<i class="fa-solid fa-xmark"></i>
+                        {% elif act.status == 'NO_SHOW' %}<i class="fa-solid fa-user-slash"></i>
+                        {% else %}<i class="fa-solid fa-calendar-plus"></i>{% endif %}
+                    </div>
+                    <div class="activity-text">
+                        <strong>{{ act.patient__name|default:'مريض' }}</strong>
+                        {% if act.status == 'PENDING' %} — حجز جديد بانتظار التأكيد
+                        {% elif act.status == 'CONFIRMED' %} — تم تأكيد الموعد
+                        {% elif act.status == 'COMPLETED' %} — تمت الزيارة بنجاح
+                        {% elif act.status == 'CANCELLED' %} — تم إلغاء الموعد
+                        {% elif act.status == 'NO_SHOW' %} — لم يحضر
+                        {% else %} — حالة: {{ act.status }}{% endif %}
+                        · <span style="color:var(--color-text-muted);">{{ act.doctor__name|default:'—' }}</span>
+                    </div>
+                    <span class="activity-time">{{ act.appointment_date|date:'d/m' }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- ── Clinic Info + Subscription ─────────────────────────────── -->
     <div class="info-pair">
