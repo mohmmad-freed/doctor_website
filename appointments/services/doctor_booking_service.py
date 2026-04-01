@@ -100,7 +100,29 @@ def schedule_followup(
             code="past_date",
         )
 
-    # ── 5. Resolve appointment type ───────────────────────────
+    # ── 5. Check for existing upcoming appointment ────────────
+    existing_upcoming = (
+        Appointment.objects.filter(
+            doctor=doctor,
+            patient_id=patient_id,
+            appointment_date__gte=date.today(),
+            status__in=[
+                Appointment.Status.PENDING,
+                Appointment.Status.CONFIRMED,
+            ],
+        )
+        .order_by("appointment_date", "appointment_time")
+        .first()
+    )
+    if existing_upcoming and not allow_conflict:
+        raise DoctorSchedulingError(
+            f"This patient already has an upcoming appointment on "
+            f"{existing_upcoming.appointment_date.strftime('%d %b %Y')} at "
+            f"{existing_upcoming.appointment_time.strftime('%H:%M')}.",
+            code="already_scheduled",
+        )
+
+    # ── 6. Resolve appointment type ───────────────────────────
     appointment_type = None
     if appointment_type_id:
         try:
@@ -122,27 +144,29 @@ def schedule_followup(
             name__icontains="follow",
         ).first()
 
-    # ── 6. Conflict check (advisory — doctor can override) ────
-    conflict_exists = Appointment.objects.filter(
-        doctor=doctor,
-        appointment_date=appointment_date,
-        appointment_time=appointment_time,
-        status__in=[
-            Appointment.Status.CONFIRMED,
-            Appointment.Status.CHECKED_IN,
-            Appointment.Status.IN_PROGRESS,
-        ],
-    ).exists()
-
-    if conflict_exists and not allow_conflict:
-        raise DoctorSchedulingError(
-            "You already have an appointment at this time. "
-            "Check the override box to schedule anyway.",
-            code="slot_conflict",
+    # ── 7. Conflict check + create (atomic, with row-level lock) ──
+    with transaction.atomic():
+        conflict_exists = (
+            Appointment.objects.select_for_update()
+            .filter(
+                doctor=doctor,
+                appointment_date=appointment_date,
+                appointment_time=appointment_time,
+                status__in=[
+                    Appointment.Status.CONFIRMED,
+                    Appointment.Status.CHECKED_IN,
+                    Appointment.Status.IN_PROGRESS,
+                ],
+            )
+            .exists()
         )
 
-    # ── 7. Create appointment ─────────────────────────────────
-    with transaction.atomic():
+        if conflict_exists and not allow_conflict:
+            raise DoctorSchedulingError(
+                "You already have an appointment at this time.",
+                code="slot_conflict",
+            )
+
         appointment = Appointment.objects.create(
             patient=patient,
             clinic=clinic,

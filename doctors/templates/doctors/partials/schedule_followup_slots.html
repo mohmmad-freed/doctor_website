@@ -1,11 +1,3 @@
-{#
-  Schedule Follow-up — Slots Partial
-  ─────────────────────────────────────
-  Loaded via HTMX into #followup-slots when the doctor selects a date.
-  Always provides exactly one input[name="appointment_time"] so the
-  parent form captures it on submit.
-#}
-
 {% if error %}
 {# ── Error (missing clinic / date) ── #}
 <p class="text-xs text-slate-400 dark:text-slate-500 italic py-1">{{ error }}</p>

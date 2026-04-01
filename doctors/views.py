@@ -2220,8 +2220,10 @@ def ws_schedule_followup(request, patient_id):
             "doctor":            doctor,
             "clinics":           clinics,
             "default_clinic":    default_clinic,
+            "default_clinic_id": default_clinic.id if default_clinic else None,
             "appointment_types": appointment_types,
             "today":             date.today().isoformat(),
+            "last_visit":        _ws_last_visit(patient_id, doctor),
         })
 
     # ── POST ──────────────────────────────────────────────────

@@ -43,6 +43,9 @@
     </script>
 
     <style type="text/tailwindcss">
+        /* Alpine x-cloak: hide elements until Alpine initialises them */
+        [x-cloak] { display: none !important; }
+
         @layer utilities {
             .scrollbar-none::-webkit-scrollbar { display: none; }
             .scrollbar-none { scrollbar-width: none; }

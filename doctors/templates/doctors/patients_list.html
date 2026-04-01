@@ -418,6 +418,12 @@
             if (q && q.value.trim()) {
                 highlightText(evt.detail.target, q.value.trim());
             }
+            // Re-initialise Alpine for newly injected patient rows
+            if (typeof Alpine !== 'undefined') Alpine.initTree(evt.detail.target);
+        }
+        // Re-initialise Alpine for dynamically injected modal content
+        if (evt.detail.target && evt.detail.target.id === 'followup-modal-root') {
+            if (typeof Alpine !== 'undefined') Alpine.initTree(evt.detail.target);
         }
     });
 

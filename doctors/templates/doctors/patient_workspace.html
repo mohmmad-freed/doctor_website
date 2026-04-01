@@ -288,6 +288,15 @@
       const tab = url.searchParams.get('tab') || 'overview';
       setActiveTab(tab);
     }
+    // Re-initialise Alpine for dynamically injected modal content
+    if (e.detail.target && e.detail.target.id === 'followup-modal-root') {
+      if (typeof Alpine !== 'undefined') Alpine.initTree(e.detail.target);
+    }
+  });
+
+  // Refresh overview tab after a follow-up is successfully scheduled
+  document.addEventListener('followup-scheduled', function () {
+    switchTab('overview');
   });
 </script>
 {% endblock %}
