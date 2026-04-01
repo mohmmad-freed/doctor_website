@@ -1767,14 +1767,20 @@ def _ws_notes_data(patient, cids, request):
 
 
 def _ws_orders_data(patient, cids, request):
+    from clinics.models import DrugFamily
     type_filter = request.GET.get("order_type", "")
     qs = Order.objects.filter(patient=patient, clinic_id__in=cids).select_related("doctor", "clinic")
     if type_filter:
         qs = qs.filter(order_type=type_filter)
+    drug_families = list(
+        DrugFamily.objects.filter(clinic_id__in=cids).values("id", "name", "clinic_id").order_by("name")
+    )
     return {
         "orders": list(qs[:50]),
         "order_type_filter": type_filter,
         "order_types": Order.OrderType.choices,
+        "drug_families": drug_families,
+        "catalog_clinic_ids": list(cids),
     }
 
 
@@ -1991,6 +1997,83 @@ def ws_order_delete(request, patient_id, order_id):
         return render(request, "doctors/partials/ws_orders.html", ctx)
 
     return redirect("doctors:patient_workspace", patient_id=patient_id)
+
+
+# ── Order Catalog HTMX Search ─────────────────────────────────────────────────
+
+@login_required
+def htmx_catalog_drug_search(request, patient_id):
+    """HTMX endpoint: search clinic drug catalog for the order picker."""
+    from clinics.models import DrugProduct
+    from django.http import HttpResponseForbidden
+
+    ctx = _ws_access(request, patient_id)
+    if ctx is None:
+        return HttpResponseForbidden()
+
+    try:
+        clinic_id = int(request.GET.get("clinic_id", 0))
+    except (ValueError, TypeError):
+        clinic_id = 0
+    if clinic_id not in ctx["shared_clinic_ids"]:
+        clinic_id = ctx["shared_clinic_ids"][0] if ctx["shared_clinic_ids"] else 0
+    if not clinic_id:
+        return render(request, "doctors/partials/catalog_drug_results.html", {"drugs": []})
+
+    from django.db.models import Q
+    mode = request.GET.get("mode", "generic")
+    qs = DrugProduct.objects.filter(clinic_id=clinic_id, is_active=True).select_related("family")
+
+    family_id = request.GET.get("family_id", "").strip()
+    if family_id:
+        qs = qs.filter(family_id=family_id)
+
+    q = request.GET.get("drug_q", "").strip()
+    if q:
+        qs = qs.filter(Q(generic_name__icontains=q) | Q(commercial_name__icontains=q))
+
+    if mode == "commercial":
+        drugs = list(qs.order_by("commercial_name", "generic_name")[:60])
+    else:
+        drugs = list(qs.order_by("generic_name")[:60])
+
+    return render(request, "doctors/partials/catalog_drug_results.html", {
+        "drugs": drugs,
+        "mode": mode,
+    })
+
+
+@login_required
+def htmx_catalog_nondrug_search(request, patient_id):
+    """HTMX endpoint: search clinic non-drug catalog for the order picker."""
+    from clinics.models import OrderCatalogItem
+    from django.http import HttpResponseForbidden
+
+    ctx = _ws_access(request, patient_id)
+    if ctx is None:
+        return HttpResponseForbidden()
+
+    try:
+        clinic_id = int(request.GET.get("clinic_id", 0))
+    except (ValueError, TypeError):
+        clinic_id = 0
+    if clinic_id not in ctx["shared_clinic_ids"]:
+        clinic_id = ctx["shared_clinic_ids"][0] if ctx["shared_clinic_ids"] else 0
+    if not clinic_id:
+        return render(request, "doctors/partials/catalog_nondrug_results.html", {"items": []})
+
+    category = request.GET.get("category", "").upper()
+    valid = {c for c, _ in OrderCatalogItem.Category.choices}
+    if category not in valid:
+        return render(request, "doctors/partials/catalog_nondrug_results.html", {"items": []})
+
+    q = request.GET.get("q", "").strip()
+    qs = OrderCatalogItem.objects.filter(clinic_id=clinic_id, category=category, is_active=True)
+    if q:
+        qs = qs.filter(name__icontains=q)
+    items = list(qs.order_by("name")[:60])
+
+    return render(request, "doctors/partials/catalog_nondrug_results.html", {"items": items})
 
 
 # ── Prescriptions ─────────────────────────────────────────────────────────────

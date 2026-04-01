@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views, api_views
+from . import views, api_views, catalog_views
 
 app_name = "doctors"
 
@@ -102,6 +102,20 @@ urlpatterns = [
         views.my_appointment_types,
         name="my_appointment_types",
     ),
+    # --- Order Catalog (MAIN_DOCTOR only) ---
+    path("order-catalog/", catalog_views.order_catalog, name="order_catalog"),
+    path("order-catalog/families/create/", catalog_views.drug_family_create, name="drug_family_create"),
+    path("order-catalog/families/<int:family_id>/edit/", catalog_views.drug_family_edit, name="drug_family_edit"),
+    path("order-catalog/families/<int:family_id>/delete/", catalog_views.drug_family_delete, name="drug_family_delete"),
+    path("order-catalog/drugs/create/", catalog_views.drug_product_create, name="drug_product_create"),
+    path("order-catalog/drugs/<int:product_id>/edit/", catalog_views.drug_product_edit, name="drug_product_edit"),
+    path("order-catalog/drugs/<int:product_id>/delete/", catalog_views.drug_product_delete, name="drug_product_delete"),
+    path("order-catalog/items/create/", catalog_views.catalog_item_create, name="catalog_item_create"),
+    path("order-catalog/items/<int:item_id>/edit/", catalog_views.catalog_item_edit, name="catalog_item_edit"),
+    path("order-catalog/items/<int:item_id>/delete/", catalog_views.catalog_item_delete, name="catalog_item_delete"),
+    # --- Order Catalog HTMX search (patient workspace) ---
+    path("patients/<int:patient_id>/catalog/drugs/", views.htmx_catalog_drug_search, name="htmx_catalog_drug_search"),
+    path("patients/<int:patient_id>/catalog/items/", views.htmx_catalog_nondrug_search, name="htmx_catalog_nondrug_search"),
     # --- Intake Form Builder ---
     path(
         "intake-forms/<int:appointment_type_id>/",

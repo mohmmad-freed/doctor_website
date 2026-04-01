@@ -623,3 +623,85 @@ class DoctorAvailabilityException(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
+
+
+# ============================================================
+# ORDER CATALOG
+# ============================================================
+
+
+class DrugFamily(models.Model):
+    """Drug families / categories for the clinic's drug catalog (e.g. Antibiotics, Beta-Blockers)."""
+
+    clinic = models.ForeignKey(
+        Clinic, on_delete=models.CASCADE, related_name="drug_families"
+    )
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name"]
+        unique_together = [("clinic", "name")]
+        verbose_name = "Drug Family"
+        verbose_name_plural = "Drug Families"
+
+    def __str__(self):
+        return f"{self.name} ({self.clinic.name})"
+
+
+class DrugProduct(models.Model):
+    """Individual drug in the clinic's catalog, optionally grouped under a DrugFamily."""
+
+    clinic = models.ForeignKey(
+        Clinic, on_delete=models.CASCADE, related_name="drug_products"
+    )
+    family = models.ForeignKey(
+        DrugFamily,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="products",
+    )
+    generic_name = models.CharField(max_length=255)
+    commercial_name = models.CharField(max_length=255, blank=True)
+    default_dosage = models.CharField(max_length=100, blank=True)
+    default_frequency = models.CharField(max_length=100, blank=True)
+    default_duration = models.CharField(max_length=100, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["generic_name"]
+        verbose_name = "Drug Product"
+        verbose_name_plural = "Drug Products"
+
+    def __str__(self):
+        return f"{self.generic_name} ({self.clinic.name})"
+
+
+class OrderCatalogItem(models.Model):
+    """Named catalog items for non-drug order types (Lab, Radiology, Microbiology, Procedure)."""
+
+    class Category(models.TextChoices):
+        LAB = "LAB", "Lab"
+        RADIOLOGY = "RADIOLOGY", "Radiology"
+        MICROBIOLOGY = "MICROBIOLOGY", "Microbiology"
+        PROCEDURE = "PROCEDURE", "Procedure"
+
+    clinic = models.ForeignKey(
+        Clinic, on_delete=models.CASCADE, related_name="catalog_items"
+    )
+    category = models.CharField(max_length=20, choices=Category.choices)
+    name = models.CharField(max_length=255)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["category", "name"]
+        unique_together = [("clinic", "category", "name")]
+        verbose_name = "Order Catalog Item"
+        verbose_name_plural = "Order Catalog Items"
+
+    def __str__(self):
+        return f"[{self.category}] {self.name} ({self.clinic.name})"

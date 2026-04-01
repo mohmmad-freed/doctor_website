@@ -4,6 +4,7 @@ from django.utils.html import format_html
 from .models import (
     Clinic, ClinicStaff, ClinicActivationCode, ClinicSubscription,
     ClinicVerification, InvitationAuditLog, ClinicHoliday, DoctorAvailabilityException,
+    DrugFamily, DrugProduct, OrderCatalogItem,
 )
 
 
@@ -237,3 +238,32 @@ class InvitationAuditLogAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+
+class DrugProductInline(admin.TabularInline):
+    model = DrugProduct
+    extra = 0
+    fields = ['generic_name', 'commercial_name', 'default_dosage', 'default_frequency', 'default_duration', 'is_active']
+
+
+@admin.register(DrugFamily)
+class DrugFamilyAdmin(admin.ModelAdmin):
+    list_display = ['name', 'clinic', 'created_at']
+    list_filter = ['clinic']
+    search_fields = ['name', 'clinic__name']
+    inlines = [DrugProductInline]
+
+
+@admin.register(DrugProduct)
+class DrugProductAdmin(admin.ModelAdmin):
+    list_display = ['generic_name', 'commercial_name', 'family', 'clinic', 'is_active', 'created_at']
+    list_filter = ['clinic', 'family', 'is_active']
+    search_fields = ['generic_name', 'commercial_name']
+
+
+@admin.register(OrderCatalogItem)
+class OrderCatalogItemAdmin(admin.ModelAdmin):
+    list_display = ['name', 'category', 'clinic', 'is_active', 'created_at']
+    list_filter = ['clinic', 'category', 'is_active']
+    search_fields = ['name']

@@ -1,0 +1,938 @@
+{% extends "doctors/base_doctor.html" %}
+{% block title %}Order Catalog | Doctor Portal{% endblock %}
+
+{% block extra_head %}
+<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<style>
+  .ws-input, .ws-select {
+    width: 100%; padding: .5rem .75rem; font-size: .875rem;
+    border: 1px solid #d1d5db; border-radius: .5rem;
+    background: #fff; color: #111827; outline: none;
+    transition: border-color .15s, box-shadow .15s; font-family: inherit;
+  }
+  .ws-input:focus, .ws-select:focus {
+    border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.12);
+  }
+  .dark .ws-input, .dark .ws-select {
+    background: #0f172a; border-color: #334155; color: #f1f5f9;
+  }
+  .sec-icon {
+    width: 1.75rem; height: 1.75rem; border-radius: .5rem;
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .edit-strip { border-left: 3px solid #f59e0b; background: rgba(254,243,199,.5); }
+  .dark .edit-strip { background: rgba(120,53,15,.12); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div x-data="{
+  tab: '{{ active_tab }}',
+  showAddFamily: false,
+  showAddDrug: false,
+  showAddLab: false,
+  showAddRadiology: false,
+  showAddMicrobiology: false,
+  showAddProcedure: false,
+  editingFamilyId: null,
+  editingDrugId: null,
+  editingItemId: null,
+  drugFamilyFilter: '',
+}" x-cloak class="max-w-5xl mx-auto">
+
+  <!-- ── Page header ───────────────────────────────────── -->
+  <div class="mb-6 flex items-start justify-between gap-4 flex-wrap">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Order Catalog</h1>
+      <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">
+        {% if can_edit %}Manage your clinic's catalog — drugs, lab tests, radiology, and more.
+        {% else %}Browse the clinic catalog used when creating patient orders.{% endif %}
+      </p>
+    </div>
+    {% if all_clinics|length > 1 %}
+    <form method="get" class="flex items-center gap-2">
+      <label class="text-xs text-gray-500 dark:text-slate-400 font-medium flex-shrink-0">Clinic:</label>
+      <select name="clinic_id" onchange="this.form.submit()"
+              class="text-sm bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg px-3 py-1.5 text-gray-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500">
+        {% for c in all_clinics %}
+        <option value="{{ c.id }}" {% if c.id == clinic.id %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </form>
+    {% endif %}
+  </div>
+
+  <!-- ── Tab bar ───────────────────────────────────────── -->
+  <div class="flex gap-0 mb-6 border-b border-gray-200 dark:border-slate-700 overflow-x-auto scrollbar-none">
+
+    {% with tabs_data="drugs:fa-pills:blue:Drugs,lab:fa-flask:purple:Lab,radiology:fa-x-ray:indigo:Radiology,microbiology:fa-microscope:teal:Microbiology,procedure:fa-stethoscope:orange:Procedures" %}
+
+    <button @click="tab='drugs'; showAddFamily=false; showAddDrug=false; editingFamilyId=null; editingDrugId=null"
+            :class="tab==='drugs' ? 'border-primary-500 text-primary-600 dark:text-primary-400 font-bold' : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'"
+            class="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+      <i class="fa-solid fa-pills opacity-75 text-[13px]"></i> Drugs
+      <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[11px] px-1 font-semibold transition-colors"
+            :class="tab==='drugs' ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400'">
+        {{ drug_products|length }}
+      </span>
+    </button>
+
+    <button @click="tab='lab'; showAddLab=false; editingItemId=null"
+            :class="tab==='lab' ? 'border-primary-500 text-primary-600 dark:text-primary-400 font-bold' : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'"
+            class="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+      <i class="fa-solid fa-flask opacity-75 text-[13px]"></i> Lab
+      <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[11px] px-1 font-semibold transition-colors"
+            :class="tab==='lab' ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400'">
+        {{ lab_items|length }}
+      </span>
+    </button>
+
+    <button @click="tab='radiology'; showAddRadiology=false; editingItemId=null"
+            :class="tab==='radiology' ? 'border-primary-500 text-primary-600 dark:text-primary-400 font-bold' : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'"
+            class="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+      <i class="fa-solid fa-x-ray opacity-75 text-[13px]"></i> Radiology
+      <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[11px] px-1 font-semibold transition-colors"
+            :class="tab==='radiology' ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400'">
+        {{ radiology_items|length }}
+      </span>
+    </button>
+
+    <button @click="tab='microbiology'; showAddMicrobiology=false; editingItemId=null"
+            :class="tab==='microbiology' ? 'border-primary-500 text-primary-600 dark:text-primary-400 font-bold' : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'"
+            class="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+      <i class="fa-solid fa-microscope opacity-75 text-[13px]"></i> Microbiology
+      <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[11px] px-1 font-semibold transition-colors"
+            :class="tab==='microbiology' ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400'">
+        {{ microbiology_items|length }}
+      </span>
+    </button>
+
+    <button @click="tab='procedure'; showAddProcedure=false; editingItemId=null"
+            :class="tab==='procedure' ? 'border-primary-500 text-primary-600 dark:text-primary-400 font-bold' : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'"
+            class="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+      <i class="fa-solid fa-stethoscope opacity-75 text-[13px]"></i> Procedures
+      <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[11px] px-1 font-semibold transition-colors"
+            :class="tab==='procedure' ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400'">
+        {{ procedure_items|length }}
+      </span>
+    </button>
+
+    {% endwith %}
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+       DRUGS TAB
+  ════════════════════════════════════════════════════ -->
+  <div x-show="tab === 'drugs'"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0 translate-y-1"
+       x-transition:enter-end="opacity-100 translate-y-0">
+
+    <!-- Drug Families ───────────────────────────────── -->
+    <div class="glass-card overflow-hidden mb-5">
+
+      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50/70 dark:bg-slate-700/40">
+        <div class="flex items-center gap-2.5">
+          <span class="sec-icon bg-purple-100 dark:bg-purple-900/30">
+            <i class="fa-solid fa-layer-group text-purple-600 dark:text-purple-400 text-xs"></i>
+          </span>
+          <div>
+            <p class="text-sm font-bold text-gray-800 dark:text-white leading-tight">Drug Families</p>
+            <p class="text-[11px] text-gray-400 dark:text-slate-500">{{ drug_families|length }} group{{ drug_families|length|pluralize }}</p>
+          </div>
+        </div>
+        {% if can_edit %}
+        <button @click="showAddFamily = !showAddFamily; if(showAddFamily) $nextTick(() => $refs.newFamilyName && $refs.newFamilyName.focus())"
+                :class="showAddFamily ? 'bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-slate-200' : 'bg-primary-600 hover:bg-primary-700 active:scale-95 text-white shadow-sm'"
+                class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
+          <i class="fa-solid" :class="showAddFamily ? 'fa-xmark' : 'fa-plus'"></i>
+          <span x-text="showAddFamily ? 'Cancel' : 'Add Family'"></span>
+        </button>
+        {% endif %}
+      </div>
+
+      {% if can_edit %}
+      <div x-show="showAddFamily"
+           x-transition:enter="transition ease-out duration-200"
+           x-transition:enter-start="opacity-0 -translate-y-2"
+           x-transition:enter-end="opacity-100 translate-y-0"
+           x-transition:leave="transition ease-in duration-150"
+           x-transition:leave-start="opacity-100 translate-y-0"
+           x-transition:leave-end="opacity-0 -translate-y-2"
+           class="border-b border-primary-100 dark:border-primary-900/40 bg-primary-50/60 dark:bg-primary-900/10 px-5 py-4">
+        <form method="post" action="{% url 'doctors:drug_family_create' %}">
+          {% csrf_token %}
+          <input type="hidden" name="clinic_id" value="{{ clinic.id }}">
+          <div class="flex gap-3 flex-wrap sm:flex-nowrap items-end">
+            <div class="flex-1 min-w-0">
+              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Name <span class="text-red-500">*</span></label>
+              <input type="text" name="name" x-ref="newFamilyName" required
+                     placeholder="e.g. Antibiotics, Beta-Blockers"
+                     class="ws-input">
+            </div>
+            <div class="flex-1 min-w-0">
+              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Description <span class="font-normal text-gray-400">(optional)</span></label>
+              <input type="text" name="description" placeholder="Brief description" class="ws-input">
+            </div>
+            <button type="submit"
+                    class="flex-shrink-0 inline-flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm whitespace-nowrap">
+              <i class="fa-solid fa-plus text-xs"></i> Add Family
+            </button>
+          </div>
+        </form>
+      </div>
+      {% endif %}
+
+      {% if drug_families %}
+      <div class="divide-y divide-gray-100 dark:divide-slate-700/60">
+        {% for fam in drug_families %}
+        <div class="animate-fade-in-up" style="animation-delay: {{ forloop.counter0 }}0ms;">
+          <!-- Normal row -->
+          <div x-show="editingFamilyId !== {{ fam.id }}"
+               class="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50/60 dark:hover:bg-slate-700/20 transition-colors group">
+            <div class="flex-1 min-w-0">
+              <span class="text-sm font-semibold text-gray-800 dark:text-gray-100">{{ fam.name }}</span>
+              {% if fam.description %}
+              <span class="text-xs text-gray-400 dark:text-slate-500 ml-2">{{ fam.description }}</span>
+              {% endif %}
+            </div>
+            <span class="dr-badge bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 mr-1 flex-shrink-0">
+              <i class="fa-solid fa-pills text-[10px]"></i> {{ fam.product_count }}
+            </span>
+            {% if can_edit %}
+            <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+              <button @click="editingFamilyId = {{ fam.id }}" title="Edit"
+                      class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
+                <i class="fa-solid fa-pen text-xs"></i>
+              </button>
+              <form method="post" action="{% url 'doctors:drug_family_delete' fam.id %}"
+                    onsubmit="return confirm('Delete «{{ fam.name }}»?\nDrugs will become uncategorized.')">
+                {% csrf_token %}
+                <button type="submit" title="Delete"
+                        class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                  <i class="fa-solid fa-trash text-xs"></i>
+                </button>
+              </form>
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- Inline edit -->
+          {% if can_edit %}
+          <div x-show="editingFamilyId === {{ fam.id }}"
+               x-transition:enter="transition ease-out duration-150"
+               x-transition:enter-start="opacity-0"
+               x-transition:enter-end="opacity-100"
+               class="edit-strip px-5 py-4">
+            <form method="post" action="{% url 'doctors:drug_family_edit' fam.id %}">
+              {% csrf_token %}
+              <p class="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-3">
+                <i class="fa-solid fa-pen me-1.5"></i>Editing: {{ fam.name }}
+              </p>
+              <div class="flex gap-3 flex-wrap sm:flex-nowrap items-end">
+                <div class="flex-1 min-w-0">
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Name *</label>
+                  <input type="text" name="name" value="{{ fam.name }}" required class="ws-input">
+                </div>
+                <div class="flex-1 min-w-0">
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Description</label>
+                  <input type="text" name="description" value="{{ fam.description }}" placeholder="optional" class="ws-input">
+                </div>
+                <div class="flex gap-2 flex-shrink-0">
+                  <button type="submit"
+                          class="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm">
+                    <i class="fa-solid fa-floppy-disk text-xs"></i> Save
+                  </button>
+                  <button type="button" @click="editingFamilyId = null"
+                          class="inline-flex items-center text-sm font-medium text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="px-5 py-10 text-center">
+        <div class="w-14 h-14 rounded-2xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center mx-auto mb-3">
+          <i class="fa-solid fa-layer-group text-purple-300 dark:text-purple-600 text-xl"></i>
+        </div>
+        <p class="text-sm font-medium text-gray-600 dark:text-slate-300">No drug families yet.</p>
+        {% if can_edit %}
+        <p class="text-xs text-gray-400 dark:text-slate-500 mt-1">Group drugs by class — Antibiotics, Beta-Blockers, NSAIDs…</p>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div><!-- /families -->
+
+    <!-- Drug Products ───────────────────────────────── -->
+    <div class="glass-card overflow-hidden">
+
+      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50/70 dark:bg-slate-700/40 flex-wrap gap-2">
+        <div class="flex items-center gap-2.5">
+          <span class="sec-icon bg-blue-100 dark:bg-blue-900/30">
+            <i class="fa-solid fa-pills text-blue-600 dark:text-blue-400 text-xs"></i>
+          </span>
+          <div>
+            <p class="text-sm font-bold text-gray-800 dark:text-white leading-tight">Drug Products</p>
+            <p class="text-[11px] text-gray-400 dark:text-slate-500">{{ drug_products|length }} product{{ drug_products|length|pluralize }}</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <select x-model="drugFamilyFilter"
+                  class="text-xs bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg px-2.5 py-1.5 text-gray-600 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-primary-400">
+            <option value="">All Families</option>
+            {% for fam in drug_families %}
+            <option value="{{ fam.id }}">{{ fam.name }}</option>
+            {% endfor %}
+          </select>
+          {% if can_edit %}
+          <button @click="showAddDrug = !showAddDrug; if(showAddDrug) $nextTick(() => $refs.newDrugName && $refs.newDrugName.focus())"
+                  :class="showAddDrug ? 'bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-slate-200' : 'bg-primary-600 hover:bg-primary-700 active:scale-95 text-white shadow-sm'"
+                  class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
+            <i class="fa-solid" :class="showAddDrug ? 'fa-xmark' : 'fa-plus'"></i>
+            <span x-text="showAddDrug ? 'Cancel' : 'Add Drug'"></span>
+          </button>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if can_edit %}
+      <div x-show="showAddDrug"
+           x-transition:enter="transition ease-out duration-200"
+           x-transition:enter-start="opacity-0 -translate-y-2"
+           x-transition:enter-end="opacity-100 translate-y-0"
+           x-transition:leave="transition ease-in duration-150"
+           x-transition:leave-start="opacity-100 translate-y-0"
+           x-transition:leave-end="opacity-0 -translate-y-2"
+           class="border-b border-primary-100 dark:border-primary-900/40 bg-primary-50/60 dark:bg-primary-900/10 px-5 py-5">
+        <form method="post" action="{% url 'doctors:drug_product_create' %}">
+          {% csrf_token %}
+          <input type="hidden" name="clinic_id" value="{{ clinic.id }}">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Generic Name <span class="text-red-500">*</span></label>
+              <input type="text" name="generic_name" x-ref="newDrugName" required placeholder="e.g. Amoxicillin" class="ws-input">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Commercial Name <span class="text-red-500">*</span></label>
+              <input type="text" name="commercial_name" required placeholder="e.g. Amoxil, Augmentin" class="ws-input">
+            </div>
+          </div>
+          <div class="mb-4">
+            <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Family</label>
+            <select name="family_id" class="ws-select text-sm">
+              <option value="">— None —</option>
+              {% for fam in drug_families %}<option value="{{ fam.id }}">{{ fam.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="flex gap-2">
+            <button type="submit"
+                    class="inline-flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm">
+              <i class="fa-solid fa-plus text-xs"></i> Add Drug
+            </button>
+            <button type="button" @click="showAddDrug = false"
+                    class="inline-flex items-center text-sm font-medium text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+      {% endif %}
+
+      {% if drug_products %}
+      <div class="divide-y divide-gray-100 dark:divide-slate-700/60">
+        {% for drug in drug_products %}
+        <div>
+          <!-- Normal row -->
+          <div x-show="editingDrugId !== {{ drug.id }} && (drugFamilyFilter === '' || drugFamilyFilter === '{{ drug.family_id|default:'' }}')"
+               class="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50/60 dark:hover:bg-slate-700/20 transition-colors group">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-baseline gap-2 flex-wrap">
+                <span class="text-sm font-semibold text-gray-800 dark:text-gray-100">{{ drug.generic_name }}</span>
+                {% if drug.commercial_name %}
+                <span class="text-xs text-gray-500 dark:text-slate-400">{{ drug.commercial_name }}</span>
+                {% endif %}
+              </div>
+              {% if drug.family %}
+              <div class="mt-0.5">
+                <span class="dr-badge bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300">{{ drug.family.name }}</span>
+              </div>
+              {% endif %}
+            </div>
+            {% if can_edit %}
+            <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+              <button @click="editingDrugId = {{ drug.id }}" title="Edit"
+                      class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
+                <i class="fa-solid fa-pen text-xs"></i>
+              </button>
+              <form method="post" action="{% url 'doctors:drug_product_delete' drug.id %}"
+                    onsubmit="return confirm('Delete «{{ drug.generic_name }}»?')">
+                {% csrf_token %}
+                <button type="submit" title="Delete"
+                        class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                  <i class="fa-solid fa-trash text-xs"></i>
+                </button>
+              </form>
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- Inline edit -->
+          {% if can_edit %}
+          <div x-show="editingDrugId === {{ drug.id }}"
+               x-transition:enter="transition ease-out duration-150"
+               x-transition:enter-start="opacity-0"
+               x-transition:enter-end="opacity-100"
+               class="edit-strip px-5 py-4">
+            <form method="post" action="{% url 'doctors:drug_product_edit' drug.id %}">
+              {% csrf_token %}
+              <p class="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-3">
+                <i class="fa-solid fa-pen me-1.5"></i>Editing: {{ drug.generic_name }}
+              </p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Generic Name *</label>
+                  <input type="text" name="generic_name" value="{{ drug.generic_name }}" required class="ws-input">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Commercial Name <span class="text-red-500">*</span></label>
+                  <input type="text" name="commercial_name" value="{{ drug.commercial_name }}" required class="ws-input">
+                </div>
+              </div>
+              <div class="mb-4">
+                <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Family</label>
+                <select name="family_id" class="ws-select text-sm">
+                  <option value="">— None —</option>
+                  {% for fam in drug_families %}
+                  <option value="{{ fam.id }}" {% if drug.family_id == fam.id %}selected{% endif %}>{{ fam.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="flex gap-2">
+                <button type="submit"
+                        class="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm">
+                  <i class="fa-solid fa-floppy-disk text-xs"></i> Save
+                </button>
+                <button type="button" @click="editingDrugId = null"
+                        class="inline-flex items-center text-sm font-medium text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="px-5 py-10 text-center">
+        <div class="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center mx-auto mb-3">
+          <i class="fa-solid fa-pills text-blue-300 dark:text-blue-600 text-xl"></i>
+        </div>
+        <p class="text-sm font-medium text-gray-600 dark:text-slate-300">No drug products yet.</p>
+        {% if can_edit %}
+        <p class="text-xs text-gray-400 dark:text-slate-500 mt-1">Add drugs with generic names, commercial names, and default dosage info.</p>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div><!-- /products -->
+  </div><!-- /drugs tab -->
+
+
+  <!-- ════════════════════════════════════════════════════
+       LAB TAB
+  ════════════════════════════════════════════════════ -->
+  <div x-show="tab === 'lab'"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0 translate-y-1"
+       x-transition:enter-end="opacity-100 translate-y-0">
+    <div class="glass-card overflow-hidden">
+
+      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50/70 dark:bg-slate-700/40">
+        <div class="flex items-center gap-2.5">
+          <span class="sec-icon bg-purple-100 dark:bg-purple-900/30">
+            <i class="fa-solid fa-flask text-purple-600 dark:text-purple-400 text-xs"></i>
+          </span>
+          <div>
+            <p class="text-sm font-bold text-gray-800 dark:text-white leading-tight">Lab Tests</p>
+            <p class="text-[11px] text-gray-400 dark:text-slate-500">{{ lab_items|length }} test{{ lab_items|length|pluralize }}</p>
+          </div>
+        </div>
+        {% if can_edit %}
+        <button @click="showAddLab = !showAddLab; if(showAddLab) $nextTick(() => $refs.newLabName && $refs.newLabName.focus())"
+                :class="showAddLab ? 'bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-slate-200' : 'bg-primary-600 hover:bg-primary-700 active:scale-95 text-white shadow-sm'"
+                class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
+          <i class="fa-solid" :class="showAddLab ? 'fa-xmark' : 'fa-plus'"></i>
+          <span x-text="showAddLab ? 'Cancel' : 'Add Test'"></span>
+        </button>
+        {% endif %}
+      </div>
+
+      {% if can_edit %}
+      <div x-show="showAddLab"
+           x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
+           x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2"
+           class="border-b border-primary-100 dark:border-primary-900/40 bg-primary-50/60 dark:bg-primary-900/10 px-5 py-4">
+        <form method="post" action="{% url 'doctors:catalog_item_create' %}">
+          {% csrf_token %}
+          <input type="hidden" name="clinic_id" value="{{ clinic.id }}">
+          <input type="hidden" name="category" value="LAB">
+          <div class="flex gap-3 items-end flex-wrap sm:flex-nowrap">
+            <div class="flex-1 min-w-0">
+              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Test Name <span class="text-red-500">*</span></label>
+              <input type="text" name="name" x-ref="newLabName" required
+                     placeholder="e.g. Complete Blood Count, Lipid Panel"
+                     class="ws-input">
+            </div>
+            <button type="submit"
+                    class="flex-shrink-0 inline-flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm whitespace-nowrap">
+              <i class="fa-solid fa-plus text-xs"></i> Add Test
+            </button>
+          </div>
+        </form>
+      </div>
+      {% endif %}
+
+      {% if lab_items %}
+      <div class="divide-y divide-gray-100 dark:divide-slate-700/60">
+        {% for item in lab_items %}
+        <div>
+          <div x-show="editingItemId !== {{ item.id }}"
+               class="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50/60 dark:hover:bg-slate-700/20 transition-colors group">
+            <p class="flex-1 text-sm font-medium text-gray-800 dark:text-gray-100">{{ item.name }}</p>
+            {% if not item.is_active %}<span class="text-[11px] text-gray-400 dark:text-slate-500 flex-shrink-0">Inactive</span>{% endif %}
+            {% if can_edit %}
+            <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+              <button @click="editingItemId = {{ item.id }}" title="Edit"
+                      class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
+                <i class="fa-solid fa-pen text-xs"></i>
+              </button>
+              <form method="post" action="{% url 'doctors:catalog_item_delete' item.id %}"
+                    onsubmit="return confirm('Delete «{{ item.name }}»?')">
+                {% csrf_token %}
+                <button type="submit" title="Delete"
+                        class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                  <i class="fa-solid fa-trash text-xs"></i>
+                </button>
+              </form>
+            </div>
+            {% endif %}
+          </div>
+          {% if can_edit %}
+          <div x-show="editingItemId === {{ item.id }}"
+               x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+               class="edit-strip px-5 py-4">
+            <form method="post" action="{% url 'doctors:catalog_item_edit' item.id %}">
+              {% csrf_token %}
+              <p class="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-3">
+                <i class="fa-solid fa-pen me-1.5"></i>Editing
+              </p>
+              <div class="flex gap-3 items-end flex-wrap sm:flex-nowrap">
+                <div class="flex-1 min-w-0">
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Name *</label>
+                  <input type="text" name="name" value="{{ item.name }}" required class="ws-input">
+                </div>
+                <div class="flex gap-2 flex-shrink-0">
+                  <button type="submit"
+                          class="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm">
+                    <i class="fa-solid fa-floppy-disk text-xs"></i> Save
+                  </button>
+                  <button type="button" @click="editingItemId = null"
+                          class="inline-flex items-center text-sm font-medium text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="px-5 py-10 text-center">
+        <div class="w-14 h-14 rounded-2xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center mx-auto mb-3">
+          <i class="fa-solid fa-flask text-purple-300 dark:text-purple-600 text-xl"></i>
+        </div>
+        <p class="text-sm font-medium text-gray-600 dark:text-slate-300">No lab tests yet.</p>
+        {% if can_edit %}<p class="text-xs text-gray-400 dark:text-slate-500 mt-1">Add tests like CBC, Lipid Panel, Liver Function…</p>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div><!-- /lab tab -->
+
+
+  <!-- ════════════════════════════════════════════════════
+       RADIOLOGY TAB
+  ════════════════════════════════════════════════════ -->
+  <div x-show="tab === 'radiology'"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0 translate-y-1"
+       x-transition:enter-end="opacity-100 translate-y-0">
+    <div class="glass-card overflow-hidden">
+
+      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50/70 dark:bg-slate-700/40">
+        <div class="flex items-center gap-2.5">
+          <span class="sec-icon bg-indigo-100 dark:bg-indigo-900/30">
+            <i class="fa-solid fa-x-ray text-indigo-600 dark:text-indigo-400 text-xs"></i>
+          </span>
+          <div>
+            <p class="text-sm font-bold text-gray-800 dark:text-white leading-tight">Radiology Exams</p>
+            <p class="text-[11px] text-gray-400 dark:text-slate-500">{{ radiology_items|length }} exam{{ radiology_items|length|pluralize }}</p>
+          </div>
+        </div>
+        {% if can_edit %}
+        <button @click="showAddRadiology = !showAddRadiology; if(showAddRadiology) $nextTick(() => $refs.newRadiologyName && $refs.newRadiologyName.focus())"
+                :class="showAddRadiology ? 'bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-slate-200' : 'bg-primary-600 hover:bg-primary-700 active:scale-95 text-white shadow-sm'"
+                class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
+          <i class="fa-solid" :class="showAddRadiology ? 'fa-xmark' : 'fa-plus'"></i>
+          <span x-text="showAddRadiology ? 'Cancel' : 'Add Exam'"></span>
+        </button>
+        {% endif %}
+      </div>
+
+      {% if can_edit %}
+      <div x-show="showAddRadiology"
+           x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
+           x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2"
+           class="border-b border-primary-100 dark:border-primary-900/40 bg-primary-50/60 dark:bg-primary-900/10 px-5 py-4">
+        <form method="post" action="{% url 'doctors:catalog_item_create' %}">
+          {% csrf_token %}
+          <input type="hidden" name="clinic_id" value="{{ clinic.id }}">
+          <input type="hidden" name="category" value="RADIOLOGY">
+          <div class="flex gap-3 items-end flex-wrap sm:flex-nowrap">
+            <div class="flex-1 min-w-0">
+              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Exam Name <span class="text-red-500">*</span></label>
+              <input type="text" name="name" x-ref="newRadiologyName" required
+                     placeholder="e.g. Chest X-Ray, Abdominal CT Scan"
+                     class="ws-input">
+            </div>
+            <button type="submit"
+                    class="flex-shrink-0 inline-flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm whitespace-nowrap">
+              <i class="fa-solid fa-plus text-xs"></i> Add Exam
+            </button>
+          </div>
+        </form>
+      </div>
+      {% endif %}
+
+      {% if radiology_items %}
+      <div class="divide-y divide-gray-100 dark:divide-slate-700/60">
+        {% for item in radiology_items %}
+        <div>
+          <div x-show="editingItemId !== {{ item.id }}"
+               class="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50/60 dark:hover:bg-slate-700/20 transition-colors group">
+            <p class="flex-1 text-sm font-medium text-gray-800 dark:text-gray-100">{{ item.name }}</p>
+            {% if not item.is_active %}<span class="text-[11px] text-gray-400 dark:text-slate-500 flex-shrink-0">Inactive</span>{% endif %}
+            {% if can_edit %}
+            <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+              <button @click="editingItemId = {{ item.id }}" title="Edit"
+                      class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
+                <i class="fa-solid fa-pen text-xs"></i>
+              </button>
+              <form method="post" action="{% url 'doctors:catalog_item_delete' item.id %}"
+                    onsubmit="return confirm('Delete «{{ item.name }}»?')">
+                {% csrf_token %}
+                <button type="submit" title="Delete"
+                        class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                  <i class="fa-solid fa-trash text-xs"></i>
+                </button>
+              </form>
+            </div>
+            {% endif %}
+          </div>
+          {% if can_edit %}
+          <div x-show="editingItemId === {{ item.id }}"
+               x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+               class="edit-strip px-5 py-4">
+            <form method="post" action="{% url 'doctors:catalog_item_edit' item.id %}">
+              {% csrf_token %}
+              <p class="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-3">
+                <i class="fa-solid fa-pen me-1.5"></i>Editing
+              </p>
+              <div class="flex gap-3 items-end flex-wrap sm:flex-nowrap">
+                <div class="flex-1 min-w-0">
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Name *</label>
+                  <input type="text" name="name" value="{{ item.name }}" required class="ws-input">
+                </div>
+                <div class="flex gap-2 flex-shrink-0">
+                  <button type="submit"
+                          class="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm">
+                    <i class="fa-solid fa-floppy-disk text-xs"></i> Save
+                  </button>
+                  <button type="button" @click="editingItemId = null"
+                          class="inline-flex items-center text-sm font-medium text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="px-5 py-10 text-center">
+        <div class="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center mx-auto mb-3">
+          <i class="fa-solid fa-x-ray text-indigo-300 dark:text-indigo-600 text-xl"></i>
+        </div>
+        <p class="text-sm font-medium text-gray-600 dark:text-slate-300">No radiology exams yet.</p>
+        {% if can_edit %}<p class="text-xs text-gray-400 dark:text-slate-500 mt-1">Add exams like X-Ray, CT Scan, MRI…</p>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div><!-- /radiology tab -->
+
+
+  <!-- ════════════════════════════════════════════════════
+       MICROBIOLOGY TAB
+  ════════════════════════════════════════════════════ -->
+  <div x-show="tab === 'microbiology'"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0 translate-y-1"
+       x-transition:enter-end="opacity-100 translate-y-0">
+    <div class="glass-card overflow-hidden">
+
+      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50/70 dark:bg-slate-700/40">
+        <div class="flex items-center gap-2.5">
+          <span class="sec-icon bg-teal-100 dark:bg-teal-900/30">
+            <i class="fa-solid fa-microscope text-teal-600 dark:text-teal-400 text-xs"></i>
+          </span>
+          <div>
+            <p class="text-sm font-bold text-gray-800 dark:text-white leading-tight">Microbiology</p>
+            <p class="text-[11px] text-gray-400 dark:text-slate-500">{{ microbiology_items|length }} test{{ microbiology_items|length|pluralize }}</p>
+          </div>
+        </div>
+        {% if can_edit %}
+        <button @click="showAddMicrobiology = !showAddMicrobiology; if(showAddMicrobiology) $nextTick(() => $refs.newMicroName && $refs.newMicroName.focus())"
+                :class="showAddMicrobiology ? 'bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-slate-200' : 'bg-primary-600 hover:bg-primary-700 active:scale-95 text-white shadow-sm'"
+                class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
+          <i class="fa-solid" :class="showAddMicrobiology ? 'fa-xmark' : 'fa-plus'"></i>
+          <span x-text="showAddMicrobiology ? 'Cancel' : 'Add Test'"></span>
+        </button>
+        {% endif %}
+      </div>
+
+      {% if can_edit %}
+      <div x-show="showAddMicrobiology"
+           x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
+           x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2"
+           class="border-b border-primary-100 dark:border-primary-900/40 bg-primary-50/60 dark:bg-primary-900/10 px-5 py-4">
+        <form method="post" action="{% url 'doctors:catalog_item_create' %}">
+          {% csrf_token %}
+          <input type="hidden" name="clinic_id" value="{{ clinic.id }}">
+          <input type="hidden" name="category" value="MICROBIOLOGY">
+          <div class="flex gap-3 items-end flex-wrap sm:flex-nowrap">
+            <div class="flex-1 min-w-0">
+              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Test Name <span class="text-red-500">*</span></label>
+              <input type="text" name="name" x-ref="newMicroName" required
+                     placeholder="e.g. Blood Culture, Urine Culture"
+                     class="ws-input">
+            </div>
+            <button type="submit"
+                    class="flex-shrink-0 inline-flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm whitespace-nowrap">
+              <i class="fa-solid fa-plus text-xs"></i> Add Test
+            </button>
+          </div>
+        </form>
+      </div>
+      {% endif %}
+
+      {% if microbiology_items %}
+      <div class="divide-y divide-gray-100 dark:divide-slate-700/60">
+        {% for item in microbiology_items %}
+        <div>
+          <div x-show="editingItemId !== {{ item.id }}"
+               class="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50/60 dark:hover:bg-slate-700/20 transition-colors group">
+            <p class="flex-1 text-sm font-medium text-gray-800 dark:text-gray-100">{{ item.name }}</p>
+            {% if not item.is_active %}<span class="text-[11px] text-gray-400 dark:text-slate-500 flex-shrink-0">Inactive</span>{% endif %}
+            {% if can_edit %}
+            <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+              <button @click="editingItemId = {{ item.id }}" title="Edit"
+                      class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
+                <i class="fa-solid fa-pen text-xs"></i>
+              </button>
+              <form method="post" action="{% url 'doctors:catalog_item_delete' item.id %}"
+                    onsubmit="return confirm('Delete «{{ item.name }}»?')">
+                {% csrf_token %}
+                <button type="submit" title="Delete"
+                        class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                  <i class="fa-solid fa-trash text-xs"></i>
+                </button>
+              </form>
+            </div>
+            {% endif %}
+          </div>
+          {% if can_edit %}
+          <div x-show="editingItemId === {{ item.id }}"
+               x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+               class="edit-strip px-5 py-4">
+            <form method="post" action="{% url 'doctors:catalog_item_edit' item.id %}">
+              {% csrf_token %}
+              <p class="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-3">
+                <i class="fa-solid fa-pen me-1.5"></i>Editing
+              </p>
+              <div class="flex gap-3 items-end flex-wrap sm:flex-nowrap">
+                <div class="flex-1 min-w-0">
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Name *</label>
+                  <input type="text" name="name" value="{{ item.name }}" required class="ws-input">
+                </div>
+                <div class="flex gap-2 flex-shrink-0">
+                  <button type="submit"
+                          class="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm">
+                    <i class="fa-solid fa-floppy-disk text-xs"></i> Save
+                  </button>
+                  <button type="button" @click="editingItemId = null"
+                          class="inline-flex items-center text-sm font-medium text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="px-5 py-10 text-center">
+        <div class="w-14 h-14 rounded-2xl bg-teal-50 dark:bg-teal-900/20 flex items-center justify-center mx-auto mb-3">
+          <i class="fa-solid fa-microscope text-teal-300 dark:text-teal-600 text-xl"></i>
+        </div>
+        <p class="text-sm font-medium text-gray-600 dark:text-slate-300">No microbiology tests yet.</p>
+        {% if can_edit %}<p class="text-xs text-gray-400 dark:text-slate-500 mt-1">Add cultures, sensitivity tests, etc.</p>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div><!-- /microbiology tab -->
+
+
+  <!-- ════════════════════════════════════════════════════
+       PROCEDURES TAB
+  ════════════════════════════════════════════════════ -->
+  <div x-show="tab === 'procedure'"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0 translate-y-1"
+       x-transition:enter-end="opacity-100 translate-y-0">
+    <div class="glass-card overflow-hidden">
+
+      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50/70 dark:bg-slate-700/40">
+        <div class="flex items-center gap-2.5">
+          <span class="sec-icon bg-orange-100 dark:bg-orange-900/30">
+            <i class="fa-solid fa-stethoscope text-orange-600 dark:text-orange-400 text-xs"></i>
+          </span>
+          <div>
+            <p class="text-sm font-bold text-gray-800 dark:text-white leading-tight">Procedures</p>
+            <p class="text-[11px] text-gray-400 dark:text-slate-500">{{ procedure_items|length }} procedure{{ procedure_items|length|pluralize }}</p>
+          </div>
+        </div>
+        {% if can_edit %}
+        <button @click="showAddProcedure = !showAddProcedure; if(showAddProcedure) $nextTick(() => $refs.newProcName && $refs.newProcName.focus())"
+                :class="showAddProcedure ? 'bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-slate-200' : 'bg-primary-600 hover:bg-primary-700 active:scale-95 text-white shadow-sm'"
+                class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
+          <i class="fa-solid" :class="showAddProcedure ? 'fa-xmark' : 'fa-plus'"></i>
+          <span x-text="showAddProcedure ? 'Cancel' : 'Add Procedure'"></span>
+        </button>
+        {% endif %}
+      </div>
+
+      {% if can_edit %}
+      <div x-show="showAddProcedure"
+           x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
+           x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2"
+           class="border-b border-primary-100 dark:border-primary-900/40 bg-primary-50/60 dark:bg-primary-900/10 px-5 py-4">
+        <form method="post" action="{% url 'doctors:catalog_item_create' %}">
+          {% csrf_token %}
+          <input type="hidden" name="clinic_id" value="{{ clinic.id }}">
+          <input type="hidden" name="category" value="PROCEDURE">
+          <div class="flex gap-3 items-end flex-wrap sm:flex-nowrap">
+            <div class="flex-1 min-w-0">
+              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Procedure Name <span class="text-red-500">*</span></label>
+              <input type="text" name="name" x-ref="newProcName" required
+                     placeholder="e.g. ECG, Wound Dressing, Suturing"
+                     class="ws-input">
+            </div>
+            <button type="submit"
+                    class="flex-shrink-0 inline-flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm whitespace-nowrap">
+              <i class="fa-solid fa-plus text-xs"></i> Add Procedure
+            </button>
+          </div>
+        </form>
+      </div>
+      {% endif %}
+
+      {% if procedure_items %}
+      <div class="divide-y divide-gray-100 dark:divide-slate-700/60">
+        {% for item in procedure_items %}
+        <div>
+          <div x-show="editingItemId !== {{ item.id }}"
+               class="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50/60 dark:hover:bg-slate-700/20 transition-colors group">
+            <p class="flex-1 text-sm font-medium text-gray-800 dark:text-gray-100">{{ item.name }}</p>
+            {% if not item.is_active %}<span class="text-[11px] text-gray-400 dark:text-slate-500 flex-shrink-0">Inactive</span>{% endif %}
+            {% if can_edit %}
+            <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+              <button @click="editingItemId = {{ item.id }}" title="Edit"
+                      class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
+                <i class="fa-solid fa-pen text-xs"></i>
+              </button>
+              <form method="post" action="{% url 'doctors:catalog_item_delete' item.id %}"
+                    onsubmit="return confirm('Delete «{{ item.name }}»?')">
+                {% csrf_token %}
+                <button type="submit" title="Delete"
+                        class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                  <i class="fa-solid fa-trash text-xs"></i>
+                </button>
+              </form>
+            </div>
+            {% endif %}
+          </div>
+          {% if can_edit %}
+          <div x-show="editingItemId === {{ item.id }}"
+               x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+               class="edit-strip px-5 py-4">
+            <form method="post" action="{% url 'doctors:catalog_item_edit' item.id %}">
+              {% csrf_token %}
+              <p class="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-3">
+                <i class="fa-solid fa-pen me-1.5"></i>Editing
+              </p>
+              <div class="flex gap-3 items-end flex-wrap sm:flex-nowrap">
+                <div class="flex-1 min-w-0">
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Name *</label>
+                  <input type="text" name="name" value="{{ item.name }}" required class="ws-input">
+                </div>
+                <div class="flex gap-2 flex-shrink-0">
+                  <button type="submit"
+                          class="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm">
+                    <i class="fa-solid fa-floppy-disk text-xs"></i> Save
+                  </button>
+                  <button type="button" @click="editingItemId = null"
+                          class="inline-flex items-center text-sm font-medium text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="px-5 py-10 text-center">
+        <div class="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center mx-auto mb-3">
+          <i class="fa-solid fa-stethoscope text-orange-300 dark:text-orange-600 text-xl"></i>
+        </div>
+        <p class="text-sm font-medium text-gray-600 dark:text-slate-300">No procedures yet.</p>
+        {% if can_edit %}<p class="text-xs text-gray-400 dark:text-slate-500 mt-1">Add procedures like ECG, Wound Dressing, Suturing…</p>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div><!-- /procedure tab -->
+
+</div><!-- /Alpine root -->
+{% endblock %}

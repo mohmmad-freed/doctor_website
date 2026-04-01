@@ -1,0 +1,81 @@
+{% extends "doctors/base_doctor.html" %}
+{% block title %}{{ form_title }} | Doctor Portal{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto">
+
+  <div class="mb-6">
+    <a href="{% url 'doctors:order_catalog' %}?tab=drugs&clinic_id={{ clinic.id }}"
+       class="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors mb-3">
+      <i class="fa-solid fa-arrow-left text-xs"></i> Back to Order Catalog
+    </a>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ form_title }}</h1>
+    <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">{{ clinic.name }}</p>
+  </div>
+
+  {% for msg in messages %}
+  <div class="mb-4 px-4 py-3 rounded-xl text-sm font-medium
+    {% if msg.tags == 'error' %}bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-700/40
+    {% else %}bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700/40{% endif %}">
+    {{ msg }}
+  </div>
+  {% endfor %}
+
+  <div class="glass-card p-6">
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="clinic_id" value="{{ clinic.id }}">
+
+      <div class="space-y-4">
+
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">
+            Generic Name <span class="text-red-500">*</span>
+          </label>
+          <input type="text" name="generic_name" value="{{ product.generic_name|default:'' }}" required
+                 placeholder="e.g. Amoxicillin"
+                 class="ws-input w-full" autofocus>
+          <p class="mt-1 text-xs text-gray-400 dark:text-slate-500">Used when a doctor selects this drug in generic mode.</p>
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">
+            Commercial / Brand Name <span class="text-red-500">*</span>
+          </label>
+          <input type="text" name="commercial_name" value="{{ product.commercial_name|default:'' }}"
+                 placeholder="e.g. Amoxil, Augmentin" required
+                 class="ws-input w-full">
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">
+            Drug Family <span class="text-xs font-normal text-gray-400">(optional)</span>
+          </label>
+          <select name="family_id" class="ws-input w-full">
+            <option value="">— No Family —</option>
+            {% for fam in families %}
+            <option value="{{ fam.id }}"
+              {% if product.family_id == fam.id or preselect_family_id == fam.id|stringformat:"s" %}selected{% endif %}>
+              {{ fam.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+      </div>
+
+      <div class="flex items-center gap-3 mt-6">
+        <button type="submit"
+                class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-all shadow-sm">
+          <i class="fa-solid fa-floppy-disk"></i> {{ submit_label }}
+        </button>
+        <a href="{% url 'doctors:order_catalog' %}?tab=drugs&clinic_id={{ clinic.id }}"
+           class="inline-flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+          Cancel
+        </a>
+      </div>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

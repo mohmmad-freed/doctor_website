@@ -1,0 +1,18 @@
+{% if items %}
+<ul class="divide-y divide-gray-100 dark:divide-slate-700/60 max-h-48 overflow-y-auto">
+  {% for item in items %}
+  <li>
+    <button type="button"
+            class="w-full text-left px-3 py-2.5 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors flex items-center gap-2 group"
+            @click="pickItem('{{ item.name|escapejs }}')">
+      <i class="fa-solid fa-circle-dot text-xs text-primary-400 flex-shrink-0"></i>
+      <span class="text-sm font-medium text-gray-800 dark:text-gray-100 group-hover:text-primary-700 dark:group-hover:text-primary-300 truncate">
+        {{ item.name }}
+      </span>
+    </button>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="px-3 py-4 text-sm text-center text-gray-400 dark:text-slate-500">No items found.</p>
+{% endif %}

@@ -1,0 +1,32 @@
+{% if drugs %}
+<ul class="divide-y divide-gray-100 dark:divide-slate-700/60 max-h-56 overflow-y-auto">
+  {% for drug in drugs %}
+  <li>
+    <button type="button"
+            class="w-full text-left px-3 py-2.5 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors flex items-start gap-2 group"
+            @click="pickDrug('{{ drug.generic_name|escapejs }}', '{{ drug.commercial_name|escapejs }}', catalogMode)">
+      <i class="fa-solid fa-pills text-xs text-primary-400 mt-0.5 flex-shrink-0"></i>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 group-hover:text-primary-700 dark:group-hover:text-primary-300 truncate">
+          {% if mode == "commercial" and drug.commercial_name %}
+            {{ drug.commercial_name }}
+          {% else %}
+            {{ drug.generic_name }}
+          {% endif %}
+        </p>
+        <p class="text-xs text-gray-400 dark:text-slate-500 truncate">
+          {% if mode == "commercial" and drug.commercial_name %}
+            {{ drug.generic_name }}{% if drug.family %} · {{ drug.family.name }}{% endif %}
+          {% else %}
+            {% if drug.commercial_name %}{{ drug.commercial_name }}{% endif %}{% if drug.family %} {% if drug.commercial_name %}·{% endif %} {{ drug.family.name }}{% endif %}
+          {% endif %}
+          {% if drug.default_dosage %}<span class="ml-1 opacity-60">{{ drug.default_dosage }}</span>{% endif %}
+        </p>
+      </div>
+    </button>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="px-3 py-4 text-sm text-center text-gray-400 dark:text-slate-500">No drugs found.</p>
+{% endif %}

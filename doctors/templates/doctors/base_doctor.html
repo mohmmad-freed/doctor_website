@@ -274,6 +274,11 @@
                     <i class="fa-solid fa-list-check w-4 text-center flex-shrink-0"></i>
                     Appointment Types
                 </a>
+                <a href="{% url 'doctors:order_catalog' %}"
+                   class="sidebar-link {% if request.resolver_match.url_name == 'order_catalog' or request.resolver_match.url_name == 'drug_family_create' or request.resolver_match.url_name == 'drug_family_edit' or request.resolver_match.url_name == 'drug_product_create' or request.resolver_match.url_name == 'drug_product_edit' or request.resolver_match.url_name == 'catalog_item_create' or request.resolver_match.url_name == 'catalog_item_edit' %}active{% endif %}">
+                    <i class="fa-solid fa-book-medical w-4 text-center flex-shrink-0"></i>
+                    Order Catalog
+                </a>
 
                 <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500 px-3 pt-4 pb-2">Account</p>
 
