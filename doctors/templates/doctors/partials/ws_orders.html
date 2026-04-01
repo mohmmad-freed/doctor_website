@@ -91,6 +91,9 @@
   get isDrug() { return this.orderType === 'DRUG'; },
 
   init() {
+    $watch('open', val => {
+      if (val && this.isDrug) $nextTick(() => htmx.trigger($refs.drugFamilySelect, 'change'));
+    });
     $watch('orderType', val => {
       if (val === 'DRUG') $nextTick(() => htmx.trigger($refs.drugFamilySelect, 'change'));
     });
