@@ -1730,7 +1730,7 @@ def patient_workspace(request, patient_id):
 # ── Tab data helpers ──────────────────────────────────────────────────────────
 
 def _ws_overview_data(patient, cids):
-    recent_notes   = list(ClinicalNote.objects.filter(patient=patient, clinic_id__in=cids).select_related("doctor", "clinic")[:3])
+    all_notes      = list(ClinicalNote.objects.filter(patient=patient, clinic_id__in=cids).select_related("doctor", "clinic").order_by("-created_at"))
     active_orders  = list(Order.objects.filter(patient=patient, clinic_id__in=cids, status=Order.Status.PENDING).select_related("doctor")[:8])
     latest_rx      = Prescription.objects.filter(patient=patient, clinic_id__in=cids).prefetch_related("items").first()
     recent_records = list(MedicalRecord.objects.filter(patient=patient, clinic_id__in=cids)[:5])
@@ -1750,7 +1750,7 @@ def _ws_overview_data(patient, cids):
     events.sort(key=lambda x: x["ts"], reverse=True)
 
     return {
-        "recent_notes":   recent_notes,
+        "all_notes":      all_notes,
         "active_orders":  active_orders,
         "latest_rx":      latest_rx,
         "recent_records": recent_records,
