@@ -1785,12 +1785,14 @@ def _ws_orders_data(patient, cids, request):
 
 
 def _ws_prescriptions_data(patient, cids):
+    qs = (
+        Prescription.objects.filter(patient=patient, clinic_id__in=cids)
+        .select_related("doctor", "clinic")
+        .prefetch_related("items")
+    )
     return {
-        "prescriptions": list(
-            Prescription.objects.filter(patient=patient, clinic_id__in=cids)
-            .select_related("doctor", "clinic")
-            .prefetch_related("items")
-        )
+        "active_prescriptions": list(qs.filter(is_active=True)),
+        "inactive_prescriptions": list(qs.filter(is_active=False)),
     }
 
 
@@ -2145,6 +2147,29 @@ def ws_prescription_print(request, patient_id, rx_id):
 
 
 @login_required
+def ws_prescription_print_active(request, patient_id):
+    ctx = _ws_access(request, patient_id)
+    if ctx is None:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden()
+
+    active_rxs = list(
+        Prescription.objects.filter(
+            patient_id=patient_id,
+            clinic_id__in=ctx["shared_clinic_ids"],
+            is_active=True,
+        )
+        .select_related("doctor", "clinic")
+        .prefetch_related("items")
+    )
+    ctx["active_rxs"] = active_rxs
+    ctx["all_active_items"] = [item for rx in active_rxs for item in rx.items.all()]
+    ctx["all_active_notes"] = [rx.notes for rx in active_rxs if rx.notes]
+    ctx["clinic_name"] = active_rxs[0].clinic.name if active_rxs else (ctx["clinics"][0].name if ctx.get("clinics") else "")
+    return render(request, "doctors/ws_prescription_print_active.html", ctx)
+
+
+@login_required
 def ws_prescription_delete(request, patient_id, rx_id):
     ctx = _ws_access(request, patient_id)
     if ctx is None:
@@ -2194,6 +2219,26 @@ def ws_prescription_from_order(request, patient_id, order_id):
         ctx["rx_saved"] = True
         # Return prescriptions tab so the doctor can review/print
         return render(request, "doctors/partials/ws_prescriptions.html", ctx)
+
+    return redirect("doctors:patient_workspace", patient_id=patient_id)
+
+
+@login_required
+def ws_prescription_toggle_active(request, patient_id, rx_id):
+    ctx = _ws_access(request, patient_id)
+    if ctx is None:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden()
+
+    if request.method == "POST":
+        rx = get_object_or_404(
+            Prescription, pk=rx_id, patient_id=patient_id,
+            clinic_id__in=ctx["shared_clinic_ids"]
+        )
+        rx.is_active = not rx.is_active
+        rx.save(update_fields=["is_active"])
+        from django.http import HttpResponse
+        return HttpResponse(status=200)
 
     return redirect("doctors:patient_workspace", patient_id=patient_id)
 

@@ -26,6 +26,8 @@ urlpatterns = [
     path("patients/<int:patient_id>/prescriptions/<int:rx_id>/print/", views.ws_prescription_print, name="ws_prescription_print"),
     path("patients/<int:patient_id>/prescriptions/<int:rx_id>/delete/", views.ws_prescription_delete, name="ws_prescription_delete"),
     path("patients/<int:patient_id>/prescriptions/from-order/<int:order_id>/", views.ws_prescription_from_order, name="ws_prescription_from_order"),
+    path("patients/<int:patient_id>/prescriptions/<int:rx_id>/toggle-active/", views.ws_prescription_toggle_active, name="ws_prescription_toggle_active"),
+    path("patients/<int:patient_id>/prescriptions/print-active/", views.ws_prescription_print_active, name="ws_prescription_print_active"),
     path("patients/<int:patient_id>/records/upload/", views.ws_record_upload, name="ws_record_upload"),
     path("patients/<int:patient_id>/records/<int:record_id>/delete/", views.ws_record_delete, name="ws_record_delete"),
     # --- Schedule Follow-up (doctor-side appointment creation) ---

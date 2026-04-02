@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prescription – {{ patient.name }}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #f8fafc; color: #1e293b; padding: 2rem; }
+    .page { max-width: 680px; margin: 0 auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,.10); }
+    .header { background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); padding: 2rem 2.5rem; color: #fff; position: relative; }
+    .header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -.025em; }
+    .header .sub { font-size: .875rem; opacity: .8; margin-top: .25rem; }
+    .rx-symbol { font-size: 3rem; font-weight: 900; opacity: .15; position: absolute; top: 1rem; right: 2.5rem; }
+    .meta { padding: 1.5rem 2.5rem; border-bottom: 1px solid #e2e8f0; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .meta-item label { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #64748b; display: block; margin-bottom: .2rem; }
+    .meta-item p { font-size: .9rem; font-weight: 600; color: #1e293b; }
+    .meds { padding: 1.5rem 2.5rem; }
+    .meds h2 { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #64748b; margin-bottom: 1rem; }
+    .med-row { display: flex; align-items: flex-start; gap: 1rem; padding: .875rem 1rem; border-radius: .5rem; background: #f8fafc; border: 1px solid #e2e8f0; margin-bottom: .75rem; }
+    .med-num { flex-shrink: 0; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: #4f46e5; color: #fff; font-size: .7rem; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: .1rem; }
+    .med-name { font-size: .95rem; font-weight: 600; color: #1e293b; }
+    .med-detail { font-size: .8rem; color: #64748b; margin-top: .2rem; }
+    .med-instructions { font-size: .8rem; color: #4f46e5; margin-top: .2rem; font-style: italic; }
+    .notes-section { padding: 0 2.5rem 1rem; }
+    .notes-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: .5rem; padding: .75rem 1rem; font-size: .85rem; color: #1e40af; margin-bottom: .5rem; }
+    .empty { padding: 3rem 2.5rem; text-align: center; color: #94a3b8; font-size: .95rem; }
+    .footer { padding: 1.5rem 2.5rem; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: flex-end; }
+    .sig { text-align: right; }
+    .sig-line { width: 160px; border-top: 1.5px solid #94a3b8; margin-bottom: .4rem; }
+    .sig p { font-size: .8rem; color: #64748b; }
+    .sig .doctor-name { font-size: .9rem; font-weight: 700; color: #1e293b; }
+    .print-btn { position: fixed; bottom: 2rem; right: 2rem; padding: .75rem 1.5rem; background: #4f46e5; color: #fff; border: none; border-radius: .625rem; font-family: inherit; font-size: .875rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(79,70,229,.4); display: flex; align-items: center; gap: .5rem; }
+    .print-btn:hover { background: #4338ca; }
+    @media print {
+      body { background: #fff; padding: 0; }
+      .page { box-shadow: none; border-radius: 0; }
+      .print-btn { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page">
+  <!-- Header -->
+  <div class="header">
+    <div class="rx-symbol">℞</div>
+    <h1>Prescription</h1>
+    <p class="sub">{{ clinic_name }}</p>
+  </div>
+
+  <!-- Patient + Doctor Meta -->
+  <div class="meta">
+    <div class="meta-item">
+      <label>Patient</label>
+      <p>{{ patient.name }}</p>
+    </div>
+    <div class="meta-item">
+      <label>Phone</label>
+      <p>{{ patient.phone }}</p>
+    </div>
+    <div class="meta-item">
+      <label>Date</label>
+      <p>{% now "d F Y" %}</p>
+    </div>
+    <div class="meta-item">
+      <label>Prescribing Doctor</label>
+      <p>{{ doctor.name }}</p>
+    </div>
+  </div>
+
+  {% if all_active_items %}
+  <!-- All active medications (flat numbered list) -->
+  <div class="meds">
+    <h2>Medications</h2>
+    {% for item in all_active_items %}
+    <div class="med-row">
+      <div class="med-num">{{ forloop.counter }}</div>
+      <div>
+        <p class="med-name">{{ item.medication_name }}</p>
+        <p class="med-detail">
+          {{ item.dosage }}{% if item.frequency %} &nbsp;·&nbsp; {{ item.frequency }}{% endif %}{% if item.duration %} &nbsp;·&nbsp; {{ item.duration }}{% endif %}
+        </p>
+        {% if item.instructions %}
+        <p class="med-instructions">{{ item.instructions }}</p>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if all_active_notes %}
+  <div class="notes-section">
+    {% for note in all_active_notes %}
+    <div class="notes-box"><strong>Note:</strong> {{ note }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="empty">No active prescriptions for this patient.</div>
+  {% endif %}
+
+  <!-- Footer / Signature -->
+  <div class="footer">
+    <div>
+      <p style="font-size:.75rem;color:#94a3b8;">This prescription was issued electronically via MedPortal.</p>
+    </div>
+    <div class="sig">
+      <div class="sig-line"></div>
+      <p class="doctor-name">{{ doctor.name }}</p>
+      <p>{{ clinic_name }}</p>
+      <p>{% now "d M Y" %}</p>
+    </div>
+  </div>
+</div>
+
+<button class="print-btn" onclick="window.print()">
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+    <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/>
+    <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/>
+  </svg>
+  Print
+</button>
+
+</body>
+</html>

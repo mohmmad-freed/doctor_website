@@ -105,7 +105,7 @@
                 <div class="flex flex-wrap gap-1">
                     {% for start, end in day.open_ranges %}
                     <span class="text-xs px-2.5 py-1 rounded-lg bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-gray-500 dark:text-gray-400 font-mono" dir="ltr">
-                        {{ start|time:"H:i" }} – {{ end|time:"H:i" }}
+                        {{ start|time:"g:i A" }} – {{ end|time:"g:i A" }}
                     </span>
                     {% endfor %}
                 </div>
@@ -128,7 +128,7 @@
                         <span class="text-sm font-semibold
                                      {% if slot.is_active %}text-primary-700 dark:text-primary-300{% else %}text-gray-500{% endif %}"
                               dir="ltr">
-                            {{ slot.start_time|time:"H:i" }} – {{ slot.end_time|time:"H:i" }}
+                            {{ slot.start_time|time:"g:i A" }} – {{ slot.end_time|time:"g:i A" }}
                         </span>
                         <!-- Delete button -->
                         <form method="post" class="inline" onsubmit="return confirm('Delete this time slot?')">
@@ -197,7 +197,7 @@
                             <i class="fa-solid fa-circle-info mr-1"></i>
                             Clinic open:
                             {% for start, end in day.open_ranges %}
-                            <span dir="ltr" class="font-mono">{{ start|time:"H:i" }}–{{ end|time:"H:i" }}</span>{% if not forloop.last %}, {% endif %}
+                            <span dir="ltr" class="font-mono">{{ start|time:"g:i A" }}–{{ end|time:"g:i A" }}</span>{% if not forloop.last %}, {% endif %}
                             {% endfor %}
                         </div>
                         {% endif %}

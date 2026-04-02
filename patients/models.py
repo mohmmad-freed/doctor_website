@@ -215,6 +215,7 @@ class Prescription(models.Model):
         related_name="prescriptions",
     )
     notes = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
