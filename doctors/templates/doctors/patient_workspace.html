@@ -125,6 +125,38 @@
 {% endblock %}
 
 {% block content %}
+{# ── Multi-Patient Workspace: inline pre-registration (runs before DOMContentLoaded) ── #}
+<script>
+    // Set current patient ID globally so the sidebar can mark this patient as active
+    window.CURRENT_PATIENT_ID = {{ patient.id }};
+    // Dirty-form flag — set to true when user edits a form in the tab content area
+    window.wsFormDirty = false;
+
+    // Pre-register in localStorage immediately (before DOMContentLoaded)
+    // so the sidebar renders correctly on first paint without a flash.
+    (function () {
+        var MPW_KEY = 'mpw_open_patients';
+        try {
+            var list = JSON.parse(localStorage.getItem(MPW_KEY) || '[]');
+            var id = {{ patient.id }};
+            var idx = list.findIndex(function (p) { return p.id === id; });
+            var entry = {
+                id: id,
+                name: '{{ patient.name|escapejs }}',
+                phone: '{{ patient.phone|escapejs }}',
+                activeTab: '{{ active_tab }}'
+            };
+            if (idx >= 0) {
+                // Update name/phone/tab in case they changed; preserve other keys
+                list[idx] = Object.assign({}, list[idx], entry);
+            } else {
+                list.push(entry);
+            }
+            localStorage.setItem(MPW_KEY, JSON.stringify(list));
+        } catch (e) {}
+    })();
+</script>
+
 <div class="workspace-root -mx-4 sm:-mx-6 lg:-mx-8" id="workspace">
 
   <!-- ═══════════════════════ STICKY PATIENT HEADER ═══════════════════════ -->
@@ -135,6 +167,7 @@
       <div class="flex items-center gap-4 min-w-0">
         <!-- Back -->
         <a href="{% url 'doctors:patients' %}"
+           onclick="return mpwBackGuard()"
            class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
            title="Back to My Patients">
           <i class="fa-solid fa-arrow-left text-sm"></i>
@@ -282,17 +315,51 @@
     }, { passive: true });
   })();
 
-  // After HTMX tab swap, re-sync active indicator
+  // After HTMX tab swap, re-sync active indicator and persist active tab
   document.body.addEventListener('htmx:afterSwap', function (e) {
     if (e.detail.target.id === 'tab-content') {
       const url = new URL(window.location.href);
       const tab = url.searchParams.get('tab') || 'overview';
       setActiveTab(tab);
+      // Persist active tab to localStorage so sidebar link restores it
+      if (typeof mpwUpdateTab === 'function') mpwUpdateTab(PATIENT_ID, tab);
+      // Reset dirty flag after tab switches (new tab content = clean slate)
+      window.wsFormDirty = false;
     }
     // Re-initialise Alpine for dynamically injected modal content
     if (e.detail.target && e.detail.target.id === 'followup-modal-root') {
       if (typeof Alpine !== 'undefined') Alpine.initTree(e.detail.target);
     }
+  });
+
+  // Track dirty state: any input inside tab-content marks the workspace dirty
+  document.addEventListener('input', function (e) {
+    if (e.target.closest && e.target.closest('#tab-content')) {
+      window.wsFormDirty = true;
+    }
+  });
+
+  // Reset dirty flag after a successful HTMX form submission (POST/PUT)
+  document.body.addEventListener('htmx:afterRequest', function (e) {
+    if (e.detail.successful) {
+      const verb = e.detail.requestConfig && e.detail.requestConfig.verb;
+      if (verb === 'post' || verb === 'put' || verb === 'patch') {
+        window.wsFormDirty = false;
+      }
+    }
+  });
+
+  // Guard for back button — warns if there are unsaved changes
+  window.mpwBackGuard = function () {
+    if (window.wsFormDirty) {
+      return confirm('You have unsaved changes. Leave this patient workspace?');
+    }
+    return true;
+  };
+
+  // Re-render the sidebar open-patients list now that this page is loaded
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof mpwRender === 'function') mpwRender();
   });
 
   // Refresh overview tab after a follow-up is successfully scheduled
