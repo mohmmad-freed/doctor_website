@@ -1732,8 +1732,9 @@ def patient_workspace(request, patient_id):
 def _ws_overview_data(patient, cids):
     all_notes      = list(ClinicalNote.objects.filter(patient=patient, clinic_id__in=cids).select_related("doctor", "clinic").order_by("-created_at"))
     active_orders  = list(Order.objects.filter(patient=patient, clinic_id__in=cids, status=Order.Status.PENDING).select_related("doctor")[:8])
-    latest_rx      = Prescription.objects.filter(patient=patient, clinic_id__in=cids).prefetch_related("items").first()
+    latest_rx      = Prescription.objects.filter(patient=patient, clinic_id__in=cids, is_active=True).prefetch_related("items").first()
     recent_records = list(MedicalRecord.objects.filter(patient=patient, clinic_id__in=cids)[:5])
+    lab_records    = [r for r in recent_records if r.category == 'LAB']
 
     # Build unified activity timeline (most recent 15 events across all types)
     tl_notes   = list(ClinicalNote.objects.filter(patient=patient, clinic_id__in=cids).select_related("doctor", "clinic").order_by("-created_at")[:6])
@@ -1754,6 +1755,7 @@ def _ws_overview_data(patient, cids):
         "active_orders":  active_orders,
         "latest_rx":      latest_rx,
         "recent_records": recent_records,
+        "lab_records":    lab_records,
         "timeline_events": events[:15],
     }
 
