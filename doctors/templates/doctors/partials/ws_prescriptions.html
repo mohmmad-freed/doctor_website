@@ -101,7 +101,7 @@
                 class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors shadow-sm">
           <i class="fa-solid fa-prescription text-xs"></i> Save Prescription
         </button>
-        <button type="button" @click="open = false"
+        <button type="button" @click="open = false; meds = [{ name:'', dosage:'', frequency:'', duration:'', instructions:'' }]; $el.closest('form').reset(); typeof wsDraftClearCurrent === 'function' && wsDraftClearCurrent()"
                 class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
           Cancel
         </button>

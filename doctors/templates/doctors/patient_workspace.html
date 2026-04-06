@@ -366,6 +366,148 @@
   document.addEventListener('followup-scheduled', function () {
     switchTab('overview');
   });
+
+  // ── Draft persistence: auto-save/restore form data per patient + tab ──────
+  (function () {
+    var _PID = {{ patient.id }};
+    var _timer = null;
+    // Prescription dynamic field names — handled via Alpine __meds, not DOM
+    var RX_FIELD_RE = /^(med_name|dosage|frequency|duration|instructions)_\d+$/;
+
+    function _key(tab) { return 'ws_draft_' + _PID + '_' + tab; }
+
+    function _currentTab() {
+      return new URL(window.location.href).searchParams.get('tab') || 'overview';
+    }
+
+    // Return the collapsible form container for a given tab
+    function _formContainer(tab, root) {
+      if (tab === 'notes')         return root.querySelector('#note-form-section');
+      if (tab === 'orders')        return root.querySelector('[x-data*="orderType"]');
+      if (tab === 'prescriptions') return root.querySelector('[x-data*="meds"]');
+      return null;
+    }
+
+    // Collect saveable values from the tab-content area
+    function _collect(tab) {
+      var root = document.getElementById('tab-content');
+      if (!root) return null;
+      var draft = {};
+      var dirty = false;
+
+      root.querySelectorAll('input:not([type=hidden])[name], select[name], textarea[name]').forEach(function (el) {
+        var val = el.value;
+        if (val) { draft[el.name] = val; dirty = true; }
+      });
+
+      // Prescriptions: also snapshot the Alpine meds array
+      if (tab === 'prescriptions') {
+        var rxEl = root.querySelector('[x-data*="meds"]');
+        if (rxEl && rxEl._x_dataStack) {
+          var meds = rxEl._x_dataStack[0].meds || [];
+          if (meds.some(function (m) { return m.name || m.dosage || m.frequency; })) {
+            draft.__meds = JSON.parse(JSON.stringify(meds));
+            dirty = true;
+          }
+        }
+      }
+
+      return dirty ? draft : null;
+    }
+
+    function _save() {
+      var tab = _currentTab();
+      if (tab === 'overview' || tab === 'records') return;
+      var draft = _collect(tab);
+      if (draft) localStorage.setItem(_key(tab), JSON.stringify(draft));
+      else        localStorage.removeItem(_key(tab));
+    }
+
+    function _restore(tab) {
+      if (!tab || tab === 'overview' || tab === 'records') return;
+      var raw = localStorage.getItem(_key(tab));
+      if (!raw) return;
+      var draft;
+      try { draft = JSON.parse(raw); } catch (e) { return; }
+
+      var root = document.getElementById('tab-content');
+      if (!root) return;
+
+      // Restore regular form fields
+      var hasData = false;
+      Object.keys(draft).forEach(function (name) {
+        if (name.charAt(0) === '_') return; // skip __meds etc.
+        if (tab === 'prescriptions' && RX_FIELD_RE.test(name)) return; // __meds handles these
+        var el = root.querySelector('[name="' + name + '"]');
+        if (!el || el.type === 'hidden') return;
+        el.value = draft[name];
+        // Dispatch events so Alpine x-model bindings pick up the restored value
+        el.dispatchEvent(new Event('input',  { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        if (draft[name]) hasData = true;
+      });
+
+      // Mutate Alpine reactive state after it has initialised the components
+      setTimeout(function () {
+        var container = _formContainer(tab, root);
+
+        // Auto-open the collapsible form if there is draft data
+        if ((hasData || draft.__meds) && container && container._x_dataStack) {
+          container._x_dataStack[0].open = true;
+        }
+
+        // Prescriptions: restore the full meds array via Alpine reactive state
+        if (tab === 'prescriptions' && draft.__meds && container && container._x_dataStack) {
+          var d = container._x_dataStack[0];
+          d.meds = draft.__meds;
+          d.open  = true;
+        }
+      }, 80);
+    }
+
+    function _clearCurrent() {
+      localStorage.removeItem(_key(_currentTab()));
+    }
+
+    // Auto-save on every user input (debounced 400ms)
+    document.addEventListener('input', function (e) {
+      if (e.target.closest && e.target.closest('#tab-content')) {
+        clearTimeout(_timer);
+        _timer = setTimeout(_save, 400);
+      }
+    });
+    document.addEventListener('change', function (e) {
+      if (e.target.closest && e.target.closest('#tab-content')) {
+        clearTimeout(_timer);
+        _timer = setTimeout(_save, 400);
+      }
+    });
+
+    // Restore after an HTMX tab switch (Alpine is ready by afterSettle)
+    document.body.addEventListener('htmx:afterSettle', function (e) {
+      if (e.detail.target && e.detail.target.id === 'tab-content') {
+        _restore(_currentTab());
+      }
+    });
+
+    // Restore on initial page load, after Alpine has finished initialising
+    document.addEventListener('alpine:initialized', function () {
+      _restore('{{ active_tab }}');
+    });
+
+    // Clear draft after a successful form submission (POST/PUT/PATCH)
+    document.body.addEventListener('htmx:afterRequest', function (e) {
+      if (e.detail.successful) {
+        var verb = e.detail.requestConfig && e.detail.requestConfig.verb;
+        if (verb === 'post' || verb === 'put' || verb === 'patch') {
+          _clearCurrent();
+        }
+      }
+    });
+
+    // Expose so Cancel buttons can explicitly discard a draft
+    window.wsDraftClearCurrent = _clearCurrent;
+  })();
 </script>
 {% endblock %}
 
