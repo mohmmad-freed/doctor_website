@@ -68,15 +68,22 @@
       </div>
 
       <div class="flex justify-between items-center px-5 py-3.5">
-        <span class="text-sm font-semibold text-gray-500 dark:text-gray-400">Status</span>
+        <span class="text-sm font-semibold text-gray-500 dark:text-gray-400">Phone Verified</span>
         {% if request.user.is_verified %}
         <span class="text-sm font-bold text-emerald-600 dark:text-emerald-400">
           <i class="fa-solid fa-circle-check me-1 text-xs"></i>Verified
         </span>
         {% else %}
-        <span class="text-sm font-bold text-amber-600 dark:text-amber-400">
-          <i class="fa-solid fa-clock me-1 text-xs"></i>Unverified
-        </span>
+        <div class="flex items-center gap-2.5">
+          <span class="text-sm font-bold text-amber-600 dark:text-amber-400">
+            <i class="fa-solid fa-clock me-1 text-xs"></i>Unverified
+          </span>
+          <a href="{% url 'doctors:verify_phone' %}"
+             class="inline-flex items-center gap-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-lg transition-colors shadow-sm">
+            <i class="fa-solid fa-shield-halved text-[10px]"></i>
+            Verify Now
+          </a>
+        </div>
         {% endif %}
       </div>
 

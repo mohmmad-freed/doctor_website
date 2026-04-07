@@ -1,6 +1,7 @@
 import random
 import re
 import logging
+import time
 
 from django.core.cache import cache
 from django.conf import settings
@@ -149,7 +150,7 @@ def request_otp(phone):
 
     if using_tweetsms:
         sms_phone = _normalize_phone(phone)
-        message = f"ط·آ±ط¸â€¦ط·آ² ط·آ§ط¸â€‍ط·ع¾ط·آ­ط¸â€ڑط¸â€ڑ ط·آ§ط¸â€‍ط·آ®ط·آ§ط·آµ ط·آ¨ط¸ئ’ ط¸â€،ط¸ث†: {otp}"
+        message = f"Your verification code is: {otp}"
 
         try:
             tweetsms_send_sms(sms_phone, message)
@@ -192,8 +193,8 @@ def request_otp(phone):
     else:
         cache.incr(_otp_resend_count_key(phone))
 
-    # 6. Set cooldown
-    cache.set(_otp_cooldown_key(phone), True, timeout=OTP_RESEND_COOLDOWN_SECONDS)
+    # 6. Set cooldown (store expiry timestamp so callers can compute remaining seconds)
+    cache.set(_otp_cooldown_key(phone), time.time() + OTP_RESEND_COOLDOWN_SECONDS, timeout=OTP_RESEND_COOLDOWN_SECONDS)
 
     # 7. Reset failed attempts
     cache.delete(_otp_attempts_key(phone))
@@ -247,6 +248,14 @@ def _verify_otp_from_cache(phone, entered_otp):
 # ============================================
 def is_in_cooldown(phone):
     return cache.get(_otp_cooldown_key(phone)) is not None
+
+
+def get_cooldown_remaining(phone):
+    """Return the number of seconds remaining in the resend cooldown (0 if not in cooldown)."""
+    expiry = cache.get(_otp_cooldown_key(phone))
+    if expiry is None:
+        return 0
+    return max(0, int(expiry - time.time()))
 
 
 def get_remaining_resends(phone):

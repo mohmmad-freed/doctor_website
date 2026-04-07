@@ -1,0 +1,152 @@
+{% extends "doctors/base_doctor.html" %}
+{% load static %}
+{% block title %}Verify Phone | Doctor Portal{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto px-4 pt-10 pb-12">
+
+  <!-- Back link -->
+  <a href="{% url 'doctors:doctor_profile' %}"
+     class="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors mb-8">
+    <i class="fa-solid fa-arrow-left text-xs"></i>
+    Back to Profile
+  </a>
+
+  <!-- Card -->
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+
+    <!-- Header -->
+    <div class="flex flex-col items-center px-8 pt-8 pb-6 text-center border-b border-gray-100 dark:border-gray-700">
+      <div class="w-14 h-14 rounded-2xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center mb-4">
+        <i class="fa-solid fa-shield-halved text-indigo-600 dark:text-indigo-400 text-xl"></i>
+      </div>
+      <h1 class="text-xl font-bold text-gray-900 dark:text-white mb-1">Verify Your Phone</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        {% if otp_sent %}
+          We sent a 6-digit code to
+          <span class="font-semibold text-gray-700 dark:text-gray-200" dir="ltr">{{ phone }}</span>
+        {% else %}
+          We'll send a one-time code to
+          <span class="font-semibold text-gray-700 dark:text-gray-200" dir="ltr">{{ phone }}</span>
+        {% endif %}
+      </p>
+    </div>
+
+    <div class="px-8 py-7">
+
+      {% if not otp_sent %}
+      <!-- Send OTP state -->
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="send">
+        <button type="submit"
+                class="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm py-3 rounded-xl transition-colors shadow-sm">
+          <i class="fa-solid fa-paper-plane text-xs"></i>
+          Send Verification Code
+        </button>
+      </form>
+
+      {% else %}
+      <!-- OTP entry state -->
+      <form method="post" id="otpForm">
+        {% csrf_token %}
+        <input type="hidden" id="full_otp_code" name="otp">
+
+        <!-- 6-box OTP input -->
+        <div class="flex gap-2.5 justify-center mb-6" dir="ltr">
+          {% for i in "123456" %}
+          <input type="text" maxlength="1"
+                 class="otp-box w-11 h-14 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-center text-xl font-bold text-gray-900 dark:text-white focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 dark:focus:ring-indigo-400/20 transition-all"
+                 inputmode="numeric"
+                 {% if forloop.first %}autocomplete="one-time-code"{% endif %}>
+          {% endfor %}
+        </div>
+
+        <button type="submit"
+                class="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm py-3 rounded-xl transition-colors shadow-sm mb-5">
+          <i class="fa-solid fa-check-double text-xs"></i>
+          Confirm Code
+        </button>
+      </form>
+
+      <!-- Resend -->
+      <div class="text-center border-t border-gray-100 dark:border-gray-700 pt-5">
+        <p class="text-xs text-gray-400 dark:text-gray-500 mb-2">Didn't receive the code?</p>
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="resend">
+          <button type="submit" id="resendBtn"
+                  class="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  {% if cooldown %}disabled{% endif %}>
+            <i class="fa-solid fa-rotate-right text-xs"></i>
+            Resend Code
+            {% if cooldown %}<span id="timer" class="font-normal text-gray-400 dark:text-gray-500">({{ cooldown_seconds }}s)</span>{% endif %}
+          </button>
+        </form>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if otp_sent %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const boxes = document.querySelectorAll('.otp-box');
+  const hidden = document.getElementById('full_otp_code');
+
+  boxes[0].focus();
+
+  boxes.forEach((box, i) => {
+    box.addEventListener('input', (e) => {
+      const v = e.target.value.replace(/\D/g, '');
+      e.target.value = v.slice(-1);
+      syncHidden();
+      if (v && i < boxes.length - 1) boxes[i + 1].focus();
+    });
+
+    box.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace') {
+        if (!box.value && i > 0) { boxes[i - 1].focus(); boxes[i - 1].value = ''; }
+        syncHidden();
+      } else if (e.key === 'ArrowLeft' && i > 0) boxes[i - 1].focus();
+      else if (e.key === 'ArrowRight' && i < boxes.length - 1) boxes[i + 1].focus();
+    });
+
+    box.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const digits = ((e.clipboardData || window.clipboardData).getData('text')).replace(/\D/g, '').split('');
+      digits.forEach((d, j) => { if (i + j < boxes.length) boxes[i + j].value = d; });
+      syncHidden();
+      const next = Array.from(boxes).findIndex(b => !b.value);
+      (next !== -1 ? boxes[next] : boxes[boxes.length - 1]).focus();
+    });
+  });
+
+  function syncHidden() {
+    hidden.value = Array.from(boxes).map(b => b.value).join('');
+  }
+
+  // Countdown timer for resend
+  const timerEl = document.getElementById('timer');
+  const resendBtn = document.getElementById('resendBtn');
+  if (timerEl && resendBtn) {
+    let t = parseInt(timerEl.textContent.replace(/\D/g, ''), 10) || 60;
+    const iv = setInterval(() => {
+      t--;
+      timerEl.textContent = '(' + t + 's)';
+      if (t <= 0) {
+        clearInterval(iv);
+        resendBtn.removeAttribute('disabled');
+        timerEl.remove();
+      }
+    }, 1000);
+  }
+});
+</script>
+{% endif %}
+{% endblock %}

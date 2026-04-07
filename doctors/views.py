@@ -5,10 +5,14 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
 from django.http import HttpResponse
 
+from django.contrib import messages
+from django.urls import reverse
+
 from appointments.models import Appointment, AppointmentType
 from clinics.models import ClinicStaff
 from .models import DoctorAvailability, DoctorProfile, DoctorVerification, ClinicDoctorCredential, DoctorIntakeFormTemplate, DoctorIntakeQuestion, DoctorIntakeRule
 from .services import generate_slots_for_date
+from accounts.otp_utils import request_otp, verify_otp, is_in_cooldown, get_remaining_resends, get_cooldown_remaining
 
 User = get_user_model()
 
@@ -943,6 +947,66 @@ def doctor_profile_view(request):
         "profile": profile,
         "specialties": specialties,
         "memberships": memberships,
+    })
+
+
+@login_required
+def doctor_verify_phone_view(request):
+    """Send / confirm OTP to mark the doctor's phone as verified."""
+    user = request.user
+    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
+        messages.error(request, "This page is for doctors only.")
+        return redirect(reverse("accounts:home"))
+
+    if user.is_verified:
+        return redirect(reverse("doctors:doctor_profile"))
+
+    phone = user.phone
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+
+        if action == "send":
+            success, _ = request_otp(phone)
+            if success:
+                messages.success(request, "A verification code was sent to your phone.")
+            else:
+                messages.error(request, "Could not send the code. Please try again.")
+            return redirect(reverse("doctors:verify_phone"))
+
+        if action == "resend":
+            remaining = get_remaining_resends(phone)
+            if remaining <= 0:
+                messages.error(request, "You have reached the maximum OTP requests for today.")
+            else:
+                success, _ = request_otp(phone)
+                if success:
+                    messages.success(request, "A new code was sent to your phone.")
+                else:
+                    messages.error(request, "Could not resend the code. Please try again.")
+            return redirect(reverse("doctors:verify_phone"))
+
+        # Confirm OTP
+        entered_otp = request.POST.get("otp", "").strip()
+        if not entered_otp:
+            messages.error(request, "Please enter the verification code.")
+        else:
+            success, _ = verify_otp(phone, entered_otp)
+            if success:
+                user.is_verified = True
+                user.save(update_fields=["is_verified"])
+                messages.success(request, "Phone number verified successfully.")
+                return redirect(reverse("doctors:doctor_profile"))
+            else:
+                messages.error(request, "Invalid or expired code. Please try again.")
+
+    otp_sent = is_in_cooldown(phone)
+    return render(request, "doctors/verify_phone.html", {
+        "phone": phone,
+        "otp_sent": otp_sent,
+        "remaining_resends": get_remaining_resends(phone),
+        "cooldown": otp_sent,
+        "cooldown_seconds": get_cooldown_remaining(phone),
     })
 
 

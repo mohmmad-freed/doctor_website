@@ -88,6 +88,11 @@ urlpatterns = [
         name="doctor_profile",
     ),
     path(
+        "profile/verify-phone/",
+        views.doctor_verify_phone_view,
+        name="verify_phone",
+    ),
+    path(
         "profile/edit/",
         views.doctor_edit_profile_view,
         name="doctor_edit_profile",
