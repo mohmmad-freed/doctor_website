@@ -935,6 +935,7 @@ def doctor_profile_view(request):
     specialties = profile.specialties.all()
     memberships = (
         ClinicStaff.objects.filter(user=user, revoked_at__isnull=True)
+        .exclude(role__in=["SECRETARY", "MAIN_DOCTOR"])
         .select_related("clinic")
     )
 
