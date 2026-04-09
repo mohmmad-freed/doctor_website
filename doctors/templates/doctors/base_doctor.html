@@ -352,6 +352,11 @@
                     <i class="fa-solid fa-book-medical w-4 text-center flex-shrink-0"></i>
                     Order Catalog
                 </a>
+                <a href="{% url 'doctors:clinical_note_templates' %}"
+                   class="sidebar-link {% if request.resolver_match.url_name == 'clinical_note_templates' or request.resolver_match.url_name == 'clinical_note_template_create' or request.resolver_match.url_name == 'clinical_note_template_edit' %}active{% endif %}">
+                    <i class="fa-solid fa-note-medical w-4 text-center flex-shrink-0"></i>
+                    Note Templates
+                </a>
 
                 <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500 px-3 pt-4 pb-2">Account</p>
 

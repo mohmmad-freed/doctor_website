@@ -1,0 +1,111 @@
+{% extends "doctors/base_doctor.html" %}
+{% block title %}{% if mode == 'edit' %}Edit Template{% else %}New Template{% endif %} | Doctor Portal{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto animate-fade-in-up">
+
+  <!-- Page header -->
+  <div class="mb-6">
+    <div class="flex items-center gap-2 text-sm text-gray-400 dark:text-slate-500 mb-2">
+      <a href="{% url 'doctors:clinical_note_templates' %}"
+         class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Note Templates</a>
+      <i class="fa-solid fa-chevron-right text-[10px]"></i>
+      <span>{% if mode == 'edit' %}Edit{% else %}New Template{% endif %}</span>
+    </div>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+      {% if mode == 'edit' %}Edit Template{% else %}Create Template{% endif %}
+    </h1>
+    <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">
+      Choose a name and select the sections you want to appear in the Clinical Notes editor.
+    </p>
+  </div>
+
+  {% if messages %}
+  <div class="mb-4 space-y-2">
+    {% for msg in messages %}
+    <div class="px-4 py-3 rounded-lg text-sm font-medium
+      {% if msg.tags == 'success' %}bg-emerald-50 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300
+      {% else %}bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300{% endif %}">
+      {{ msg }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <form method="post"
+        action="{% if mode == 'edit' %}{% url 'doctors:clinical_note_template_edit' tpl.id %}{% else %}{% url 'doctors:clinical_note_template_create' %}{% endif %}">
+    {% csrf_token %}
+
+    <div class="glass-card p-6 space-y-5">
+
+      <!-- Name -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">
+          Template Name <span class="text-red-500">*</span>
+        </label>
+        <input type="text"
+               name="name"
+               value="{% if mode == 'edit' %}{{ tpl.name }}{% endif %}"
+               required
+               placeholder="e.g. My SOAP Template"
+               class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors">
+      </div>
+
+      <!-- Description -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">
+          Description <span class="font-normal normal-case text-gray-400 dark:text-slate-500">(optional)</span>
+        </label>
+        <textarea name="description"
+                  rows="2"
+                  placeholder="Short description of when to use this template…"
+                  class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors resize-none">{% if mode == 'edit' %}{{ tpl.description }}{% endif %}</textarea>
+      </div>
+
+      <!-- Elements -->
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-2">
+          Sections <span class="text-red-500">*</span>
+          <span class="font-normal normal-case text-gray-400 dark:text-slate-500 ml-1">— select and reorder</span>
+        </label>
+
+        <div id="element-builder" class="space-y-2">
+          {% for et, label in element_choices %}
+          <label class="flex items-center gap-3 px-3.5 py-3 rounded-lg border cursor-pointer transition-colors
+            {% if et in selected_elements %}border-primary-300 bg-primary-50 dark:border-primary-700 dark:bg-primary-900/20
+            {% else %}border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/60{% endif %}">
+            <input type="checkbox"
+                   name="elements"
+                   value="{{ et }}"
+                   {% if et in selected_elements %}checked{% endif %}
+                   class="w-4 h-4 rounded accent-indigo-500 flex-shrink-0">
+            <span class="text-sm font-medium text-gray-800 dark:text-slate-100">
+              {{ label }}
+            </span>
+          </label>
+          {% endfor %}
+        </div>
+        <p class="text-xs text-gray-400 dark:text-slate-500 mt-2">
+          The sections will appear in the order listed above. At least one section is required.
+        </p>
+      </div>
+
+    </div><!-- /glass-card -->
+
+    <!-- Actions -->
+    <div class="flex items-center gap-3 mt-5">
+      <button type="submit"
+              class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm transition-colors shadow-sm">
+        <i class="fa-solid fa-floppy-disk text-xs"></i>
+        {% if mode == 'edit' %}Save Changes{% else %}Create Template{% endif %}
+      </button>
+      <a href="{% url 'doctors:clinical_note_templates' %}"
+         class="px-5 py-2.5 rounded-lg border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 font-medium text-sm hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+        Cancel
+      </a>
+    </div>
+
+  </form>
+
+</div>
+{% endblock %}

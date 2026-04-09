@@ -154,6 +154,32 @@ urlpatterns = [
         views.intake_rule_delete,
         name="intake_rule_delete",
     ),
+    # --- Clinical Note Templates ---
+    path(
+        "clinical-note-templates/",
+        views.clinical_note_templates,
+        name="clinical_note_templates",
+    ),
+    path(
+        "clinical-note-templates/create/",
+        views.clinical_note_template_create,
+        name="clinical_note_template_create",
+    ),
+    path(
+        "clinical-note-templates/<int:template_id>/edit/",
+        views.clinical_note_template_edit,
+        name="clinical_note_template_edit",
+    ),
+    path(
+        "clinical-note-templates/<int:template_id>/activate/",
+        views.clinical_note_template_activate,
+        name="clinical_note_template_activate",
+    ),
+    path(
+        "clinical-note-templates/<int:template_id>/delete/",
+        views.clinical_note_template_delete,
+        name="clinical_note_template_delete",
+    ),
     # --- API Endpoints ---
     path(
         "api/specialties/",

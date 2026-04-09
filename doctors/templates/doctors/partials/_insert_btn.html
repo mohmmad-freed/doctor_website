@@ -1,0 +1,12 @@
+{% comment %}Reusable "insert into notes" tooltip button. Include with med_value set to the text to insert.{% endcomment %}
+<div class="relative group flex-shrink-0">
+  <button data-med="{{ med_value }}"
+          onmousedown="event.preventDefault(); window.dispatchEvent(new CustomEvent('cn-insert', {detail:{text:this.dataset.med}}));"
+          class="flex items-center justify-center w-8 h-8 rounded-full bg-primary-50 dark:bg-primary-900/30 text-primary-500 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900/60 hover:text-primary-700 dark:hover:text-primary-300 active:scale-95 transition-[background-color,color,transform] duration-150">
+    <i class="fa-solid fa-pen-to-square text-sm"></i>
+  </button>
+  <div class="pointer-events-none absolute bottom-full right-0 mb-1.5 px-2 py-1 rounded-md bg-slate-800 dark:bg-slate-700 text-white text-[11px] font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 shadow-md">
+    Insert into notes
+    <span class="absolute top-full right-3 border-4 border-transparent border-t-slate-800 dark:border-t-slate-700"></span>
+  </div>
+</div>

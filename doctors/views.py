@@ -10,7 +10,7 @@ from django.urls import reverse
 
 from appointments.models import Appointment, AppointmentType
 from clinics.models import ClinicStaff
-from .models import DoctorAvailability, DoctorProfile, DoctorVerification, ClinicDoctorCredential, DoctorIntakeFormTemplate, DoctorIntakeQuestion, DoctorIntakeRule
+from .models import DoctorAvailability, DoctorProfile, DoctorVerification, ClinicDoctorCredential, DoctorIntakeFormTemplate, DoctorIntakeQuestion, DoctorIntakeRule, ClinicalNoteTemplate, ClinicalNoteTemplateElement, DoctorClinicalNoteSettings
 from .services import generate_slots_for_date
 from accounts.otp_utils import request_otp, verify_otp, is_in_cooldown, get_remaining_resends, get_cooldown_remaining
 
@@ -1770,8 +1770,10 @@ def patient_workspace(request, patient_id):
 
     if tab == "overview":
         ctx.update(_ws_overview_data(patient, cids))
+        ctx["active_note_elements"] = _get_active_template_elements(ctx["doctor"])
     elif tab == "notes":
         ctx.update(_ws_notes_data(patient, cids, request))
+        ctx["active_note_elements"] = _get_active_template_elements(ctx["doctor"])
     elif tab == "orders":
         ctx.update(_ws_orders_data(patient, cids, request))
     elif tab == "prescriptions":
@@ -1905,6 +1907,7 @@ def ws_note_add(request, patient_id):
         )
         ctx.update(_ws_notes_data(ctx["patient"], ctx["shared_clinic_ids"], request))
         ctx["note_saved"] = True
+        ctx["active_note_elements"] = _get_active_template_elements(ctx["doctor"])
         return render(request, "doctors/partials/ws_notes.html", ctx)
 
     return redirect("doctors:patient_workspace", patient_id=patient_id)
@@ -1928,10 +1931,12 @@ def ws_note_edit(request, patient_id, note_id):
         note.save()
         ctx.update(_ws_notes_data(ctx["patient"], ctx["shared_clinic_ids"], request))
         ctx["note_saved"] = True
+        ctx["active_note_elements"] = _get_active_template_elements(ctx["doctor"])
         return render(request, "doctors/partials/ws_notes.html", ctx)
 
     ctx["edit_note"] = note
     ctx.update(_ws_notes_data(ctx["patient"], ctx["shared_clinic_ids"], request))
+    ctx["active_note_elements"] = _get_active_template_elements(ctx["doctor"])
     return render(request, "doctors/partials/ws_notes.html", ctx)
 
 
@@ -2572,3 +2577,261 @@ def htmx_followup_slots(request, patient_id):
         "slots":       slots,
         "target_date": target_date,
     })
+
+
+# ============================================
+# CLINICAL NOTE TEMPLATES
+# ============================================
+
+# All element type codes in their canonical display order
+_ALL_ELEMENT_TYPES = [
+    "SUBJECTIVE", "OBJECTIVE", "ASSESSMENT", "PLAN",
+    "FREE_TEXT", "VITALS", "BODY_DIAGRAM", "DENTAL",
+]
+
+_ELEMENT_LABELS = {
+    "SUBJECTIVE":   "S — Subjective",
+    "OBJECTIVE":    "O — Objective",
+    "ASSESSMENT":   "A — Assessment",
+    "PLAN":         "P — Plan",
+    "FREE_TEXT":    "Free Text",
+    "VITALS":       "Vitals",
+    "BODY_DIAGRAM": "Body Diagram",
+    "DENTAL":       "Dental Chart",
+}
+
+
+def _get_active_template_elements(doctor):
+    """
+    Return the ordered list of element type codes for the doctor's active
+    template.  Falls back to the system default template when no active
+    template is configured.  Returns None only when the system has no default
+    (should not happen after migrations).
+    """
+    try:
+        settings_obj = DoctorClinicalNoteSettings.objects.select_related(
+            "active_template"
+        ).get(doctor=doctor)
+        tpl = settings_obj.active_template
+    except DoctorClinicalNoteSettings.DoesNotExist:
+        tpl = None
+
+    if tpl is None:
+        # Fall back to the system default template
+        tpl = ClinicalNoteTemplate.objects.filter(
+            template_type=ClinicalNoteTemplate.TemplateType.SYSTEM,
+            is_system_default=True,
+        ).first()
+
+    if tpl is None:
+        return _ALL_ELEMENT_TYPES  # ultimate fallback: show everything
+
+    return list(
+        tpl.elements.order_by("order").values_list("element_type", flat=True)
+    )
+
+
+def _require_doctor(request):
+    """Return the user if they are a DOCTOR/MAIN_DOCTOR, else None."""
+    user = request.user
+    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
+        return None
+    return user
+
+
+@login_required
+def clinical_note_templates(request):
+    """List page: active template, system templates, and doctor's custom templates."""
+    user = _require_doctor(request)
+    if user is None:
+        return redirect("accounts:home")
+
+    # Determine active template
+    try:
+        settings_obj = DoctorClinicalNoteSettings.objects.select_related(
+            "active_template"
+        ).get(doctor=user)
+        active_template = settings_obj.active_template
+    except DoctorClinicalNoteSettings.DoesNotExist:
+        active_template = None
+
+    system_default = ClinicalNoteTemplate.objects.filter(
+        template_type=ClinicalNoteTemplate.TemplateType.SYSTEM,
+        is_system_default=True,
+    ).prefetch_related("elements").first()
+
+    system_templates = ClinicalNoteTemplate.objects.filter(
+        template_type=ClinicalNoteTemplate.TemplateType.SYSTEM,
+        is_system_default=False,
+    ).prefetch_related("elements").order_by("name")
+
+    my_templates = ClinicalNoteTemplate.objects.filter(
+        template_type=ClinicalNoteTemplate.TemplateType.CUSTOM,
+        doctor=user,
+    ).prefetch_related("elements").order_by("name")
+
+    # Effective active: explicit or system default
+    effective_active = active_template or system_default
+
+    return render(request, "doctors/clinical_note_templates.html", {
+        "active_template":  active_template,
+        "effective_active": effective_active,
+        "system_default":   system_default,
+        "system_templates": system_templates,
+        "my_templates":     my_templates,
+        "element_labels":   _ELEMENT_LABELS,
+    })
+
+
+@login_required
+def clinical_note_template_create(request):
+    """Create a new custom template."""
+    user = _require_doctor(request)
+    if user is None:
+        return redirect("accounts:home")
+
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        description = request.POST.get("description", "").strip()
+        element_types = request.POST.getlist("elements")
+
+        if not name:
+            messages.error(request, "Template name is required.")
+            return redirect("doctors:clinical_note_template_create")
+
+        # Only allow valid element types
+        valid = [e for e in element_types if e in _ALL_ELEMENT_TYPES]
+        if not valid:
+            messages.error(request, "Please select at least one element.")
+            return redirect("doctors:clinical_note_template_create")
+
+        tpl = ClinicalNoteTemplate.objects.create(
+            name=name,
+            description=description,
+            template_type=ClinicalNoteTemplate.TemplateType.CUSTOM,
+            doctor=user,
+        )
+        for idx, et in enumerate(valid):
+            ClinicalNoteTemplateElement.objects.create(
+                template=tpl, element_type=et, order=idx
+            )
+
+        messages.success(request, f'Template "{name}" created.')
+        return redirect("doctors:clinical_note_templates")
+
+    return render(request, "doctors/clinical_note_template_form.html", {
+        "mode": "create",
+        "element_choices": [(et, _ELEMENT_LABELS[et]) for et in _ALL_ELEMENT_TYPES],
+        "selected_elements": set(_ALL_ELEMENT_TYPES[:5]),
+    })
+
+
+@login_required
+def clinical_note_template_edit(request, template_id):
+    """Edit a doctor-owned custom template."""
+    user = _require_doctor(request)
+    if user is None:
+        return redirect("accounts:home")
+
+    tpl = get_object_or_404(
+        ClinicalNoteTemplate,
+        id=template_id,
+        template_type=ClinicalNoteTemplate.TemplateType.CUSTOM,
+        doctor=user,
+    )
+
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        description = request.POST.get("description", "").strip()
+        element_types = request.POST.getlist("elements")
+
+        if not name:
+            messages.error(request, "Template name is required.")
+            return redirect("doctors:clinical_note_template_edit", template_id=tpl.id)
+
+        valid = [e for e in element_types if e in _ALL_ELEMENT_TYPES]
+        if not valid:
+            messages.error(request, "Please select at least one element.")
+            return redirect("doctors:clinical_note_template_edit", template_id=tpl.id)
+
+        tpl.name = name
+        tpl.description = description
+        tpl.save()
+
+        # Replace elements
+        tpl.elements.all().delete()
+        for idx, et in enumerate(valid):
+            ClinicalNoteTemplateElement.objects.create(
+                template=tpl, element_type=et, order=idx
+            )
+
+        messages.success(request, f'Template "{name}" updated.')
+        return redirect("doctors:clinical_note_templates")
+
+    selected_elements = set(
+        tpl.elements.order_by("order").values_list("element_type", flat=True)
+    )
+    return render(request, "doctors/clinical_note_template_form.html", {
+        "mode": "edit",
+        "tpl": tpl,
+        "element_choices": [(et, _ELEMENT_LABELS[et]) for et in _ALL_ELEMENT_TYPES],
+        "selected_elements": selected_elements,
+    })
+
+
+@login_required
+def clinical_note_template_activate(request, template_id):
+    """Activate a template (system or doctor-owned custom) for the current doctor."""
+    if request.method != "POST":
+        return redirect("doctors:clinical_note_templates")
+
+    user = _require_doctor(request)
+    if user is None:
+        return redirect("accounts:home")
+
+    tpl = get_object_or_404(ClinicalNoteTemplate, id=template_id)
+
+    # Doctors may only activate system templates or their own custom templates
+    if tpl.template_type == ClinicalNoteTemplate.TemplateType.CUSTOM and tpl.doctor != user:
+        messages.error(request, "You cannot activate another doctor's template.")
+        return redirect("doctors:clinical_note_templates")
+
+    settings_obj, _ = DoctorClinicalNoteSettings.objects.get_or_create(doctor=user)
+
+    if tpl.is_system_default:
+        # Activating the system default = clear the override (use None)
+        settings_obj.active_template = None
+    else:
+        settings_obj.active_template = tpl
+
+    settings_obj.save()
+    messages.success(request, f'"{tpl.name}" is now your active template.')
+    return redirect("doctors:clinical_note_templates")
+
+
+@login_required
+def clinical_note_template_delete(request, template_id):
+    """Delete a doctor-owned custom template."""
+    if request.method != "POST":
+        return redirect("doctors:clinical_note_templates")
+
+    user = _require_doctor(request)
+    if user is None:
+        return redirect("accounts:home")
+
+    tpl = get_object_or_404(
+        ClinicalNoteTemplate,
+        id=template_id,
+        template_type=ClinicalNoteTemplate.TemplateType.CUSTOM,
+        doctor=user,
+    )
+
+    # If this was the active template, clear the setting
+    DoctorClinicalNoteSettings.objects.filter(
+        doctor=user, active_template=tpl
+    ).update(active_template=None)
+
+    name = tpl.name
+    tpl.delete()
+    messages.success(request, f'Template "{name}" deleted.')
+    return redirect("doctors:clinical_note_templates")

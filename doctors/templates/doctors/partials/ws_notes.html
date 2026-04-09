@@ -39,29 +39,59 @@
       <input type="hidden" name="clinic_id" value="{{ clinics.0.id }}">
       {% endif %}
 
-      <!-- SOAP Fields -->
+      <!-- Sections driven by the doctor's active Clinical Note Template -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {% if not active_note_elements or 'SUBJECTIVE' in active_note_elements %}
         <div>
           <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">S — Subjective</label>
           <textarea name="subjective" rows="3" class="ws-textarea" placeholder="Patient's symptoms and complaints...">{% if edit_note %}{{ edit_note.subjective }}{% endif %}</textarea>
         </div>
+        {% endif %}
+        {% if not active_note_elements or 'OBJECTIVE' in active_note_elements %}
         <div>
           <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">O — Objective</label>
           <textarea name="objective" rows="3" class="ws-textarea" placeholder="Physical findings, vitals, labs...">{% if edit_note %}{{ edit_note.objective }}{% endif %}</textarea>
         </div>
+        {% endif %}
+        {% if not active_note_elements or 'ASSESSMENT' in active_note_elements %}
         <div>
           <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">A — Assessment</label>
           <textarea name="assessment" rows="3" class="ws-textarea" placeholder="Diagnosis or differential...">{% if edit_note %}{{ edit_note.assessment }}{% endif %}</textarea>
         </div>
+        {% endif %}
+        {% if not active_note_elements or 'PLAN' in active_note_elements %}
         <div>
           <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">P — Plan</label>
           <textarea name="plan" rows="3" class="ws-textarea" placeholder="Treatment plan, follow-up...">{% if edit_note %}{{ edit_note.plan }}{% endif %}</textarea>
         </div>
+        {% endif %}
       </div>
+      {% if not active_note_elements or 'VITALS' in active_note_elements %}
       <div>
-        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Free Text (optional)</label>
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Vitals</label>
+        <textarea name="vitals" rows="2" class="ws-textarea" placeholder="BP, HR, Temp, SpO2, weight…"></textarea>
+      </div>
+      {% endif %}
+      {% if not active_note_elements or 'BODY_DIAGRAM' in active_note_elements %}
+      <div class="p-3 rounded-lg bg-orange-50/60 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/30">
+        <p class="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wide mb-1">Body Diagram</p>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">Describe or annotate the affected body region.</p>
+        <textarea name="body_diagram_notes" rows="2" class="ws-textarea" placeholder="e.g. Right knee lateral pain, left shoulder impingement…"></textarea>
+      </div>
+      {% endif %}
+      {% if not active_note_elements or 'DENTAL' in active_note_elements %}
+      <div class="p-3 rounded-lg bg-cyan-50/60 dark:bg-cyan-900/10 border border-cyan-100 dark:border-cyan-900/30">
+        <p class="text-xs font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-wide mb-1">Dental Chart</p>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">Document tooth-level findings.</p>
+        <textarea name="dental_notes" rows="2" class="ws-textarea" placeholder="e.g. Tooth 36 – caries, Tooth 11 – fracture…"></textarea>
+      </div>
+      {% endif %}
+      {% if not active_note_elements or 'FREE_TEXT' in active_note_elements %}
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Free Text <span class="font-normal normal-case text-slate-400 dark:text-slate-500">(optional)</span></label>
         <textarea name="free_text" rows="2" class="ws-textarea" placeholder="Additional notes...">{% if edit_note %}{{ edit_note.free_text }}{% endif %}</textarea>
       </div>
+      {% endif %}
 
       <div class="flex items-center gap-3 pt-1">
         <button type="submit"
