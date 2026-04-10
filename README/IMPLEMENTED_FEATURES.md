@@ -331,3 +331,43 @@ Steps 1-2 are required for the clinic to become `ACTIVE`. Steps 3-4 are optional
 
 Allows the clinic owner (MAIN_DOCTOR) to review per-clinic specialty certificates
 uploaded by their doctors. Layer B of the dual-layer verification system.
+
+---
+
+## Clinical Note Templates
+
+**App**: `doctors`
+**Models**: `ClinicalNoteTemplate`, `ClinicalNoteTemplateElement`, `DoctorClinicalNoteSettings`
+**Routes**: `doctors:clinical_note_templates`, `doctors:clinical_note_template_create`,
+`doctors:clinical_note_template_edit`, `doctors:clinical_note_template_activate`,
+`doctors:clinical_note_template_delete`
+**URL prefix**: `/doctors/clinical-note-templates/`
+**Sidebar**: Setup → Note Templates
+
+### What it does
+Doctors can configure the layout/sections of their Clinical Notes editor.
+
+### Template types
+| Type | Description |
+|---|---|
+| `SYSTEM` + `is_system_default=True` | The platform fallback template used when no override is set |
+| `SYSTEM` + `is_system_default=False` | Ready-made specialty templates (Orthopedic, Dental, General) |
+| `CUSTOM` | Doctor-created templates, each owned by a single doctor |
+
+### Element types
+`SUBJECTIVE`, `OBJECTIVE`, `ASSESSMENT`, `PLAN`, `FREE_TEXT`, `VITALS`, `BODY_DIAGRAM`, `DENTAL`
+
+### Activation rules
+- Only one template is active per doctor at a time.
+- Activating the system default clears the override (sets `active_template=None`).
+- Doctors may only activate system templates or their own custom templates.
+- When a doctor deletes their active custom template, the active override is cleared (falls back to system default).
+
+### Backward compatibility
+- Existing `ClinicalNote` records are never modified — all stored fields remain intact.
+- The note viewer always shows only non-empty SOAP fields (unchanged behavior).
+- When `active_note_elements` is `None` or empty the workspace form falls back to rendering all sections.
+
+### Seed data
+Migration `0004_seed_system_templates` creates four system templates:
+Default, General, Orthopedic (includes Body Diagram), Dental (includes Dental Chart).

@@ -514,3 +514,122 @@ class FormField(models.Model):
 
     def __str__(self):
         return f"[Legacy] {self.label}"
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Clinical Note Templates
+# ──────────────────────────────────────────────────────────────────────────────
+
+class ClinicalNoteTemplate(models.Model):
+    """
+    A configurable template that controls which elements appear in the
+    Clinical Notes UI when a doctor creates or edits a note.
+
+    - SYSTEM templates (doctor=None) are provided by the platform.
+    - CUSTOM templates are created and owned by a specific doctor.
+    - The special is_system_default flag marks the fall-back template used
+      when a doctor has no active template configured.
+    """
+
+    class TemplateType(models.TextChoices):
+        SYSTEM = "SYSTEM", "System Template"
+        CUSTOM = "CUSTOM", "Custom Template"
+
+    name = models.CharField(max_length=150)
+    description = models.TextField(blank=True)
+    template_type = models.CharField(
+        max_length=10,
+        choices=TemplateType.choices,
+        default=TemplateType.CUSTOM,
+    )
+    # null for system templates; set to the owning doctor for custom templates
+    doctor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="clinical_note_templates",
+    )
+    # Marks the single platform-wide default template (exactly one row)
+    is_system_default = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Clinical Note Template"
+        verbose_name_plural = "Clinical Note Templates"
+        ordering = ["template_type", "name"]
+
+    def __str__(self):
+        owner = self.doctor.name if self.doctor else "System"
+        return f"{self.name} [{owner}]"
+
+    def get_element_types(self):
+        """Return ordered list of element type codes for this template."""
+        return list(
+            self.elements.order_by("order").values_list("element_type", flat=True)
+        )
+
+
+class ClinicalNoteTemplateElement(models.Model):
+    """
+    An ordered element within a ClinicalNoteTemplate.
+    The element_type corresponds to a field/block in the clinical note UI.
+    """
+
+    class ElementType(models.TextChoices):
+        SUBJECTIVE   = "SUBJECTIVE",   "S — Subjective"
+        OBJECTIVE    = "OBJECTIVE",    "O — Objective"
+        ASSESSMENT   = "ASSESSMENT",   "A — Assessment"
+        PLAN         = "PLAN",         "P — Plan"
+        FREE_TEXT    = "FREE_TEXT",    "Free Text"
+        VITALS       = "VITALS",       "Vitals"
+        BODY_DIAGRAM = "BODY_DIAGRAM", "Body Diagram"
+        DENTAL       = "DENTAL",       "Dental Chart"
+
+    template = models.ForeignKey(
+        ClinicalNoteTemplate,
+        on_delete=models.CASCADE,
+        related_name="elements",
+    )
+    element_type = models.CharField(max_length=20, choices=ElementType.choices)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = "Template Element"
+        verbose_name_plural = "Template Elements"
+        ordering = ["template", "order"]
+        unique_together = [("template", "element_type")]
+
+    def __str__(self):
+        return f"{self.template.name} / {self.get_element_type_display()} (#{self.order})"
+
+
+class DoctorClinicalNoteSettings(models.Model):
+    """
+    Per-doctor settings for Clinical Notes.
+    Tracks which template is currently active for the doctor.
+    When active_template is None the system default template is used.
+    """
+
+    doctor = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="clinical_note_settings",
+    )
+    active_template = models.ForeignKey(
+        ClinicalNoteTemplate,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="activated_by",
+    )
+
+    class Meta:
+        verbose_name = "Doctor Clinical Note Settings"
+        verbose_name_plural = "Doctor Clinical Note Settings"
+
+    def __str__(self):
+        tpl = self.active_template.name if self.active_template else "System Default"
+        return f"{self.doctor.name} → {tpl}"
