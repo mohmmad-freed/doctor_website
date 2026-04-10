@@ -1,0 +1,397 @@
+{% extends "secretary/base_secretary.html" %}
+{% load static %}
+
+{% block title %}ملفي الشخصي — {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+  {# ── Header ── #}
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">ملفي الشخصي</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">إدارة معلوماتك الشخصية وإعدادات الحساب</p>
+  </div>
+
+  {# ── Profile Hero ── #}
+  <div class="relative overflow-hidden rounded-2xl shadow-sm bg-gradient-to-br from-purple-600 to-violet-800">
+    <div class="absolute inset-0 pointer-events-none">
+      <div class="absolute w-48 h-48 rounded-full bg-white/5 -top-16 -right-12"></div>
+      <div class="absolute w-24 h-24 rounded-full bg-white/5 bottom-0 left-8"></div>
+    </div>
+    <div class="relative z-10 px-6 py-5 flex items-center gap-5 flex-wrap">
+      {# Avatar #}
+      <div class="w-16 h-16 rounded-full bg-white/20 border-2 border-white/30 flex items-center justify-center text-white font-bold text-2xl flex-shrink-0 shadow-lg">
+        {{ request.user.name|slice:":1" }}
+      </div>
+      <div class="flex-1 min-w-0">
+        <h2 class="text-xl font-bold text-white leading-tight truncate">{{ request.user.name }}</h2>
+        <p class="text-white/70 text-sm mt-0.5" dir="ltr">{{ request.user.phone }}</p>
+        <div class="flex flex-wrap gap-2 mt-2">
+          <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/15 text-white border border-white/20">
+            <i class="fa-solid fa-user-tie text-[10px]"></i> سكرتير/ة
+          </span>
+          <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/15 text-white border border-white/20">
+            <i class="fa-solid fa-hospital text-[10px]"></i> {{ clinic.name }}
+          </span>
+          {% if request.user.is_verified %}
+          <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/30 text-emerald-100 border border-emerald-400/30">
+            <i class="fa-solid fa-circle-check text-[10px]"></i> موثق
+          </span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Personal Info (Edit) ── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+      <h3 class="font-semibold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+        <i class="fa-solid fa-user-pen text-purple-500"></i>
+        المعلومات الشخصية
+      </h3>
+    </div>
+    <div class="p-5">
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="action" value="profile">
+        <div class="space-y-4">
+
+          {# Name #}
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+              الاسم الكامل <span class="text-red-500">*</span>
+            </label>
+            <input type="text" name="name"
+                   value="{{ profile_data.name|default:request.user.name }}"
+                   placeholder="أدخل اسمك الكامل"
+                   autocomplete="name"
+                   class="w-full px-3 py-2.5 rounded-xl border {% if profile_errors.name %}border-red-400 dark:border-red-500{% else %}border-gray-200 dark:border-gray-600{% endif %} bg-gray-50 dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
+            {% if profile_errors.name %}
+            <p class="text-xs text-red-600 dark:text-red-400 mt-1 flex items-center gap-1">
+              <i class="fa-solid fa-circle-exclamation"></i> {{ profile_errors.name }}
+            </p>
+            {% endif %}
+          </div>
+
+          {# Email #}
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+              البريد الإلكتروني
+            </label>
+            <input type="email" name="email" dir="ltr"
+                   value="{{ profile_data.email|default:request.user.email|default:'' }}"
+                   placeholder="example@email.com"
+                   autocomplete="email"
+                   class="w-full px-3 py-2.5 rounded-xl border {% if profile_errors.email %}border-red-400 dark:border-red-500{% else %}border-gray-200 dark:border-gray-600{% endif %} bg-gray-50 dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
+            {% if profile_errors.email %}
+            <p class="text-xs text-red-600 dark:text-red-400 mt-1 flex items-center gap-1">
+              <i class="fa-solid fa-circle-exclamation"></i> {{ profile_errors.email }}
+            </p>
+            {% else %}
+            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1 flex items-center gap-1">
+              <i class="fa-solid fa-circle-info"></i>
+              تغيير البريد الإلكتروني يتطلب التحقق عبر رمز يُرسل للعنوان الجديد.
+            </p>
+            {% endif %}
+          </div>
+
+          {# Phone (locked) #}
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+              رقم الهاتف
+            </label>
+            <div class="relative">
+              <input type="text" value="{{ request.user.phone }}" disabled dir="ltr"
+                     class="w-full px-3 py-2.5 ps-9 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 text-sm text-gray-500 dark:text-gray-400 cursor-not-allowed">
+              <i class="fa-solid fa-lock absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-xs"></i>
+            </div>
+            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1 flex items-center gap-1">
+              <i class="fa-solid fa-lock"></i>
+              رقم الهاتف هو معرّف الحساب ولا يمكن تغييره.
+            </p>
+          </div>
+
+          {# City #}
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+              المدينة
+            </label>
+            <select name="city"
+                    class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
+              <option value="">— اختر المدينة —</option>
+              {% for city in cities %}
+              <option value="{{ city.id }}"
+                {% if profile_data %}
+                  {% if profile_data.city == city.id|stringformat:"s" %}selected{% endif %}
+                {% elif request.user.city_id == city.id %}selected{% endif %}>
+                {{ city.name }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          {# Submit #}
+          <div class="flex items-center justify-end pt-2">
+            <button type="submit"
+                    class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold shadow transition-colors">
+              <i class="fa-solid fa-floppy-disk"></i> حفظ التغييرات
+            </button>
+          </div>
+
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {# ── Password Change ── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+      <h3 class="font-semibold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+        <i class="fa-solid fa-key text-amber-500"></i>
+        تغيير كلمة المرور
+      </h3>
+    </div>
+    <div class="p-5">
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="action" value="password">
+        <div class="space-y-4">
+
+          {# Current password #}
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+              كلمة المرور الحالية <span class="text-red-500">*</span>
+            </label>
+            <input type="password" name="current_password"
+                   autocomplete="current-password"
+                   class="w-full px-3 py-2.5 rounded-xl border {% if password_errors.current_password %}border-red-400 dark:border-red-500{% else %}border-gray-200 dark:border-gray-600{% endif %} bg-gray-50 dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
+            {% if password_errors.current_password %}
+            <p class="text-xs text-red-600 dark:text-red-400 mt-1 flex items-center gap-1">
+              <i class="fa-solid fa-circle-exclamation"></i> {{ password_errors.current_password }}
+            </p>
+            {% endif %}
+          </div>
+
+          {# New password #}
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                كلمة المرور الجديدة <span class="text-red-500">*</span>
+              </label>
+              <input type="password" name="new_password"
+                     autocomplete="new-password"
+                     class="w-full px-3 py-2.5 rounded-xl border {% if password_errors.new_password %}border-red-400 dark:border-red-500{% else %}border-gray-200 dark:border-gray-600{% endif %} bg-gray-50 dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
+              {% if password_errors.new_password %}
+              <p class="text-xs text-red-600 dark:text-red-400 mt-1 flex items-center gap-1">
+                <i class="fa-solid fa-circle-exclamation"></i> {{ password_errors.new_password }}
+              </p>
+              {% else %}
+              <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">8 أحرف على الأقل</p>
+              {% endif %}
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                تأكيد كلمة المرور <span class="text-red-500">*</span>
+              </label>
+              <input type="password" name="confirm_password"
+                     autocomplete="new-password"
+                     class="w-full px-3 py-2.5 rounded-xl border {% if password_errors.confirm_password %}border-red-400 dark:border-red-500{% else %}border-gray-200 dark:border-gray-600{% endif %} bg-gray-50 dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
+              {% if password_errors.confirm_password %}
+              <p class="text-xs text-red-600 dark:text-red-400 mt-1 flex items-center gap-1">
+                <i class="fa-solid fa-circle-exclamation"></i> {{ password_errors.confirm_password }}
+              </p>
+              {% endif %}
+            </div>
+          </div>
+
+          {# Submit #}
+          <div class="flex items-center justify-end pt-2">
+            <button type="submit"
+                    class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold shadow transition-colors">
+              <i class="fa-solid fa-lock"></i> تغيير كلمة المرور
+            </button>
+          </div>
+
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {# ── Preferences (localStorage-based) ── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+      <h3 class="font-semibold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+        <i class="fa-solid fa-sliders text-blue-500"></i>
+        التفضيلات
+      </h3>
+    </div>
+    <div class="divide-y divide-gray-50 dark:divide-gray-700">
+
+      {# Theme #}
+      <div class="px-5 py-4 flex items-center justify-between gap-4">
+        <div>
+          <p class="text-sm font-medium text-gray-900 dark:text-gray-100">المظهر</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">الوضع الليلي أو النهاري</p>
+        </div>
+        <div class="flex items-center gap-3 text-sm">
+          <button id="pref-theme-light"
+                  onclick="setTheme('light')"
+                  class="px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors">
+            <i class="fa-solid fa-sun me-1 text-amber-500"></i> نهاري
+          </button>
+          <button id="pref-theme-dark"
+                  onclick="setTheme('dark')"
+                  class="px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors">
+            <i class="fa-solid fa-moon me-1 text-indigo-400"></i> ليلي
+          </button>
+        </div>
+      </div>
+
+      {# Default calendar view #}
+      <div class="px-5 py-4 flex items-center justify-between gap-4">
+        <div>
+          <p class="text-sm font-medium text-gray-900 dark:text-gray-100">عرض التقويم الافتراضي</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">العرض المفضل عند فتح التقويم</p>
+        </div>
+        <select id="pref-calendar-view"
+                onchange="savePref('secretary_cal_view', this.value)"
+                class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
+          <option value="dayGridMonth">شهري</option>
+          <option value="timeGridWeek">أسبوعي</option>
+          <option value="timeGridDay">يومي</option>
+          <option value="listWeek">قائمة</option>
+        </select>
+      </div>
+
+      {# Default appointment duration #}
+      <div class="px-5 py-4 flex items-center justify-between gap-4">
+        <div>
+          <p class="text-sm font-medium text-gray-900 dark:text-gray-100">مدة الموعد الافتراضية</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">للاقتراح التلقائي عند الحجز</p>
+        </div>
+        <select id="pref-appt-duration"
+                onchange="savePref('secretary_appt_duration', this.value)"
+                class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
+          <option value="15">15 دقيقة</option>
+          <option value="20">20 دقيقة</option>
+          <option value="30">30 دقيقة</option>
+          <option value="45">45 دقيقة</option>
+          <option value="60">ساعة</option>
+        </select>
+      </div>
+
+    </div>
+  </div>
+
+  {# ── Clinic Assignment (read-only) ── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+      <h3 class="font-semibold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+        <i class="fa-solid fa-hospital text-emerald-500"></i>
+        العيادة المرتبطة
+      </h3>
+    </div>
+    <div class="px-5 py-4">
+      <div class="flex items-center gap-4">
+        <div class="w-11 h-11 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 flex-shrink-0">
+          <i class="fa-solid fa-hospital-user"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="font-semibold text-gray-900 dark:text-white truncate">{{ clinic.name }}</p>
+          {% if clinic.address %}
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+            <i class="fa-solid fa-location-dot me-1"></i>{{ clinic.address }}
+          </p>
+          {% endif %}
+        </div>
+        <div>
+          {% if staff.is_active %}
+          <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">
+            <i class="fa-solid fa-circle text-[6px]"></i> نشط
+          </span>
+          {% else %}
+          <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+            غير نشط
+          </span>
+          {% endif %}
+        </div>
+      </div>
+      {% if staff.created_at %}
+      <p class="text-xs text-gray-400 dark:text-gray-500 mt-3">
+        <i class="fa-regular fa-clock me-1"></i>
+        انضممت {{ staff.created_at|date:"j F Y" }}
+      </p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Preferences: read from localStorage on page load ─────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+  // Theme buttons active state
+  function updateThemeButtons() {
+    var isDark = document.documentElement.classList.contains('dark');
+    var lightBtn = document.getElementById('pref-theme-light');
+    var darkBtn = document.getElementById('pref-theme-dark');
+    if (!lightBtn || !darkBtn) return;
+    if (isDark) {
+      darkBtn.classList.add('bg-indigo-100', 'dark:bg-indigo-900/30', 'border-indigo-400', 'text-indigo-700', 'dark:text-indigo-300');
+      darkBtn.classList.remove('border-gray-200', 'dark:border-gray-600', 'text-gray-600', 'dark:text-gray-300');
+      lightBtn.classList.add('border-gray-200', 'dark:border-gray-600', 'text-gray-600', 'dark:text-gray-300');
+      lightBtn.classList.remove('bg-amber-100', 'dark:bg-amber-900/30', 'border-amber-400', 'text-amber-700');
+    } else {
+      lightBtn.classList.add('bg-amber-100', 'border-amber-400', 'text-amber-700');
+      lightBtn.classList.remove('border-gray-200', 'dark:border-gray-600', 'text-gray-600');
+      darkBtn.classList.add('border-gray-200', 'dark:border-gray-600', 'text-gray-600', 'dark:text-gray-300');
+      darkBtn.classList.remove('bg-indigo-100', 'dark:bg-indigo-900/30', 'border-indigo-400', 'text-indigo-700', 'dark:text-indigo-300');
+    }
+  }
+  updateThemeButtons();
+
+  // Calendar view
+  var calView = localStorage.getItem('secretary_cal_view') || 'timeGridWeek';
+  var calSelect = document.getElementById('pref-calendar-view');
+  if (calSelect) calSelect.value = calView;
+
+  // Appointment duration
+  var apptDur = localStorage.getItem('secretary_appt_duration') || '30';
+  var durSelect = document.getElementById('pref-appt-duration');
+  if (durSelect) durSelect.value = apptDur;
+});
+
+function savePref(key, value) {
+  try { localStorage.setItem(key, value); } catch(e) {}
+}
+
+function setTheme(t) {
+  try { localStorage.setItem('theme', t); } catch(e) {}
+  if (t === 'dark') {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
+  // Sync all theme toggles on the page
+  document.querySelectorAll('.theme-toggle').forEach(function(btn) {
+    if (t === 'dark') btn.classList.add('is-dark');
+    else btn.classList.remove('is-dark');
+  });
+  // Update button active states
+  var lightBtn = document.getElementById('pref-theme-light');
+  var darkBtn = document.getElementById('pref-theme-dark');
+  if (lightBtn && darkBtn) {
+    if (t === 'dark') {
+      darkBtn.classList.add('bg-indigo-100', 'border-indigo-400', 'text-indigo-700');
+      lightBtn.classList.remove('bg-amber-100', 'border-amber-400', 'text-amber-700');
+      lightBtn.classList.add('border-gray-200', 'text-gray-600');
+    } else {
+      lightBtn.classList.add('bg-amber-100', 'border-amber-400', 'text-amber-700');
+      darkBtn.classList.remove('bg-indigo-100', 'border-indigo-400', 'text-indigo-700');
+      darkBtn.classList.add('border-gray-200', 'text-gray-600');
+    }
+  }
+}
+</script>
+{% endblock %}

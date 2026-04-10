@@ -1,0 +1,139 @@
+{% extends "secretary/base_secretary.html" %}
+{% load static %}
+
+{% block title %}غرفة الانتظار — {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+
+  {# ── Header ── #}
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">غرفة الانتظار</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ today|date:"l، j F Y" }}</p>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap">
+      {# Doctor filter #}
+      <form method="get" class="flex items-center gap-2">
+        <select name="doctor_id" onchange="this.form.submit()"
+                class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
+          <option value="">جميع الأطباء</option>
+          {% for doc in doctors %}
+          <option value="{{ doc.id }}" {% if doctor_filter == doc.id|stringformat:"s" %}selected{% endif %}>
+            د. {{ doc.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </form>
+
+      <a href="{% url 'secretary:checkin_search' %}"
+         class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold shadow transition-colors">
+        <i class="fa-solid fa-user-check"></i> تسجيل وصول
+      </a>
+
+      <a href="{% url 'secretary:waiting_room_display' %}?clinic_id={{ clinic.id }}"
+         target="_blank"
+         class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-semibold transition-colors"
+         title="فتح شاشة العرض">
+        <i class="fa-solid fa-tv"></i> شاشة الانتظار
+      </a>
+    </div>
+  </div>
+
+  {# ── Stats strip ── #}
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4 flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400">
+        <i class="fa-solid fa-chair text-sm"></i>
+      </div>
+      <div>
+        <div class="text-xl font-bold text-gray-900 dark:text-white">{{ total_waiting }}</div>
+        <div class="text-xs text-gray-500 dark:text-gray-400">ينتظرون الآن</div>
+      </div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4 flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+        <i class="fa-solid fa-calendar-check text-sm"></i>
+      </div>
+      <div>
+        <div class="text-xl font-bold text-gray-900 dark:text-white">{{ confirmed_list|length }}</div>
+        <div class="text-xs text-gray-500 dark:text-gray-400">مواعيد مؤكدة</div>
+      </div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4 flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center text-amber-600 dark:text-amber-400">
+        <i class="fa-solid fa-clock text-sm"></i>
+      </div>
+      <div>
+        <div class="text-xl font-bold text-gray-900 dark:text-white">{{ avg_wait }}<span class="text-xs font-normal ms-0.5">د</span></div>
+        <div class="text-xs text-gray-500 dark:text-gray-400">متوسط الانتظار</div>
+      </div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-4 flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center text-purple-600 dark:text-purple-400">
+        <i class="fa-solid fa-stethoscope text-sm"></i>
+      </div>
+      <div>
+        <div class="text-xl font-bold text-gray-900 dark:text-white">{{ doctors|length }}</div>
+        <div class="text-xs text-gray-500 dark:text-gray-400">أطباء اليوم</div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Two-column board ── #}
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+    {# ── Column A: CONFIRMED (arriving soon) ── #}
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col">
+      <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span>
+          <h2 class="font-semibold text-gray-900 dark:text-white text-sm">مواعيد مؤكدة اليوم</h2>
+          <span class="text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
+            {{ confirmed_list|length }}
+          </span>
+        </div>
+        <span class="text-xs text-gray-400 dark:text-gray-500">
+          <i class="fa-solid fa-rotate me-1"></i>تحديث كل 30 ث
+        </span>
+      </div>
+
+      <div id="confirmed-column"
+           class="divide-y divide-gray-50 dark:divide-gray-700 flex-1"
+           hx-get="{% url 'secretary:waiting_room_confirmed_htmx' %}{% if doctor_filter %}?doctor_id={{ doctor_filter }}{% endif %}"
+           hx-trigger="every 30s"
+           hx-swap="innerHTML">
+        {% include "secretary/htmx/waiting_room_confirmed_rows.html" with confirmed_list=confirmed_list clinic=clinic %}
+      </div>
+    </div>
+
+    {# ── Column B: CHECKED_IN (active queue) ── #}
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col">
+      <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse inline-block"></span>
+          <h2 class="font-semibold text-gray-900 dark:text-white text-sm">طابور الانتظار</h2>
+          <span class="text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
+            {{ total_waiting }}
+          </span>
+        </div>
+        <div class="flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>&lt;15د</span>
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>15-30د</span>
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-400 inline-block"></span>&gt;30د</span>
+        </div>
+      </div>
+
+      <div id="checkedin-column"
+           class="divide-y divide-gray-50 dark:divide-gray-700 flex-1"
+           hx-get="{% url 'secretary:waiting_room_checkedin_htmx' %}{% if doctor_filter %}?doctor_id={{ doctor_filter }}{% endif %}"
+           hx-trigger="every 30s"
+           hx-swap="innerHTML">
+        {% include "secretary/htmx/waiting_room_checkedin_rows.html" with checkedin_list=checkedin_list clinic=clinic %}
+      </div>
+    </div>
+
+  </div>{# end grid #}
+
+</div>
+{% endblock %}

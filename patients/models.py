@@ -87,6 +87,12 @@ class ClinicPatient(models.Model):
     )
     registered_at = models.DateTimeField(auto_now_add=True)
     notes = models.TextField(blank=True)
+    file_number = models.CharField(
+        max_length=20,
+        blank=True,
+        default="",
+        help_text="Auto-generated per-clinic file number (e.g. 2026-0001). Set by the secretary on registration.",
+    )
 
     class Meta:
         unique_together = [("clinic", "patient")]

@@ -1,0 +1,300 @@
+{% extends "secretary/base_secretary.html" %}
+{% load static %}
+
+{% block title %}{{ patient.name }} — {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+  {# ── Back + header ── #}
+  <div class="flex items-start gap-4">
+    <a href="{% url 'secretary:patient_list' %}"
+       aria-label="العودة إلى قائمة المرضى"
+       class="mt-1 p-2 rounded-xl text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0">
+      <i class="fa-solid fa-arrow-right"></i>
+    </a>
+    <div class="flex-1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div class="flex items-center gap-4">
+        {# Avatar #}
+        <div class="w-14 h-14 rounded-2xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center text-purple-700 dark:text-purple-300 font-bold text-2xl flex-shrink-0">
+          {{ patient.name|slice:":1" }}
+        </div>
+        <div>
+          <h1 class="text-xl font-bold text-gray-900 dark:text-white">{{ patient.name }}</h1>
+          <div class="flex items-center gap-3 mt-0.5 text-sm text-gray-500 dark:text-gray-400 flex-wrap">
+            <span><i class="fa-solid fa-phone text-xs me-1"></i>{{ patient.phone }}</span>
+            {% if clinic_patient.file_number %}
+            <span class="text-gray-300 dark:text-gray-600">|</span>
+            <span class="font-mono text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-lg">
+              {{ clinic_patient.file_number }}
+            </span>
+            {% endif %}
+            {% if profile.get_gender_display %}
+            <span class="text-gray-300 dark:text-gray-600">|</span>
+            <span>{{ profile.get_gender_display }}</span>
+            {% endif %}
+            {% if age is not None %}
+            <span class="text-gray-300 dark:text-gray-600">|</span>
+            <span>{{ age }} سنة</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <a href="{% url 'secretary:create_appointment' %}?patient_id={{ patient.id }}"
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold shadow transition-colors">
+          <i class="fa-solid fa-calendar-plus"></i> حجز موعد
+        </a>
+        <a href="{% url 'secretary:edit_patient' patient.id %}"
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-semibold transition-colors">
+          <i class="fa-solid fa-pen"></i> تعديل
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {# ── Tabs ── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
+    {# Tab bar #}
+    <div class="flex border-b border-gray-100 dark:border-gray-700 overflow-x-auto">
+      {% for tab_id, tab_label, tab_icon in tab_list %}
+      <a href="?tab={{ tab_id }}"
+         class="flex items-center gap-2 px-5 py-3.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors
+           {% if active_tab == tab_id %}border-purple-500 text-purple-600 dark:text-purple-400
+           {% else %}border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300{% endif %}">
+        <i class="{{ tab_icon }}"></i>
+        {{ tab_label }}
+      </a>
+      {% endfor %}
+    </div>
+
+    <div class="p-5">
+
+      {# ══ Tab: Personal Info ══ #}
+      {% if active_tab == 'info' %}
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {# Contact #}
+        <div class="space-y-4">
+          <h3 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">بيانات التواصل</h3>
+          <dl class="space-y-3">
+            <div>
+              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">الاسم الكامل</dt>
+              <dd class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ patient.name }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">رقم الهاتف</dt>
+              <dd class="text-sm text-gray-900 dark:text-gray-100 dir-ltr">{{ patient.phone }}</dd>
+            </div>
+            {% if patient.national_id %}
+            <div>
+              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">رقم الهوية</dt>
+              <dd class="text-sm text-gray-900 dark:text-gray-100 dir-ltr">{{ patient.national_id|slice:":4" }}****</dd>
+            </div>
+            {% endif %}
+            {% if patient.city %}
+            <div>
+              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">المدينة</dt>
+              <dd class="text-sm text-gray-900 dark:text-gray-100">{{ patient.city }}</dd>
+            </div>
+            {% endif %}
+            {% if patient.email %}
+            <div>
+              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">البريد الإلكتروني</dt>
+              <dd class="text-sm text-gray-900 dark:text-gray-100 dir-ltr">{{ patient.email }}</dd>
+            </div>
+            {% endif %}
+          </dl>
+        </div>
+
+        {# Medical basics #}
+        <div class="space-y-4">
+          <h3 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">البيانات الطبية</h3>
+          <dl class="space-y-3">
+            {% if profile.date_of_birth %}
+            <div>
+              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">تاريخ الميلاد</dt>
+              <dd class="text-sm text-gray-900 dark:text-gray-100">{{ profile.date_of_birth|date:"Y/m/d" }}
+                {% if age is not None %}<span class="text-gray-400 text-xs"> ({{ age }} سنة)</span>{% endif %}
+              </dd>
+            </div>
+            {% endif %}
+            {% if profile.gender %}
+            <div>
+              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">الجنس</dt>
+              <dd class="text-sm text-gray-900 dark:text-gray-100">{{ profile.get_gender_display }}</dd>
+            </div>
+            {% endif %}
+            {% if profile.blood_type %}
+            <div>
+              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">فصيلة الدم</dt>
+              <dd class="text-sm text-gray-900 dark:text-gray-100">{{ profile.blood_type }}</dd>
+            </div>
+            {% endif %}
+            {% if profile.allergies %}
+            <div>
+              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">الحساسية</dt>
+              <dd class="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-line">{{ profile.allergies }}</dd>
+            </div>
+            {% endif %}
+          </dl>
+        </div>
+
+        {# Emergency contact #}
+        {% if profile.emergency_contact_name or profile.emergency_contact_phone %}
+        <div class="sm:col-span-2 pt-4 border-t border-gray-100 dark:border-gray-700">
+          <h3 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">جهة الاتصال في الطوارئ</h3>
+          <dl class="flex flex-wrap gap-6">
+            {% if profile.emergency_contact_name %}
+            <div>
+              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">الاسم</dt>
+              <dd class="text-sm text-gray-900 dark:text-gray-100">{{ profile.emergency_contact_name }}</dd>
+            </div>
+            {% endif %}
+            {% if profile.emergency_contact_phone %}
+            <div>
+              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">الهاتف</dt>
+              <dd class="text-sm text-gray-900 dark:text-gray-100 dir-ltr">{{ profile.emergency_contact_phone }}</dd>
+            </div>
+            {% endif %}
+          </dl>
+        </div>
+        {% endif %}
+
+        {# Clinic notes #}
+        {% if clinic_patient.notes %}
+        <div class="sm:col-span-2 pt-4 border-t border-gray-100 dark:border-gray-700">
+          <h3 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">ملاحظات العيادة</h3>
+          <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line leading-relaxed">{{ clinic_patient.notes }}</p>
+        </div>
+        {% endif %}
+      </div>
+
+      {# ══ Tab: Appointments ══ #}
+      {% elif active_tab == 'appointments' %}
+      <div class="space-y-3">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold text-gray-900 dark:text-white">سجل المواعيد ({{ appointments.count }})</h3>
+          <a href="{% url 'secretary:create_appointment' %}?patient_id={{ patient.id }}"
+             class="inline-flex items-center gap-1.5 text-sm text-purple-600 dark:text-purple-400 hover:underline font-medium">
+            <i class="fa-solid fa-plus text-xs"></i> موعد جديد
+          </a>
+        </div>
+        {% for appt in appointments %}
+        <a href="{% url 'secretary:appointment_detail' appt.id %}"
+           class="flex items-center gap-4 p-4 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700 hover:bg-purple-50/30 dark:hover:bg-purple-900/10 transition-colors group">
+          {# Date block #}
+          <div class="text-center flex-shrink-0 w-12">
+            <div class="text-lg font-bold text-gray-900 dark:text-gray-100 leading-none">{{ appt.appointment_date|date:"d" }}</div>
+            <div class="text-xs text-gray-400 dark:text-gray-500">{{ appt.appointment_date|date:"M Y" }}</div>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="font-medium text-gray-900 dark:text-gray-100 truncate">
+              {{ appt.appointment_type.name }} — الدكتور {{ appt.doctor.name }}
+            </div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ appt.appointment_time|time:"H:i" }}</div>
+          </div>
+          <span class="status-badge status-{{ appt.status|lower }} flex-shrink-0">{{ appt.get_status_display }}</span>
+          <i class="fa-solid fa-chevron-left text-xs text-gray-300 dark:text-gray-600 group-hover:text-purple-400 transition-colors flex-shrink-0"></i>
+        </a>
+        {% empty %}
+        <div class="flex flex-col items-center py-10 gap-3 text-gray-400 dark:text-gray-500 text-sm">
+          <i class="fa-solid fa-calendar-xmark text-3xl opacity-50"></i>
+          <p>لا توجد مواعيد مسجلة</p>
+          <a href="{% url 'secretary:create_appointment' %}?patient_id={{ patient.id }}"
+             class="text-purple-600 dark:text-purple-400 hover:underline font-medium text-sm">
+            حجز أول موعد
+          </a>
+        </div>
+        {% endfor %}
+      </div>
+
+      {# ══ Tab: Medical Records ══ #}
+      {% elif active_tab == 'records' %}
+      <div class="space-y-3">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold text-gray-900 dark:text-white">السجلات الطبية ({{ medical_records.count }})</h3>
+        </div>
+        {% for rec in medical_records %}
+        <div class="flex items-center gap-4 p-4 rounded-xl border border-gray-100 dark:border-gray-700">
+          {# File type icon #}
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0
+            {% if rec.category == 'LAB' %}bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400
+            {% elif rec.category == 'RADIOLOGY' %}bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400
+            {% else %}bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400{% endif %}">
+            {% if rec.category == 'LAB' %}<i class="fa-solid fa-flask text-sm"></i>
+            {% elif rec.category == 'RADIOLOGY' %}<i class="fa-solid fa-x-ray text-sm"></i>
+            {% else %}<i class="fa-solid fa-file-medical text-sm"></i>{% endif %}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="font-medium text-gray-900 dark:text-gray-100 truncate">{{ rec.title }}</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              {{ rec.get_category_display }} · {{ rec.uploaded_at|date:"Y/m/d" }}
+            </div>
+            {% if rec.notes %}
+            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">{{ rec.notes }}</div>
+            {% endif %}
+          </div>
+          {% if rec.file %}
+          <a href="{{ rec.file.url }}" target="_blank"
+             class="p-2 rounded-lg text-gray-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors flex-shrink-0"
+             title="تنزيل">
+            <i class="fa-solid fa-download text-sm"></i>
+          </a>
+          {% endif %}
+        </div>
+        {% empty %}
+        <div class="flex flex-col items-center py-10 gap-3 text-gray-400 dark:text-gray-500 text-sm">
+          <i class="fa-solid fa-folder-open text-3xl opacity-50"></i>
+          <p>لا توجد سجلات طبية</p>
+        </div>
+        {% endfor %}
+      </div>
+
+      {# ══ Tab: Billing ══ #}
+      {% elif active_tab == 'billing' %}
+      <div class="space-y-4">
+        {# Summary cards #}
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-2">
+          <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-700">
+            <div class="text-xs text-gray-400 dark:text-gray-500 mb-1">إجمالي الفواتير</div>
+            <div class="text-xl font-bold text-gray-900 dark:text-white">{{ invoices.count }}</div>
+          </div>
+          <div class="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800">
+            <div class="text-xs text-emerald-600 dark:text-emerald-400 mb-1">إجمالي المدفوع</div>
+            <div class="text-xl font-bold text-emerald-700 dark:text-emerald-300">₪ —</div>
+          </div>
+          <div class="p-4 rounded-xl {% if balance_due_total > 0 %}bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800{% else %}bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-700{% endif %}">
+            <div class="text-xs {% if balance_due_total > 0 %}text-red-600 dark:text-red-400{% else %}text-gray-400 dark:text-gray-500{% endif %} mb-1">رصيد مستحق</div>
+            <div class="text-xl font-bold {% if balance_due_total > 0 %}text-red-700 dark:text-red-300{% else %}text-gray-900 dark:text-white{% endif %}">₪ {{ balance_due_total|default:"0" }}</div>
+          </div>
+        </div>
+
+        {# Invoice list #}
+        {% for inv in invoices %}
+        <div class="flex items-center gap-4 p-4 rounded-xl border border-gray-100 dark:border-gray-700">
+          <div class="flex-1 min-w-0">
+            <div class="font-medium text-gray-900 dark:text-gray-100">فاتورة #{{ inv.id }}</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ inv.created_at|date:"Y/m/d" }}</div>
+          </div>
+          <div class="text-sm font-semibold text-gray-900 dark:text-gray-100">₪ {{ inv.total }}</div>
+          <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium
+            {% if inv.status == 'PAID' %}bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300
+            {% elif inv.status == 'PARTIAL' %}bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300
+            {% else %}bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300{% endif %}">
+            {{ inv.get_status_display|default:inv.status }}
+          </span>
+        </div>
+        {% empty %}
+        <div class="flex flex-col items-center py-10 gap-3 text-gray-400 dark:text-gray-500 text-sm">
+          <i class="fa-solid fa-receipt text-3xl opacity-50"></i>
+          <p>لا توجد فواتير</p>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+    </div>{# end tab body #}
+  </div>{# end tab card #}
+
+</div>
+{% endblock %}

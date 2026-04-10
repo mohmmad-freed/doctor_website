@@ -157,6 +157,16 @@ class Appointment(models.Model):
         default=0,
         help_text="Number of times the patient has edited this appointment. Max 2.",
     )
+    checked_in_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Timestamp set automatically when the appointment status transitions to CHECKED_IN.",
+    )
+    cancellation_reason = models.TextField(
+        blank=True,
+        default="",
+        help_text="Reason provided by the secretary or patient when cancelling.",
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="appointments_created",

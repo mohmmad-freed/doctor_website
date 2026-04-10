@@ -1,0 +1,257 @@
+{% extends "secretary/base_secretary.html" %}
+{% load static %}
+
+{% block title %}تقرير الغياب والإلغاء — {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 print:px-0 print:py-0 print:space-y-4">
+
+  {# ── Header ── #}
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 print:hidden">
+    <div class="flex items-center gap-4">
+      <a href="{% url 'secretary:reports_index' %}"
+         aria-label="العودة إلى التقارير"
+         class="p-2 rounded-xl text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+        <i class="fa-solid fa-arrow-right"></i>
+      </a>
+      <div>
+        <h1 class="text-xl font-bold text-gray-900 dark:text-white">تقرير الغياب والإلغاء</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+          {{ date_from|date:"j F Y" }} — {{ date_to|date:"j F Y" }}
+        </p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap">
+      <a href="?date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}{% if doctor_filter %}&doctor_id={{ doctor_filter }}{% endif %}&export=csv"
+         class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+        <i class="fa-solid fa-file-csv text-emerald-600"></i> تصدير CSV
+      </a>
+      <button onclick="window.print()"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+        <i class="fa-solid fa-print text-gray-500"></i> طباعة
+      </button>
+    </div>
+  </div>
+
+  {# ── Filters ── #}
+  <form method="get" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 flex flex-wrap items-end gap-4 print:hidden">
+    <div>
+      <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">من تاريخ</label>
+      <input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}"
+             max="{{ today|date:'Y-m-d' }}"
+             class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">إلى تاريخ</label>
+      <input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}"
+             max="{{ today|date:'Y-m-d' }}"
+             class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
+    </div>
+    <div>
+      <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">الطبيب</label>
+      <select name="doctor_id"
+              class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
+        <option value="">جميع الأطباء</option>
+        {% for doc in doctors %}
+        <option value="{{ doc.id }}" {% if doctor_filter == doc.id|stringformat:"s" %}selected{% endif %}>
+          د. {{ doc.name }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit"
+            class="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold transition-colors">
+      عرض
+    </button>
+  </form>
+
+  {# ── Print header ── #}
+  <div class="hidden print:block mb-4">
+    <h1 class="text-xl font-bold">{{ clinic.name }} — تقرير الغياب والإلغاء</h1>
+    <p class="text-sm text-gray-500">{{ date_from|date:"j F Y" }} — {{ date_to|date:"j F Y" }}</p>
+  </div>
+
+  {# ── Rate cards ── #}
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 text-center">
+      <div class="text-3xl font-bold text-gray-900 dark:text-white">{{ total }}</div>
+      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">إجمالي المواعيد</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 text-center">
+      <div class="text-3xl font-bold text-amber-600 dark:text-amber-400">{{ noshow_count }}</div>
+      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">لم يحضروا</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 text-center">
+      <div class="text-3xl font-bold text-red-600 dark:text-red-400">{{ cancelled_count }}</div>
+      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">ملغاة</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 text-center">
+      <div class="text-2xl font-bold text-gray-700 dark:text-gray-300">{{ noshow_rate }}%</div>
+      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">نسبة الغياب</div>
+      <div class="text-lg font-bold text-gray-600 dark:text-gray-400 mt-1">{{ cancel_rate }}%</div>
+      <div class="text-xs text-gray-500 dark:text-gray-400">نسبة الإلغاء</div>
+    </div>
+  </div>
+
+  {# ── Day-of-week breakdown ── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
+    <h2 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">توزيع الغياب حسب أيام الأسبوع</h2>
+    <div class="space-y-2">
+      {% for day in dow_breakdown %}
+      {% with day_total=day.noshows|add:day.cancelled %}
+      <div class="flex items-center gap-3">
+        <div class="w-16 text-xs text-gray-600 dark:text-gray-300 text-right shrink-0">{{ day.name }}</div>
+        <div class="flex-1 h-5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden flex">
+          {% if day.noshows > 0 %}
+          <div class="h-full bg-amber-500 transition-all"
+               style="width: {% widthratio day.noshows max_dow 100 %}%"></div>
+          {% endif %}
+          {% if day.cancelled > 0 %}
+          <div class="h-full bg-red-500 transition-all"
+               style="width: {% widthratio day.cancelled max_dow 100 %}%"></div>
+          {% endif %}
+        </div>
+        <div class="w-20 text-xs text-gray-500 dark:text-gray-400 text-right shrink-0">
+          {% if day.noshows > 0 %}<span class="text-amber-600 dark:text-amber-400">{{ day.noshows }}غ</span>{% endif %}
+          {% if day.cancelled > 0 %}<span class="text-red-600 dark:text-red-400 ms-1">{{ day.cancelled }}إ</span>{% endif %}
+          {% if day.noshows == 0 and day.cancelled == 0 %}<span class="text-gray-300">—</span>{% endif %}
+        </div>
+      </div>
+      {% endwith %}
+      {% endfor %}
+    </div>
+    <div class="flex items-center gap-4 mt-3 text-xs text-gray-500 dark:text-gray-400">
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-amber-500 inline-block"></span> غياب</span>
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-red-500 inline-block"></span> إلغاء</span>
+    </div>
+  </div>
+
+  {# ── Top no-show patients ── #}
+  {% if top_noshows %}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+      <h2 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">أكثر المرضى غياباً</h2>
+    </div>
+    <div class="divide-y divide-gray-50 dark:divide-gray-700">
+      {% for p in top_noshows %}
+      <div class="px-5 py-3 flex items-center gap-4">
+        <div class="w-7 h-7 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-xs font-bold text-amber-600 dark:text-amber-400 shrink-0">
+          {{ forloop.counter }}
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="font-medium text-gray-900 dark:text-gray-100 text-sm truncate">{{ p.patient__name }}</div>
+          <div class="text-xs text-gray-400 dark:text-gray-500">{{ p.patient__phone }}</div>
+        </div>
+        <div class="text-sm font-bold text-amber-600 dark:text-amber-400 shrink-0">
+          {{ p.count }} مرة
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── No-show list ── #}
+  {% if noshows %}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
+      <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
+      <h2 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">الغياب ({{ noshow_count }})</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-gray-50 dark:bg-gray-700/50">
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">المريض</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">التاريخ</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">الطبيب</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">الخدمة</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
+          {% for appt in noshows %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+            <td class="px-4 py-3">
+              <a href="{% url 'secretary:patient_detail' appt.patient.id %}"
+                 class="font-medium text-gray-900 dark:text-gray-100 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
+                {{ appt.patient.name }}
+              </a>
+              <div class="text-xs text-gray-400 dark:text-gray-500">{{ appt.patient.phone }}</div>
+            </td>
+            <td class="px-4 py-3 text-gray-600 dark:text-gray-400">{{ appt.appointment_date|date:"j/m/Y" }}</td>
+            <td class="px-4 py-3 text-gray-600 dark:text-gray-400">
+              {% if appt.doctor %}د. {{ appt.doctor.name }}{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3 text-gray-600 dark:text-gray-400">
+              {% if appt.appointment_type %}{{ appt.appointment_type.display_name }}{% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Cancellations list ── #}
+  {% if cancellations %}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
+      <span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
+      <h2 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">الإلغاءات ({{ cancelled_count }})</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-gray-50 dark:bg-gray-700/50">
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">المريض</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">التاريخ</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">الطبيب</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">سبب الإلغاء</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
+          {% for appt in cancellations %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+            <td class="px-4 py-3">
+              <a href="{% url 'secretary:patient_detail' appt.patient.id %}"
+                 class="font-medium text-gray-900 dark:text-gray-100 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
+                {{ appt.patient.name }}
+              </a>
+              <div class="text-xs text-gray-400 dark:text-gray-500">{{ appt.patient.phone }}</div>
+            </td>
+            <td class="px-4 py-3 text-gray-600 dark:text-gray-400">{{ appt.appointment_date|date:"j/m/Y" }}</td>
+            <td class="px-4 py-3 text-gray-600 dark:text-gray-400">
+              {% if appt.doctor %}د. {{ appt.doctor.name }}{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-3 text-gray-500 dark:text-gray-400 italic">
+              {{ appt.cancellation_reason|default:"—" }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if not noshows and not cancellations %}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-12 text-center text-gray-400 dark:text-gray-500">
+    <i class="fa-solid fa-check-circle text-4xl opacity-30 mb-3 block text-emerald-500"></i>
+    <p class="text-sm">لا يوجد غياب أو إلغاء في هذه الفترة</p>
+  </div>
+  {% endif %}
+
+</div>
+
+<style>
+@media print {
+  nav, header, footer, .print\\:hidden { display: none !important; }
+  body { background: white !important; color: black !important; }
+  .bg-white { background: white !important; }
+  .border { border-color: #ddd !important; }
+  .rounded-2xl { border-radius: 0 !important; }
+  a { color: inherit !important; text-decoration: none !important; }
+}
+</style>
+{% endblock %}

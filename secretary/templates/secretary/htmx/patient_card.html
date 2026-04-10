@@ -104,7 +104,7 @@
   </div>
 
   <div class="px-5 py-5">
-    <form method="post" action="{% url 'secretary:register_patient_submit' %}" id="registration-form" novalidate>
+    <form method="post" action="{% url 'secretary:create_new_patient' %}" id="registration-form" novalidate>
       {% csrf_token %}
       <input type="hidden" name="patient_id" value="{{ patient.id }}">
 

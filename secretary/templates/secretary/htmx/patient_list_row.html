@@ -1,0 +1,86 @@
+{% load static %}
+{% with patient=cp.patient profile=cp.patient.patient_profile %}
+<tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
+  {# Name + avatar #}
+  <td class="px-4 py-3">
+    <a href="{% url 'secretary:patient_detail' cp.patient.id %}" class="flex items-center gap-3 group">
+      <div class="w-9 h-9 rounded-full bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center text-purple-700 dark:text-purple-300 font-bold text-sm flex-shrink-0">
+        {{ patient.name|slice:":1" }}
+      </div>
+      <div>
+        <div class="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+          {{ patient.name }}
+        </div>
+        {% if profile and profile.date_of_birth %}
+        <div class="text-xs text-gray-400 dark:text-gray-500">{{ profile.get_gender_display|default:"" }}{% if profile.gender and profile.date_of_birth %} · {% endif %}{{ profile.date_of_birth|date:"Y" }}</div>
+        {% endif %}
+      </div>
+    </a>
+  </td>
+
+  {# Phone #}
+  <td class="px-4 py-3 text-gray-600 dark:text-gray-300 dir-ltr text-right">
+    <a href="tel:{{ patient.phone }}" class="hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
+      {{ patient.phone }}
+    </a>
+  </td>
+
+  {# File number #}
+  <td class="px-4 py-3">
+    {% if cp.file_number %}
+    <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-mono font-medium">
+      {{ cp.file_number }}
+    </span>
+    {% else %}
+    <span class="text-gray-300 dark:text-gray-600">—</span>
+    {% endif %}
+  </td>
+
+  {# Last visit #}
+  <td class="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">
+    {% if cp.last_visit %}
+      {{ cp.last_visit|date:"Y/m/d" }}
+    {% else %}
+      <span class="text-gray-300 dark:text-gray-600">لا توجد زيارات</span>
+    {% endif %}
+  </td>
+
+  {# Visit count #}
+  <td class="px-4 py-3 text-center">
+    <span class="inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold
+      {% if cp.visit_count > 0 %}bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300
+      {% else %}bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500{% endif %}">
+      {{ cp.visit_count|default:"0" }}
+    </span>
+  </td>
+
+  {# Registration date #}
+  <td class="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">
+    {{ cp.registered_at|date:"Y/m/d" }}
+  </td>
+
+  {# Actions #}
+  <td class="px-4 py-3 text-center">
+    <div class="flex items-center justify-center gap-1">
+      <a href="{% url 'secretary:patient_detail' patient.id %}"
+         aria-label="عرض ملف المريض"
+         title="عرض الملف"
+         class="p-1.5 rounded-lg text-gray-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors">
+        <i class="fa-solid fa-eye text-xs"></i>
+      </a>
+      <a href="{% url 'secretary:edit_patient' patient.id %}"
+         aria-label="تعديل بيانات المريض"
+         title="تعديل"
+         class="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+        <i class="fa-solid fa-pen text-xs"></i>
+      </a>
+      <a href="{% url 'secretary:create_appointment' %}?patient_id={{ patient.id }}"
+         aria-label="حجز موعد للمريض"
+         title="حجز موعد"
+         class="p-1.5 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors">
+        <i class="fa-solid fa-calendar-plus text-xs"></i>
+      </a>
+    </div>
+  </td>
+</tr>
+{% endwith %}

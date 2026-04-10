@@ -1,0 +1,263 @@
+{% extends "secretary/base_secretary.html" %}
+{% block title %}تفاصيل الموعد #{{ appointment.id }}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-5">
+
+  {# Back link #}
+  <a href="{% url 'secretary:appointments' %}"
+     class="inline-flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
+    <i class="fa-solid fa-arrow-right"></i>
+    العودة إلى قائمة المواعيد
+  </a>
+
+  {# Header card #}
+  <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-6 relative overflow-hidden">
+    <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-l from-primary-500 to-accent-500"></div>
+    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+      <div class="w-12 h-12 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center flex-shrink-0">
+        <i class="fa-regular fa-calendar-check text-primary-500 text-xl"></i>
+      </div>
+      <div class="flex-grow min-w-0">
+        <h1 class="text-lg font-bold text-gray-900 dark:text-white">
+          {{ appointment.patient.name }}
+        </h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+          {{ appointment.appointment_date|date:"d/m/Y" }}
+          &mdash; {{ appointment.appointment_time|time:"H:i" }}
+          &mdash; موعد #{{ appointment.id }}
+        </p>
+      </div>
+      {# Status chip (HTMX target) #}
+      <div id="status-chip-{{ appointment.id }}" class="flex flex-wrap items-center gap-2 flex-shrink-0">
+        <span class="status-badge status-{{ appointment.status|lower }}">{{ appointment.get_status_display }}</span>
+        {% for target_status in valid_transitions %}
+        {% if target_status == 'CANCELLED' %}{% comment %}handled below{% endcomment %}
+        {% elif target_status == 'CONFIRMED' %}
+        <form hx-post="{% url 'secretary:update_appointment_status' appointment.id %}"
+              hx-target="#status-chip-{{ appointment.id }}"
+              hx-swap="outerHTML">
+          {% csrf_token %}
+          <input type="hidden" name="status" value="{{ target_status }}">
+          <button type="submit" class="px-3 py-1 rounded-lg text-xs font-bold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 transition-colors">تأكيد</button>
+        </form>
+        {% elif target_status == 'CHECKED_IN' %}
+        <form hx-post="{% url 'secretary:update_appointment_status' appointment.id %}"
+              hx-target="#status-chip-{{ appointment.id }}"
+              hx-swap="outerHTML">
+          {% csrf_token %}
+          <input type="hidden" name="status" value="{{ target_status }}">
+          <button type="submit" class="px-3 py-1 rounded-lg text-xs font-bold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 transition-colors">وصل المريض</button>
+        </form>
+        {% elif target_status == 'IN_PROGRESS' %}
+        <form hx-post="{% url 'secretary:update_appointment_status' appointment.id %}"
+              hx-target="#status-chip-{{ appointment.id }}"
+              hx-swap="outerHTML">
+          {% csrf_token %}
+          <input type="hidden" name="status" value="{{ target_status }}">
+          <button type="submit" class="px-3 py-1 rounded-lg text-xs font-bold bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-200 transition-colors">بدء الجلسة</button>
+        </form>
+        {% elif target_status == 'COMPLETED' %}
+        <form hx-post="{% url 'secretary:update_appointment_status' appointment.id %}"
+              hx-target="#status-chip-{{ appointment.id }}"
+              hx-swap="outerHTML">
+          {% csrf_token %}
+          <input type="hidden" name="status" value="{{ target_status }}">
+          <button type="submit" class="px-3 py-1 rounded-lg text-xs font-bold bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 transition-colors">اكتمل</button>
+        </form>
+        {% elif target_status == 'NO_SHOW' %}
+        <form hx-post="{% url 'secretary:update_appointment_status' appointment.id %}"
+              hx-target="#status-chip-{{ appointment.id }}"
+              hx-swap="outerHTML"
+              onsubmit="return confirm('هل لم يحضر المريض؟')">
+          {% csrf_token %}
+          <input type="hidden" name="status" value="{{ target_status }}">
+          <button type="submit" class="px-3 py-1 rounded-lg text-xs font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-200 transition-colors">لم يحضر</button>
+        </form>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {# Status timeline #}
+  {% if appointment.status not in terminal_statuses or appointment.status == 'COMPLETED' %}
+  <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm px-6 py-4">
+    {% with steps_all="PENDING,CONFIRMED,CHECKED_IN,IN_PROGRESS,COMPLETED" %}
+    <div class="flex items-center">
+      {% for step_status in "PENDING,CONFIRMED,CHECKED_IN,IN_PROGRESS,COMPLETED"|split:"," %}
+      <div class="flex flex-col items-center flex-1 relative">
+        {% if step_status == appointment.status %}
+        <div class="w-6 h-6 rounded-full bg-primary-600 border-2 border-primary-600 flex items-center justify-center z-10">
+          <div class="w-2 h-2 rounded-full bg-white"></div>
+        </div>
+        {% elif appointment.status == 'COMPLETED' or appointment.status == 'IN_PROGRESS' and step_status != 'COMPLETED' or appointment.status == 'CHECKED_IN' and step_status in "PENDING,CONFIRMED,CHECKED_IN" or appointment.status == 'CONFIRMED' and step_status in "PENDING,CONFIRMED" %}
+        <div class="w-6 h-6 rounded-full bg-primary-600 flex items-center justify-center z-10">
+          <i class="fa-solid fa-check text-white text-[9px]"></i>
+        </div>
+        {% else %}
+        <div class="w-6 h-6 rounded-full border-2 border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 z-10"></div>
+        {% endif %}
+        <span class="text-[10px] font-semibold mt-1 text-center
+          {% if step_status == appointment.status %}text-primary-600 dark:text-primary-400
+          {% else %}text-gray-400 dark:text-gray-500{% endif %}">
+          {% if step_status == 'PENDING' %}انتظار{% elif step_status == 'CONFIRMED' %}مؤكد{% elif step_status == 'CHECKED_IN' %}وصل{% elif step_status == 'IN_PROGRESS' %}جارٍ{% else %}مكتمل{% endif %}
+        </span>
+        {% if not forloop.last %}
+        <div class="absolute top-3 right-1/2 left-1/2 h-0.5 bg-gray-200 dark:bg-slate-600 w-full -translate-x-1/2" style="width:calc(100% - 24px); right:50%; left:auto;"></div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endwith %}
+  </div>
+  {% endif %}
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+    {# Patient info #}
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-5">
+      <h2 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4 flex items-center gap-1.5">
+        <i class="fa-solid fa-user"></i> المريض
+      </h2>
+      <div class="space-y-3 text-sm">
+        <div class="flex justify-between">
+          <span class="text-gray-500 dark:text-gray-400">الاسم</span>
+          <span class="font-semibold text-gray-800 dark:text-gray-100">{{ appointment.patient.name }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-500 dark:text-gray-400">رقم الهاتف</span>
+          <span class="font-mono text-gray-700 dark:text-gray-300" dir="ltr">{{ appointment.patient.phone }}</span>
+        </div>
+        {% if appointment.patient.national_id %}
+        <div class="flex justify-between">
+          <span class="text-gray-500 dark:text-gray-400">الهوية</span>
+          <span class="font-mono text-gray-700 dark:text-gray-300">{{ appointment.patient.national_id }}</span>
+        </div>
+        {% endif %}
+        {% if profile and profile.date_of_birth %}
+        <div class="flex justify-between">
+          <span class="text-gray-500 dark:text-gray-400">تاريخ الميلاد</span>
+          <span class="text-gray-700 dark:text-gray-300">{{ profile.date_of_birth|date:"d/m/Y" }}</span>
+        </div>
+        {% endif %}
+        {% if profile and profile.gender %}
+        <div class="flex justify-between">
+          <span class="text-gray-500 dark:text-gray-400">الجنس</span>
+          <span class="text-gray-700 dark:text-gray-300">{{ profile.get_gender_display }}</span>
+        </div>
+        {% endif %}
+        {% if clinic_patient and clinic_patient.file_number %}
+        <div class="flex justify-between">
+          <span class="text-gray-500 dark:text-gray-400">رقم الملف</span>
+          <span class="font-mono font-bold text-primary-600 dark:text-primary-400">{{ clinic_patient.file_number }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Appointment info #}
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-5">
+      <h2 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4 flex items-center gap-1.5">
+        <i class="fa-regular fa-calendar"></i> تفاصيل الموعد
+      </h2>
+      <div class="space-y-3 text-sm">
+        <div class="flex justify-between">
+          <span class="text-gray-500 dark:text-gray-400">الطبيب</span>
+          <span class="font-semibold text-gray-800 dark:text-gray-100">{{ appointment.doctor.name|default:"—" }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-500 dark:text-gray-400">نوع الموعد</span>
+          <span class="text-gray-700 dark:text-gray-300">{{ appointment.appointment_type.display_name|default:"—" }}</span>
+        </div>
+        {% if appointment.appointment_type and appointment.appointment_type.duration_minutes %}
+        <div class="flex justify-between">
+          <span class="text-gray-500 dark:text-gray-400">المدة</span>
+          <span class="text-gray-700 dark:text-gray-300">{{ appointment.appointment_type.duration_minutes }} دقيقة</span>
+        </div>
+        {% endif %}
+        {% if appointment.appointment_type and appointment.appointment_type.price %}
+        <div class="flex justify-between">
+          <span class="text-gray-500 dark:text-gray-400">السعر</span>
+          <span class="font-semibold text-teal-600 dark:text-teal-400">₪{{ appointment.appointment_type.price }}</span>
+        </div>
+        {% endif %}
+        {% if appointment.reason %}
+        <div class="flex flex-col gap-1">
+          <span class="text-gray-500 dark:text-gray-400">سبب الزيارة</span>
+          <span class="text-gray-700 dark:text-gray-300 text-xs bg-gray-50 dark:bg-slate-700/50 rounded-lg px-3 py-2">{{ appointment.reason }}</span>
+        </div>
+        {% endif %}
+        {% if appointment.notes %}
+        <div class="flex flex-col gap-1">
+          <span class="text-gray-500 dark:text-gray-400">ملاحظات</span>
+          <span class="text-gray-700 dark:text-gray-300 text-xs bg-gray-50 dark:bg-slate-700/50 rounded-lg px-3 py-2">{{ appointment.notes }}</span>
+        </div>
+        {% endif %}
+        {% if appointment.checked_in_at %}
+        <div class="flex justify-between">
+          <span class="text-gray-500 dark:text-gray-400">وقت الوصول</span>
+          <span class="text-gray-700 dark:text-gray-300">{{ appointment.checked_in_at|date:"H:i" }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# Cancellation reason #}
+  {% if appointment.status == 'CANCELLED' and appointment.cancellation_reason %}
+  <div class="bg-red-50 dark:bg-red-900/20 rounded-2xl border border-red-200 dark:border-red-800 p-5">
+    <div class="flex items-start gap-3">
+      <i class="fa-solid fa-circle-xmark text-red-500 mt-0.5"></i>
+      <div>
+        <p class="font-semibold text-red-700 dark:text-red-400 text-sm">سبب الإلغاء</p>
+        <p class="text-sm text-red-600 dark:text-red-300 mt-1">{{ appointment.cancellation_reason }}</p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Actions #}
+  {% if appointment.status not in terminal_statuses %}
+  <div class="flex flex-wrap gap-3">
+    <a href="{% url 'secretary:edit_appointment' appointment.id %}"
+       class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 text-sm font-semibold transition-colors">
+      <i class="fa-solid fa-pen-to-square text-xs"></i>
+      إعادة جدولة / تعديل
+    </a>
+    {% if 'CANCELLED' in valid_transitions %}
+    <button type="button" onclick="document.getElementById('cancel-panel').classList.toggle('hidden')"
+            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-200 dark:border-red-900/40 bg-white dark:bg-slate-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-semibold transition-colors">
+      <i class="fa-solid fa-xmark text-xs"></i>
+      إلغاء الموعد
+    </button>
+    {% endif %}
+  </div>
+
+  {# Cancel panel (inline, not modal) #}
+  {% if 'CANCELLED' in valid_transitions %}
+  <div id="cancel-panel" class="hidden bg-red-50 dark:bg-red-900/10 rounded-2xl border border-red-200 dark:border-red-800 p-5">
+    <form method="post" action="{% url 'secretary:cancel_appointment' appointment.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.path }}">
+      <p class="font-semibold text-red-700 dark:text-red-400 text-sm mb-3">تأكيد إلغاء الموعد</p>
+      <textarea name="cancellation_reason" rows="2" required
+                placeholder="يرجى ذكر سبب الإلغاء..."
+                class="w-full text-sm rounded-xl border border-red-200 dark:border-red-800 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-400 resize-none mb-3"></textarea>
+      <div class="flex gap-3">
+        <button type="submit"
+                class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors">
+          تأكيد الإلغاء
+        </button>
+        <button type="button" onclick="document.getElementById('cancel-panel').classList.add('hidden')"
+                class="px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-300 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+          تراجع
+        </button>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+  {% endif %}
+
+</div>
+{% endblock %}

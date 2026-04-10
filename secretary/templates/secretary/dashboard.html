@@ -1,152 +1,331 @@
 {% extends "secretary/base_secretary.html" %}
 {% block title %}لوحة تحكم السكرتارية{% endblock %}
 
-{% block extra_css %}
-<style>
-  .status-badge { display:inline-flex; align-items:center; padding:2px 10px; border-radius:9999px; font-size:0.75rem; font-weight:700; white-space:nowrap; }
-  .status-confirmed   { background:#d1fae5; color:#065f46; }
-  .status-checked_in  { background:#dbeafe; color:#1e40af; }
-  .status-in_progress { background:#ede9fe; color:#5b21b6; }
-  .status-completed   { background:#f3f4f6; color:#374151; }
-  .status-cancelled   { background:#fee2e2; color:#991b1b; }
-  .status-no_show     { background:#fef3c7; color:#92400e; }
-  .status-pending     { background:#fefce8; color:#713f12; }
-  .dark .status-confirmed   { background:#064e3b; color:#6ee7b7; }
-  .dark .status-checked_in  { background:#1e3a5f; color:#93c5fd; }
-  .dark .status-in_progress { background:#2e1065; color:#c4b5fd; }
-  .dark .status-completed   { background:#1f2937; color:#9ca3af; }
-  .dark .status-cancelled   { background:#450a0a; color:#fca5a5; }
-  .dark .status-no_show     { background:#451a03; color:#fcd34d; }
-  .dark .status-pending     { background:#1c1917; color:#fde68a; }
-</style>
-{% endblock %}
-
 {% block content %}
-<div dir="rtl">
+<div class="max-w-5xl mx-auto space-y-6">
 
-  {# ── Page header ── #}
-  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-    <div>
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">لوحة تحكم السكرتارية</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ clinic.name }}</p>
-    </div>
-    <div class="flex items-center gap-2 flex-wrap">
-      <a href="{% url 'secretary:register_patient' %}"
-         class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 active:scale-95 text-white text-sm font-semibold transition-all shadow-sm">
-        <i class="fa-solid fa-user-plus text-xs"></i> تسجيل مريض
-      </a>
-      <a href="{% url 'secretary:create_appointment' %}"
-         class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-semibold transition-colors">
-        <i class="fa-solid fa-calendar-plus text-xs"></i> حجز موعد جديد
-      </a>
-    </div>
-  </div>
-
-  {# ── Stat cards ── #}
-  <div class="grid grid-cols-2 gap-3 mb-6">
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 flex flex-col items-center text-center">
-      <span class="text-3xl font-bold text-purple-600 dark:text-purple-400">{{ todays_appointments.count }}</span>
-      <span class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1.5">
-        <i class="fa-regular fa-calendar-check"></i> مواعيد اليوم
-      </span>
-    </div>
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 flex flex-col items-center text-center">
-      <span class="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{{ upcoming_count }}</span>
-      <span class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1.5">
-        <i class="fa-regular fa-clock"></i> المواعيد القادمة
-      </span>
-    </div>
-  </div>
-
-  {# ── Today's appointments ── #}
-  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-
-    <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
-      <div class="flex items-center gap-2">
-        <i class="fa-solid fa-calendar-day text-purple-500 text-sm"></i>
-        <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">مواعيد اليوم</span>
+  {# ── Welcome header ── #}
+  <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-5 md:p-6 relative overflow-hidden">
+    <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-l from-primary-500 via-primary-400 to-accent-500"></div>
+    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+      <div class="w-12 h-12 rounded-2xl bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center flex-shrink-0">
+        <i class="fa-solid fa-user-tie text-primary-600 dark:text-primary-400 text-xl"></i>
       </div>
-      <span class="text-xs text-gray-400 dark:text-gray-500">{{ today|date:"d/m/Y" }}</span>
+      <div class="flex-grow min-w-0">
+        <h1 class="text-xl font-bold text-gray-900 dark:text-white">
+          أهلاً، {{ request.user.name }}
+        </h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+          {{ today|date:"l — d/m/Y" }} &mdash; {{ clinic.name }}
+        </p>
+      </div>
+      <div class="flex items-center gap-2 flex-wrap flex-shrink-0">
+        <a href="{% url 'secretary:create_appointment' %}"
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 active:scale-95 text-white text-sm font-semibold transition-all shadow-sm">
+          <i class="fa-solid fa-calendar-plus text-xs"></i> حجز موعد
+        </a>
+        <a href="{% url 'secretary:create_new_patient' %}"
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 text-sm font-semibold transition-colors">
+          <i class="fa-solid fa-user-plus text-xs"></i> تسجيل مريض
+        </a>
+        <a href="{% url 'secretary:waiting_room' %}"
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 text-sm font-semibold transition-colors">
+          <i class="fa-solid fa-people-waiting text-xs"></i> غرفة الانتظار
+          {% if stat_checked_in > 0 %}
+          <span class="w-5 h-5 flex items-center justify-center bg-blue-500 text-white text-[10px] font-bold rounded-full">{{ stat_checked_in }}</span>
+          {% endif %}
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {# ── Stats row (6 cards) ── #}
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 flex flex-col items-center text-center">
+      <span class="text-2xl font-bold text-gray-900 dark:text-white">{{ stat_total }}</span>
+      <span class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
+        <i class="fa-regular fa-calendar"></i> مجموع اليوم
+      </span>
     </div>
 
-    {% if todays_appointments %}
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide border-b border-gray-100 dark:border-gray-700">
-            <th class="px-5 py-3 text-right">الوقت</th>
-            <th class="px-5 py-3 text-right">المريض</th>
-            <th class="px-5 py-3 text-right hidden sm:table-cell">الطبيب</th>
-            <th class="px-5 py-3 text-right hidden md:table-cell">نوع الموعد</th>
-            <th class="px-5 py-3 text-right">الحالة</th>
-            <th class="px-5 py-3 text-left">إجراءات</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-          {% for appt in todays_appointments %}
-          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-            <td class="px-5 py-3 font-mono font-semibold text-gray-800 dark:text-gray-100 whitespace-nowrap">
-              {{ appt.appointment_time|time:"H:i" }}
-            </td>
-            <td class="px-5 py-3 font-semibold text-gray-800 dark:text-gray-100">{{ appt.patient.name }}</td>
-            <td class="px-5 py-3 text-gray-600 dark:text-gray-300 hidden sm:table-cell">{{ appt.doctor.name|default:"—" }}</td>
-            <td class="px-5 py-3 text-gray-600 dark:text-gray-300 hidden md:table-cell">{{ appt.appointment_type.display_name|default:"—" }}</td>
-            <td class="px-5 py-3">
-              <span class="status-badge status-{{ appt.status|lower }}">{{ appt.get_status_display }}</span>
-            </td>
-            <td class="px-5 py-3">
-              {% if appt.status not in terminal_statuses %}
-              <div class="flex items-center gap-1.5">
-                <a href="{% url 'secretary:edit_appointment' appt.id %}"
-                   class="p-1.5 rounded-lg text-gray-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors" title="تعديل">
-                  <i class="fa-solid fa-pen-to-square text-xs"></i>
-                </a>
-                <form method="post" action="{% url 'secretary:cancel_appointment' appt.id %}">
-                  {% csrf_token %}
-                  <button type="submit"
-                          class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                          title="إلغاء"
-                          onclick="return confirm('هل أنت متأكد من إلغاء هذا الموعد؟')">
-                    <i class="fa-solid fa-xmark text-xs"></i>
-                  </button>
-                </form>
-              </div>
-              {% else %}
-              <span class="text-xs text-gray-300 dark:text-gray-600">—</span>
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 flex flex-col items-center text-center">
+      <span class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{{ stat_pending }}</span>
+      <span class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
+        <i class="fa-regular fa-clock"></i> في الانتظار
+      </span>
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 flex flex-col items-center text-center">
+      <span class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ stat_checked_in }}</span>
+      <span class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
+        <i class="fa-solid fa-door-open"></i> وصل
+      </span>
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 flex flex-col items-center text-center">
+      <span class="text-2xl font-bold text-primary-600 dark:text-primary-400">{{ stat_in_progress }}</span>
+      <span class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
+        <i class="fa-solid fa-spinner fa-spin"></i> جارٍ
+      </span>
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 flex flex-col items-center text-center">
+      <span class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ stat_completed }}</span>
+      <span class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
+        <i class="fa-solid fa-circle-check"></i> مكتمل
+      </span>
+    </div>
+
+    {% if revenue_today is not None %}
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 flex flex-col items-center text-center">
+      <span class="text-2xl font-bold text-teal-600 dark:text-teal-400">₪{{ revenue_today|floatformat:0 }}</span>
+      <span class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
+        <i class="fa-solid fa-coins"></i> إيرادات
+      </span>
     </div>
     {% else %}
-    <div class="flex flex-col items-center py-12 gap-3 text-center px-4">
-      <div class="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-        <i class="fa-regular fa-calendar-xmark text-gray-400 dark:text-gray-500 text-xl"></i>
-      </div>
-      <div>
-        <p class="font-semibold text-gray-700 dark:text-gray-200">لا توجد مواعيد لهذا اليوم</p>
-        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">يمكنك حجز موعد جديد من الزر أعلاه</p>
-      </div>
-      <a href="{% url 'secretary:create_appointment' %}"
-         class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold transition-colors mt-1">
-        <i class="fa-solid fa-plus text-xs"></i> حجز موعد
-      </a>
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 flex flex-col items-center text-center">
+      <span class="text-2xl font-bold text-red-500 dark:text-red-400">{{ stat_cancelled }}</span>
+      <span class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
+        <i class="fa-solid fa-xmark"></i> ملغى
+      </span>
     </div>
     {% endif %}
+  </div>
 
-    <div class="px-5 py-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/20 flex justify-between items-center">
-      <a href="{% url 'secretary:register_patient' %}"
-         class="text-xs font-medium text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1">
-        <i class="fa-solid fa-user-plus text-[10px]"></i> تسجيل مريض جديد
-      </a>
-      <a href="{% url 'secretary:appointments' %}"
-         class="text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-1">
-        عرض جميع المواعيد <i class="fa-solid fa-arrow-left text-[10px]"></i>
-      </a>
+  {# ── Two-column layout: main content + side panel ── #}
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    {# LEFT (2/3): Upcoming + Today's full table #}
+    <div class="lg:col-span-2 space-y-6">
+
+      {# ── Upcoming in next 2 hours ── #}
+      {% if upcoming_2h %}
+      <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div class="flex items-center gap-2 px-5 py-3 border-b border-gray-100 dark:border-slate-700 bg-amber-50 dark:bg-amber-900/10">
+          <i class="fa-solid fa-bolt text-amber-500 text-sm"></i>
+          <span class="font-semibold text-gray-800 dark:text-gray-100 text-sm">المواعيد خلال الساعتين القادمتين</span>
+          <span class="mr-auto text-xs font-bold bg-amber-500 text-white px-2 py-0.5 rounded-full">{{ upcoming_2h|length }}</span>
+        </div>
+        <div class="divide-y divide-gray-100 dark:divide-slate-700">
+          {% for appt in upcoming_2h %}
+          <div class="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors">
+            <div class="w-12 text-center flex-shrink-0">
+              <span class="font-mono font-bold text-sm text-gray-900 dark:text-white">{{ appt.appointment_time|time:"H:i" }}</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="font-semibold text-sm text-gray-800 dark:text-gray-100 truncate">{{ appt.patient.name }}</p>
+              <p class="text-xs text-gray-400 dark:text-gray-500 truncate">{{ appt.doctor.name|default:"—" }} · {{ appt.appointment_type.display_name|default:"—" }}</p>
+            </div>
+            <span class="status-badge status-{{ appt.status|lower }} flex-shrink-0">{{ appt.get_status_display }}</span>
+            {% if appt.status == 'CONFIRMED' %}
+            <form method="post" action="{% url 'secretary:checkin_appointment' appt.id %}">
+              {% csrf_token %}
+              <button type="submit"
+                      class="flex-shrink-0 px-3 py-1.5 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors">
+                تسجيل الوصول
+              </button>
+            </form>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {# ── Today's appointments table ── #}
+      <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
+
+        <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/50">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-calendar-day text-primary-500 text-sm"></i>
+            <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">مواعيد اليوم</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-gray-400 dark:text-gray-500">{{ today|date:"d/m/Y" }}</span>
+            <a href="{% url 'secretary:appointments' %}"
+               class="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline">
+              عرض الكل
+            </a>
+          </div>
+        </div>
+
+        {% if todays_appointments %}
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide border-b border-gray-100 dark:border-slate-700">
+                <th class="px-5 py-3 text-right">الوقت</th>
+                <th class="px-5 py-3 text-right">المريض</th>
+                <th class="px-5 py-3 text-right hidden sm:table-cell">الطبيب</th>
+                <th class="px-5 py-3 text-right hidden md:table-cell">نوع الموعد</th>
+                <th class="px-5 py-3 text-right">الحالة</th>
+                <th class="px-5 py-3 text-left">إجراءات</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
+              {% for appt in todays_appointments %}
+              <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors">
+                <td class="px-5 py-3 font-mono font-semibold text-gray-800 dark:text-gray-100 whitespace-nowrap">
+                  {{ appt.appointment_time|time:"H:i" }}
+                </td>
+                <td class="px-5 py-3 font-semibold text-gray-800 dark:text-gray-100 max-w-[160px]">
+                  <span class="block truncate" title="{{ appt.patient.name }}">{{ appt.patient.name }}</span>
+                </td>
+                <td class="px-5 py-3 text-gray-600 dark:text-gray-300 hidden sm:table-cell max-w-[140px]">
+                  <span class="block truncate">{{ appt.doctor.name|default:"—" }}</span>
+                </td>
+                <td class="px-5 py-3 text-gray-600 dark:text-gray-300 hidden md:table-cell max-w-[140px]">
+                  <span class="block truncate">{{ appt.appointment_type.display_name|default:"—" }}</span>
+                </td>
+                <td class="px-5 py-3">
+                  <span class="status-badge status-{{ appt.status|lower }}">{{ appt.get_status_display }}</span>
+                </td>
+                <td class="px-5 py-3">
+                  {% if appt.status not in terminal_statuses %}
+                  <div class="flex items-center gap-1.5">
+                    {% if appt.status == 'CONFIRMED' %}
+                    <form method="post" action="{% url 'secretary:checkin_appointment' appt.id %}">
+                      {% csrf_token %}
+                      <button type="submit"
+                              aria-label="تسجيل الوصول"
+                              class="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors" title="تسجيل الوصول">
+                        <i class="fa-solid fa-door-open text-xs"></i>
+                      </button>
+                    </form>
+                    {% endif %}
+                    <a href="{% url 'secretary:appointment_detail' appt.id %}"
+                       aria-label="تفاصيل الموعد"
+                       class="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors" title="تفاصيل">
+                      <i class="fa-solid fa-eye text-xs"></i>
+                    </a>
+                    <a href="{% url 'secretary:edit_appointment' appt.id %}"
+                       aria-label="تعديل الموعد"
+                       class="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors" title="تعديل">
+                      <i class="fa-solid fa-pen-to-square text-xs"></i>
+                    </a>
+                    <form method="post" action="{% url 'secretary:cancel_appointment' appt.id %}">
+                      {% csrf_token %}
+                      <button type="submit"
+                              aria-label="إلغاء الموعد"
+                              class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                              title="إلغاء"
+                              onclick="return confirm('هل أنت متأكد من إلغاء هذا الموعد؟')">
+                        <i class="fa-solid fa-xmark text-xs"></i>
+                      </button>
+                    </form>
+                  </div>
+                  {% else %}
+                  <a href="{% url 'secretary:appointment_detail' appt.id %}"
+                     class="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors" title="تفاصيل">
+                    <i class="fa-solid fa-eye text-xs"></i>
+                  </a>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="flex flex-col items-center py-12 gap-3 text-center px-4">
+          <div class="w-14 h-14 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+            <i class="fa-regular fa-calendar-xmark text-gray-400 dark:text-gray-500 text-xl"></i>
+          </div>
+          <div>
+            <p class="font-semibold text-gray-700 dark:text-gray-200">لا توجد مواعيد لهذا اليوم</p>
+            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">يمكنك حجز موعد جديد من الزر أعلاه</p>
+          </div>
+          <a href="{% url 'secretary:create_appointment' %}"
+             class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold transition-colors mt-1">
+            <i class="fa-solid fa-plus text-xs"></i> حجز موعد
+          </a>
+        </div>
+        {% endif %}
+
+      </div>
     </div>
 
-  </div>
+    {# RIGHT (1/3): Doctor status + activity feed #}
+    <div class="space-y-6">
+
+      {# ── Doctor availability status (auto-refreshes every 60s) ── #}
+      <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/50">
+          <i class="fa-solid fa-stethoscope text-primary-500 text-sm"></i>
+          <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">حالة الأطباء اليوم</span>
+        </div>
+        {# HTMX: refreshes every 60 seconds #}
+        <div id="doctor-status-container"
+             hx-get="{% url 'secretary:doctor_status_htmx' %}"
+             hx-trigger="load, every 60s"
+             hx-swap="innerHTML">
+          {# Skeleton while loading #}
+          <div class="px-4 py-3 space-y-3">
+            {% for i in "123" %}
+            <div class="flex items-center gap-3 animate-pulse">
+              <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-slate-700 flex-shrink-0"></div>
+              <div class="flex-1 space-y-1.5">
+                <div class="h-3 bg-gray-200 dark:bg-slate-700 rounded w-3/4"></div>
+                <div class="h-2.5 bg-gray-100 dark:bg-slate-600 rounded w-1/2"></div>
+              </div>
+              <div class="w-16 h-5 bg-gray-100 dark:bg-slate-700 rounded-full"></div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      {# ── Recent activity feed ── #}
+      <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/50">
+          <i class="fa-solid fa-clock-rotate-left text-primary-500 text-sm"></i>
+          <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">آخر النشاطات</span>
+        </div>
+        {% if recent_activity %}
+        <div class="divide-y divide-gray-100 dark:divide-slate-700">
+          {% for notif in recent_activity %}
+          <div class="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors">
+            <div class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5
+              {% if notif.notification_type == 'APPOINTMENT_BOOKED' %}bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400
+              {% elif notif.notification_type == 'APPOINTMENT_CANCELLED' %}bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400
+              {% elif notif.notification_type == 'APPOINTMENT_STATUS_CHANGED' %}bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400
+              {% elif notif.notification_type == 'APPOINTMENT_RESCHEDULED' %}bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400
+              {% else %}bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400{% endif %}">
+              <i class="text-xs
+                {% if notif.notification_type == 'APPOINTMENT_BOOKED' %}fa-solid fa-calendar-plus
+                {% elif notif.notification_type == 'APPOINTMENT_CANCELLED' %}fa-solid fa-xmark
+                {% elif notif.notification_type == 'APPOINTMENT_STATUS_CHANGED' %}fa-solid fa-arrow-right-arrow-left
+                {% elif notif.notification_type == 'APPOINTMENT_RESCHEDULED' %}fa-solid fa-rotate
+                {% else %}fa-solid fa-bell{% endif %}"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs font-semibold text-gray-800 dark:text-gray-100 leading-snug">{{ notif.title }}</p>
+              <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">{{ notif.message|truncatechars:60 }}</p>
+            </div>
+            <span class="text-[10px] text-gray-300 dark:text-gray-600 flex-shrink-0 mt-0.5" title="{{ notif.created_at }}">
+              {{ notif.created_at|timesince|truncatewords:2 }}
+            </span>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="px-4 py-2.5 border-t border-gray-100 dark:border-slate-700">
+          <a href="{% url 'appointments:secretary_notifications' %}"
+             class="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1">
+            عرض كل الإشعارات <i class="fa-solid fa-arrow-left text-[10px]"></i>
+          </a>
+        </div>
+        {% else %}
+        <div class="flex flex-col items-center py-8 gap-2 text-center px-4">
+          <i class="fa-regular fa-clock text-gray-300 dark:text-slate-600 text-3xl"></i>
+          <p class="text-xs text-gray-400 dark:text-gray-500">لا توجد نشاطات حديثة</p>
+        </div>
+        {% endif %}
+      </div>
+
+    </div>{# /side panel #}
+  </div>{# /grid #}
+
 </div>
 {% endblock %}

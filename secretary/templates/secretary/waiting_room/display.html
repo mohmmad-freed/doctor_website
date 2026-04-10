@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="refresh" content="20">
+  <title>غرفة الانتظار — {{ clinic.name }}</title>
+
+  {# Tailwind CDN #}
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Cairo', 'sans-serif'] },
+          animation: {
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          }
+        }
+      }
+    }
+  </script>
+  {# Google Fonts — Cairo #}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Cairo', sans-serif; }
+  </style>
+</head>
+<body class="bg-gray-950 text-white min-h-screen flex flex-col select-none">
+
+  {# ── Header ── #}
+  <header class="bg-gray-900 border-b border-gray-800 px-8 py-5 flex items-center justify-between flex-shrink-0">
+    <div class="flex items-center gap-4">
+      <div class="w-12 h-12 rounded-2xl bg-purple-600 flex items-center justify-center text-white text-xl font-bold">
+        {{ clinic.name|slice:":1" }}
+      </div>
+      <div>
+        <h1 class="text-2xl font-bold text-white">{{ clinic.name }}</h1>
+        <p class="text-sm text-gray-400">غرفة الانتظار</p>
+      </div>
+    </div>
+    <div class="text-left rtl:text-right">
+      <div class="text-3xl font-bold text-white tabular-nums" id="clock">--:--</div>
+      <div class="text-sm text-gray-400">{{ today|date:"l، j F Y" }}</div>
+    </div>
+  </header>
+
+  {# ── Main queue table ── #}
+  <main class="flex-1 p-6 overflow-auto">
+    {% if queue_entries %}
+    <table class="w-full">
+      <thead>
+        <tr class="text-gray-400 text-sm border-b border-gray-800">
+          <th class="pb-4 text-right font-semibold w-16">#</th>
+          <th class="pb-4 text-right font-semibold">المريض</th>
+          <th class="pb-4 text-right font-semibold">الطبيب</th>
+          <th class="pb-4 text-center font-semibold w-40">الحالة</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-800">
+        {% for entry in queue_entries %}
+        <tr class="{% if entry.is_in_progress %}bg-emerald-950/50{% endif %}">
+          {# Queue number #}
+          <td class="py-5 text-right">
+            <span class="inline-flex items-center justify-center w-10 h-10 rounded-2xl
+              {% if entry.is_in_progress %}bg-emerald-500 text-white{% else %}bg-gray-800 text-gray-300{% endif %}
+              text-xl font-bold">
+              {{ entry.queue_pos }}
+            </span>
+          </td>
+
+          {# Patient name (privacy-safe) #}
+          <td class="py-5 text-right">
+            <div class="text-2xl font-bold {% if entry.is_in_progress %}text-white{% else %}text-gray-200{% endif %}">
+              {{ entry.display_name }}
+            </div>
+            {% if not entry.is_in_progress %}
+            <div class="text-sm text-gray-500 mt-0.5">
+              انتظر {{ entry.wait_minutes }} دقيقة
+            </div>
+            {% endif %}
+          </td>
+
+          {# Doctor #}
+          <td class="py-5 text-right">
+            <div class="text-xl font-semibold {% if entry.is_in_progress %}text-emerald-300{% else %}text-gray-300{% endif %}">
+              د. {{ entry.doctor_name }}
+            </div>
+          </td>
+
+          {# Status badge #}
+          <td class="py-5 text-center">
+            {% if entry.is_in_progress %}
+            <span class="inline-flex items-center gap-2 px-5 py-2 rounded-2xl bg-emerald-500/20 border border-emerald-500 text-emerald-300 text-lg font-bold animate-pulse-slow">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse inline-block"></span>
+              ادخل الآن
+            </span>
+            {% else %}
+            <span class="inline-flex items-center gap-2 px-5 py-2 rounded-2xl bg-blue-500/10 border border-blue-800 text-blue-300 text-lg font-semibold">
+              <span class="w-2.5 h-2.5 rounded-full bg-blue-400 inline-block"></span>
+              قيد الانتظار
+            </span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="flex flex-col items-center justify-center h-64 gap-5 text-gray-600">
+      <i class="fa-solid fa-couch text-5xl opacity-30"></i>
+      <p class="text-2xl font-semibold">لا يوجد مرضى في الانتظار حالياً</p>
+    </div>
+    {% endif %}
+  </main>
+
+  {# ── Footer ── #}
+  <footer class="bg-gray-900 border-t border-gray-800 px-8 py-3 flex items-center justify-between text-sm text-gray-500 flex-shrink-0">
+    <span>يتحدث الشاشة تلقائياً كل 20 ثانية</span>
+    <span>{{ clinic.name }} — نظام العيادة</span>
+  </footer>
+
+  <script>
+    // Live clock
+    function updateClock() {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      document.getElementById('clock').textContent = h + ':' + m;
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+  </script>
+</body>
+</html>

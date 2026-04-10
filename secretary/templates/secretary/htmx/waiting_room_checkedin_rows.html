@@ -1,0 +1,86 @@
+{% load static %}
+{# HTMX partial — Column B: CHECKED_IN today, ordered by checked_in_at (queue order) #}
+{% for entry in checkedin_list %}
+{% with appt=entry.appt %}
+<div class="px-5 py-4 transition-colors {{ entry.row_bg }}"
+     id="checkedin-row-{{ appt.id }}">
+  <div class="flex items-start justify-between gap-3">
+
+    {# Queue number + wait time #}
+    <div class="flex items-center gap-3 min-w-0 flex-1">
+      {# Position bubble #}
+      <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0
+           {% if entry.wait_minutes >= 30 %}bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300
+           {% elif entry.wait_minutes >= 15 %}bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300
+           {% else %}bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300{% endif %}">
+        {{ entry.queue_pos }}
+      </div>
+
+      <div class="min-w-0 flex-1">
+        <div class="font-semibold text-gray-900 dark:text-gray-100 truncate">{{ appt.patient.name }}</div>
+        <div class="flex items-center gap-2 mt-0.5 text-xs text-gray-500 dark:text-gray-400 flex-wrap">
+          <span>د. {{ appt.doctor.name|default:"—" }}</span>
+          {% if appt.appointment_type %}
+          <span class="text-gray-300 dark:text-gray-600">·</span>
+          <span>{{ appt.appointment_type.display_name }}</span>
+          {% endif %}
+          <span class="text-gray-300 dark:text-gray-600">·</span>
+          <span class="font-mono">
+            {{ appt.checked_in_at|time:"H:i" }}
+          </span>
+        </div>
+      </div>
+
+      {# Wait time badge #}
+      <div class="flex-shrink-0 text-right">
+        <span class="text-sm font-bold {{ entry.wait_class }} tabular-nums">
+          {{ entry.wait_minutes }}<span class="text-xs font-normal ms-0.5">د</span>
+        </span>
+      </div>
+    </div>
+
+    {# Actions #}
+    <div class="flex items-center gap-1 flex-shrink-0">
+      {# Call / send to doctor → IN_PROGRESS via status update #}
+      <form method="post"
+            action="{% url 'secretary:update_appointment_status' appt.id %}"
+            hx-post="{% url 'secretary:update_appointment_status' appt.id %}"
+            hx-target="#checkedin-row-{{ appt.id }}"
+            hx-swap="outerHTML">
+        {% csrf_token %}
+        <input type="hidden" name="new_status" value="IN_PROGRESS">
+        <button type="submit"
+                title="استدعاء المريض"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold shadow-sm transition-colors">
+          <i class="fa-solid fa-bell text-xs"></i> استدعاء
+        </button>
+      </form>
+
+      {# Cancel / remove from queue #}
+      <button type="button"
+              title="إزالة من الطابور"
+              onclick="openRemoveModal({{ appt.id }}, '{{ appt.patient.name }}')"
+              class="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+        <i class="fa-solid fa-xmark text-sm"></i>
+      </button>
+
+      <a href="{% url 'secretary:appointment_detail' appt.id %}"
+         title="تفاصيل"
+         class="p-1.5 rounded-lg text-gray-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors">
+        <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+      </a>
+    </div>
+
+  </div>
+</div>
+{% endwith %}
+{% empty %}
+<div class="px-5 py-10 flex flex-col items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
+  <i class="fa-solid fa-chair text-2xl opacity-40"></i>
+  <p>الطابور فارغ — لا يوجد مرضى في الانتظار</p>
+  <a href="{% url 'secretary:checkin_search' %}"
+     class="text-purple-600 dark:text-purple-400 hover:underline text-xs font-medium">
+    تسجيل وصول مريض
+  </a>
+</div>
+{% endfor %}

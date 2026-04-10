@@ -1,0 +1,248 @@
+{% extends "secretary/base_secretary.html" %}
+{% load static %}
+
+{% block title %}جدول الأطباء — {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+
+  {# ── Header ── #}
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">جدول الأطباء</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+        الأسبوع: {{ week_start|date:"j F" }} — {{ week_end|date:"j F Y" }}
+      </p>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap">
+
+      {# Doctor filter #}
+      <form method="get" class="flex items-center gap-2">
+        {% if week_start_str %}<input type="hidden" name="week" value="{{ week_start|date:'Y-m-d' }}">{% endif %}
+        <select name="doctor_id" onchange="this.form.submit()"
+                class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
+          <option value="">جميع الأطباء</option>
+          {% for doc in doctors %}
+          <option value="{{ doc.id }}" {% if selected_doctor_id == doc.id %}selected{% endif %}>
+            د. {{ doc.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </form>
+
+      {# Week navigation #}
+      <div class="flex items-center gap-1">
+        <a href="?week={{ prev_week }}{% if selected_doctor_id %}&doctor_id={{ selected_doctor_id }}{% endif %}"
+           class="p-2 rounded-xl border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
+           title="الأسبوع السابق">
+          <i class="fa-solid fa-chevron-right text-sm"></i>
+        </a>
+        <a href="?{% if selected_doctor_id %}doctor_id={{ selected_doctor_id }}{% endif %}"
+           class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs text-gray-600 dark:text-gray-300 font-medium transition-colors">
+          هذا الأسبوع
+        </a>
+        <a href="?week={{ next_week }}{% if selected_doctor_id %}&doctor_id={{ selected_doctor_id }}{% endif %}"
+           class="p-2 rounded-xl border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
+           title="الأسبوع التالي">
+          <i class="fa-solid fa-chevron-left text-sm"></i>
+        </a>
+      </div>
+
+      <a href="{% url 'secretary:block_doctor_time' %}"
+         class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold shadow transition-colors">
+        <i class="fa-solid fa-ban"></i> حجب وقت طبيب
+      </a>
+    </div>
+  </div>
+
+  {# ── Messages ── #}
+  {% if messages %}
+  {% for msg in messages %}
+  <div class="px-4 py-3 rounded-xl text-sm font-medium
+    {% if msg.tags == 'success' %}bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700
+    {% else %}bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700{% endif %}">
+    {{ msg }}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {# ── Legend ── #}
+  <div class="flex flex-wrap items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-emerald-400 inline-block"></span> متاح</span>
+    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-blue-400 inline-block"></span> لديه مواعيد</span>
+    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-red-400 inline-block"></span> محجوب</span>
+    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-gray-300 dark:bg-gray-600 inline-block"></span> لا يعمل</span>
+  </div>
+
+  {# ── Weekly grid (one card per doctor) ── #}
+  <div class="space-y-5">
+    {% for row in grid %}
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+
+      {# Doctor header #}
+      <div class="px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center text-purple-700 dark:text-purple-300 font-bold text-sm flex-shrink-0">
+          {{ row.doctor.name|slice:":1" }}
+        </div>
+        <div>
+          <h3 class="font-semibold text-gray-900 dark:text-white">د. {{ row.doctor.name }}</h3>
+        </div>
+        <div class="ms-auto flex items-center gap-2">
+          <a href="{% url 'secretary:appointments' %}?doctor_id={{ row.doctor.id }}&date_from={{ today|date:'Y-m-d' }}&date_to={{ today|date:'Y-m-d' }}"
+             class="text-xs text-purple-600 dark:text-purple-400 hover:underline font-medium">
+            مواعيد اليوم
+          </a>
+          <span class="text-gray-200 dark:text-gray-600">|</span>
+          <a href="{% url 'secretary:block_doctor_time' %}?doctor_id={{ row.doctor.id }}"
+             class="text-xs text-red-500 dark:text-red-400 hover:underline font-medium">
+            حجب وقت
+          </a>
+        </div>
+      </div>
+
+      {# Days grid #}
+      <div class="overflow-x-auto">
+        <div class="grid grid-cols-7 min-w-[700px]">
+          {# Day header row #}
+          {% for day_cell in row.days %}
+          <div class="px-3 py-2 text-center border-b border-gray-50 dark:border-gray-700
+            {% if day_cell.is_today %}bg-purple-50 dark:bg-purple-900/20{% endif %}">
+            <div class="text-xs font-semibold text-gray-500 dark:text-gray-400">
+              {{ day_names_ar|slice:day_cell.day_int|last }}{% with idx=day_cell.day_int %}{% if idx == 0 %}الاثنين{% elif idx == 1 %}الثلاثاء{% elif idx == 2 %}الأربعاء{% elif idx == 3 %}الخميس{% elif idx == 4 %}الجمعة{% elif idx == 5 %}السبت{% else %}الأحد{% endif %}{% endwith %}
+            </div>
+            <div class="text-xs mt-0.5 {% if day_cell.is_today %}text-purple-700 dark:text-purple-300 font-bold{% else %}text-gray-400 dark:text-gray-500{% endif %}">
+              {{ day_cell.date|date:"j/m" }}
+            </div>
+          </div>
+          {% endfor %}
+
+          {# Day content cells #}
+          {% for day_cell in row.days %}
+          <div class="px-2 py-3 min-h-[90px] border-l border-gray-50 dark:border-gray-700 last:border-l-0
+            {% if day_cell.is_today %}bg-purple-50/50 dark:bg-purple-900/10{% endif %}
+            {% if day_cell.status == 'blocked' %}bg-red-50 dark:bg-red-900/10{% endif %}">
+
+            {% if day_cell.status == 'blocked' %}
+            {# Blocked day #}
+            <div class="flex flex-col gap-1">
+              {% for exc in day_cell.exceptions %}
+              <div class="relative group">
+                <div class="px-2 py-1 rounded-lg bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 text-xs font-medium text-center leading-tight">
+                  <i class="fa-solid fa-ban text-xs me-1"></i>
+                  {{ exc.reason|default:"محجوب"|truncatechars:16 }}
+                </div>
+                <div class="absolute z-10 hidden group-hover:flex bottom-full mb-1 right-0 min-w-max
+                     bg-gray-900 text-white text-xs rounded-xl px-3 py-2 shadow-lg flex-col gap-1 pointer-events-none">
+                  <span class="font-semibold">{{ exc.reason|default:"محجوب" }}</span>
+                  <span class="text-gray-300">{{ exc.start_date|date:"j/m" }} — {{ exc.end_date|date:"j/m/Y" }}</span>
+                  {% if exc.created_by %}<span class="text-gray-400">أضافه: {{ exc.created_by.name }}</span>{% endif %}
+                </div>
+              </div>
+              {% endfor %}
+              {# Delete block form (one per exception) #}
+              {% for exc in day_cell.exceptions %}
+              {% if exc.start_date == day_cell.date %}
+              <form method="post" action="{% url 'secretary:delete_doctor_block' exc.id %}"
+                    onsubmit="return confirm('هل تريد إلغاء حجب الوقت هذا؟')">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit"
+                        class="w-full mt-1 px-2 py-1 rounded-lg bg-white dark:bg-gray-800 border border-red-200 dark:border-red-700 text-red-500 dark:text-red-400 text-xs hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                  <i class="fa-solid fa-xmark me-1"></i> إلغاء الحجب
+                </button>
+              </form>
+              {% endif %}
+              {% endfor %}
+            </div>
+
+            {% elif day_cell.status == 'off' %}
+            {# No schedule #}
+            <div class="flex items-center justify-center h-full">
+              <span class="text-xs text-gray-300 dark:text-gray-600">—</span>
+            </div>
+
+            {% else %}
+            {# Available or busy — show working hours + appointment count #}
+            <div class="flex flex-col gap-1.5">
+              {% for slot in day_cell.slots %}
+              <div class="px-2 py-1 rounded-lg text-xs font-medium text-center
+                {% if day_cell.status == 'busy' %}bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300
+                {% else %}bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300{% endif %}">
+                {{ slot.start_time|time:"H:i" }} — {{ slot.end_time|time:"H:i" }}
+              </div>
+              {% endfor %}
+
+              {% if day_cell.appt_count > 0 %}
+              <a href="{% url 'secretary:appointments' %}?doctor_id={{ row.doctor.id }}&date_from={{ day_cell.date|date:'Y-m-d' }}&date_to={{ day_cell.date|date:'Y-m-d' }}"
+                 class="inline-flex items-center justify-center gap-1 px-2 py-1 rounded-lg bg-blue-600/10 dark:bg-blue-600/20 text-blue-700 dark:text-blue-300 text-xs hover:bg-blue-600/20 transition-colors">
+                <i class="fa-solid fa-calendar-check text-xs"></i>
+                {{ day_cell.appt_count }} موعد
+              </a>
+              {% else %}
+              <a href="{% url 'secretary:create_appointment' %}?doctor_id={{ row.doctor.id }}&date={{ day_cell.date|date:'Y-m-d' }}"
+                 class="inline-flex items-center justify-center gap-1 px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs hover:bg-purple-100 dark:hover:bg-purple-900/20 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
+                <i class="fa-solid fa-plus text-xs"></i>
+                حجز
+              </a>
+              {% endif %}
+            </div>
+            {% endif %}
+
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+    </div>
+    {% empty %}
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-12 flex flex-col items-center gap-4 text-center text-gray-400 dark:text-gray-500">
+      <i class="fa-solid fa-user-doctor text-4xl opacity-30"></i>
+      <p class="text-sm">لا يوجد أطباء مسجلون في هذه العيادة</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# ── Active blocks sidebar panel ── #}
+  {% if active_blocks %}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
+    <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+      <h3 class="font-semibold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+        <i class="fa-solid fa-ban text-red-500"></i> الأوقات المحجوبة القادمة
+      </h3>
+      <a href="{% url 'secretary:block_doctor_time' %}"
+         class="text-xs text-purple-600 dark:text-purple-400 hover:underline font-medium">
+        + إضافة حجب
+      </a>
+    </div>
+    <div class="divide-y divide-gray-50 dark:divide-gray-700">
+      {% for block in active_blocks %}
+      <div class="px-5 py-3.5 flex items-center gap-4">
+        <div class="w-8 h-8 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-500 flex-shrink-0">
+          <i class="fa-solid fa-ban text-xs"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="font-medium text-gray-900 dark:text-gray-100 text-sm truncate">
+            د. {{ block.doctor.name }}
+          </div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            {{ block.start_date|date:"j F" }} — {{ block.end_date|date:"j F Y" }}
+            {% if block.reason %}· {{ block.reason }}{% endif %}
+          </div>
+        </div>
+        <form method="post" action="{% url 'secretary:delete_doctor_block' block.id %}"
+              onsubmit="return confirm('هل تريد إلغاء هذا الحجب؟')">
+          {% csrf_token %}
+          <button type="submit"
+                  class="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  title="إلغاء الحجب">
+            <i class="fa-solid fa-xmark text-sm"></i>
+          </button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
