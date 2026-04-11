@@ -1,6 +1,6 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" class="scroll-smooth">
-{% load static %}
+<html lang="{{ CURRENT_LANG }}" dir="{{ DIR }}" class="scroll-smooth">
+{% load static i18n %}
 
 <head>
     <meta charset="UTF-8">
@@ -25,7 +25,7 @@
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Cairo', 'sans-serif'],
+                        sans: ['Cairo', 'Inter', 'sans-serif'],
                     },
                     colors: {
                         primary: {
@@ -193,6 +193,20 @@
             width: max-content;
         }
 
+        [dir="ltr"] body { font-family: 'Inter', 'Cairo', sans-serif; }
+        [dir="rtl"] body { font-family: 'Cairo', 'Inter', sans-serif; }
+        .lang-toggle-btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 3px;
+            padding: 3px 9px; height: 30px;
+            background: transparent;
+            border: 1.5px solid #e5e7eb; border-radius: 8px;
+            font-size: 0.78rem; font-weight: 700; color: #6b7280;
+            cursor: pointer; transition: border-color 0.15s, color 0.15s;
+            font-family: inherit; white-space: nowrap;
+        }
+        .lang-toggle-btn:hover { border-color: #3b82f6; color: #3b82f6; }
+        .dark .lang-toggle-btn { border-color: #334155; color: #94a3b8; }
+        .dark .lang-toggle-btn:hover { border-color: #60a5fa; color: #60a5fa; }
     </style>
     {% block extra_head %}{% endblock %}
 
@@ -243,26 +257,38 @@
                         class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white">
                         <i class="fa-solid fa-heart-pulse"></i>
                     </div>
-                    <span class="font-bold text-xl text-gray-900 dark:text-white tracking-tight">منصتي الطبية</span>
+                    <span class="font-bold text-xl text-gray-900 dark:text-white tracking-tight">{% trans "منصتي الطبية" %}</span>
                     <span
-                        class="text-xs bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 px-2 py-0.5 rounded-full mr-2 hidden sm:inline-block">بوابة
-                        المرضى</span>
+                        class="text-xs bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 px-2 py-0.5 rounded-full mr-2 hidden sm:inline-block">{% trans "بوابة المرضى" %}</span>
                 </div>
 
                 <!-- Desktop Menu -->
-                <div class="hidden md:flex items-center space-x-reverse space-x-6">
+                <div class="hidden md:flex items-center gap-6">
                     <a href="{% url 'patients:dashboard' %}"
-                        class="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors">الرئيسية</a>
+                        class="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors">{% trans "الرئيسية" %}</a>
                     <a href="{% url 'patients:browse_doctors' %}"
-                        class="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors">الأطباء</a>
+                        class="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors">{% trans "أطبائي" %}</a>
                     <a href="{% url 'patients:my_appointments' %}"
-                        class="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors">مواعيدي</a>
+                        class="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors">{% trans "مواعيدي" %}</a>
                     <a href="{% url 'patients:clinics_list' %}"
-                        class="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors">العيادات</a>
+                        class="text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors">{% trans "العيادات" %}</a>
                 </div>
 
                 <!-- User Menu -->
                 <div class="flex items-center gap-3">
+
+                    <!-- Language toggle -->
+                    <form method="post" action="{% url 'accounts:set_language' %}" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        {% if IS_RTL %}
+                        <input type="hidden" name="language" value="en">
+                        <button type="submit" class="lang-toggle-btn"><i class="fa-solid fa-globe" style="font-size:0.7rem;"></i> عر</button>
+                        {% else %}
+                        <input type="hidden" name="language" value="ar">
+                        <button type="submit" class="lang-toggle-btn"><i class="fa-solid fa-globe" style="font-size:0.7rem;"></i> EN</button>
+                        {% endif %}
+                    </form>
 
                     <!-- Notification Bell -->
                     {% if user.is_authenticated %}
@@ -273,7 +299,7 @@
                        title="الإشعارات">
                         <i class="fa-regular fa-bell text-lg"></i>
                         {% if unread_patient_notification_count > 0 %}
-                        <span class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-0.5
+                        <span class="absolute -top-0.5 -end-0.5 min-w-[18px] h-[18px] px-0.5
                                      bg-red-500 text-white text-[10px] font-bold rounded-full
                                      flex items-center justify-center leading-none">
                             {% if unread_patient_notification_count > 9 %}9+{% else %}{{ unread_patient_notification_count }}{% endif %}
@@ -312,7 +338,7 @@
                             <i class="fa-solid fa-chevron-down text-gray-400 pum-chevron" style="font-size:0.6rem;transition:transform 0.2s;"></i>
                         </button>
 
-                        <div class="pum-dropdown hidden absolute left-0 top-full mt-2 w-56 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden">
+                        <div class="pum-dropdown hidden absolute start-0 top-full mt-2 w-56 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden">
                             <!-- Header -->
                             <div class="flex items-center gap-2.5 px-3.5 py-3 bg-gray-50 dark:bg-slate-700/50">
                                 <div class="w-9 h-9 rounded-full overflow-hidden flex-shrink-0">
@@ -337,29 +363,29 @@
 
                             {% if request.user.roles|length > 1 %}
                             <div class="h-px bg-gray-100 dark:bg-slate-700"></div>
-                            <div class="px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">تبديل الدور</div>
+                            <div class="px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">{% trans "تبديل الدور" %}</div>
 
                             <a href="{% url 'patients:dashboard' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-bold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20">
                                 <i class="fa-solid fa-user-injured w-4 text-center text-primary-500"></i>
-                                مريض
-                                <i class="fa-solid fa-check mr-auto text-primary-500" style="font-size:0.75rem;"></i>
+                                {% trans "مريض" %}
+                                <i class="fa-solid fa-check ms-auto text-primary-500" style="font-size:0.75rem;"></i>
                             </a>
                             {% if "MAIN_DOCTOR" in request.user.roles %}
                             <a href="{% url 'clinics:my_clinics' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
                                 <i class="fa-solid fa-hospital-user w-4 text-center text-gray-400"></i>
-                                صاحب عيادة
+                                {% trans "صاحب عيادة" %}
                             </a>
                             {% endif %}
                             {% if "DOCTOR" in request.user.roles %}
                             <a href="{% url 'doctors:dashboard' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
                                 <i class="fa-solid fa-stethoscope w-4 text-center text-gray-400"></i>
-                                طبيب
+                                {% trans "طبيب" %}
                             </a>
                             {% endif %}
                             {% if "SECRETARY" in request.user.roles %}
                             <a href="{% url 'secretary:dashboard' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
                                 <i class="fa-solid fa-user-tie w-4 text-center text-gray-400"></i>
-                                سكرتير/ة
+                                {% trans "سكرتير/ة" %}
                             </a>
                             {% endif %}
                             {% endif %}
@@ -367,7 +393,7 @@
                             <div class="h-px bg-gray-100 dark:bg-slate-700"></div>
                             <a href="{% url 'accounts:logout' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
                                 <i class="fa-solid fa-right-from-bracket w-4 text-center"></i>
-                                تسجيل الخروج
+                                {% trans "تسجيل الخروج" %}
                             </a>
                         </div>
                     </div>
@@ -409,23 +435,23 @@
     <nav class="mobile-nav-glass md:hidden">
         <a href="{% url 'patients:dashboard' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
             <i class="fa-solid fa-house"></i>
-            <span class="text">الرئيسية</span>
+            <span class="text">{% trans "الرئيسية" %}</span>
         </a>
         <a href="{% url 'patients:browse_doctors' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'browse_doctors' %}active{% endif %}">
             <i class="fa-solid fa-user-doctor"></i>
-            <span class="text">الأطباء</span>
+            <span class="text">{% trans "أطبائي" %}</span>
         </a>
         <a href="{% url 'patients:my_appointments' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'my_appointments' %}active{% endif %}">
             <i class="fa-regular fa-calendar-check"></i>
-            <span class="text">مواعيدي</span>
+            <span class="text">{% trans "مواعيدي" %}</span>
         </a>
         <a href="{% url 'appointments:patient_notifications' %}"
            class="mobile-nav-item {% if request.resolver_match.namespace == 'appointments' and request.resolver_match.url_name == 'patient_notifications' %}active{% endif %}"
            style="position:relative;">
             <i class="fa-regular fa-bell"></i>
-            <span class="text">الإشعارات</span>
+            <span class="text">{% trans "الإشعارات" %}</span>
             {% if unread_patient_notification_count > 0 %}
-            <span style="position:absolute;top:4px;right:4px;min-width:16px;height:16px;
+            <span style="position:absolute;top:4px;inset-inline-end:4px;min-width:16px;height:16px;
                          background:#ef4444;color:#fff;font-size:10px;font-weight:700;
                          border-radius:999px;display:flex;align-items:center;
                          justify-content:center;padding:0 3px;line-height:1;">
@@ -436,7 +462,7 @@
         {% if "MAIN_DOCTOR" in request.user.roles %}
         <a href="{% url 'clinics:my_clinics' %}" class="mobile-nav-item">
             <i class="fa-solid fa-hospital-user"></i>
-            <span class="text">عياداتي</span>
+            <span class="text">{% trans "عياداتي" %}</span>
         </a>
         {% endif %}
     </nav>

@@ -1,4 +1,4 @@
-{% load static %}
+{% load static i18n %}
 <style>
     .clinic-switcher {
         position: relative;
@@ -35,11 +35,45 @@
     .clinic-switcher.open .clinic-switcher-btn .chevron {
         transform: rotate(180deg);
     }
+    /* ── Language toggle button ─────────────────────────────────────── */
+    .lang-toggle-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        padding: 4px 10px;
+        background: var(--color-surface-card, #fff);
+        border: 1.5px solid var(--color-surface-border, #e5e7eb);
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--color-text-muted, #6b7280);
+        cursor: pointer;
+        transition: border-color 0.15s, color 0.15s;
+        font-family: inherit;
+        letter-spacing: 0.03em;
+        height: 34px;
+        white-space: nowrap;
+    }
+    .lang-toggle-btn:hover {
+        border-color: var(--color-primary-500, #2563eb);
+        color: var(--color-primary-500, #2563eb);
+    }
+    [data-theme="dark"] .lang-toggle-btn {
+        background: rgba(255,255,255,0.05);
+        border-color: rgba(255,255,255,0.12);
+        color: #94a3b8;
+    }
+    [data-theme="dark"] .lang-toggle-btn:hover {
+        border-color: #818cf8;
+        color: #818cf8;
+    }
+
     .clinic-switcher-dropdown {
         display: none;
         position: absolute;
         top: calc(100% + 6px);
-        right: 0;
+        inset-inline-end: 0;
         min-width: 220px;
         background: var(--color-surface-card, #fff);
         border: 1px solid var(--color-surface-border, #e5e7eb);
@@ -132,7 +166,7 @@
         display: none;
         position: absolute;
         top: calc(100% + 8px);
-        left: 0;
+        inset-inline-start: 0;
         min-width: 230px;
         background: var(--color-surface-card, #fff);
         border: 1px solid var(--color-surface-border, #e5e7eb);
@@ -268,18 +302,35 @@
         <ul class="navbar-menu">
             {% if request.resolver_match.namespace == 'clinics' or request.resolver_match.url_name == 'clinic_owner_notifications' %}
             {# Clinic owner navigation #}
-            <li><a href="{% url 'clinics:my_clinics' %}" class="navbar-link {% if request.resolver_match.url_name == 'my_clinics' or request.resolver_match.url_name == 'my_clinic' %}navbar-link-active{% endif %}">عياداتي</a></li>
-            <li><a href="{% url 'clinics:reports' %}" class="navbar-link {% if request.resolver_match.url_name == 'reports' %}navbar-link-active{% endif %}">التقارير</a></li>
+            <li><a href="{% url 'clinics:my_clinics' %}" class="navbar-link {% if request.resolver_match.url_name == 'my_clinics' or request.resolver_match.url_name == 'my_clinic' %}navbar-link-active{% endif %}">{% trans "عياداتي" %}</a></li>
+            <li><a href="{% url 'clinics:reports' %}" class="navbar-link {% if request.resolver_match.url_name == 'reports' %}navbar-link-active{% endif %}">{% trans "التقارير" %}</a></li>
             {% else %}
             {# Landing page navigation #}
-            <li><a href="{% url 'accounts:landing' %}" class="navbar-link">الرئيسية</a></li>
-            <li><a href="{% url 'accounts:landing' %}#features" class="navbar-link">الميزات</a></li>
-            <li><a href="{% url 'accounts:landing' %}#how-it-works" class="navbar-link">كيف يعمل</a></li>
-            <li><a href="{% url 'accounts:landing' %}#contact" class="navbar-link">اتصل بنا</a></li>
+            <li><a href="{% url 'accounts:landing' %}" class="navbar-link">{% trans "الرئيسية" %}</a></li>
+            <li><a href="{% url 'accounts:landing' %}#features" class="navbar-link">{% if IS_RTL %}الميزات{% else %}Features{% endif %}</a></li>
+            <li><a href="{% url 'accounts:landing' %}#how-it-works" class="navbar-link">{% if IS_RTL %}كيف يعمل{% else %}How It Works{% endif %}</a></li>
+            <li><a href="{% url 'accounts:landing' %}#contact" class="navbar-link">{% if IS_RTL %}اتصل بنا{% else %}Contact{% endif %}</a></li>
             {% endif %}
         </ul>
 
         <div class="navbar-actions">
+            {# ── Language toggle ─────────────────────────────────────── #}
+            <form method="post" action="{% url 'accounts:set_language' %}" style="display:inline;">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                {% if IS_RTL %}
+                <input type="hidden" name="language" value="en">
+                <button type="submit" class="lang-toggle-btn" title="Switch to English">
+                    <i class="fa-solid fa-globe" style="font-size:0.75rem;"></i> عر
+                </button>
+                {% else %}
+                <input type="hidden" name="language" value="ar">
+                <button type="submit" class="lang-toggle-btn" title="التبديل إلى العربية">
+                    <i class="fa-solid fa-globe" style="font-size:0.75rem;"></i> EN
+                </button>
+                {% endif %}
+            </form>
+
             <button class="theme-toggle" id="theme-toggle" aria-label="Toggle Dark Mode">
                 <span class="toggle-background">
                     <span class="star star-1"></span>
@@ -368,8 +419,8 @@
 
             {% if request.resolver_match.namespace != 'clinics' and request.resolver_match.url_name != 'clinic_owner_notifications' %}
             <a href="{% url 'accounts:home' %}" class="btn btn-primary">
-                لوحة التحكم
-                <i class="fa-solid fa-arrow-left"></i>
+                {% trans "لوحة التحكم" %}
+                {% if IS_RTL %}<i class="fa-solid fa-arrow-left"></i>{% else %}<i class="fa-solid fa-arrow-right"></i>{% endif %}
             </a>
             {% endif %}
 
@@ -400,12 +451,12 @@
 
                     {# Role switcher — only if user has more than one role #}
                     {% if user.roles|length > 1 %}
-                    <div class="user-menu-section-label">تبديل الدور</div>
+                    <div class="user-menu-section-label">{% trans "تبديل الدور" %}</div>
                     {% if "MAIN_DOCTOR" in user.roles %}
                     <a href="{% url 'clinics:my_clinics' %}"
                         class="user-menu-item {% if request.resolver_match.namespace == 'clinics' or request.resolver_match.url_name == 'clinic_owner_notifications' %}user-menu-item-active{% endif %}">
                         <i class="fa-solid fa-hospital-user"></i>
-                        صاحب عيادة
+                        {% trans "صاحب عيادة" %}
                         {% if request.resolver_match.namespace == 'clinics' or request.resolver_match.url_name == 'clinic_owner_notifications' %}<i class="fa-solid fa-check user-menu-check"></i>{% endif %}
                     </a>
                     {% endif %}
@@ -413,7 +464,7 @@
                     <a href="{% url 'patients:dashboard' %}"
                        class="user-menu-item {% if request.resolver_match.namespace == 'patients' %}user-menu-item-active{% endif %}">
                         <i class="fa-solid fa-user-injured"></i>
-                        مريض
+                        {% trans "مريض" %}
                         {% if request.resolver_match.namespace == 'patients' %}<i class="fa-solid fa-check user-menu-check"></i>{% endif %}
                     </a>
                     {% endif %}
@@ -421,7 +472,7 @@
                     <a href="{% url 'doctors:dashboard' %}"
                        class="user-menu-item {% if request.resolver_match.namespace == 'doctors' %}user-menu-item-active{% endif %}">
                         <i class="fa-solid fa-stethoscope"></i>
-                        طبيب
+                        {% trans "طبيب" %}
                         {% if request.resolver_match.namespace == 'doctors' %}<i class="fa-solid fa-check user-menu-check"></i>{% endif %}
                     </a>
                     {% endif %}
@@ -429,7 +480,7 @@
                     <a href="{% url 'secretary:dashboard' %}"
                        class="user-menu-item {% if request.resolver_match.namespace == 'secretary' %}user-menu-item-active{% endif %}">
                         <i class="fa-solid fa-user-tie"></i>
-                        سكرتير/ة
+                        {% trans "سكرتير/ة" %}
                         {% if request.resolver_match.namespace == 'secretary' %}<i class="fa-solid fa-check user-menu-check"></i>{% endif %}
                     </a>
                     {% endif %}
@@ -438,7 +489,7 @@
                     <div class="user-menu-divider"></div>
                     <a href="{% url 'accounts:logout' %}" class="user-menu-item user-menu-logout">
                         <i class="fa-solid fa-right-from-bracket"></i>
-                        تسجيل الخروج
+                        {% trans "تسجيل الخروج" %}
                     </a>
                 </div>
             </div>

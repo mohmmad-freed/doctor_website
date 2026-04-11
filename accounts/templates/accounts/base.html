@@ -1,6 +1,6 @@
-{% load static %}
+{% load static i18n %}
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" data-theme="light">
+<html lang="{{ CURRENT_LANG }}" dir="{{ DIR }}" data-theme="light">
 
 <head>
     <meta charset="UTF-8">
@@ -24,6 +24,18 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'accounts/css/landing.css' %}">
     <link rel="stylesheet" href="{% static 'accounts/css/loader.css' %}">
+    {# Font switching — Cairo for Arabic, Inter for English #}
+    <style>
+        [dir="ltr"] body, [dir="ltr"] .hb-text {
+            font-family: 'Inter', 'Cairo', sans-serif;
+        }
+        [dir="rtl"] body, [dir="rtl"] .hb-text {
+            font-family: 'Cairo', 'Inter', sans-serif;
+        }
+        /* Sidebar/mobile-nav: no-FOUC direction support for active indicator */
+        [dir="ltr"] .mobile-nav-item.active i { margin-right: 8px; margin-left: 0; }
+        [dir="rtl"] .mobile-nav-item.active i { margin-left: 8px; margin-right: 0; }
+    </style>
     {% block extra_css %}{% endblock %}
     <style>
         /* Field-level validation error — inline to bypass CSS caching */
@@ -130,57 +142,57 @@
         {# Clinic owner mobile nav #}
         <a href="{% url 'clinics:my_clinics' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'my_clinics' %}active{% endif %}">
             <i class="fa-solid fa-hospital-user"></i>
-            <span class="text">عياداتي</span>
+            <span class="text">{% trans "عياداتي" %}</span>
         </a>
         <a href="{% url 'clinics:add_clinic_code' %}" class="mobile-nav-item">
             <i class="fa-solid fa-plus"></i>
-            <span class="text">عيادة جديدة</span>
+            <span class="text">{% trans "عيادة جديدة" %}</span>
         </a>
         <a href="{% url 'clinics:owner_profile' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'owner_profile' %}active{% endif %}">
             <i class="fa-solid fa-user-circle"></i>
-            <span class="text">الملف</span>
+            <span class="text">{% trans "الملف" %}</span>
         </a>
         {% if user.is_authenticated and "PATIENT" in user.roles %}
         <a href="{% url 'patients:dashboard' %}" class="mobile-nav-item">
             <i class="fa-solid fa-user-injured"></i>
-            <span class="text">مريض</span>
+            <span class="text">{% trans "مريض" %}</span>
         </a>
         {% endif %}
         <a href="{% url 'accounts:logout' %}" class="mobile-nav-item">
             <i class="fa-solid fa-right-from-bracket"></i>
-            <span class="text">خروج</span>
+            <span class="text">{% trans "خروج" %}</span>
         </a>
         {% else %}
         {# Landing / auth mobile nav #}
         <a href="{% url 'accounts:landing' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'landing' %}active{% endif %}">
             <i class="fa-solid fa-house"></i>
-            <span class="text">الرئيسية</span>
+            <span class="text">{% trans "الرئيسية" %}</span>
         </a>
         {% if user.is_authenticated %}
         <a href="{% url 'accounts:home' %}" class="mobile-nav-item">
             <i class="fa-solid fa-cubes"></i>
-            <span class="text">لوحة التحكم</span>
+            <span class="text">{% trans "لوحة التحكم" %}</span>
         </a>
         {% if "DOCTOR" in user.roles or "MAIN_DOCTOR" in user.roles %}
         <a href="{% url 'doctors:doctor_invitations_inbox' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'doctor_invitations_inbox' %}active{% endif %}">
             <i class="fa-solid fa-envelope-open-text"></i>
-            <span class="text">الدعوات</span>
+            <span class="text">{% trans "الدعوات" %}</span>
         </a>
         {% endif %}
         {% if "MAIN_DOCTOR" in user.roles %}
         <a href="{% url 'clinics:my_clinics' %}" class="mobile-nav-item">
             <i class="fa-solid fa-hospital-user"></i>
-            <span class="text">عياداتي</span>
+            <span class="text">{% trans "عياداتي" %}</span>
         </a>
         {% endif %}
         {% else %}
         <a href="{% url 'accounts:login' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'login' %}active{% endif %}">
             <i class="fa-solid fa-right-to-bracket"></i>
-            <span class="text">دخول</span>
+            <span class="text">{% trans "دخول" %}</span>
         </a>
         <a href="{% url 'accounts:register' %}" class="mobile-nav-item {% if 'register' in request.resolver_match.url_name %}active{% endif %}">
             <i class="fa-solid fa-user-plus"></i>
-            <span class="text">حساب جديد</span>
+            <span class="text">{% trans "حساب جديد" %}</span>
         </a>
         {% endif %}
         {% endif %}

@@ -91,13 +91,20 @@ body {
   font-family: var(--font-family-primary);
   background-color: var(--color-surface-ground);
   color: var(--color-text-main);
-  direction: rtl;
-  /* Arabic First */
+  /* direction is driven by <html dir="rtl|ltr"> — do not set it here */
   line-height: 1.5;
   transition: background-color 0.3s ease, color 0.3s ease;
   overflow-x: hidden;
   /* Prevent blob overflow */
   width: 100%;
+}
+
+/* Font switching based on dir attribute */
+[dir="rtl"] body, [dir="rtl"] .hb-text {
+  font-family: 'Cairo', 'Inter', sans-serif;
+}
+[dir="ltr"] body, [dir="ltr"] .hb-text {
+  font-family: 'Inter', 'Cairo', sans-serif;
 }
 
 a {
@@ -112,10 +119,8 @@ ul {
 
 .container {
   width: 100%;
-  margin-right: auto;
-  margin-left: auto;
-  padding-right: var(--space-4);
-  padding-left: var(--space-4);
+  margin-inline: auto;
+  padding-inline: var(--space-4);
 }
 
 img {
@@ -477,7 +482,7 @@ html.js .reveal-on-scroll.is-visible {
     display: none;
     position: absolute;
     top: 100%;
-    left: 0;
+    inset-inline-start: 0;
     width: 100%;
     background-color: var(--color-surface-ground);
     flex-direction: column;
@@ -561,7 +566,7 @@ html.js .reveal-on-scroll.is-visible {
 }
 
 .mobile-nav-item.active i {
-  margin-left: 8px; /* RTL space */
+  margin-inline-start: 8px; /* space between icon and label, respects dir */
 }
 
 .mobile-nav-item .text {
@@ -914,8 +919,7 @@ html.js .reveal-on-scroll.is-visible {
   text-align: center;
   margin-bottom: var(--space-12);
   max-width: 700px;
-  margin-left: auto;
-  margin-right: auto;
+  margin-inline: auto;
 }
 
 .features-grid {
@@ -1038,35 +1042,35 @@ html.js .reveal-on-scroll.is-visible {
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* Top-Left Blue Accent */
+/* Top-Start Blue Accent */
 .cta-banner::before {
   content: '';
   position: absolute;
   top: 0;
-  left: 0;
+  inset-inline-start: 0;
   width: 100px;
   height: 100px;
   background: transparent;
   border-top: 6px solid #3B82F6;
   /* Blue 500 */
-  border-left: 6px solid #3B82F6;
-  border-top-left-radius: 32px;
+  border-inline-start: 6px solid #3B82F6;
+  border-start-start-radius: 32px;
   filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.6));
 }
 
-/* Bottom-Right Purple Accent */
+/* Bottom-End Purple Accent */
 .cta-banner::after {
   content: '';
   position: absolute;
   bottom: 0;
-  right: 0;
+  inset-inline-end: 0;
   width: 100px;
   height: 100px;
   background: transparent;
   border-bottom: 6px solid #D946EF;
   /* Fuchsia 500 */
-  border-right: 6px solid #D946EF;
-  border-bottom-right-radius: 32px;
+  border-inline-end: 6px solid #D946EF;
+  border-end-end-radius: 32px;
   filter: drop-shadow(0 0 10px rgba(217, 70, 239, 0.6));
 }
 

@@ -116,6 +116,8 @@ urlpatterns = [
         views.forgot_password_reset,
         name="forgot_password_reset",
     ),
+    # Language preference
+    path("set-language/", views.set_language_preference, name="set_language"),
     # API Endpoints
     path("api/login/", api_views.MyTokenObtainPairView.as_view(), name="api_login"),
     path("api/logout/", api_views.LogoutAPIView.as_view(), name="api_logout"),

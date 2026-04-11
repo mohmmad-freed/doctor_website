@@ -1,6 +1,6 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr" class="scroll-smooth">
-{% load static %}
+<html lang="{{ CURRENT_LANG }}" dir="{{ DIR }}" class="scroll-smooth">
+{% load static i18n %}
 
 <head>
     <meta charset="UTF-8">
@@ -92,8 +92,8 @@
         }
         .sidebar-link.active::before {
             content: '';
-            position: absolute; left: 0; top: 20%; bottom: 20%;
-            width: 3px; border-radius: 0 3px 3px 0;
+            position: absolute; inset-inline-start: 0; top: 20%; bottom: 20%;
+            width: 3px; border-start-end-radius: 3px; border-end-end-radius: 3px;
             background: #4f46e5;
         }
         .dark .sidebar-link.active::before { background: #818cf8; }
@@ -199,8 +199,8 @@
         .dark .mpw-item.mpw-active { background: rgba(99,102,241,0.1); }
         .mpw-item.mpw-active::before {
             content: ''; position: absolute;
-            left: 0; top: 20%; bottom: 20%;
-            width: 3px; border-radius: 0 3px 3px 0;
+            inset-inline-start: 0; top: 20%; bottom: 20%;
+            width: 3px; border-start-end-radius: 3px; border-end-end-radius: 3px;
             background: #4f46e5;
         }
         .dark .mpw-item.mpw-active::before { background: #818cf8; }
@@ -212,7 +212,7 @@
             flex-shrink: 0;
         }
         .mpw-close-btn {
-            margin-left: auto; flex-shrink: 0;
+            margin-inline-start: auto; flex-shrink: 0;
             width: 18px; height: 18px; border-radius: 50%;
             border: none; background: transparent;
             color: #94a3b8; font-size: 9px;
@@ -261,6 +261,25 @@
         #sidebarUserMenu.open .dr-dropdown { display: block; }
     </style>
 
+    <style>
+        /* Font switching */
+        [dir="rtl"] body { font-family: 'Cairo', 'Inter', sans-serif; }
+        [dir="ltr"] body { font-family: 'Inter', 'Cairo', sans-serif; }
+        /* Language toggle button */
+        .lang-toggle-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            padding: 3px 9px; height: 30px;
+            background: transparent;
+            border: 1.5px solid #e2e8f0; border-radius: 7px;
+            font-size: 0.78rem; font-weight: 700; color: #64748b;
+            cursor: pointer; transition: border-color 0.15s, color 0.15s;
+            font-family: inherit; white-space: nowrap;
+        }
+        .lang-toggle-btn:hover { border-color: #4f46e5; color: #4f46e5; }
+        .dark .lang-toggle-btn { border-color: #334155; color: #94a3b8; }
+        .dark .lang-toggle-btn:hover { border-color: #818cf8; color: #818cf8; }
+    </style>
+
     <!-- Dark-mode pre-script (no FOUC) -->
     <script>
         const _t = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
@@ -289,9 +308,9 @@
 
     <!-- ═══════════════ SIDEBAR ═══════════════ -->
     <aside id="sidebar"
-           class="hidden md:flex fixed inset-y-0 left-0 w-64 flex-col
+           class="hidden md:flex fixed inset-y-0 start-0 w-64 flex-col
                   bg-white dark:bg-slate-900
-                  border-r border-gray-200 dark:border-slate-700
+                  border-e border-gray-200 dark:border-slate-700
                   z-40">
 
             <!-- Logo -->
@@ -301,24 +320,24 @@
                 </div>
                 <div class="flex flex-col leading-tight min-w-0">
                     <span class="font-bold text-base text-gray-900 dark:text-white tracking-tight">MedPortal</span>
-                    <span class="text-[10px] font-semibold text-primary-600 dark:text-primary-400 uppercase tracking-wider">Doctor Portal</span>
+                    <span class="text-[10px] font-semibold text-primary-600 dark:text-primary-400 uppercase tracking-wider">{% trans "بوابة الأطباء" %}</span>
                 </div>
             </div>
 
             <!-- Nav links (scrollable) -->
             <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
 
-                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500 px-3 pt-1 pb-2">Main</p>
+                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500 px-3 pt-1 pb-2">{% trans "المهام الرئيسية" %}</p>
 
                 <a href="{% url 'doctors:dashboard' %}"
                    class="sidebar-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
                     <i class="fa-solid fa-house-medical w-4 text-center flex-shrink-0"></i>
-                    Dashboard
+                    {% trans "لوحة التحكم" %}
                 </a>
                 <a href="{% url 'doctors:appointments' %}"
                    class="sidebar-link {% if request.resolver_match.url_name == 'appointments' or request.resolver_match.url_name == 'appointment_detail' %}active{% endif %}">
                     <i class="fa-regular fa-calendar-check w-4 text-center flex-shrink-0"></i>
-                    Appointments
+                    {% trans "المواعيد" %}
                 </a>
                 <!-- My Patients + Multi-Patient Workspace open tabs -->
                 <div id="mpw-patients-section">
@@ -326,56 +345,56 @@
                        class="sidebar-link {% if request.resolver_match.url_name == 'patients' %}active{% endif %}"
                        id="mpw-patients-link">
                         <i class="fa-solid fa-users w-4 text-center flex-shrink-0"></i>
-                        My Patients
+                        {% trans "مرضاي" %}
                         <span id="mpw-count-badge"
-                              class="ml-auto min-w-[20px] h-5 bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 text-[10px] font-bold rounded-full items-center justify-center px-1"
+                              class="ms-auto min-w-[20px] h-5 bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 text-[10px] font-bold rounded-full items-center justify-center px-1"
                               style="display:none;"></span>
                     </a>
                     <!-- Open patient workspace items (populated by JS from localStorage) -->
                     <div id="mpw-open-patients" class="mt-0.5 space-y-0.5 px-1"></div>
                 </div>
 
-                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500 px-3 pt-4 pb-2">Setup</p>
+                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500 px-3 pt-4 pb-2">{% trans "الإعداد" %}</p>
 
                 <a href="{% url 'doctors:my_schedule' %}"
                    class="sidebar-link {% if request.resolver_match.url_name == 'my_schedule' %}active{% endif %}">
                     <i class="fa-solid fa-calendar-week w-4 text-center flex-shrink-0"></i>
-                    My Schedule
+                    {% trans "جدولي" %}
                 </a>
                 <a href="{% url 'doctors:my_appointment_types' %}"
                    class="sidebar-link {% if request.resolver_match.url_name == 'my_appointment_types' or request.resolver_match.url_name == 'intake_form_builder' or request.resolver_match.url_name == 'intake_question_edit' %}active{% endif %}">
                     <i class="fa-solid fa-list-check w-4 text-center flex-shrink-0"></i>
-                    Appointment Types
+                    {% trans "أنواع المواعيد" %}
                 </a>
                 <a href="{% url 'doctors:order_catalog' %}"
                    class="sidebar-link {% if request.resolver_match.url_name == 'order_catalog' or request.resolver_match.url_name == 'drug_family_create' or request.resolver_match.url_name == 'drug_family_edit' or request.resolver_match.url_name == 'drug_product_create' or request.resolver_match.url_name == 'drug_product_edit' or request.resolver_match.url_name == 'catalog_item_create' or request.resolver_match.url_name == 'catalog_item_edit' %}active{% endif %}">
                     <i class="fa-solid fa-book-medical w-4 text-center flex-shrink-0"></i>
-                    Order Catalog
+                    {% trans "كتالوج الطلبات" %}
                 </a>
                 <a href="{% url 'doctors:clinical_note_templates' %}"
                    class="sidebar-link {% if request.resolver_match.url_name == 'clinical_note_templates' or request.resolver_match.url_name == 'clinical_note_template_create' or request.resolver_match.url_name == 'clinical_note_template_edit' %}active{% endif %}">
                     <i class="fa-solid fa-note-medical w-4 text-center flex-shrink-0"></i>
-                    Note Templates
+                    {% trans "قوالب الملاحظات" %}
                 </a>
 
-                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500 px-3 pt-4 pb-2">Account</p>
+                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500 px-3 pt-4 pb-2">{% trans "الحساب" %}</p>
 
                 <a href="{% url 'doctors:doctor_profile' %}"
                    class="sidebar-link {% if request.resolver_match.url_name == 'doctor_profile' or request.resolver_match.url_name == 'edit_profile' %}active{% endif %}">
                     <i class="fa-solid fa-user-doctor w-4 text-center flex-shrink-0"></i>
-                    My Profile
+                    {% trans "ملفي" %}
                 </a>
                 <a href="{% url 'doctors:verification_status' %}"
                    class="sidebar-link {% if request.resolver_match.url_name == 'verification_status' or request.resolver_match.url_name == 'upload_credentials' or request.resolver_match.url_name == 'upload_clinic_credential' %}active{% endif %}">
                     <i class="fa-solid fa-shield-halved w-4 text-center flex-shrink-0"></i>
-                    Verification
+                    {% trans "التحقق" %}
                 </a>
                 <a href="{% url 'doctors:doctor_invitations_inbox' %}"
                    class="sidebar-link relative {% if request.resolver_match.url_name == 'doctor_invitations_inbox' %}active{% endif %}">
                     <i class="fa-regular fa-envelope w-4 text-center flex-shrink-0"></i>
-                    Invitations
+                    {% trans "الدعوات" %}
                     {% if pending_invitations_count > 0 %}
-                    <span class="ml-auto min-w-[20px] h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                    <span class="ms-auto min-w-[20px] h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
                         {{ pending_invitations_count }}
                     </span>
                     {% endif %}
@@ -383,9 +402,9 @@
                 <a href="{% url 'appointments:doctor_notifications' %}"
                    class="sidebar-link relative {% if request.resolver_match.namespace == 'appointments' and request.resolver_match.url_name == 'doctor_notifications' %}active{% endif %}">
                     <i class="fa-regular fa-bell w-4 text-center flex-shrink-0"></i>
-                    Notifications
+                    {% trans "الإشعارات" %}
                     {% if unread_doctor_notification_count > 0 %}
-                    <span class="ml-auto min-w-[20px] h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                    <span class="ms-auto min-w-[20px] h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
                         {% if unread_doctor_notification_count > 9 %}9+{% else %}{{ unread_doctor_notification_count }}{% endif %}
                     </span>
                     {% endif %}
@@ -398,7 +417,7 @@
 
                 <button onclick="document.getElementById('sidebarUserMenu').classList.toggle('open')"
                         class="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl
-                               hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-left group">
+                               hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-start group">
                     <div class="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center text-primary-600 dark:text-primary-300 font-bold text-sm flex-shrink-0">
                         {{ request.user.name|slice:":1" }}
                     </div>
@@ -407,6 +426,17 @@
                         <p class="text-xs text-gray-500 dark:text-gray-400 truncate" dir="ltr">{{ request.user.phone }}</p>
                     </div>
                     <div class="flex items-center gap-2 flex-shrink-0">
+                        <form method="post" action="{% url 'accounts:set_language' %}" style="display:inline;" onclick="event.stopPropagation()">
+                          {% csrf_token %}
+                          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                          {% if IS_RTL %}
+                          <input type="hidden" name="language" value="en">
+                          <button type="submit" class="lang-toggle-btn" style="height:26px;padding:2px 8px;font-size:0.72rem;border-radius:6px;gap:4px;"><i class="fa-solid fa-globe" style="font-size:0.65rem;"></i> عر</button>
+                          {% else %}
+                          <input type="hidden" name="language" value="ar">
+                          <button type="submit" class="lang-toggle-btn" style="height:26px;padding:2px 8px;font-size:0.72rem;border-radius:6px;gap:4px;"><i class="fa-solid fa-globe" style="font-size:0.65rem;"></i> EN</button>
+                          {% endif %}
+                        </form>
                         <button class="theme-toggle" id="theme-toggle" aria-label="Toggle Dark Mode" onclick="event.stopPropagation()">
                             <span class="toggle-background">
                                 <span class="star star-1"></span>
@@ -424,42 +454,42 @@
                 <!-- User popup (opens upward) -->
                 <div class="dr-dropdown">
                     {% if request.user.roles|length > 1 %}
-                    <div class="px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mt-1">Switch Role</div>
+                    <div class="px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mt-1">{% trans "تبديل الدور" %}</div>
                     <a href="{% url 'doctors:dashboard' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-bold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20">
                         <i class="fa-solid fa-stethoscope w-4 text-center text-primary-500"></i>
-                        Doctor
-                        <i class="fa-solid fa-check ml-auto text-primary-500" style="font-size:0.75rem;"></i>
+                        {% trans "طبيب" %}
+                        <i class="fa-solid fa-check ms-auto text-primary-500" style="font-size:0.75rem;"></i>
                     </a>
                     {% if "PATIENT" in request.user.roles %}
                     <a href="{% url 'patients:dashboard' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
                         <i class="fa-solid fa-user-injured w-4 text-center text-gray-400"></i>
-                        Patient
+                        {% trans "مريض" %}
                     </a>
                     {% endif %}
                     {% if "MAIN_DOCTOR" in request.user.roles %}
                     <a href="{% url 'clinics:my_clinics' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
                         <i class="fa-solid fa-hospital-user w-4 text-center text-gray-400"></i>
-                        Clinic Owner
+                        {% trans "صاحب عيادة" %}
                     </a>
                     {% endif %}
                     {% if "SECRETARY" in request.user.roles %}
                     <a href="{% url 'secretary:dashboard' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
                         <i class="fa-solid fa-user-tie w-4 text-center text-gray-400"></i>
-                        Secretary
+                        {% trans "سكرتير/ة" %}
                     </a>
                     {% endif %}
                     <div class="h-px bg-gray-100 dark:bg-slate-700"></div>
                     {% endif %}
                     <a href="{% url 'accounts:logout' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
                         <i class="fa-solid fa-right-from-bracket w-4 text-center"></i>
-                        Log Out
+                        {% trans "خروج" %}
                     </a>
                 </div>
             </div>
         </aside>
 
     <!-- ═══════════════ PAGE CONTENT ═══════════════ -->
-    <div class="md:ml-64">
+    <div class="md:ms-64">
 
             <!-- Mobile top bar -->
             <header class="md:hidden sticky top-0 z-30 h-14 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-gray-200 dark:border-slate-700 flex items-center justify-between px-4">
@@ -528,30 +558,30 @@
     <nav class="mobile-nav-glass md:hidden">
         <a href="{% url 'doctors:dashboard' %}" class="mob-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
             <i class="fa-solid fa-house-medical"></i>
-            <span>Home</span>
+            <span>{% trans "لوحة التحكم" %}</span>
         </a>
         <a href="{% url 'doctors:appointments' %}" class="mob-item {% if request.resolver_match.url_name == 'appointments' or request.resolver_match.url_name == 'appointment_detail' %}active{% endif %}">
             <i class="fa-regular fa-calendar-check"></i>
-            <span>Appointments</span>
+            <span>{% trans "المواعيد" %}</span>
         </a>
         <a href="{% url 'doctors:patients' %}" class="mob-item {% if request.resolver_match.url_name == 'patients' %}active{% endif %}">
             <i class="fa-solid fa-users"></i>
-            <span>Patients</span>
+            <span>{% trans "مرضاي" %}</span>
         </a>
         <a href="{% url 'doctors:my_schedule' %}" class="mob-item {% if request.resolver_match.url_name == 'my_schedule' %}active{% endif %}">
             <i class="fa-solid fa-calendar-week"></i>
-            <span>Schedule</span>
+            <span>{% trans "جدولي" %}</span>
         </a>
         <a href="{% url 'doctors:doctor_invitations_inbox' %}" class="mob-item {% if request.resolver_match.url_name == 'doctor_invitations_inbox' %}active{% endif %}" style="position:relative;">
             <i class="fa-regular fa-envelope"></i>
-            <span>Invitations</span>
+            <span>{% trans "الدعوات" %}</span>
             {% if pending_invitations_count > 0 %}
             <span class="mob-badge">{{ pending_invitations_count }}</span>
             {% endif %}
         </a>
         <a href="{% url 'appointments:doctor_notifications' %}" class="mob-item {% if request.resolver_match.namespace == 'appointments' and request.resolver_match.url_name == 'doctor_notifications' %}active{% endif %}" style="position:relative;">
             <i class="fa-regular fa-bell"></i>
-            <span>Alerts</span>
+            <span>{% trans "الإشعارات" %}</span>
             {% if unread_doctor_notification_count > 0 %}
             <span class="mob-badge">{% if unread_doctor_notification_count > 9 %}9+{% else %}{{ unread_doctor_notification_count }}{% endif %}</span>
             {% endif %}

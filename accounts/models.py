@@ -105,6 +105,19 @@ class CustomUser(AbstractUser):
     )
     city = models.ForeignKey("City", on_delete=models.SET_NULL, null=True, blank=True)
 
+    LANGUAGE_CHOICES = [
+        ("ar", "Arabic / العربية"),
+        ("en", "English"),
+    ]
+
+    preferred_language = models.CharField(
+        max_length=5,
+        choices=LANGUAGE_CHOICES,
+        blank=True,
+        null=True,
+        help_text="User's preferred UI language. Null means role-based default applies.",
+    )
+
     # Set phone as the unique identifier for login
     USERNAME_FIELD = "phone"
     REQUIRED_FIELDS = []

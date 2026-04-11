@@ -1,0 +1,384 @@
+# Arabic translations — Arabic is the source language, so msgstr is empty
+# (Django falls back to msgid when msgstr is blank)
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: ar\n"
+"Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 && n%100<=99 ? 4 : 5;\n"
+
+# ── Common ───────────────────────────────────────────────────────────────────
+msgid "حفظ"
+msgstr ""
+
+msgid "إلغاء"
+msgstr ""
+
+msgid "حذف"
+msgstr ""
+
+msgid "تعديل"
+msgstr ""
+
+msgid "بحث"
+msgstr ""
+
+msgid "جاري التحميل..."
+msgstr ""
+
+msgid "لا توجد بيانات"
+msgstr ""
+
+msgid "تأكيد"
+msgstr ""
+
+msgid "رجوع"
+msgstr ""
+
+msgid "التالي"
+msgstr ""
+
+msgid "نعم"
+msgstr ""
+
+msgid "لا"
+msgstr ""
+
+msgid "إضافة"
+msgstr ""
+
+msgid "تصفية"
+msgstr ""
+
+msgid "إرسال"
+msgstr ""
+
+msgid "تحديث"
+msgstr ""
+
+msgid "طباعة"
+msgstr ""
+
+msgid "تصدير"
+msgstr ""
+
+msgid "إغلاق"
+msgstr ""
+
+msgid "حفظ التغييرات"
+msgstr ""
+
+msgid "تأكيد الحذف"
+msgstr ""
+
+msgid "هل أنت متأكد؟"
+msgstr ""
+
+msgid "لا يمكن التراجع عن هذا الإجراء."
+msgstr ""
+
+# ── Navigation ───────────────────────────────────────────────────────────────
+msgid "لوحة التحكم"
+msgstr ""
+
+msgid "المواعيد"
+msgstr ""
+
+msgid "المرضى"
+msgstr ""
+
+msgid "التقارير"
+msgstr ""
+
+msgid "الإعدادات"
+msgstr ""
+
+msgid "الإشعارات"
+msgstr ""
+
+msgid "الدعوات"
+msgstr ""
+
+msgid "عياداتي"
+msgstr ""
+
+msgid "عيادة جديدة"
+msgstr ""
+
+msgid "الملف"
+msgstr ""
+
+msgid "خروج"
+msgstr ""
+
+msgid "الرئيسية"
+msgstr ""
+
+msgid "دخول"
+msgstr ""
+
+msgid "حساب جديد"
+msgstr ""
+
+msgid "ملفي الشخصي"
+msgstr ""
+
+msgid "تسجيل الخروج"
+msgstr ""
+
+msgid "تبديل الدور"
+msgstr ""
+
+# ── Auth ─────────────────────────────────────────────────────────────────────
+msgid "تسجيل الدخول"
+msgstr ""
+
+msgid "رقم الهاتف"
+msgstr ""
+
+msgid "كلمة المرور"
+msgstr ""
+
+msgid "تذكرني"
+msgstr ""
+
+msgid "نسيت كلمة المرور؟"
+msgstr ""
+
+msgid "إنشاء حساب"
+msgstr ""
+
+msgid "لديك حساب بالفعل؟"
+msgstr ""
+
+msgid "ليس لديك حساب؟"
+msgstr ""
+
+msgid "تسجيل"
+msgstr ""
+
+msgid "التحقق من رقم الهاتف"
+msgstr ""
+
+msgid "أدخل رمز التحقق"
+msgstr ""
+
+msgid "إرسال رمز جديد"
+msgstr ""
+
+msgid "تم التحقق بنجاح"
+msgstr ""
+
+# ── Appointments ─────────────────────────────────────────────────────────────
+msgid "موعد جديد"
+msgstr ""
+
+msgid "حجز موعد جديد"
+msgstr ""
+
+msgid "قائمة المواعيد"
+msgstr ""
+
+msgid "التقويم"
+msgstr ""
+
+msgid "تفاصيل الموعد"
+msgstr ""
+
+msgid "تعديل الموعد"
+msgstr ""
+
+msgid "إلغاء الموعد"
+msgstr ""
+
+msgid "تأكيد الموعد"
+msgstr ""
+
+msgid "مجدول"
+msgstr ""
+
+msgid "مؤكد"
+msgstr ""
+
+msgid "تم التسجيل"
+msgstr ""
+
+msgid "قيد المعالجة"
+msgstr ""
+
+msgid "مكتمل"
+msgstr ""
+
+msgid "ملغي"
+msgstr ""
+
+msgid "لم يحضر"
+msgstr ""
+
+msgid "معلق"
+msgstr ""
+
+msgid "التاريخ"
+msgstr ""
+
+msgid "الوقت"
+msgstr ""
+
+msgid "الطبيب"
+msgstr ""
+
+msgid "المريض"
+msgstr ""
+
+msgid "نوع الموعد"
+msgstr ""
+
+msgid "الحالة"
+msgstr ""
+
+msgid "ملاحظات"
+msgstr ""
+
+# ── Patients ─────────────────────────────────────────────────────────────────
+msgid "قائمة المرضى"
+msgstr ""
+
+msgid "مريض جديد"
+msgstr ""
+
+msgid "تسجيل مريض جديد"
+msgstr ""
+
+msgid "تفاصيل المريض"
+msgstr ""
+
+msgid "تعديل بيانات المريض"
+msgstr ""
+
+msgid "الاسم"
+msgstr ""
+
+msgid "رقم الهوية"
+msgstr ""
+
+msgid "تاريخ الميلاد"
+msgstr ""
+
+msgid "الجنس"
+msgstr ""
+
+msgid "ذكر"
+msgstr ""
+
+msgid "أنثى"
+msgstr ""
+
+msgid "فصيلة الدم"
+msgstr ""
+
+msgid "التاريخ الطبي"
+msgstr ""
+
+msgid "الحساسيات"
+msgstr ""
+
+# ── Secretary portal ─────────────────────────────────────────────────────────
+msgid "بوابة السكرتارية"
+msgstr ""
+
+msgid "المهام الرئيسية"
+msgstr ""
+
+msgid "غرفة الانتظار"
+msgstr ""
+
+msgid "المالية"
+msgstr ""
+
+msgid "التقارير والجدول"
+msgstr ""
+
+msgid "الحساب"
+msgstr ""
+
+msgid "الفواتير"
+msgstr ""
+
+msgid "الملخص اليومي"
+msgstr ""
+
+msgid "جدول الأطباء"
+msgstr ""
+
+msgid "سكرتير/ة"
+msgstr ""
+
+msgid "صاحب عيادة"
+msgstr ""
+
+msgid "مريض"
+msgstr ""
+
+msgid "طبيب"
+msgstr ""
+
+# ── Doctor portal ────────────────────────────────────────────────────────────
+msgid "بوابة الأطباء"
+msgstr ""
+
+msgid "الإعداد"
+msgstr ""
+
+msgid "مرضاي"
+msgstr ""
+
+msgid "جدولي"
+msgstr ""
+
+msgid "أنواع المواعيد"
+msgstr ""
+
+msgid "كتالوج الطلبات"
+msgstr ""
+
+msgid "قوالب الملاحظات"
+msgstr ""
+
+msgid "ملفي"
+msgstr ""
+
+msgid "التحقق"
+msgstr ""
+
+# ── Clinic owner ─────────────────────────────────────────────────────────────
+msgid "منصتي الطبية"
+msgstr ""
+
+msgid "لوحة تحكم العيادة"
+msgstr ""
+
+# ── Patient portal ───────────────────────────────────────────────────────────
+msgid "بوابة المرضى"
+msgstr ""
+
+msgid "مواعيدي"
+msgstr ""
+
+msgid "ملفي الطبي"
+msgstr ""
+
+msgid "أطبائي"
+msgstr ""
+
+# ── Language toggle ──────────────────────────────────────────────────────────
+msgid "اللغة"
+msgstr ""
+
+msgid "العربية"
+msgstr ""
+
+msgid "الإنجليزية"
+msgstr ""
+
+msgid "تغيير اللغة"
+msgstr ""

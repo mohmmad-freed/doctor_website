@@ -1,0 +1,383 @@
+# English translations
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# ── Common ───────────────────────────────────────────────────────────────────
+msgid "حفظ"
+msgstr "Save"
+
+msgid "إلغاء"
+msgstr "Cancel"
+
+msgid "حذف"
+msgstr "Delete"
+
+msgid "تعديل"
+msgstr "Edit"
+
+msgid "بحث"
+msgstr "Search"
+
+msgid "جاري التحميل..."
+msgstr "Loading..."
+
+msgid "لا توجد بيانات"
+msgstr "No data"
+
+msgid "تأكيد"
+msgstr "Confirm"
+
+msgid "رجوع"
+msgstr "Back"
+
+msgid "التالي"
+msgstr "Next"
+
+msgid "نعم"
+msgstr "Yes"
+
+msgid "لا"
+msgstr "No"
+
+msgid "إضافة"
+msgstr "Add"
+
+msgid "تصفية"
+msgstr "Filter"
+
+msgid "إرسال"
+msgstr "Submit"
+
+msgid "تحديث"
+msgstr "Update"
+
+msgid "طباعة"
+msgstr "Print"
+
+msgid "تصدير"
+msgstr "Export"
+
+msgid "إغلاق"
+msgstr "Close"
+
+msgid "حفظ التغييرات"
+msgstr "Save Changes"
+
+msgid "تأكيد الحذف"
+msgstr "Confirm Delete"
+
+msgid "هل أنت متأكد؟"
+msgstr "Are you sure?"
+
+msgid "لا يمكن التراجع عن هذا الإجراء."
+msgstr "This action cannot be undone."
+
+# ── Navigation ───────────────────────────────────────────────────────────────
+msgid "لوحة التحكم"
+msgstr "Dashboard"
+
+msgid "المواعيد"
+msgstr "Appointments"
+
+msgid "المرضى"
+msgstr "Patients"
+
+msgid "التقارير"
+msgstr "Reports"
+
+msgid "الإعدادات"
+msgstr "Settings"
+
+msgid "الإشعارات"
+msgstr "Notifications"
+
+msgid "الدعوات"
+msgstr "Invitations"
+
+msgid "عياداتي"
+msgstr "My Clinics"
+
+msgid "عيادة جديدة"
+msgstr "New Clinic"
+
+msgid "الملف"
+msgstr "Profile"
+
+msgid "خروج"
+msgstr "Logout"
+
+msgid "الرئيسية"
+msgstr "Home"
+
+msgid "دخول"
+msgstr "Login"
+
+msgid "حساب جديد"
+msgstr "Register"
+
+msgid "ملفي الشخصي"
+msgstr "My Profile"
+
+msgid "تسجيل الخروج"
+msgstr "Sign Out"
+
+msgid "تبديل الدور"
+msgstr "Switch Role"
+
+# ── Auth ─────────────────────────────────────────────────────────────────────
+msgid "تسجيل الدخول"
+msgstr "Sign In"
+
+msgid "رقم الهاتف"
+msgstr "Phone Number"
+
+msgid "كلمة المرور"
+msgstr "Password"
+
+msgid "تذكرني"
+msgstr "Remember me"
+
+msgid "نسيت كلمة المرور؟"
+msgstr "Forgot password?"
+
+msgid "إنشاء حساب"
+msgstr "Create Account"
+
+msgid "لديك حساب بالفعل؟"
+msgstr "Already have an account?"
+
+msgid "ليس لديك حساب؟"
+msgstr "Don't have an account?"
+
+msgid "تسجيل"
+msgstr "Register"
+
+msgid "التحقق من رقم الهاتف"
+msgstr "Phone Verification"
+
+msgid "أدخل رمز التحقق"
+msgstr "Enter verification code"
+
+msgid "إرسال رمز جديد"
+msgstr "Resend code"
+
+msgid "تم التحقق بنجاح"
+msgstr "Verification successful"
+
+# ── Appointments ─────────────────────────────────────────────────────────────
+msgid "موعد جديد"
+msgstr "New Appointment"
+
+msgid "حجز موعد جديد"
+msgstr "Book New Appointment"
+
+msgid "قائمة المواعيد"
+msgstr "Appointments List"
+
+msgid "التقويم"
+msgstr "Calendar"
+
+msgid "تفاصيل الموعد"
+msgstr "Appointment Details"
+
+msgid "تعديل الموعد"
+msgstr "Edit Appointment"
+
+msgid "إلغاء الموعد"
+msgstr "Cancel Appointment"
+
+msgid "تأكيد الموعد"
+msgstr "Confirm Appointment"
+
+msgid "مجدول"
+msgstr "Scheduled"
+
+msgid "مؤكد"
+msgstr "Confirmed"
+
+msgid "تم التسجيل"
+msgstr "Checked In"
+
+msgid "قيد المعالجة"
+msgstr "In Progress"
+
+msgid "مكتمل"
+msgstr "Completed"
+
+msgid "ملغي"
+msgstr "Cancelled"
+
+msgid "لم يحضر"
+msgstr "No Show"
+
+msgid "معلق"
+msgstr "Pending"
+
+msgid "التاريخ"
+msgstr "Date"
+
+msgid "الوقت"
+msgstr "Time"
+
+msgid "الطبيب"
+msgstr "Doctor"
+
+msgid "المريض"
+msgstr "Patient"
+
+msgid "نوع الموعد"
+msgstr "Appointment Type"
+
+msgid "الحالة"
+msgstr "Status"
+
+msgid "ملاحظات"
+msgstr "Notes"
+
+# ── Patients ─────────────────────────────────────────────────────────────────
+msgid "قائمة المرضى"
+msgstr "Patients List"
+
+msgid "مريض جديد"
+msgstr "New Patient"
+
+msgid "تسجيل مريض جديد"
+msgstr "Register New Patient"
+
+msgid "تفاصيل المريض"
+msgstr "Patient Details"
+
+msgid "تعديل بيانات المريض"
+msgstr "Edit Patient"
+
+msgid "الاسم"
+msgstr "Name"
+
+msgid "رقم الهوية"
+msgstr "National ID"
+
+msgid "تاريخ الميلاد"
+msgstr "Date of Birth"
+
+msgid "الجنس"
+msgstr "Gender"
+
+msgid "ذكر"
+msgstr "Male"
+
+msgid "أنثى"
+msgstr "Female"
+
+msgid "فصيلة الدم"
+msgstr "Blood Type"
+
+msgid "التاريخ الطبي"
+msgstr "Medical History"
+
+msgid "الحساسيات"
+msgstr "Allergies"
+
+# ── Secretary portal ─────────────────────────────────────────────────────────
+msgid "بوابة السكرتارية"
+msgstr "Secretary Portal"
+
+msgid "المهام الرئيسية"
+msgstr "Main Tasks"
+
+msgid "غرفة الانتظار"
+msgstr "Waiting Room"
+
+msgid "المالية"
+msgstr "Finance"
+
+msgid "التقارير والجدول"
+msgstr "Reports & Schedule"
+
+msgid "الحساب"
+msgstr "Account"
+
+msgid "الفواتير"
+msgstr "Invoices"
+
+msgid "الملخص اليومي"
+msgstr "Daily Summary"
+
+msgid "جدول الأطباء"
+msgstr "Doctor Schedule"
+
+msgid "سكرتير/ة"
+msgstr "Secretary"
+
+msgid "صاحب عيادة"
+msgstr "Clinic Owner"
+
+msgid "مريض"
+msgstr "Patient"
+
+msgid "طبيب"
+msgstr "Doctor"
+
+# ── Doctor portal ────────────────────────────────────────────────────────────
+msgid "بوابة الأطباء"
+msgstr "Doctor Portal"
+
+msgid "الإعداد"
+msgstr "Setup"
+
+msgid "مرضاي"
+msgstr "My Patients"
+
+msgid "جدولي"
+msgstr "My Schedule"
+
+msgid "أنواع المواعيد"
+msgstr "Appointment Types"
+
+msgid "كتالوج الطلبات"
+msgstr "Order Catalog"
+
+msgid "قوالب الملاحظات"
+msgstr "Note Templates"
+
+msgid "ملفي"
+msgstr "My Profile"
+
+msgid "التحقق"
+msgstr "Verification"
+
+# ── Clinic owner ─────────────────────────────────────────────────────────────
+msgid "منصتي الطبية"
+msgstr "My Medical Platform"
+
+msgid "لوحة تحكم العيادة"
+msgstr "Clinic Dashboard"
+
+# ── Patient portal ───────────────────────────────────────────────────────────
+msgid "بوابة المرضى"
+msgstr "Patient Portal"
+
+msgid "مواعيدي"
+msgstr "My Appointments"
+
+msgid "ملفي الطبي"
+msgstr "My Medical Record"
+
+msgid "أطبائي"
+msgstr "My Doctors"
+
+# ── Language toggle ──────────────────────────────────────────────────────────
+msgid "اللغة"
+msgstr "Language"
+
+msgid "العربية"
+msgstr "Arabic"
+
+msgid "الإنجليزية"
+msgstr "English"
+
+msgid "تغيير اللغة"
+msgstr "Change Language"

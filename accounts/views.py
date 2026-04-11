@@ -3,6 +3,7 @@ from django.urls import reverse
 from django.contrib.auth import login, logout, authenticate, get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.views.decorators.http import require_POST
 from django.conf import settings
 from django.http import JsonResponse
 from django.db import transaction, IntegrityError
@@ -1282,3 +1283,30 @@ def forgot_password_reset(request):
         form = ResetPasswordForm()
 
     return render(request, "accounts/forgot_password_reset.html", {"form": form})
+
+
+# ─── Language preference ────────────────────────────────────────────────────
+
+@require_POST
+def set_language_preference(request):
+    """
+    Save the user's chosen language (POST param: language = 'ar' | 'en').
+    Persists to DB (authenticated users), then sets the 'lang' cookie so
+    the next page load picks it up immediately via LanguagePreferenceMiddleware.
+    """
+    lang = request.POST.get("language", "ar")
+    if lang not in ("ar", "en"):
+        lang = "ar"
+
+    if request.user.is_authenticated:
+        User = get_user_model()
+        User.objects.filter(pk=request.user.pk).update(preferred_language=lang)
+
+    next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or "/"
+    # Prevent open-redirect: only allow relative URLs
+    if next_url.startswith("http"):
+        next_url = "/"
+
+    response = redirect(next_url)
+    response.set_cookie("lang", lang, max_age=365 * 24 * 3600, samesite="Lax")
+    return response
