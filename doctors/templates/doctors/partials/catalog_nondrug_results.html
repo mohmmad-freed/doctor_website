@@ -14,5 +14,5 @@
   {% endfor %}
 </ul>
 {% else %}
-<p class="px-3 py-4 text-sm text-center text-gray-400 dark:text-slate-500">No items found.</p>
+<p class="px-3 py-4 text-sm text-center text-gray-400 dark:text-slate-500">{% if IS_RTL %}لم يتم العثور على عناصر.{% else %}No items found.{% endif %}</p>
 {% endif %}

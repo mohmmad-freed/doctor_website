@@ -1,5 +1,5 @@
 {% extends "doctors/base_doctor.html" %}
-{% block title %}Order Catalog | Doctor Portal{% endblock %}
+{% block title %}{% if IS_RTL %}كتالوج الطلبات | بوابة الطبيب{% else %}Order Catalog | Doctor Portal{% endif %}{% endblock %}
 
 {% block extra_head %}
 <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -43,15 +43,15 @@
   <!-- ── Page header ───────────────────────────────────── -->
   <div class="mb-6 flex items-start justify-between gap-4 flex-wrap">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Order Catalog</h1>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{% if IS_RTL %}كتالوج الطلبات{% else %}Order Catalog{% endif %}</h1>
       <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">
-        {% if can_edit %}Manage your clinic's catalog — drugs, lab tests, radiology, and more.
-        {% else %}Browse the clinic catalog used when creating patient orders.{% endif %}
+        {% if can_edit %}{% if IS_RTL %}إدارة كتالوج عيادتك — الأدوية وفحوصات المختبر والأشعة وغيرها.{% else %}Manage your clinic's catalog — drugs, lab tests, radiology, and more.{% endif %}
+        {% else %}{% if IS_RTL %}استعرض كتالوج العيادة المستخدم عند إنشاء طلبات للمريض.{% else %}Browse the clinic catalog used when creating patient orders.{% endif %}{% endif %}
       </p>
     </div>
     {% if all_clinics|length > 1 %}
     <form method="get" class="flex items-center gap-2">
-      <label class="text-xs text-gray-500 dark:text-slate-400 font-medium flex-shrink-0">Clinic:</label>
+      <label class="text-xs text-gray-500 dark:text-slate-400 font-medium flex-shrink-0">{% if IS_RTL %}العيادة:{% else %}Clinic:{% endif %}</label>
       <select name="clinic_id" onchange="this.form.submit()"
               class="text-sm bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg px-3 py-1.5 text-gray-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500">
         {% for c in all_clinics %}
@@ -70,7 +70,7 @@
     <button @click="tab='drugs'; showAddFamily=false; showAddDrug=false; editingFamilyId=null; editingDrugId=null"
             :class="tab==='drugs' ? 'border-primary-500 text-primary-600 dark:text-primary-400 font-bold' : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'"
             class="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
-      <i class="fa-solid fa-pills opacity-75 text-[13px]"></i> Drugs
+      <i class="fa-solid fa-pills opacity-75 text-[13px]"></i> {% if IS_RTL %}الأدوية{% else %}Drugs{% endif %}
       <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[11px] px-1 font-semibold transition-colors"
             :class="tab==='drugs' ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400'">
         {{ drug_products|length }}
@@ -80,7 +80,7 @@
     <button @click="tab='lab'; showAddLab=false; editingItemId=null"
             :class="tab==='lab' ? 'border-primary-500 text-primary-600 dark:text-primary-400 font-bold' : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'"
             class="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
-      <i class="fa-solid fa-flask opacity-75 text-[13px]"></i> Lab
+      <i class="fa-solid fa-flask opacity-75 text-[13px]"></i> {% if IS_RTL %}المختبر{% else %}Lab{% endif %}
       <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[11px] px-1 font-semibold transition-colors"
             :class="tab==='lab' ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400'">
         {{ lab_items|length }}
@@ -90,7 +90,7 @@
     <button @click="tab='radiology'; showAddRadiology=false; editingItemId=null"
             :class="tab==='radiology' ? 'border-primary-500 text-primary-600 dark:text-primary-400 font-bold' : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'"
             class="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
-      <i class="fa-solid fa-x-ray opacity-75 text-[13px]"></i> Radiology
+      <i class="fa-solid fa-x-ray opacity-75 text-[13px]"></i> {% if IS_RTL %}الأشعة{% else %}Radiology{% endif %}
       <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[11px] px-1 font-semibold transition-colors"
             :class="tab==='radiology' ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400'">
         {{ radiology_items|length }}
@@ -100,7 +100,7 @@
     <button @click="tab='microbiology'; showAddMicrobiology=false; editingItemId=null"
             :class="tab==='microbiology' ? 'border-primary-500 text-primary-600 dark:text-primary-400 font-bold' : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'"
             class="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
-      <i class="fa-solid fa-microscope opacity-75 text-[13px]"></i> Microbiology
+      <i class="fa-solid fa-microscope opacity-75 text-[13px]"></i> {% if IS_RTL %}علم الأحياء الدقيقة{% else %}Microbiology{% endif %}
       <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[11px] px-1 font-semibold transition-colors"
             :class="tab==='microbiology' ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400'">
         {{ microbiology_items|length }}
@@ -110,7 +110,7 @@
     <button @click="tab='procedure'; showAddProcedure=false; editingItemId=null"
             :class="tab==='procedure' ? 'border-primary-500 text-primary-600 dark:text-primary-400 font-bold' : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'"
             class="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
-      <i class="fa-solid fa-stethoscope opacity-75 text-[13px]"></i> Procedures
+      <i class="fa-solid fa-stethoscope opacity-75 text-[13px]"></i> {% if IS_RTL %}الإجراءات{% else %}Procedures{% endif %}
       <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[11px] px-1 font-semibold transition-colors"
             :class="tab==='procedure' ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400'">
         {{ procedure_items|length }}
@@ -137,8 +137,8 @@
             <i class="fa-solid fa-layer-group text-purple-600 dark:text-purple-400 text-xs"></i>
           </span>
           <div>
-            <p class="text-sm font-bold text-gray-800 dark:text-white leading-tight">Drug Families</p>
-            <p class="text-[11px] text-gray-400 dark:text-slate-500">{{ drug_families|length }} group{{ drug_families|length|pluralize }}</p>
+            <p class="text-sm font-bold text-gray-800 dark:text-white leading-tight">{% if IS_RTL %}عائلات الأدوية{% else %}Drug Families{% endif %}</p>
+            <p class="text-[11px] text-gray-400 dark:text-slate-500">{{ drug_families|length }} {% if IS_RTL %}مجموعة{% else %}group{{ drug_families|length|pluralize }}{% endif %}</p>
           </div>
         </div>
         {% if can_edit %}
@@ -146,7 +146,7 @@
                 :class="showAddFamily ? 'bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-slate-200' : 'bg-primary-600 hover:bg-primary-700 active:scale-95 text-white shadow-sm'"
                 class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
           <i class="fa-solid" :class="showAddFamily ? 'fa-xmark' : 'fa-plus'"></i>
-          <span x-text="showAddFamily ? 'Cancel' : 'Add Family'"></span>
+          <span x-text="showAddFamily ? '{% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}' : '{% if IS_RTL %}إضافة عائلة{% else %}Add Family{% endif %}'"></span>
         </button>
         {% endif %}
       </div>
@@ -165,18 +165,18 @@
           <input type="hidden" name="clinic_id" value="{{ clinic.id }}">
           <div class="flex gap-3 flex-wrap sm:flex-nowrap items-end">
             <div class="flex-1 min-w-0">
-              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Name <span class="text-red-500">*</span></label>
+              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">{% if IS_RTL %}الاسم{% else %}Name{% endif %} <span class="text-red-500">*</span></label>
               <input type="text" name="name" x-ref="newFamilyName" required
-                     placeholder="e.g. Antibiotics, Beta-Blockers"
+                     placeholder="{% if IS_RTL %}مثال: مضادات حيوية، حاصرات بيتا{% else %}e.g. Antibiotics, Beta-Blockers{% endif %}"
                      class="ws-input">
             </div>
             <div class="flex-1 min-w-0">
-              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Description <span class="font-normal text-gray-400">(optional)</span></label>
-              <input type="text" name="description" placeholder="Brief description" class="ws-input">
+              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">{% if IS_RTL %}الوصف{% else %}Description{% endif %} <span class="font-normal text-gray-400">({% if IS_RTL %}اختياري{% else %}optional{% endif %})</span></label>
+              <input type="text" name="description" placeholder="{% if IS_RTL %}وصف مختصر{% else %}Brief description{% endif %}" class="ws-input">
             </div>
             <button type="submit"
                     class="flex-shrink-0 inline-flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm whitespace-nowrap">
-              <i class="fa-solid fa-plus text-xs"></i> Add Family
+              <i class="fa-solid fa-plus text-xs"></i> {% if IS_RTL %}إضافة عائلة{% else %}Add Family{% endif %}
             </button>
           </div>
         </form>
@@ -201,14 +201,14 @@
             </span>
             {% if can_edit %}
             <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-              <button @click="editingFamilyId = {{ fam.id }}" title="Edit"
+              <button @click="editingFamilyId = {{ fam.id }}" title="{% if IS_RTL %}تعديل{% else %}Edit{% endif %}"
                       class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
                 <i class="fa-solid fa-pen text-xs"></i>
               </button>
               <form method="post" action="{% url 'doctors:drug_family_delete' fam.id %}"
-                    onsubmit="return confirm('Delete «{{ fam.name }}»?\nDrugs will become uncategorized.')">
+                    onsubmit="return confirm('{% if IS_RTL %}حذف «{{ fam.name }}»؟\nستصبح الأدوية غير مصنفة.{% else %}Delete «{{ fam.name }}»?\nDrugs will become uncategorized.{% endif %}')">
                 {% csrf_token %}
-                <button type="submit" title="Delete"
+                <button type="submit" title="{% if IS_RTL %}حذف{% else %}Delete{% endif %}"
                         class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
                   <i class="fa-solid fa-trash text-xs"></i>
                 </button>
@@ -227,25 +227,25 @@
             <form method="post" action="{% url 'doctors:drug_family_edit' fam.id %}">
               {% csrf_token %}
               <p class="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-3">
-                <i class="fa-solid fa-pen me-1.5"></i>Editing: {{ fam.name }}
+                <i class="fa-solid fa-pen me-1.5"></i>{% if IS_RTL %}تعديل:{% else %}Editing:{% endif %} {{ fam.name }}
               </p>
               <div class="flex gap-3 flex-wrap sm:flex-nowrap items-end">
                 <div class="flex-1 min-w-0">
-                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Name *</label>
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">{% if IS_RTL %}الاسم *{% else %}Name *{% endif %}</label>
                   <input type="text" name="name" value="{{ fam.name }}" required class="ws-input">
                 </div>
                 <div class="flex-1 min-w-0">
-                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Description</label>
-                  <input type="text" name="description" value="{{ fam.description }}" placeholder="optional" class="ws-input">
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">{% if IS_RTL %}الوصف{% else %}Description{% endif %}</label>
+                  <input type="text" name="description" value="{{ fam.description }}" placeholder="{% if IS_RTL %}اختياري{% else %}optional{% endif %}" class="ws-input">
                 </div>
                 <div class="flex gap-2 flex-shrink-0">
                   <button type="submit"
                           class="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm">
-                    <i class="fa-solid fa-floppy-disk text-xs"></i> Save
+                    <i class="fa-solid fa-floppy-disk text-xs"></i> {% if IS_RTL %}حفظ{% else %}Save{% endif %}
                   </button>
                   <button type="button" @click="editingFamilyId = null"
                           class="inline-flex items-center text-sm font-medium text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                    Cancel
+                    {% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}
                   </button>
                 </div>
               </div>
@@ -260,9 +260,9 @@
         <div class="w-14 h-14 rounded-2xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center mx-auto mb-3">
           <i class="fa-solid fa-layer-group text-purple-300 dark:text-purple-600 text-xl"></i>
         </div>
-        <p class="text-sm font-medium text-gray-600 dark:text-slate-300">No drug families yet.</p>
+        <p class="text-sm font-medium text-gray-600 dark:text-slate-300">{% if IS_RTL %}لا توجد عائلات أدوية بعد.{% else %}No drug families yet.{% endif %}</p>
         {% if can_edit %}
-        <p class="text-xs text-gray-400 dark:text-slate-500 mt-1">Group drugs by class — Antibiotics, Beta-Blockers, NSAIDs…</p>
+        <p class="text-xs text-gray-400 dark:text-slate-500 mt-1">{% if IS_RTL %}صنّف الأدوية حسب الفئة — مضادات حيوية، حاصرات بيتا، مضادات التهاب...{% else %}Group drugs by class — Antibiotics, Beta-Blockers, NSAIDs…{% endif %}</p>
         {% endif %}
       </div>
       {% endif %}
@@ -277,14 +277,14 @@
             <i class="fa-solid fa-pills text-blue-600 dark:text-blue-400 text-xs"></i>
           </span>
           <div>
-            <p class="text-sm font-bold text-gray-800 dark:text-white leading-tight">Drug Products</p>
-            <p class="text-[11px] text-gray-400 dark:text-slate-500">{{ drug_products|length }} product{{ drug_products|length|pluralize }}</p>
+            <p class="text-sm font-bold text-gray-800 dark:text-white leading-tight">{% if IS_RTL %}منتجات الأدوية{% else %}Drug Products{% endif %}</p>
+            <p class="text-[11px] text-gray-400 dark:text-slate-500">{{ drug_products|length }} {% if IS_RTL %}منتج{% else %}product{{ drug_products|length|pluralize }}{% endif %}</p>
           </div>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
           <select x-model="drugFamilyFilter"
                   class="text-xs bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg px-2.5 py-1.5 text-gray-600 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-primary-400">
-            <option value="">All Families</option>
+            <option value="">{% if IS_RTL %}جميع العائلات{% else %}All Families{% endif %}</option>
             {% for fam in drug_families %}
             <option value="{{ fam.id }}">{{ fam.name }}</option>
             {% endfor %}
@@ -294,7 +294,7 @@
                   :class="showAddDrug ? 'bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-slate-200' : 'bg-primary-600 hover:bg-primary-700 active:scale-95 text-white shadow-sm'"
                   class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
             <i class="fa-solid" :class="showAddDrug ? 'fa-xmark' : 'fa-plus'"></i>
-            <span x-text="showAddDrug ? 'Cancel' : 'Add Drug'"></span>
+            <span x-text="showAddDrug ? '{% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}' : '{% if IS_RTL %}إضافة دواء{% else %}Add Drug{% endif %}'"></span>
           </button>
           {% endif %}
         </div>
@@ -314,29 +314,29 @@
           <input type="hidden" name="clinic_id" value="{{ clinic.id }}">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             <div>
-              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Generic Name <span class="text-red-500">*</span></label>
-              <input type="text" name="generic_name" x-ref="newDrugName" required placeholder="e.g. Amoxicillin" class="ws-input">
+              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">{% if IS_RTL %}الاسم الجنيسي{% else %}Generic Name{% endif %} <span class="text-red-500">*</span></label>
+              <input type="text" name="generic_name" x-ref="newDrugName" required placeholder="{% if IS_RTL %}مثال: أموكسيسيلين{% else %}e.g. Amoxicillin{% endif %}" class="ws-input">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Commercial Name <span class="text-red-500">*</span></label>
-              <input type="text" name="commercial_name" required placeholder="e.g. Amoxil, Augmentin" class="ws-input">
+              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">{% if IS_RTL %}الاسم التجاري{% else %}Commercial Name{% endif %} <span class="text-red-500">*</span></label>
+              <input type="text" name="commercial_name" required placeholder="{% if IS_RTL %}مثال: أموكسيل، أوجمنتين{% else %}e.g. Amoxil, Augmentin{% endif %}" class="ws-input">
             </div>
           </div>
           <div class="mb-4">
-            <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Family</label>
+            <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">{% if IS_RTL %}العائلة{% else %}Family{% endif %}</label>
             <select name="family_id" class="ws-select text-sm">
-              <option value="">— None —</option>
+              <option value="">{% if IS_RTL %}— لا شيء —{% else %}— None —{% endif %}</option>
               {% for fam in drug_families %}<option value="{{ fam.id }}">{{ fam.name }}</option>{% endfor %}
             </select>
           </div>
           <div class="flex gap-2">
             <button type="submit"
                     class="inline-flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm">
-              <i class="fa-solid fa-plus text-xs"></i> Add Drug
+              <i class="fa-solid fa-plus text-xs"></i> {% if IS_RTL %}إضافة دواء{% else %}Add Drug{% endif %}
             </button>
             <button type="button" @click="showAddDrug = false"
                     class="inline-flex items-center text-sm font-medium text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-              Cancel
+              {% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}
             </button>
           </div>
         </form>
@@ -365,14 +365,14 @@
             </div>
             {% if can_edit %}
             <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-              <button @click="editingDrugId = {{ drug.id }}" title="Edit"
+              <button @click="editingDrugId = {{ drug.id }}" title="{% if IS_RTL %}تعديل{% else %}Edit{% endif %}"
                       class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
                 <i class="fa-solid fa-pen text-xs"></i>
               </button>
               <form method="post" action="{% url 'doctors:drug_product_delete' drug.id %}"
-                    onsubmit="return confirm('Delete «{{ drug.generic_name }}»?')">
+                    onsubmit="return confirm('{% if IS_RTL %}حذف «{{ drug.generic_name }}»؟{% else %}Delete «{{ drug.generic_name }}»?{% endif %}')">
                 {% csrf_token %}
-                <button type="submit" title="Delete"
+                <button type="submit" title="{% if IS_RTL %}حذف{% else %}Delete{% endif %}"
                         class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
                   <i class="fa-solid fa-trash text-xs"></i>
                 </button>
@@ -391,22 +391,22 @@
             <form method="post" action="{% url 'doctors:drug_product_edit' drug.id %}">
               {% csrf_token %}
               <p class="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-3">
-                <i class="fa-solid fa-pen me-1.5"></i>Editing: {{ drug.generic_name }}
+                <i class="fa-solid fa-pen me-1.5"></i>{% if IS_RTL %}تعديل:{% else %}Editing:{% endif %} {{ drug.generic_name }}
               </p>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Generic Name *</label>
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">{% if IS_RTL %}الاسم الجنيسي *{% else %}Generic Name *{% endif %}</label>
                   <input type="text" name="generic_name" value="{{ drug.generic_name }}" required class="ws-input">
                 </div>
                 <div>
-                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Commercial Name <span class="text-red-500">*</span></label>
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">{% if IS_RTL %}الاسم التجاري{% else %}Commercial Name{% endif %} <span class="text-red-500">*</span></label>
                   <input type="text" name="commercial_name" value="{{ drug.commercial_name }}" required class="ws-input">
                 </div>
               </div>
               <div class="mb-4">
-                <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Family</label>
+                <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">{% if IS_RTL %}العائلة{% else %}Family{% endif %}</label>
                 <select name="family_id" class="ws-select text-sm">
-                  <option value="">— None —</option>
+                  <option value="">{% if IS_RTL %}— لا شيء —{% else %}— None —{% endif %}</option>
                   {% for fam in drug_families %}
                   <option value="{{ fam.id }}" {% if drug.family_id == fam.id %}selected{% endif %}>{{ fam.name }}</option>
                   {% endfor %}
@@ -415,11 +415,11 @@
               <div class="flex gap-2">
                 <button type="submit"
                         class="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm">
-                  <i class="fa-solid fa-floppy-disk text-xs"></i> Save
+                  <i class="fa-solid fa-floppy-disk text-xs"></i> {% if IS_RTL %}حفظ{% else %}Save{% endif %}
                 </button>
                 <button type="button" @click="editingDrugId = null"
                         class="inline-flex items-center text-sm font-medium text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                  Cancel
+                  {% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}
                 </button>
               </div>
             </form>
@@ -433,9 +433,9 @@
         <div class="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center mx-auto mb-3">
           <i class="fa-solid fa-pills text-blue-300 dark:text-blue-600 text-xl"></i>
         </div>
-        <p class="text-sm font-medium text-gray-600 dark:text-slate-300">No drug products yet.</p>
+        <p class="text-sm font-medium text-gray-600 dark:text-slate-300">{% if IS_RTL %}لا توجد منتجات أدوية بعد.{% else %}No drug products yet.{% endif %}</p>
         {% if can_edit %}
-        <p class="text-xs text-gray-400 dark:text-slate-500 mt-1">Add drugs with generic names, commercial names, and default dosage info.</p>
+        <p class="text-xs text-gray-400 dark:text-slate-500 mt-1">{% if IS_RTL %}أضف الأدوية بالأسماء الجنيسية والتجارية ومعلومات الجرعة الافتراضية.{% else %}Add drugs with generic names, commercial names, and default dosage info.{% endif %}</p>
         {% endif %}
       </div>
       {% endif %}
@@ -458,8 +458,8 @@
             <i class="fa-solid fa-flask text-purple-600 dark:text-purple-400 text-xs"></i>
           </span>
           <div>
-            <p class="text-sm font-bold text-gray-800 dark:text-white leading-tight">Lab Tests</p>
-            <p class="text-[11px] text-gray-400 dark:text-slate-500">{{ lab_items|length }} test{{ lab_items|length|pluralize }}</p>
+            <p class="text-sm font-bold text-gray-800 dark:text-white leading-tight">{% if IS_RTL %}فحوصات المختبر{% else %}Lab Tests{% endif %}</p>
+            <p class="text-[11px] text-gray-400 dark:text-slate-500">{{ lab_items|length }} {% if IS_RTL %}فحص{% else %}test{{ lab_items|length|pluralize }}{% endif %}</p>
           </div>
         </div>
         {% if can_edit %}
@@ -467,7 +467,7 @@
                 :class="showAddLab ? 'bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-slate-200' : 'bg-primary-600 hover:bg-primary-700 active:scale-95 text-white shadow-sm'"
                 class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
           <i class="fa-solid" :class="showAddLab ? 'fa-xmark' : 'fa-plus'"></i>
-          <span x-text="showAddLab ? 'Cancel' : 'Add Test'"></span>
+          <span x-text="showAddLab ? '{% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}' : '{% if IS_RTL %}إضافة فحص{% else %}Add Test{% endif %}'"></span>
         </button>
         {% endif %}
       </div>
@@ -483,14 +483,14 @@
           <input type="hidden" name="category" value="LAB">
           <div class="flex gap-3 items-end flex-wrap sm:flex-nowrap">
             <div class="flex-1 min-w-0">
-              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Test Name <span class="text-red-500">*</span></label>
+              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">{% if IS_RTL %}اسم الفحص{% else %}Test Name{% endif %} <span class="text-red-500">*</span></label>
               <input type="text" name="name" x-ref="newLabName" required
-                     placeholder="e.g. Complete Blood Count, Lipid Panel"
+                     placeholder="{% if IS_RTL %}مثال: صورة دم كاملة، دهون الدم{% else %}e.g. Complete Blood Count, Lipid Panel{% endif %}"
                      class="ws-input">
             </div>
             <button type="submit"
                     class="flex-shrink-0 inline-flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm whitespace-nowrap">
-              <i class="fa-solid fa-plus text-xs"></i> Add Test
+              <i class="fa-solid fa-plus text-xs"></i> {% if IS_RTL %}إضافة فحص{% else %}Add Test{% endif %}
             </button>
           </div>
         </form>
@@ -504,17 +504,17 @@
           <div x-show="editingItemId !== {{ item.id }}"
                class="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50/60 dark:hover:bg-slate-700/20 transition-colors group">
             <p class="flex-1 text-sm font-medium text-gray-800 dark:text-gray-100">{{ item.name }}</p>
-            {% if not item.is_active %}<span class="text-[11px] text-gray-400 dark:text-slate-500 flex-shrink-0">Inactive</span>{% endif %}
+            {% if not item.is_active %}<span class="text-[11px] text-gray-400 dark:text-slate-500 flex-shrink-0">{% if IS_RTL %}غير نشط{% else %}Inactive{% endif %}</span>{% endif %}
             {% if can_edit %}
             <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-              <button @click="editingItemId = {{ item.id }}" title="Edit"
+              <button @click="editingItemId = {{ item.id }}" title="{% if IS_RTL %}تعديل{% else %}Edit{% endif %}"
                       class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
                 <i class="fa-solid fa-pen text-xs"></i>
               </button>
               <form method="post" action="{% url 'doctors:catalog_item_delete' item.id %}"
-                    onsubmit="return confirm('Delete «{{ item.name }}»?')">
+                    onsubmit="return confirm('{% if IS_RTL %}حذف «{{ item.name }}»؟{% else %}Delete «{{ item.name }}»?{% endif %}')">
                 {% csrf_token %}
-                <button type="submit" title="Delete"
+                <button type="submit" title="{% if IS_RTL %}حذف{% else %}Delete{% endif %}"
                         class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
                   <i class="fa-solid fa-trash text-xs"></i>
                 </button>
@@ -529,21 +529,21 @@
             <form method="post" action="{% url 'doctors:catalog_item_edit' item.id %}">
               {% csrf_token %}
               <p class="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-3">
-                <i class="fa-solid fa-pen me-1.5"></i>Editing
+                <i class="fa-solid fa-pen me-1.5"></i>{% if IS_RTL %}تعديل{% else %}Editing{% endif %}
               </p>
               <div class="flex gap-3 items-end flex-wrap sm:flex-nowrap">
                 <div class="flex-1 min-w-0">
-                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Name *</label>
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">{% if IS_RTL %}الاسم *{% else %}Name *{% endif %}</label>
                   <input type="text" name="name" value="{{ item.name }}" required class="ws-input">
                 </div>
                 <div class="flex gap-2 flex-shrink-0">
                   <button type="submit"
                           class="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm">
-                    <i class="fa-solid fa-floppy-disk text-xs"></i> Save
+                    <i class="fa-solid fa-floppy-disk text-xs"></i> {% if IS_RTL %}حفظ{% else %}Save{% endif %}
                   </button>
                   <button type="button" @click="editingItemId = null"
                           class="inline-flex items-center text-sm font-medium text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                    Cancel
+                    {% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}
                   </button>
                 </div>
               </div>
@@ -558,8 +558,8 @@
         <div class="w-14 h-14 rounded-2xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center mx-auto mb-3">
           <i class="fa-solid fa-flask text-purple-300 dark:text-purple-600 text-xl"></i>
         </div>
-        <p class="text-sm font-medium text-gray-600 dark:text-slate-300">No lab tests yet.</p>
-        {% if can_edit %}<p class="text-xs text-gray-400 dark:text-slate-500 mt-1">Add tests like CBC, Lipid Panel, Liver Function…</p>{% endif %}
+        <p class="text-sm font-medium text-gray-600 dark:text-slate-300">{% if IS_RTL %}لا توجد فحوصات مختبرية بعد.{% else %}No lab tests yet.{% endif %}</p>
+        {% if can_edit %}<p class="text-xs text-gray-400 dark:text-slate-500 mt-1">{% if IS_RTL %}أضف فحوصات مثل صورة دم كاملة، دهون الدم، وظائف الكبد...{% else %}Add tests like CBC, Lipid Panel, Liver Function…{% endif %}</p>{% endif %}
       </div>
       {% endif %}
     </div>
@@ -581,8 +581,8 @@
             <i class="fa-solid fa-x-ray text-indigo-600 dark:text-indigo-400 text-xs"></i>
           </span>
           <div>
-            <p class="text-sm font-bold text-gray-800 dark:text-white leading-tight">Radiology Exams</p>
-            <p class="text-[11px] text-gray-400 dark:text-slate-500">{{ radiology_items|length }} exam{{ radiology_items|length|pluralize }}</p>
+            <p class="text-sm font-bold text-gray-800 dark:text-white leading-tight">{% if IS_RTL %}فحوصات الأشعة{% else %}Radiology Exams{% endif %}</p>
+            <p class="text-[11px] text-gray-400 dark:text-slate-500">{{ radiology_items|length }} {% if IS_RTL %}فحص{% else %}exam{{ radiology_items|length|pluralize }}{% endif %}</p>
           </div>
         </div>
         {% if can_edit %}
@@ -590,7 +590,7 @@
                 :class="showAddRadiology ? 'bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-slate-200' : 'bg-primary-600 hover:bg-primary-700 active:scale-95 text-white shadow-sm'"
                 class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
           <i class="fa-solid" :class="showAddRadiology ? 'fa-xmark' : 'fa-plus'"></i>
-          <span x-text="showAddRadiology ? 'Cancel' : 'Add Exam'"></span>
+          <span x-text="showAddRadiology ? '{% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}' : '{% if IS_RTL %}إضافة فحص{% else %}Add Exam{% endif %}'"></span>
         </button>
         {% endif %}
       </div>
@@ -606,14 +606,14 @@
           <input type="hidden" name="category" value="RADIOLOGY">
           <div class="flex gap-3 items-end flex-wrap sm:flex-nowrap">
             <div class="flex-1 min-w-0">
-              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Exam Name <span class="text-red-500">*</span></label>
+              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">{% if IS_RTL %}اسم الفحص{% else %}Exam Name{% endif %} <span class="text-red-500">*</span></label>
               <input type="text" name="name" x-ref="newRadiologyName" required
-                     placeholder="e.g. Chest X-Ray, Abdominal CT Scan"
+                     placeholder="{% if IS_RTL %}مثال: أشعة صدر، CT بطن{% else %}e.g. Chest X-Ray, Abdominal CT Scan{% endif %}"
                      class="ws-input">
             </div>
             <button type="submit"
                     class="flex-shrink-0 inline-flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm whitespace-nowrap">
-              <i class="fa-solid fa-plus text-xs"></i> Add Exam
+              <i class="fa-solid fa-plus text-xs"></i> {% if IS_RTL %}إضافة فحص{% else %}Add Exam{% endif %}
             </button>
           </div>
         </form>
@@ -627,17 +627,17 @@
           <div x-show="editingItemId !== {{ item.id }}"
                class="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50/60 dark:hover:bg-slate-700/20 transition-colors group">
             <p class="flex-1 text-sm font-medium text-gray-800 dark:text-gray-100">{{ item.name }}</p>
-            {% if not item.is_active %}<span class="text-[11px] text-gray-400 dark:text-slate-500 flex-shrink-0">Inactive</span>{% endif %}
+            {% if not item.is_active %}<span class="text-[11px] text-gray-400 dark:text-slate-500 flex-shrink-0">{% if IS_RTL %}غير نشط{% else %}Inactive{% endif %}</span>{% endif %}
             {% if can_edit %}
             <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-              <button @click="editingItemId = {{ item.id }}" title="Edit"
+              <button @click="editingItemId = {{ item.id }}" title="{% if IS_RTL %}تعديل{% else %}Edit{% endif %}"
                       class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
                 <i class="fa-solid fa-pen text-xs"></i>
               </button>
               <form method="post" action="{% url 'doctors:catalog_item_delete' item.id %}"
-                    onsubmit="return confirm('Delete «{{ item.name }}»?')">
+                    onsubmit="return confirm('{% if IS_RTL %}حذف «{{ item.name }}»؟{% else %}Delete «{{ item.name }}»?{% endif %}')">
                 {% csrf_token %}
-                <button type="submit" title="Delete"
+                <button type="submit" title="{% if IS_RTL %}حذف{% else %}Delete{% endif %}"
                         class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
                   <i class="fa-solid fa-trash text-xs"></i>
                 </button>
@@ -652,21 +652,21 @@
             <form method="post" action="{% url 'doctors:catalog_item_edit' item.id %}">
               {% csrf_token %}
               <p class="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-3">
-                <i class="fa-solid fa-pen me-1.5"></i>Editing
+                <i class="fa-solid fa-pen me-1.5"></i>{% if IS_RTL %}تعديل{% else %}Editing{% endif %}
               </p>
               <div class="flex gap-3 items-end flex-wrap sm:flex-nowrap">
                 <div class="flex-1 min-w-0">
-                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Name *</label>
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">{% if IS_RTL %}الاسم *{% else %}Name *{% endif %}</label>
                   <input type="text" name="name" value="{{ item.name }}" required class="ws-input">
                 </div>
                 <div class="flex gap-2 flex-shrink-0">
                   <button type="submit"
                           class="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm">
-                    <i class="fa-solid fa-floppy-disk text-xs"></i> Save
+                    <i class="fa-solid fa-floppy-disk text-xs"></i> {% if IS_RTL %}حفظ{% else %}Save{% endif %}
                   </button>
                   <button type="button" @click="editingItemId = null"
                           class="inline-flex items-center text-sm font-medium text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                    Cancel
+                    {% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}
                   </button>
                 </div>
               </div>
@@ -681,8 +681,8 @@
         <div class="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center mx-auto mb-3">
           <i class="fa-solid fa-x-ray text-indigo-300 dark:text-indigo-600 text-xl"></i>
         </div>
-        <p class="text-sm font-medium text-gray-600 dark:text-slate-300">No radiology exams yet.</p>
-        {% if can_edit %}<p class="text-xs text-gray-400 dark:text-slate-500 mt-1">Add exams like X-Ray, CT Scan, MRI…</p>{% endif %}
+        <p class="text-sm font-medium text-gray-600 dark:text-slate-300">{% if IS_RTL %}لا توجد فحوصات أشعة بعد.{% else %}No radiology exams yet.{% endif %}</p>
+        {% if can_edit %}<p class="text-xs text-gray-400 dark:text-slate-500 mt-1">{% if IS_RTL %}أضف فحوصات مثل الأشعة السينية، CT، MRI...{% else %}Add exams like X-Ray, CT Scan, MRI…{% endif %}</p>{% endif %}
       </div>
       {% endif %}
     </div>
@@ -704,8 +704,8 @@
             <i class="fa-solid fa-microscope text-teal-600 dark:text-teal-400 text-xs"></i>
           </span>
           <div>
-            <p class="text-sm font-bold text-gray-800 dark:text-white leading-tight">Microbiology</p>
-            <p class="text-[11px] text-gray-400 dark:text-slate-500">{{ microbiology_items|length }} test{{ microbiology_items|length|pluralize }}</p>
+            <p class="text-sm font-bold text-gray-800 dark:text-white leading-tight">{% if IS_RTL %}علم الأحياء الدقيقة{% else %}Microbiology{% endif %}</p>
+            <p class="text-[11px] text-gray-400 dark:text-slate-500">{{ microbiology_items|length }} {% if IS_RTL %}فحص{% else %}test{{ microbiology_items|length|pluralize }}{% endif %}</p>
           </div>
         </div>
         {% if can_edit %}
@@ -713,7 +713,7 @@
                 :class="showAddMicrobiology ? 'bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-slate-200' : 'bg-primary-600 hover:bg-primary-700 active:scale-95 text-white shadow-sm'"
                 class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
           <i class="fa-solid" :class="showAddMicrobiology ? 'fa-xmark' : 'fa-plus'"></i>
-          <span x-text="showAddMicrobiology ? 'Cancel' : 'Add Test'"></span>
+          <span x-text="showAddMicrobiology ? '{% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}' : '{% if IS_RTL %}إضافة فحص{% else %}Add Test{% endif %}'"></span>
         </button>
         {% endif %}
       </div>
@@ -729,14 +729,14 @@
           <input type="hidden" name="category" value="MICROBIOLOGY">
           <div class="flex gap-3 items-end flex-wrap sm:flex-nowrap">
             <div class="flex-1 min-w-0">
-              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Test Name <span class="text-red-500">*</span></label>
+              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">{% if IS_RTL %}اسم الفحص{% else %}Test Name{% endif %} <span class="text-red-500">*</span></label>
               <input type="text" name="name" x-ref="newMicroName" required
-                     placeholder="e.g. Blood Culture, Urine Culture"
+                     placeholder="{% if IS_RTL %}مثال: زراعة دم، زراعة بول{% else %}e.g. Blood Culture, Urine Culture{% endif %}"
                      class="ws-input">
             </div>
             <button type="submit"
                     class="flex-shrink-0 inline-flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm whitespace-nowrap">
-              <i class="fa-solid fa-plus text-xs"></i> Add Test
+              <i class="fa-solid fa-plus text-xs"></i> {% if IS_RTL %}إضافة فحص{% else %}Add Test{% endif %}
             </button>
           </div>
         </form>
@@ -750,17 +750,17 @@
           <div x-show="editingItemId !== {{ item.id }}"
                class="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50/60 dark:hover:bg-slate-700/20 transition-colors group">
             <p class="flex-1 text-sm font-medium text-gray-800 dark:text-gray-100">{{ item.name }}</p>
-            {% if not item.is_active %}<span class="text-[11px] text-gray-400 dark:text-slate-500 flex-shrink-0">Inactive</span>{% endif %}
+            {% if not item.is_active %}<span class="text-[11px] text-gray-400 dark:text-slate-500 flex-shrink-0">{% if IS_RTL %}غير نشط{% else %}Inactive{% endif %}</span>{% endif %}
             {% if can_edit %}
             <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-              <button @click="editingItemId = {{ item.id }}" title="Edit"
+              <button @click="editingItemId = {{ item.id }}" title="{% if IS_RTL %}تعديل{% else %}Edit{% endif %}"
                       class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
                 <i class="fa-solid fa-pen text-xs"></i>
               </button>
               <form method="post" action="{% url 'doctors:catalog_item_delete' item.id %}"
-                    onsubmit="return confirm('Delete «{{ item.name }}»?')">
+                    onsubmit="return confirm('{% if IS_RTL %}حذف «{{ item.name }}»؟{% else %}Delete «{{ item.name }}»?{% endif %}')">
                 {% csrf_token %}
-                <button type="submit" title="Delete"
+                <button type="submit" title="{% if IS_RTL %}حذف{% else %}Delete{% endif %}"
                         class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
                   <i class="fa-solid fa-trash text-xs"></i>
                 </button>
@@ -775,21 +775,21 @@
             <form method="post" action="{% url 'doctors:catalog_item_edit' item.id %}">
               {% csrf_token %}
               <p class="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-3">
-                <i class="fa-solid fa-pen me-1.5"></i>Editing
+                <i class="fa-solid fa-pen me-1.5"></i>{% if IS_RTL %}تعديل{% else %}Editing{% endif %}
               </p>
               <div class="flex gap-3 items-end flex-wrap sm:flex-nowrap">
                 <div class="flex-1 min-w-0">
-                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Name *</label>
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">{% if IS_RTL %}الاسم *{% else %}Name *{% endif %}</label>
                   <input type="text" name="name" value="{{ item.name }}" required class="ws-input">
                 </div>
                 <div class="flex gap-2 flex-shrink-0">
                   <button type="submit"
                           class="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm">
-                    <i class="fa-solid fa-floppy-disk text-xs"></i> Save
+                    <i class="fa-solid fa-floppy-disk text-xs"></i> {% if IS_RTL %}حفظ{% else %}Save{% endif %}
                   </button>
                   <button type="button" @click="editingItemId = null"
                           class="inline-flex items-center text-sm font-medium text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                    Cancel
+                    {% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}
                   </button>
                 </div>
               </div>
@@ -804,8 +804,8 @@
         <div class="w-14 h-14 rounded-2xl bg-teal-50 dark:bg-teal-900/20 flex items-center justify-center mx-auto mb-3">
           <i class="fa-solid fa-microscope text-teal-300 dark:text-teal-600 text-xl"></i>
         </div>
-        <p class="text-sm font-medium text-gray-600 dark:text-slate-300">No microbiology tests yet.</p>
-        {% if can_edit %}<p class="text-xs text-gray-400 dark:text-slate-500 mt-1">Add cultures, sensitivity tests, etc.</p>{% endif %}
+        <p class="text-sm font-medium text-gray-600 dark:text-slate-300">{% if IS_RTL %}لا توجد فحوصات أحياء دقيقة بعد.{% else %}No microbiology tests yet.{% endif %}</p>
+        {% if can_edit %}<p class="text-xs text-gray-400 dark:text-slate-500 mt-1">{% if IS_RTL %}أضف زراعات وفحوصات الحساسية وغيرها.{% else %}Add cultures, sensitivity tests, etc.{% endif %}</p>{% endif %}
       </div>
       {% endif %}
     </div>
@@ -827,8 +827,8 @@
             <i class="fa-solid fa-stethoscope text-orange-600 dark:text-orange-400 text-xs"></i>
           </span>
           <div>
-            <p class="text-sm font-bold text-gray-800 dark:text-white leading-tight">Procedures</p>
-            <p class="text-[11px] text-gray-400 dark:text-slate-500">{{ procedure_items|length }} procedure{{ procedure_items|length|pluralize }}</p>
+            <p class="text-sm font-bold text-gray-800 dark:text-white leading-tight">{% if IS_RTL %}الإجراءات{% else %}Procedures{% endif %}</p>
+            <p class="text-[11px] text-gray-400 dark:text-slate-500">{{ procedure_items|length }} {% if IS_RTL %}إجراء{% else %}procedure{{ procedure_items|length|pluralize }}{% endif %}</p>
           </div>
         </div>
         {% if can_edit %}
@@ -836,7 +836,7 @@
                 :class="showAddProcedure ? 'bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-slate-200' : 'bg-primary-600 hover:bg-primary-700 active:scale-95 text-white shadow-sm'"
                 class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
           <i class="fa-solid" :class="showAddProcedure ? 'fa-xmark' : 'fa-plus'"></i>
-          <span x-text="showAddProcedure ? 'Cancel' : 'Add Procedure'"></span>
+          <span x-text="showAddProcedure ? '{% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}' : '{% if IS_RTL %}إضافة إجراء{% else %}Add Procedure{% endif %}'"></span>
         </button>
         {% endif %}
       </div>
@@ -852,14 +852,14 @@
           <input type="hidden" name="category" value="PROCEDURE">
           <div class="flex gap-3 items-end flex-wrap sm:flex-nowrap">
             <div class="flex-1 min-w-0">
-              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Procedure Name <span class="text-red-500">*</span></label>
+              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">{% if IS_RTL %}اسم الإجراء{% else %}Procedure Name{% endif %} <span class="text-red-500">*</span></label>
               <input type="text" name="name" x-ref="newProcName" required
-                     placeholder="e.g. ECG, Wound Dressing, Suturing"
+                     placeholder="{% if IS_RTL %}مثال: تخطيط قلب، تضميد جرح، خياطة{% else %}e.g. ECG, Wound Dressing, Suturing{% endif %}"
                      class="ws-input">
             </div>
             <button type="submit"
                     class="flex-shrink-0 inline-flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm whitespace-nowrap">
-              <i class="fa-solid fa-plus text-xs"></i> Add Procedure
+              <i class="fa-solid fa-plus text-xs"></i> {% if IS_RTL %}إضافة إجراء{% else %}Add Procedure{% endif %}
             </button>
           </div>
         </form>
@@ -873,17 +873,17 @@
           <div x-show="editingItemId !== {{ item.id }}"
                class="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50/60 dark:hover:bg-slate-700/20 transition-colors group">
             <p class="flex-1 text-sm font-medium text-gray-800 dark:text-gray-100">{{ item.name }}</p>
-            {% if not item.is_active %}<span class="text-[11px] text-gray-400 dark:text-slate-500 flex-shrink-0">Inactive</span>{% endif %}
+            {% if not item.is_active %}<span class="text-[11px] text-gray-400 dark:text-slate-500 flex-shrink-0">{% if IS_RTL %}غير نشط{% else %}Inactive{% endif %}</span>{% endif %}
             {% if can_edit %}
             <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-              <button @click="editingItemId = {{ item.id }}" title="Edit"
+              <button @click="editingItemId = {{ item.id }}" title="{% if IS_RTL %}تعديل{% else %}Edit{% endif %}"
                       class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
                 <i class="fa-solid fa-pen text-xs"></i>
               </button>
               <form method="post" action="{% url 'doctors:catalog_item_delete' item.id %}"
-                    onsubmit="return confirm('Delete «{{ item.name }}»?')">
+                    onsubmit="return confirm('{% if IS_RTL %}حذف «{{ item.name }}»؟{% else %}Delete «{{ item.name }}»?{% endif %}')">
                 {% csrf_token %}
-                <button type="submit" title="Delete"
+                <button type="submit" title="{% if IS_RTL %}حذف{% else %}Delete{% endif %}"
                         class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
                   <i class="fa-solid fa-trash text-xs"></i>
                 </button>
@@ -898,21 +898,21 @@
             <form method="post" action="{% url 'doctors:catalog_item_edit' item.id %}">
               {% csrf_token %}
               <p class="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-3">
-                <i class="fa-solid fa-pen me-1.5"></i>Editing
+                <i class="fa-solid fa-pen me-1.5"></i>{% if IS_RTL %}تعديل{% else %}Editing{% endif %}
               </p>
               <div class="flex gap-3 items-end flex-wrap sm:flex-nowrap">
                 <div class="flex-1 min-w-0">
-                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">Name *</label>
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">{% if IS_RTL %}الاسم *{% else %}Name *{% endif %}</label>
                   <input type="text" name="name" value="{{ item.name }}" required class="ws-input">
                 </div>
                 <div class="flex gap-2 flex-shrink-0">
                   <button type="submit"
                           class="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm">
-                    <i class="fa-solid fa-floppy-disk text-xs"></i> Save
+                    <i class="fa-solid fa-floppy-disk text-xs"></i> {% if IS_RTL %}حفظ{% else %}Save{% endif %}
                   </button>
                   <button type="button" @click="editingItemId = null"
                           class="inline-flex items-center text-sm font-medium text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                    Cancel
+                    {% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}
                   </button>
                 </div>
               </div>
@@ -927,8 +927,8 @@
         <div class="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center mx-auto mb-3">
           <i class="fa-solid fa-stethoscope text-orange-300 dark:text-orange-600 text-xl"></i>
         </div>
-        <p class="text-sm font-medium text-gray-600 dark:text-slate-300">No procedures yet.</p>
-        {% if can_edit %}<p class="text-xs text-gray-400 dark:text-slate-500 mt-1">Add procedures like ECG, Wound Dressing, Suturing…</p>{% endif %}
+        <p class="text-sm font-medium text-gray-600 dark:text-slate-300">{% if IS_RTL %}لا توجد إجراءات بعد.{% else %}No procedures yet.{% endif %}</p>
+        {% if can_edit %}<p class="text-xs text-gray-400 dark:text-slate-500 mt-1">{% if IS_RTL %}أضف إجراءات مثل تخطيط القلب، تضميد الجرح، الخياطة...{% else %}Add procedures like ECG, Wound Dressing, Suturing…{% endif %}</p>{% endif %}
       </div>
       {% endif %}
     </div>

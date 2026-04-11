@@ -4,26 +4,24 @@
 {# and subsequent HTMX search/filter updates.                                  #}
 {# ─────────────────────────────────────────────────────────────────────────── #}
 
-{# ── Result summary strip ────────────────────────────────────────────────── #}
 <div class="flex items-center justify-between mb-3 px-1" id="results-meta">
     <p class="text-sm text-slate-500 dark:text-slate-400">
         {% if current_q or current_clinic or current_status or date_from or date_to %}
             <span class="font-semibold text-slate-700 dark:text-slate-200">{{ total_count }}</span>
-            result{% if total_count != 1 %}s{% endif %} found
-            {% if current_q %}for "<em>{{ current_q }}</em>"{% endif %}
+            {% if IS_RTL %}نتيجة{% else %}result{% if total_count != 1 %}s{% endif %}{% endif %} {% if IS_RTL %}{% else %}found{% endif %}
+            {% if IS_RTL %}{% if current_q %}لـ "<em>{{ current_q }}</em>"{% endif %}{% else %}{% if current_q %}for "<em>{{ current_q }}</em>"{% endif %}{% endif %}
         {% else %}
             <span class="font-semibold text-slate-700 dark:text-slate-200">{{ total_count }}</span>
-            patient{% if total_count != 1 %}s{% endif %} total
+            {% if IS_RTL %}مريض إجمالاً{% else %}patient{% if total_count != 1 %}s{% endif %} total{% endif %}
         {% endif %}
     </p>
     {% if patient_page.paginator.num_pages > 1 %}
     <p class="text-xs text-slate-400 dark:text-slate-500">
-        Page {{ patient_page.number }} of {{ patient_page.paginator.num_pages }}
+        {% if IS_RTL %}صفحة {{ patient_page.number }} من {{ patient_page.paginator.num_pages }}{% else %}Page {{ patient_page.number }} of {{ patient_page.paginator.num_pages }}{% endif %}
     </p>
     {% endif %}
 </div>
 
-{# ── Table ───────────────────────────────────────────────────────────────── #}
 {% if patient_page.object_list %}
 <div class="glass-card overflow-hidden">
     <div class="overflow-x-auto">
@@ -31,41 +29,39 @@
             <thead>
                 <tr class="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700">
 
-                    {# Name – sortable #}
-                    <th class="text-left px-5 py-3.5">
+                    <th class="text-start px-5 py-3.5">
                         <a href="?q={{ current_q }}&clinic_id={{ current_clinic }}&status={{ current_status }}&date_from={{ date_from }}&date_to={{ date_to }}&sort={% if current_sort == 'name' %}-name{% else %}name{% endif %}"
                            hx-get="{% url 'doctors:patients' %}?q={{ current_q }}&clinic_id={{ current_clinic }}&status={{ current_status }}&date_from={{ date_from }}&date_to={{ date_to }}&sort={% if current_sort == 'name' %}-name{% else %}name{% endif %}"
                            hx-target="#patients-results"
                            hx-push-url="true"
                            class="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors no-underline">
-                            Patient
+                            {% if IS_RTL %}المريض{% else %}Patient{% endif %}
                             {% if current_sort == 'name' %}<i class="fa-solid fa-arrow-up text-primary-500"></i>
                             {% elif current_sort == '-name' %}<i class="fa-solid fa-arrow-down text-primary-500"></i>
                             {% else %}<i class="fa-solid fa-arrows-up-down opacity-30"></i>{% endif %}
                         </a>
                     </th>
 
-                    <th class="text-left px-4 py-3.5 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 hidden lg:table-cell">Age / Gender</th>
-                    <th class="text-left px-4 py-3.5 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 hidden md:table-cell">Phone</th>
-                    <th class="text-left px-4 py-3.5 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 hidden xl:table-cell">NID</th>
-                    <th class="text-left px-4 py-3.5 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 hidden lg:table-cell">Clinics</th>
+                    <th class="text-start px-4 py-3.5 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 hidden lg:table-cell">{% if IS_RTL %}العمر / الجنس{% else %}Age / Gender{% endif %}</th>
+                    <th class="text-start px-4 py-3.5 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 hidden md:table-cell">{% if IS_RTL %}الهاتف{% else %}Phone{% endif %}</th>
+                    <th class="text-start px-4 py-3.5 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 hidden xl:table-cell">{% if IS_RTL %}رقم الهوية{% else %}NID{% endif %}</th>
+                    <th class="text-start px-4 py-3.5 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 hidden lg:table-cell">{% if IS_RTL %}العيادات{% else %}Clinics{% endif %}</th>
 
-                    {# Last Visit – sortable #}
-                    <th class="text-left px-4 py-3.5">
+                    <th class="text-start px-4 py-3.5">
                         <a href="?q={{ current_q }}&clinic_id={{ current_clinic }}&status={{ current_status }}&date_from={{ date_from }}&date_to={{ date_to }}&sort={% if current_sort == '-last_visit' %}last_visit{% else %}-last_visit{% endif %}"
                            hx-get="{% url 'doctors:patients' %}?q={{ current_q }}&clinic_id={{ current_clinic }}&status={{ current_status }}&date_from={{ date_from }}&date_to={{ date_to }}&sort={% if current_sort == '-last_visit' %}last_visit{% else %}-last_visit{% endif %}"
                            hx-target="#patients-results"
                            hx-push-url="true"
                            class="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors no-underline">
-                            Last Visit
+                            {% if IS_RTL %}آخر زيارة{% else %}Last Visit{% endif %}
                             {% if current_sort == '-last_visit' %}<i class="fa-solid fa-arrow-down text-primary-500"></i>
                             {% elif current_sort == 'last_visit' %}<i class="fa-solid fa-arrow-up text-primary-500"></i>
                             {% else %}<i class="fa-solid fa-arrows-up-down opacity-30"></i>{% endif %}
                         </a>
                     </th>
 
-                    <th class="text-left px-4 py-3.5 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Status</th>
-                    <th class="px-4 py-3.5 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 text-right">Actions</th>
+                    <th class="text-start px-4 py-3.5 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{% if IS_RTL %}الحالة{% else %}Status{% endif %}</th>
+                    <th class="px-4 py-3.5 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 text-end">{% if IS_RTL %}إجراءات{% else %}Actions{% endif %}</th>
                 </tr>
             </thead>
 
@@ -76,11 +72,9 @@
                     data-phone="{{ p.patient__phone }}"
                     data-nid="{{ p.patient__national_id|default:'' }}">
 
-                    {# ── Patient identity ─────────────────────────────── #}
                     <td class="px-5 py-4">
                         <a href="{% url 'doctors:patient_workspace' p.patient_id %}"
                            class="flex items-center gap-3 group/name">
-                            {# Avatar initials #}
                             <div class="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-bold shadow-sm
                                 {% if p.patient_status == 'active' %}bg-gradient-to-br from-emerald-400 to-teal-600
                                 {% elif p.patient_status == 'follow_up' %}bg-gradient-to-br from-amber-400 to-orange-500
@@ -89,18 +83,16 @@
                             </div>
                             <div class="min-w-0">
                                 <p class="font-semibold text-slate-800 dark:text-slate-100 truncate patient-name group-hover/name:text-primary-600 dark:group-hover/name:text-primary-400 transition-colors">{{ p.patient__name }}</p>
-                                {# Phone visible on small screens (below md) #}
                                 <p class="text-xs text-slate-400 dark:text-slate-500 font-mono md:hidden mt-0.5">{{ p.patient__phone }}</p>
                             </div>
                         </a>
                     </td>
 
-                    {# ── Age / Gender ─────────────────────────────────── #}
                     <td class="px-4 py-4 hidden lg:table-cell">
                         <div class="flex items-center gap-2">
                             {% if p.age %}
                             <span class="text-slate-700 dark:text-slate-200 font-semibold">{{ p.age }}</span>
-                            <span class="text-slate-400 dark:text-slate-500 text-xs">yrs</span>
+                            <span class="text-slate-400 dark:text-slate-500 text-xs">{% if IS_RTL %}سنة{% else %}yrs{% endif %}</span>
                             {% else %}
                             <span class="text-slate-300 dark:text-slate-600">—</span>
                             {% endif %}
@@ -115,16 +107,14 @@
                         </div>
                     </td>
 
-                    {# ── Phone ───────────────────────────────────────── #}
                     <td class="px-4 py-4 hidden md:table-cell">
                         <span class="font-mono text-sm text-slate-600 dark:text-slate-300 patient-phone">{{ p.patient__phone }}</span>
                     </td>
 
-                    {# ── NID (masked) ─────────────────────────────────── #}
                     <td class="px-4 py-4 hidden xl:table-cell">
                         {% if p.patient__national_id %}
                         <span class="font-mono text-sm text-slate-500 dark:text-slate-400 tracking-wider patient-nid"
-                              title="Click to reveal"
+                              title="{% if IS_RTL %}انقر للكشف{% else %}Click to reveal{% endif %}"
                               data-nid="{{ p.patient__national_id }}"
                               data-masked="{{ p.patient__national_id|slice:':3' }}••••{{ p.patient__national_id|slice:'-2:' }}"
                               onclick="this.textContent = this.dataset.nid; this.title=''; this.classList.add('text-slate-700','dark:text-slate-200'); this.onclick=null;"
@@ -136,7 +126,6 @@
                         {% endif %}
                     </td>
 
-                    {# ── Clinics tags ─────────────────────────────────── #}
                     <td class="px-4 py-4 hidden lg:table-cell">
                         <div class="flex flex-wrap gap-1.5">
                             {% for clinic in p.clinics %}
@@ -149,7 +138,6 @@
                         </div>
                     </td>
 
-                    {# ── Last Visit ───────────────────────────────────── #}
                     <td class="px-4 py-4 whitespace-nowrap">
                         {% if p.last_visit %}
                         <div class="flex items-center gap-1.5">
@@ -159,36 +147,34 @@
                                 {% else %}text-slate-400{% endif %}"></i>
                             <span class="text-sm text-slate-600 dark:text-slate-300">{{ p.last_visit|date:"d M Y" }}</span>
                         </div>
-                        <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5 ml-4">
-                            {{ p.last_visit|timesince }} ago
+                        <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5 ms-4">
+                            {% if IS_RTL %}منذ {{ p.last_visit|timesince }}{% else %}{{ p.last_visit|timesince }} ago{% endif %}
                         </p>
                         {% else %}
                         <span class="text-slate-300 dark:text-slate-600">—</span>
                         {% endif %}
                     </td>
 
-                    {# ── Status badge ─────────────────────────────────── #}
                     <td class="px-4 py-4 whitespace-nowrap">
                         {% if p.patient_status == 'active' %}
                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40">
                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            Active
+                            {% if IS_RTL %}نشط{% else %}Active{% endif %}
                         </span>
                         {% elif p.patient_status == 'follow_up' %}
                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/40">
                             <i class="fa-solid fa-triangle-exclamation text-amber-500" style="font-size:9px;"></i>
-                            Follow-up
+                            {% if IS_RTL %}متابعة{% else %}Follow-up{% endif %}
                         </span>
                         {% else %}
                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 dark:bg-slate-700/60 dark:text-slate-400 border border-slate-200 dark:border-slate-600/40">
                             <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                            Inactive
+                            {% if IS_RTL %}غير نشط{% else %}Inactive{% endif %}
                         </span>
                         {% endif %}
                     </td>
 
-                    {# ── Quick Actions ─────────────────────────────────── #}
-                    <td class="px-4 py-4 text-right">
+                    <td class="px-4 py-4 text-end">
                         <div class="inline-block"
                              x-data="{ open: false, top: 0, right: 0 }"
                              @click.outside="open = false">
@@ -213,12 +199,12 @@
                                 <a href="{% url 'doctors:patient_workspace' p.patient_id %}"
                                    class="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors font-semibold">
                                     <i class="fa-solid fa-stethoscope w-4 text-center text-indigo-500"></i>
-                                    Open Workspace
+                                    {% if IS_RTL %}فتح مساحة العمل{% else %}Open Workspace{% endif %}
                                 </a>
                                 <a href="{% url 'doctors:appointments' %}?patient_id={{ p.patient_id }}"
                                    class="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                                     <i class="fa-regular fa-calendar-check w-4 text-center text-primary-500"></i>
-                                    View Appointments
+                                    {% if IS_RTL %}عرض المواعيد{% else %}View Appointments{% endif %}
                                 </a>
                                 <div class="h-px bg-slate-100 dark:bg-slate-700 mx-2"></div>
                                 <div class="px-4 py-2">
@@ -235,7 +221,7 @@
                                     {% if p.total_visits %}
                                     <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">
                                         <i class="fa-solid fa-calendar-days w-4 text-center"></i>
-                                        {{ p.total_visits }} visit{% if p.total_visits != 1 %}s{% endif %} total
+                                        {{ p.total_visits }} {% if IS_RTL %}زيارة{% else %}visit{% if p.total_visits != 1 %}s{% endif %} total{% endif %}
                                     </p>
                                     {% endif %}
                                 </div>
@@ -249,13 +235,12 @@
         </table>
     </div>
 
-    {# ── Pagination ───────────────────────────────────────────────────── #}
     {% if patient_page.paginator.num_pages > 1 %}
     <div class="flex items-center justify-between px-5 py-4 border-t border-slate-100 dark:border-slate-700/60">
         <p class="text-sm text-slate-500 dark:text-slate-400">
-            Showing
+            {% if IS_RTL %}عرض{% else %}Showing{% endif %}
             <span class="font-semibold text-slate-700 dark:text-slate-200">{{ patient_page.start_index }}</span>–<span class="font-semibold text-slate-700 dark:text-slate-200">{{ patient_page.end_index }}</span>
-            of
+            {% if IS_RTL %}من{% else %}of{% endif %}
             <span class="font-semibold text-slate-700 dark:text-slate-200">{{ total_count }}</span>
         </p>
         <div class="flex items-center gap-1">
@@ -265,11 +250,11 @@
                hx-target="#patients-results"
                hx-push-url="true"
                class="inline-flex items-center justify-center w-9 h-9 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-sm font-medium">
-                <i class="fa-solid fa-chevron-left text-xs"></i>
+                <i class="fa-solid {% if IS_RTL %}fa-chevron-right{% else %}fa-chevron-left{% endif %} text-xs"></i>
             </a>
             {% else %}
             <span class="inline-flex items-center justify-center w-9 h-9 rounded-lg text-slate-300 dark:text-slate-600 cursor-not-allowed text-sm">
-                <i class="fa-solid fa-chevron-left text-xs"></i>
+                <i class="fa-solid {% if IS_RTL %}fa-chevron-right{% else %}fa-chevron-left{% endif %} text-xs"></i>
             </span>
             {% endif %}
 
@@ -293,11 +278,11 @@
                hx-target="#patients-results"
                hx-push-url="true"
                class="inline-flex items-center justify-center w-9 h-9 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-sm font-medium">
-                <i class="fa-solid fa-chevron-right text-xs"></i>
+                <i class="fa-solid {% if IS_RTL %}fa-chevron-left{% else %}fa-chevron-right{% endif %} text-xs"></i>
             </a>
             {% else %}
             <span class="inline-flex items-center justify-center w-9 h-9 rounded-lg text-slate-300 dark:text-slate-600 cursor-not-allowed text-sm">
-                <i class="fa-solid fa-chevron-right text-xs"></i>
+                <i class="fa-solid {% if IS_RTL %}fa-chevron-left{% else %}fa-chevron-right{% endif %} text-xs"></i>
             </span>
             {% endif %}
         </div>
@@ -306,30 +291,38 @@
 </div>
 
 {% else %}
-{# ── Empty state ────────────────────────────────────────────────────────── #}
 <div class="glass-card">
     <div class="flex flex-col items-center justify-center py-20 px-6 text-center">
         {% if current_q or current_clinic or current_status or date_from or date_to %}
         <div class="w-16 h-16 rounded-2xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center mb-5">
             <i class="fa-solid fa-magnifying-glass fa-lg text-amber-400"></i>
         </div>
-        <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2">No results found</h3>
+        <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2">{% if IS_RTL %}لا توجد نتائج{% else %}No results found{% endif %}</h3>
         <p class="text-sm text-slate-500 dark:text-slate-400 max-w-xs">
-            No patients match your current search or filters.
-            Try adjusting your criteria or
-            <a href="{% url 'doctors:patients' %}"
-               hx-get="{% url 'doctors:patients' %}"
-               hx-target="#patients-results"
-               hx-push-url="true"
-               class="text-primary-600 dark:text-primary-400 font-medium hover:underline">clear all filters</a>.
+            {% if IS_RTL %}
+                لا يوجد مرضى يطابقون بحثك أو تصفيتك الحالية. حاول تعديل المعايير أو
+                <a href="{% url 'doctors:patients' %}"
+                   hx-get="{% url 'doctors:patients' %}"
+                   hx-target="#patients-results"
+                   hx-push-url="true"
+                   class="text-primary-600 dark:text-primary-400 font-medium hover:underline">مسح جميع الفلاتر</a>.
+            {% else %}
+                No patients match your current search or filters.
+                Try adjusting your criteria or
+                <a href="{% url 'doctors:patients' %}"
+                   hx-get="{% url 'doctors:patients' %}"
+                   hx-target="#patients-results"
+                   hx-push-url="true"
+                   class="text-primary-600 dark:text-primary-400 font-medium hover:underline">clear all filters</a>.
+            {% endif %}
         </p>
         {% else %}
         <div class="w-16 h-16 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center mb-5">
             <i class="fa-solid fa-user-group fa-lg text-primary-400"></i>
         </div>
-        <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2">No patients yet</h3>
+        <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2">{% if IS_RTL %}لا يوجد مرضى بعد{% else %}No patients yet{% endif %}</h3>
         <p class="text-sm text-slate-500 dark:text-slate-400 max-w-xs">
-            Patients registered in your clinics will appear here. Ask your secretary to register patients to get started.
+            {% if IS_RTL %}المرضى المسجلون في عياداتك سيظهرون هنا. اطلب من السكرتير/ة تسجيل المرضى للبدء.{% else %}Patients registered in your clinics will appear here. Ask your secretary to register patients to get started.{% endif %}
         </p>
         {% endif %}
     </div>

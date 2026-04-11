@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{% if IS_RTL %}ar{% else %}en{% endif %}" dir="{% if IS_RTL %}rtl{% else %}ltr{% endif %}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Prescription – {{ patient.name }}</title>
+  <title>{% if IS_RTL %}وصفة طبية{% else %}Prescription{% endif %} – {{ patient.name }}</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -45,33 +45,33 @@
   <!-- Header -->
   <div class="header" style="position:relative;">
     <div class="rx-symbol">℞</div>
-    <h1>Prescription</h1>
+    <h1>{% if IS_RTL %}وصفة طبية{% else %}Prescription{% endif %}</h1>
     <p class="sub">{{ rx.clinic.name }}</p>
   </div>
 
   <!-- Patient + Doctor Meta -->
   <div class="meta">
     <div class="meta-item">
-      <label>Patient</label>
+      <label>{% if IS_RTL %}المريض{% else %}Patient{% endif %}</label>
       <p>{{ patient.name }}</p>
     </div>
     <div class="meta-item">
-      <label>Phone</label>
+      <label>{% if IS_RTL %}رقم الهاتف{% else %}Phone{% endif %}</label>
       <p>{{ patient.phone }}</p>
     </div>
     <div class="meta-item">
-      <label>Date</label>
+      <label>{% if IS_RTL %}التاريخ{% else %}Date{% endif %}</label>
       <p>{{ rx.created_at|date:"d F Y" }}</p>
     </div>
     <div class="meta-item">
-      <label>Prescribing Doctor</label>
+      <label>{% if IS_RTL %}الطبيب المعالج{% else %}Prescribing Doctor{% endif %}</label>
       <p>{{ rx.doctor.name }}</p>
     </div>
   </div>
 
   <!-- Medications -->
   <div class="meds">
-    <h2>Medications</h2>
+    <h2>{% if IS_RTL %}الأدوية{% else %}Medications{% endif %}</h2>
     {% for item in rx.items.all %}
     <div class="med-row">
       <div class="med-num">{{ forloop.counter }}</div>
@@ -91,7 +91,7 @@
   {% if rx.notes %}
   <div class="notes-section">
     <div class="notes-box">
-      <strong>Note:</strong> {{ rx.notes }}
+      <strong>{% if IS_RTL %}ملاحظة:{% else %}Note:{% endif %}</strong> {{ rx.notes }}
     </div>
   </div>
   {% endif %}
@@ -99,7 +99,7 @@
   <!-- Footer / Signature -->
   <div class="footer">
     <div>
-      <p style="font-size:.75rem;color:#94a3b8;">This prescription was issued electronically via MedPortal.</p>
+      <p style="font-size:.75rem;color:#94a3b8;">{% if IS_RTL %}صدرت هذه الوصفة إلكترونياً عبر MedPortal.{% else %}This prescription was issued electronically via MedPortal.{% endif %}</p>
     </div>
     <div class="sig">
       <div class="sig-line"></div>
@@ -115,7 +115,7 @@
     <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/>
     <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/>
   </svg>
-  Print
+  {% if IS_RTL %}طباعة{% else %}Print{% endif %}
 </button>
 
 </body>

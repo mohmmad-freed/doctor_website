@@ -7,7 +7,7 @@
   {# ── Breadcrumb ── #}
   <nav class="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400 mb-5">
     <a href="{% url 'doctors:my_appointment_types' %}" class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
-      <i class="fa-solid fa-list-check mr-1 text-xs"></i>My Appointment Types
+      <i class="fa-solid fa-list-check mr-1 text-xs"></i>{% if IS_RTL %}أنواع مواعيدي{% else %}My Appointment Types{% endif %}
     </a>
     <i class="fa-solid fa-chevron-right text-[0.6rem] opacity-40"></i>
     <span class="text-gray-800 dark:text-white font-semibold">{{ appointment_type.display_name }}</span>
@@ -16,7 +16,7 @@
   {# ── Page header ── #}
   <div class="flex items-start justify-between mb-6 gap-4">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Patient Intake Form</h1>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{% if IS_RTL %}استمارة تسجيل المريض{% else %}Patient Intake Form{% endif %}</h1>
       <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">
         {{ appointment_type.display_name }}
         <span class="mx-1 opacity-40">·</span>
@@ -25,8 +25,8 @@
     </div>
     <a href="{% url 'doctors:my_appointment_types' %}"
        class="flex-shrink-0 inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700">
-      <i class="fa-solid fa-arrow-left text-xs"></i>
-      Back
+      <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %} text-xs"></i>
+      {% if IS_RTL %}رجوع{% else %}Back{% endif %}
     </a>
   </div>
 
@@ -34,7 +34,7 @@
   <div class="glass-card mb-6 overflow-hidden">
     <div class="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/40">
       <i class="fa-solid fa-pen-to-square text-primary-500 text-sm"></i>
-      <h2 class="font-bold text-gray-800 dark:text-white text-sm">Form Settings</h2>
+      <h2 class="font-bold text-gray-800 dark:text-white text-sm">{% if IS_RTL %}إعدادات الاستمارة{% else %}Form Settings{% endif %}</h2>
     </div>
     <form method="post" class="px-5 py-4 space-y-4">
       {% csrf_token %}
@@ -42,22 +42,22 @@
 
       <div>
         <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-          Form Title <span class="text-red-500">*</span>
+          {% if IS_RTL %}عنوان الاستمارة{% else %}Form Title{% endif %} <span class="text-red-500">*</span>
         </label>
         <input type="text" name="title_ar"
                value="{{ template.title_ar|default:template.title }}"
-               placeholder="e.g. First Consultation Form"
+               placeholder="{% if IS_RTL %}مثال: استمارة الكشف الأول{% else %}e.g. First Consultation Form{% endif %}"
                required
                class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-400 dark:focus:ring-primary-500 transition">
       </div>
 
       <div>
         <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-          Patient Instructions
-          <span class="text-xs font-normal text-gray-400 ml-1">(optional — shown before the form starts)</span>
+          {% if IS_RTL %}تعليمات المريض{% else %}Patient Instructions{% endif %}
+          <span class="text-xs font-normal text-gray-400 ml-1">({% if IS_RTL %}اختياري — يظهر قبل بدء الاستمارة{% else %}optional — shown before the form starts{% endif %})</span>
         </label>
         <textarea name="description" rows="2"
-                  placeholder="e.g. Please answer accurately to help us provide appropriate care."
+                  placeholder="{% if IS_RTL %}مثال: يرجى الإجابة بدقة لمساعدتنا على تقديم الرعاية المناسبة.{% else %}e.g. Please answer accurately to help us provide appropriate care.{% endif %}"
                   class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-400 dark:focus:ring-primary-500 transition resize-none">{{ template.description }}</textarea>
       </div>
 
@@ -66,8 +66,8 @@
         <div class="flex items-center justify-between gap-3 px-4 py-3 bg-gray-50 dark:bg-slate-700/40 border-b border-gray-200 dark:border-slate-600">
           <div class="flex items-center gap-2">
             <i class="fa-solid fa-comment-medical text-emerald-500 text-sm"></i>
-            <span class="text-sm font-bold text-gray-700 dark:text-gray-200">Fixed Question: Medical Condition Description</span>
-            <span class="text-xs text-gray-400 dark:text-slate-500">(built into the form)</span>
+            <span class="text-sm font-bold text-gray-700 dark:text-gray-200">{% if IS_RTL %}سؤال ثابت: وصف الحالة الطبية{% else %}Fixed Question: Medical Condition Description{% endif %}</span>
+            <span class="text-xs text-gray-400 dark:text-slate-500">({% if IS_RTL %}مدمج في الاستمارة{% else %}built into the form{% endif %})</span>
           </div>
           <label class="relative inline-flex items-center cursor-pointer select-none">
             <input type="checkbox" name="show_reason_field" id="show-reason-toggle"
@@ -79,7 +79,7 @@
                         after:bg-white after:rounded-full after:h-4 after:w-4
                         after:transition-all peer-checked:after:left-5"></div>
             <span class="ml-2 text-xs font-semibold text-gray-600 dark:text-gray-300 peer-checked:text-emerald-600 dark:peer-checked:text-emerald-400" id="reason-toggle-label">
-              {% if template.show_reason_field %}Enabled{% else %}Disabled{% endif %}
+              {% if template.show_reason_field %}{% if IS_RTL %}مفعّل{% else %}Enabled{% endif %}{% else %}{% if IS_RTL %}معطّل{% else %}Disabled{% endif %}{% endif %}
             </span>
           </label>
         </div>
@@ -88,22 +88,22 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                Label Text
-                <span class="font-normal text-gray-400">(optional)</span>
+                {% if IS_RTL %}نص التسمية{% else %}Label Text{% endif %}
+                <span class="font-normal text-gray-400">({% if IS_RTL %}اختياري{% else %}optional{% endif %})</span>
               </label>
               <input type="text" name="reason_field_label"
                      value="{{ template.reason_field_label }}"
-                     placeholder="Medical Condition Description"
+                     placeholder="{% if IS_RTL %}وصف الحالة الطبية{% else %}Medical Condition Description{% endif %}"
                      class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-400 transition">
             </div>
             <div>
               <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                Placeholder Text
-                <span class="font-normal text-gray-400">(optional)</span>
+                {% if IS_RTL %}نص التلميح{% else %}Placeholder Text{% endif %}
+                <span class="font-normal text-gray-400">({% if IS_RTL %}اختياري{% else %}optional{% endif %})</span>
               </label>
               <input type="text" name="reason_field_placeholder"
                      value="{{ template.reason_field_placeholder }}"
-                     placeholder="Briefly describe your medical condition or reason for visit..."
+                     placeholder="{% if IS_RTL %}أوضح حالتك الطبية أو سبب الزيارة باختصار...{% else %}Briefly describe your medical condition or reason for visit...{% endif %}"
                      class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-400 transition">
             </div>
           </div>
@@ -111,14 +111,14 @@
             <input type="checkbox" name="reason_field_required"
                    {% if template.reason_field_required %}checked{% endif %}
                    class="w-4 h-4 rounded accent-emerald-500 cursor-pointer">
-            <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Required</span>
+            <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">{% if IS_RTL %}إلزامي{% else %}Required{% endif %}</span>
           </label>
         </div>
 
         <div id="reason-field-disabled-msg" class="px-4 py-3 {% if template.show_reason_field %}hidden{% endif %}">
           <p class="text-xs text-gray-400 dark:text-slate-500">
             <i class="fa-solid fa-eye-slash mr-1"></i>
-            This question will not be shown to the patient.
+            {% if IS_RTL %}لن يتم عرض هذا السؤال للمريض.{% else %}This question will not be shown to the patient.{% endif %}
           </p>
         </div>
       </div>
@@ -127,7 +127,7 @@
         <button type="submit"
                 class="inline-flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white font-semibold text-sm px-5 py-2 rounded-lg transition-all shadow-sm">
           <i class="fa-solid fa-floppy-disk"></i>
-          Save
+          {% if IS_RTL %}حفظ{% else %}Save{% endif %}
         </button>
       </div>
     </form>
@@ -138,7 +138,7 @@
     <div class="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/40">
       <div class="flex items-center gap-2">
         <i class="fa-solid fa-clipboard-question text-indigo-500 text-sm"></i>
-        <h2 class="font-bold text-gray-800 dark:text-white text-sm">Form Questions</h2>
+        <h2 class="font-bold text-gray-800 dark:text-white text-sm">{% if IS_RTL %}أسئلة الاستمارة{% else %}Form Questions{% endif %}</h2>
         {% if questions %}
         <span class="text-xs bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full font-bold">{{ questions|length }}</span>
         {% endif %}
@@ -158,8 +158,8 @@
       <div class="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center mb-3">
         <i class="fa-regular fa-clipboard text-2xl text-gray-400 dark:text-slate-500"></i>
       </div>
-      <p class="text-sm font-semibold text-gray-600 dark:text-slate-400">No questions yet</p>
-      <p class="text-xs text-gray-400 dark:text-slate-500 mt-1">Add questions using the form below</p>
+      <p class="text-sm font-semibold text-gray-600 dark:text-slate-400">{% if IS_RTL %}لا توجد أسئلة بعد{% else %}No questions yet{% endif %}</p>
+      <p class="text-xs text-gray-400 dark:text-slate-500 mt-1">{% if IS_RTL %}أضف أسئلة باستخدام النموذج أدناه{% else %}Add questions using the form below{% endif %}</p>
     </div>
     {% endif %}
   </div>
@@ -168,7 +168,7 @@
   <div class="glass-card overflow-hidden" id="add-question-section">
     <div class="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-slate-700 bg-indigo-50 dark:bg-indigo-900/10">
       <i class="fa-solid fa-plus-circle text-indigo-500 text-sm"></i>
-      <h2 class="font-bold text-indigo-800 dark:text-indigo-300 text-sm">Add New Question</h2>
+      <h2 class="font-bold text-indigo-800 dark:text-indigo-300 text-sm">{% if IS_RTL %}إضافة سؤال جديد{% else %}Add New Question{% endif %}</h2>
     </div>
 
     <form method="post" action="{% url 'doctors:intake_question_add' template.id %}" class="px-5 py-4 space-y-4"
@@ -177,17 +177,17 @@
 
       <div>
         <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-          Question Text <span class="text-red-500">*</span>
+          {% if IS_RTL %}نص السؤال{% else %}Question Text{% endif %} <span class="text-red-500">*</span>
         </label>
         <input type="text" name="question_text_ar"
-               placeholder="e.g. Do you have any medication allergies?"
+               placeholder="{% if IS_RTL %}مثال: هل لديك أي حساسية للأدوية؟{% else %}e.g. Do you have any medication allergies?{% endif %}"
                required
                class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition">
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Field Type</label>
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">{% if IS_RTL %}نوع الحقل{% else %}Field Type{% endif %}</label>
           <select name="field_type" id="field-type-select"
                   class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 transition">
             {% for val, label in field_types %}
@@ -199,7 +199,7 @@
           <label class="flex items-center gap-2.5 cursor-pointer select-none">
             <input type="checkbox" name="is_required"
                    class="w-4 h-4 rounded accent-indigo-500 cursor-pointer">
-            <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Required question</span>
+            <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">{% if IS_RTL %}سؤال إلزامي{% else %}Required question{% endif %}</span>
           </label>
         </div>
       </div>
@@ -207,7 +207,7 @@
       {# ── Choices builder (SELECT / MULTISELECT only) ── #}
       <div id="choices-section" class="hidden">
         <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-          Choices <span class="text-red-500">*</span>
+          {% if IS_RTL %}الخيارات{% else %}Choices{% endif %} <span class="text-red-500">*</span>
         </label>
         <div class="space-y-2" id="main-choices-list">
           <div class="choice-row flex items-center gap-2">
@@ -228,28 +228,28 @@
         <button type="button" onclick="addChoice('main-choices-list', 'indigo')"
                 class="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 px-2.5 py-1.5 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors border border-dashed border-indigo-300 dark:border-indigo-700/40">
           <i class="fa-solid fa-plus text-[10px]"></i>
-          Add option
+          {% if IS_RTL %}إضافة خيار{% else %}Add option{% endif %}
         </button>
         <textarea name="choices_raw" id="main-choices-raw" class="hidden"></textarea>
       </div>
 
       <div>
         <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-          Placeholder Text
-          <span class="text-xs font-normal text-gray-400 ml-1">(optional)</span>
+          {% if IS_RTL %}نص التلميح{% else %}Placeholder Text{% endif %}
+          <span class="text-xs font-normal text-gray-400 ml-1">({% if IS_RTL %}اختياري{% else %}optional{% endif %})</span>
         </label>
         <input type="text" name="placeholder"
-               placeholder="e.g. Type your answer here..."
+               placeholder="{% if IS_RTL %}مثال: اكتب إجابتك هنا...{% else %}e.g. Type your answer here...{% endif %}"
                class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition">
       </div>
 
       <div>
         <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-          Help Text
-          <span class="text-xs font-normal text-gray-400 ml-1">(optional — additional clarification below the question)</span>
+          {% if IS_RTL %}نص المساعدة{% else %}Help Text{% endif %}
+          <span class="text-xs font-normal text-gray-400 ml-1">({% if IS_RTL %}اختياري — توضيح إضافي أسفل السؤال{% else %}optional — additional clarification below the question{% endif %})</span>
         </label>
         <input type="text" name="help_text_content"
-               placeholder="e.g. Please include the drug name and dosage if applicable."
+               placeholder="{% if IS_RTL %}مثال: يرجى ذكر اسم الدواء والجرعة إن وجد.{% else %}e.g. Please include the drug name and dosage if applicable.{% endif %}"
                class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition">
       </div>
 
@@ -257,7 +257,7 @@
         <button type="submit"
                 class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-semibold text-sm px-5 py-2.5 rounded-lg transition-all shadow-sm">
           <i class="fa-solid fa-plus"></i>
-          Add Question
+          {% if IS_RTL %}إضافة سؤال{% else %}Add Question{% endif %}
         </button>
       </div>
     </form>
@@ -364,7 +364,7 @@
       var on = reasonToggle.checked;
       reasonSettings.classList.toggle('hidden', !on);
       reasonDisabledMsg.classList.toggle('hidden', on);
-      reasonToggleLabel.textContent = on ? 'Enabled' : 'Disabled';
+      reasonToggleLabel.textContent = on ? '{% if IS_RTL %}مفعّل{% else %}Enabled{% endif %}' : '{% if IS_RTL %}معطّل{% else %}Disabled{% endif %}';
     });
   }
 

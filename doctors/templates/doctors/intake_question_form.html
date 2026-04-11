@@ -1,24 +1,24 @@
 {% extends "doctors/base_doctor.html" %}
-{% block title %}Edit Question | Doctor Portal{% endblock %}
+{% block title %}{% if IS_RTL %}تعديل السؤال | بوابة الطبيب{% else %}Edit Question | Doctor Portal{% endif %}{% endblock %}
 
 {% block content %}
 <div class="max-w-2xl mx-auto">
 
   {# ── Breadcrumb ── #}
   <nav class="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400 mb-5">
-    <a href="{% url 'doctors:my_appointment_types' %}" class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">My Appointment Types</a>
+    <a href="{% url 'doctors:my_appointment_types' %}" class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">{% if IS_RTL %}أنواع مواعيدي{% else %}My Appointment Types{% endif %}</a>
     <i class="fa-solid fa-chevron-right text-[0.6rem] opacity-40"></i>
     <a href="{% url 'doctors:intake_form_builder' appointment_type.id %}" class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
       {{ appointment_type.display_name }} Form
     </a>
     <i class="fa-solid fa-chevron-right text-[0.6rem] opacity-40"></i>
-    <span class="text-gray-800 dark:text-white font-semibold">Edit Question</span>
+    <span class="text-gray-800 dark:text-white font-semibold">{% if IS_RTL %}تعديل السؤال{% else %}Edit Question{% endif %}</span>
   </nav>
 
   <div class="glass-card overflow-hidden">
     <div class="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/40">
       <i class="fa-solid fa-pen-to-square text-primary-500 text-sm"></i>
-      <h1 class="font-bold text-gray-800 dark:text-white">Edit Question</h1>
+      <h1 class="font-bold text-gray-800 dark:text-white">{% if IS_RTL %}تعديل السؤال{% else %}Edit Question{% endif %}</h1>
     </div>
 
     <form method="post" class="px-5 py-5 space-y-4"
@@ -27,7 +27,7 @@
 
       <div>
         <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-          Question Text <span class="text-red-500">*</span>
+          {% if IS_RTL %}نص السؤال{% else %}Question Text{% endif %} <span class="text-red-500">*</span>
         </label>
         <input type="text" name="question_text_ar"
                value="{{ question.display_text }}"
@@ -37,7 +37,7 @@
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Field Type</label>
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">{% if IS_RTL %}نوع الحقل{% else %}Field Type{% endif %}</label>
           <select name="field_type" id="field-type-select"
                   class="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 transition">
             {% for val, label in field_types %}
@@ -50,7 +50,7 @@
             <input type="checkbox" name="is_required"
                    {% if question.is_required %}checked{% endif %}
                    class="w-4 h-4 rounded accent-indigo-500 cursor-pointer">
-            <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Required question</span>
+            <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">{% if IS_RTL %}سؤال إلزامي{% else %}Required question{% endif %}</span>
           </label>
         </div>
       </div>
@@ -58,7 +58,7 @@
       {# ── Choices builder ── #}
       <div id="choices-section" class="{% if question.field_type != 'SELECT' and question.field_type != 'MULTISELECT' %}hidden{% endif %}">
         <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-          Choices <span class="text-red-500">*</span>
+          {% if IS_RTL %}الخيارات{% else %}Choices{% endif %} <span class="text-red-500">*</span>
         </label>
         <div class="space-y-2" id="edit-choices-list">
           {% if question.choices %}
@@ -91,15 +91,15 @@
         <button type="button" onclick="addChoice('edit-choices-list', 'indigo')"
                 class="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 px-2.5 py-1.5 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors border border-dashed border-indigo-300 dark:border-indigo-700/40">
           <i class="fa-solid fa-plus text-[10px]"></i>
-          Add option
+          {% if IS_RTL %}إضافة خيار{% else %}Add option{% endif %}
         </button>
         <textarea name="choices_raw" id="edit-choices-raw" class="hidden"></textarea>
       </div>
 
       <div>
         <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-          Placeholder Text
-          <span class="text-xs font-normal text-gray-400 ml-1">(optional)</span>
+          {% if IS_RTL %}نص التلميح{% else %}Placeholder Text{% endif %}
+          <span class="text-xs font-normal text-gray-400 ml-1">({% if IS_RTL %}اختياري{% else %}optional{% endif %})</span>
         </label>
         <input type="text" name="placeholder"
                value="{{ question.placeholder }}"
@@ -108,8 +108,8 @@
 
       <div>
         <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-          Help Text
-          <span class="text-xs font-normal text-gray-400 ml-1">(optional)</span>
+          {% if IS_RTL %}نص المساعدة{% else %}Help Text{% endif %}
+          <span class="text-xs font-normal text-gray-400 ml-1">({% if IS_RTL %}اختياري{% else %}optional{% endif %})</span>
         </label>
         <input type="text" name="help_text_content"
                value="{{ question.help_text_content }}"
@@ -119,12 +119,12 @@
       <div class="flex items-center justify-between pt-2">
         <a href="{% url 'doctors:intake_form_builder' appointment_type.id %}"
            class="text-sm font-semibold text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 transition-colors px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700">
-          Cancel
+          {% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}
         </a>
         <button type="submit"
                 class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white font-semibold text-sm px-5 py-2.5 rounded-lg transition-all shadow-sm">
           <i class="fa-solid fa-floppy-disk"></i>
-          Save Changes
+          {% if IS_RTL %}حفظ التغييرات{% else %}Save Changes{% endif %}
         </button>
       </div>
     </form>

@@ -7,7 +7,7 @@
   <div class="mb-6">
     <a href="{{ back_url }}"
        class="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors mb-3">
-      <i class="fa-solid fa-arrow-left text-xs"></i> Back to Order Catalog
+      <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %} text-xs"></i> {% if IS_RTL %}رجوع إلى كتالوج الطلبات{% else %}Back to Order Catalog{% endif %}
     </a>
     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ form_title }}</h1>
     <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">{{ clinic.name }}</p>
@@ -31,7 +31,7 @@
 
         {% if not item %}
         <div>
-          <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">Category</label>
+          <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">{% if IS_RTL %}الفئة{% else %}Category{% endif %}</label>
           <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-slate-700/40 border border-gray-200 dark:border-slate-600">
             {% if category == "LAB" %}<i class="fa-solid fa-flask text-purple-500"></i>
             {% elif category == "RADIOLOGY" %}<i class="fa-solid fa-x-ray text-indigo-500"></i>
@@ -45,10 +45,10 @@
 
         <div>
           <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">
-            Name <span class="text-red-500">*</span>
+            {% if IS_RTL %}الاسم{% else %}Name{% endif %} <span class="text-red-500">*</span>
           </label>
           <input type="text" name="name" value="{{ item.name|default:'' }}" required
-                 placeholder="{% if category == 'LAB' %}e.g. Complete Blood Count, Lipid Panel{% elif category == 'RADIOLOGY' %}e.g. Chest X-Ray, Brain MRI{% elif category == 'MICROBIOLOGY' %}e.g. Blood Culture, Urine Culture{% else %}e.g. IV Cannula Insertion{% endif %}"
+                 placeholder="{% if IS_RTL %}{% if category == 'LAB' %}مثال: صورة دم كاملة، دهون الدم{% elif category == 'RADIOLOGY' %}مثال: أشعة صدر، MRI دماغ{% elif category == 'MICROBIOLOGY' %}مثال: زراعة دم، زراعة بول{% else %}مثال: إدخال قسطرة وريدية{% endif %}{% else %}{% if category == 'LAB' %}e.g. Complete Blood Count, Lipid Panel{% elif category == 'RADIOLOGY' %}e.g. Chest X-Ray, Brain MRI{% elif category == 'MICROBIOLOGY' %}e.g. Blood Culture, Urine Culture{% else %}e.g. IV Cannula Insertion{% endif %}{% endif %}"
                  class="ws-input w-full" autofocus>
         </div>
 
@@ -61,7 +61,7 @@
         </button>
         <a href="{{ back_url }}"
            class="inline-flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-          Cancel
+          {% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}
         </a>
       </div>
     </form>

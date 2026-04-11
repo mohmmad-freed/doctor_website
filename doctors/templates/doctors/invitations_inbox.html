@@ -1,17 +1,25 @@
 {% extends "doctors/base_doctor.html" %}
-{% block title %}Join Invitations | Doctor Portal{% endblock %}
+{% block title %}{% if IS_RTL %}دعوات الانضمام | بوابة الطبيب{% else %}Join Invitations | Doctor Portal{% endif %}{% endblock %}
 
 {% block content %}
 <div class="max-w-3xl mx-auto px-4 pt-5 pb-8">
+
+  <div class="mb-5">
+    <a href="{% url 'doctors:dashboard' %}"
+       class="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
+      <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %} text-xs"></i>
+      {% if IS_RTL %}العودة إلى لوحة التحكم{% else %}Back to Dashboard{% endif %}
+    </a>
+  </div>
 
   <div class="flex items-center gap-4 mb-7">
     <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-teal-500 flex items-center justify-center flex-shrink-0 shadow-lg">
       <i class="fa-solid fa-envelope-open-text text-white text-xl"></i>
     </div>
     <div>
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Join Invitations</h1>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{% if IS_RTL %}دعوات الانضمام{% else %}Join Invitations{% endif %}</h1>
       <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-        Pending invitations to join clinics
+        {% if IS_RTL %}دعوات معلقة للانضمام إلى العيادات{% else %}Pending invitations to join clinics{% endif %}
         {% if invitations %}
         <span class="font-semibold text-indigo-600 dark:text-indigo-400">({{ invitations|length }})</span>
         {% endif %}
@@ -40,7 +48,7 @@
 
         {% if inv.is_expired %}
         <span class="flex-shrink-0 inline-flex items-center gap-1.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-xs font-semibold px-2.5 py-1 rounded-full">
-          <i class="fa-solid fa-clock text-[10px]"></i> Expired
+          <i class="fa-solid fa-clock text-[10px]"></i> {% if IS_RTL %}منتهية الصلاحية{% else %}Expired{% endif %}
         </span>
         {% endif %}
       </div>
@@ -49,7 +57,7 @@
 
       <div class="grid grid-cols-2 gap-4 p-5">
         <div>
-          <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Sent by</p>
+          <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">{% if IS_RTL %}أرسلها{% else %}Sent by{% endif %}</p>
           <p class="font-semibold text-gray-800 dark:text-gray-200 text-sm">{{ inv.invited_by.name }}</p>
           {% if inv.invited_by.phone %}
           <p class="text-xs font-mono text-gray-400 dark:text-gray-500" dir="ltr">{{ inv.invited_by.phone }}</p>
@@ -57,14 +65,14 @@
         </div>
 
         <div>
-          <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Invite date</p>
+          <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">{% if IS_RTL %}تاريخ الدعوة{% else %}Invite date{% endif %}</p>
           <p class="font-medium text-gray-700 dark:text-gray-300 text-sm" title="{{ inv.created_at|date:'Y-m-d H:i' }}">
-            {{ inv.created_at|timesince }} ago
+            {% if IS_RTL %}منذ {{ inv.created_at|timesince }}{% else %}{{ inv.created_at|timesince }} ago{% endif %}
           </p>
         </div>
 
         <div class="col-span-2">
-          <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Required Specialties</p>
+          <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">{% if IS_RTL %}التخصصات المطلوبة{% else %}Required Specialties{% endif %}</p>
           <div class="flex flex-wrap gap-1.5">
             {% for spec in inv.specialties.all %}
             <span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-semibold px-2.5 py-1 rounded-full border border-blue-200 dark:border-blue-700">
@@ -80,25 +88,25 @@
       {% if not inv.is_expired %}
       <div class="border-t border-gray-100 dark:border-gray-700 px-5 py-4 bg-gray-50/50 dark:bg-gray-700/30 flex items-center justify-end gap-3">
         <form method="post" action="{% url 'doctors:reject_invitation' inv.id %}"
-              onsubmit="return confirm('Are you sure you want to reject this invitation?');">
+              onsubmit="return confirm('{% if IS_RTL %}هل أنت متأكد من رفض هذه الدعوة؟{% else %}Are you sure you want to reject this invitation?{% endif %}');">
           {% csrf_token %}
           <button type="submit"
                   class="inline-flex items-center gap-2 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-red-400 hover:text-red-600 dark:hover:text-red-400 dark:hover:border-red-500 bg-white dark:bg-gray-800 text-sm font-semibold px-4 py-2 rounded-xl transition-colors">
-            <i class="fa-solid fa-times text-xs"></i> Reject
+            <i class="fa-solid fa-times text-xs"></i> {% if IS_RTL %}رفض{% else %}Reject{% endif %}
           </button>
         </form>
         <form method="post" action="{% url 'doctors:accept_invitation' inv.id %}">
           {% csrf_token %}
           <button type="submit"
                   class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all shadow-sm">
-            <i class="fa-solid fa-check text-xs"></i> Accept &amp; Join
+            <i class="fa-solid fa-check text-xs"></i> {% if IS_RTL %}قبول والانضمام{% else %}Accept &amp; Join{% endif %}
           </button>
         </form>
       </div>
       {% else %}
       <div class="border-t border-gray-100 dark:border-gray-700 px-5 py-3 bg-gray-50/50 dark:bg-gray-700/30">
         <p class="text-sm text-gray-400 dark:text-gray-500 text-center">
-          <i class="fa-regular fa-clock me-1"></i>This invitation has expired
+          <i class="fa-regular fa-clock me-1"></i>{% if IS_RTL %}انتهت صلاحية هذه الدعوة{% else %}This invitation has expired{% endif %}
         </p>
       </div>
       {% endif %}
@@ -111,8 +119,8 @@
     <div class="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mx-auto mb-4">
       <i class="fa-solid fa-inbox text-2xl text-gray-400 dark:text-gray-500"></i>
     </div>
-    <p class="font-bold text-gray-700 dark:text-gray-200 mb-2">No pending invitations</p>
-    <p class="text-sm text-gray-500 dark:text-gray-400">You have no new invitations to join clinics at the moment.</p>
+    <p class="font-bold text-gray-700 dark:text-gray-200 mb-2">{% if IS_RTL %}لا توجد دعوات معلقة{% else %}No pending invitations{% endif %}</p>
+    <p class="text-sm text-gray-500 dark:text-gray-400">{% if IS_RTL %}لا توجد دعوات جديدة للانضمام إلى عيادات في الوقت الحالي.{% else %}You have no new invitations to join clinics at the moment.{% endif %}</p>
   </div>
   {% endif %}
 

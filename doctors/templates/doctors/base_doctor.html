@@ -423,7 +423,7 @@
                     </div>
                     <div class="flex-1 min-w-0">
                         <p class="text-sm font-bold text-gray-900 dark:text-white truncate leading-tight">{{ request.user.name }}</p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 truncate" dir="ltr">{{ request.user.phone }}</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 truncate{% if IS_RTL %} text-right{% endif %}" dir="ltr">{{ request.user.phone }}</p>
                     </div>
                     <div class="flex items-center gap-2 flex-shrink-0">
                         <form method="post" action="{% url 'accounts:set_language' %}" style="display:inline;" onclick="event.stopPropagation()">

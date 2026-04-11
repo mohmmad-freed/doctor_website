@@ -1,5 +1,5 @@
 {% extends "doctors/base_doctor.html" %}
-{% block title %}{{ patient.name }} – Workspace | MedPortal{% endblock %}
+{% block title %}{{ patient.name }} – {% if IS_RTL %}مساحة العمل | بوابة الطبيب{% else %}Workspace | MedPortal{% endif %}{% endblock %}
 
 {% block extra_head %}
 <script src="https://unpkg.com/htmx.org@1.9.10" crossorigin="anonymous"></script>
@@ -169,8 +169,8 @@
         <a href="{% url 'doctors:patients' %}"
            onclick="return mpwBackGuard()"
            class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-           title="Back to My Patients">
-          <i class="fa-solid fa-arrow-left text-sm"></i>
+           title="{% if IS_RTL %}رجوع إلى مرضاي{% else %}Back to My Patients{% endif %}">
+          <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %} text-sm"></i>
         </a>
 
         <!-- Avatar -->
@@ -187,19 +187,19 @@
               {{ profile.get_gender_display }}
             </span>
             {% endif %}
-            {% if age %}<span class="text-sm text-slate-500 dark:text-slate-400">{{ age }} yrs</span>{% endif %}
+            {% if age %}<span class="text-sm text-slate-500 dark:text-slate-400">{{ age }} {% if IS_RTL %}سنة{% else %}yrs{% endif %}</span>{% endif %}
           </div>
           <div class="flex items-center gap-3 mt-0.5 flex-wrap text-xs text-slate-500 dark:text-slate-400">
             <span class="font-mono">{{ patient.phone }}</span>
             {% if last_visit %}
             <span class="flex items-center gap-1">
               <i class="fa-regular fa-calendar-check text-emerald-500"></i>
-              Last visit: {{ last_visit|date:"d M Y" }}
+              {% if IS_RTL %}آخر زيارة:{% else %}Last visit:{% endif %} {{ last_visit|date:"d M Y" }}
             </span>
             {% else %}
             <span class="text-amber-500 flex items-center gap-1">
               <i class="fa-solid fa-clock-rotate-left"></i>
-              No visits yet
+              {% if IS_RTL %}لا توجد زيارات بعد{% else %}No visits yet{% endif %}
             </span>
             {% endif %}
             {% for clinic in clinics %}
@@ -212,7 +212,7 @@
           <!-- Alerts (allergies / medical history) -->
           {% if profile.allergies %}
           <div class="mt-1 flex flex-wrap gap-1.5">
-            <span class="alert-pill"><i class="fa-solid fa-triangle-exclamation text-[10px]"></i>Allergies: {{ profile.allergies|truncatechars:60 }}</span>
+            <span class="alert-pill"><i class="fa-solid fa-triangle-exclamation text-[10px]"></i>{% if IS_RTL %}الحساسية:{% else %}Allergies:{% endif %} {{ profile.allergies|truncatechars:60 }}</span>
           </div>
           {% endif %}
         </div>
@@ -222,26 +222,26 @@
       <div class="flex items-center gap-2 flex-wrap flex-shrink-0">
         <button onclick="switchTab('notes', true)"
                 class="qa-btn qa-btn-primary">
-          <i class="fa-solid fa-file-medical text-xs"></i> Add Note
+          <i class="fa-solid fa-file-medical text-xs"></i> {% if IS_RTL %}إضافة ملاحظة{% else %}Add Note{% endif %}
         </button>
         <button onclick="switchTab('orders', true)"
                 class="qa-btn qa-btn-outline">
-          <i class="fa-solid fa-flask text-xs"></i> Add Order
+          <i class="fa-solid fa-flask text-xs"></i> {% if IS_RTL %}إضافة طلب{% else %}Add Order{% endif %}
         </button>
         <button onclick="switchTab('prescriptions', true)"
                 class="qa-btn qa-btn-outline">
-          <i class="fa-solid fa-prescription text-xs"></i> Prescribe
+          <i class="fa-solid fa-prescription text-xs"></i> {% if IS_RTL %}وصفة طبية{% else %}Prescribe{% endif %}
         </button>
         <button onclick="switchTab('records', true)"
                 class="qa-btn qa-btn-outline">
-          <i class="fa-solid fa-upload text-xs"></i> Upload
+          <i class="fa-solid fa-upload text-xs"></i> {% if IS_RTL %}رفع ملف{% else %}Upload{% endif %}
         </button>
         <button hx-get="{% url 'doctors:ws_schedule_followup' patient.id %}"
                 hx-target="#followup-modal-root"
                 hx-swap="innerHTML"
                 class="qa-btn qa-btn-outline"
                 style="color:#4f46e5; border-color:#c7d2fe;">
-          <i class="fa-solid fa-calendar-plus text-xs"></i> Schedule Follow-up
+          <i class="fa-solid fa-calendar-plus text-xs"></i> {% if IS_RTL %}جدولة متابعة{% else %}Schedule Follow-up{% endif %}
         </button>
       </div>
     </div>
@@ -352,7 +352,7 @@
   // Guard for back button — warns if there are unsaved changes
   window.mpwBackGuard = function () {
     if (window.wsFormDirty) {
-      return confirm('You have unsaved changes. Leave this patient workspace?');
+      return confirm('{% if IS_RTL %}لديك تغييرات غير محفوظة. هل تريد مغادرة مساحة عمل المريض؟{% else %}You have unsaved changes. Leave this patient workspace?{% endif %}');
     }
     return true;
   };

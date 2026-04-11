@@ -42,10 +42,10 @@
           <i class="fa-solid fa-calendar-plus text-indigo-600 dark:text-indigo-400"></i>
         </div>
         <div>
-          <h2 class="text-sm font-bold text-slate-800 dark:text-slate-100">Schedule Follow-up</h2>
+          <h2 class="text-sm font-bold text-slate-800 dark:text-slate-100">{% if IS_RTL %}جدولة متابعة{% else %}Schedule Follow-up{% endif %}</h2>
           <p class="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[220px]">{{ patient.name }}</p>
           {% if last_visit %}
-          <p class="text-[11px] text-slate-400 dark:text-slate-500">Last visit: {{ last_visit|date:"d M Y" }}</p>
+          <p class="text-[11px] text-slate-400 dark:text-slate-500">{% if IS_RTL %}آخر زيارة:{% else %}Last visit:{% endif %} {{ last_visit|date:"d M Y" }}</p>
           {% endif %}
         </div>
       </div>
@@ -76,14 +76,14 @@
         <i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5 flex-shrink-0 text-base"></i>
         <div>
           <p class="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-1">
-            {% if booking_error_code == 'already_scheduled' %}Existing Appointment Detected{% else %}Time Conflict Detected{% endif %}
+            {% if booking_error_code == 'already_scheduled' %}{% if IS_RTL %}تم اكتشاف موعد موجود{% else %}Existing Appointment Detected{% endif %}{% else %}{% if IS_RTL %}تعارض في المواعيد{% else %}Time Conflict Detected{% endif %}{% endif %}
           </p>
           <p class="text-xs text-amber-700 dark:text-amber-300">{{ booking_error }}</p>
         </div>
       </div>
 
       <p class="text-sm text-slate-600 dark:text-slate-300">
-        Do you want to schedule this follow-up appointment anyway?
+        {% if IS_RTL %}هل تريد جدولة هذا الموعد على أي حال؟{% else %}Do you want to schedule this follow-up appointment anyway?{% endif %}
       </p>
     </div>
 
@@ -95,7 +95,7 @@
               hx-target="#followup-modal-root"
               hx-swap="innerHTML"
               class="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors">
-        <i class="fa-solid fa-arrow-left text-xs mr-1"></i> Go Back
+        <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %} text-xs mr-1"></i> {% if IS_RTL %}رجوع{% else %}Go Back{% endif %}
       </button>
 
       {# Schedule Anyway — resubmits with allow_conflict=1 and original values as hidden fields #}
@@ -120,7 +120,7 @@
             <i class="fa-solid fa-spinner fa-spin text-xs"></i>
           </span>
           <i class="fa-solid fa-calendar-check text-xs"></i>
-          Schedule Anyway
+          {% if IS_RTL %}جدولة على أي حال{% else %}Schedule Anyway{% endif %}
         </button>
       </form>
     </div>
@@ -146,10 +146,10 @@
           </div>
           <div class="flex-1 min-w-0">
             <p class="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate">{{ doctor.name }}</p>
-            <p class="text-[11px] text-slate-400 dark:text-slate-500">Scheduling for {{ patient.name }}</p>
+            <p class="text-[11px] text-slate-400 dark:text-slate-500">{% if IS_RTL %}جدولة لـ{% else %}Scheduling for{% endif %} {{ patient.name }}</p>
           </div>
           <span class="flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800/40">
-            Follow-up
+            {% if IS_RTL %}متابعة{% else %}Follow-up{% endif %}
           </span>
         </div>
 
@@ -158,7 +158,7 @@
         <div>
           <label for="followup-clinic"
                  class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-            Clinic
+            {% if IS_RTL %}العيادة{% else %}Clinic{% endif %}
           </label>
           <select name="clinic_id" id="followup-clinic"
                   hx-get="{% url 'doctors:htmx_followup_slots' patient.id %}"
@@ -185,7 +185,7 @@
         <div>
           <label for="followup-date-input"
                  class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-            Date
+            {% if IS_RTL %}التاريخ{% else %}Date{% endif %}
           </label>
           <input type="date"
                  name="appointment_date"
@@ -206,7 +206,7 @@
         <div>
           <label for="followup-type"
                  class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-            Type <span class="font-normal text-slate-400 normal-case tracking-normal">(optional)</span>
+            {% if IS_RTL %}النوع <span class="font-normal text-slate-400 normal-case tracking-normal">(اختياري)</span>{% else %}Type <span class="font-normal text-slate-400 normal-case tracking-normal">(optional)</span>{% endif %}
           </label>
           <select name="appointment_type_id" id="followup-type"
                   hx-get="{% url 'doctors:htmx_followup_slots' patient.id %}"
@@ -214,7 +214,7 @@
                   hx-trigger="change"
                   hx-include="#followup-clinic, #followup-date-input"
                   class="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-colors">
-            <option value="">— Follow-up (default) —</option>
+            <option value="">{% if IS_RTL %}— متابعة (افتراضي) —{% else %}— Follow-up (default) —{% endif %}</option>
             {% for apt_type in appointment_types %}
             <option value="{{ apt_type.id }}"
               {% if post_data.appointment_type_id == apt_type.id|stringformat:"s" %}selected{% endif %}>
@@ -230,13 +230,13 @@
         {# ── Time slot section (HTMX-loaded) ── #}
         <div>
           <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-            Time
+            {% if IS_RTL %}الوقت{% else %}Time{% endif %}
           </label>
 
           {# Loading indicator #}
           <div id="followup-slots-spinner" class="htmx-indicator flex items-center gap-2 py-2">
             <i class="fa-solid fa-spinner fa-spin text-indigo-400 text-sm"></i>
-            <span class="text-xs text-slate-400">Loading slots…</span>
+            <span class="text-xs text-slate-400">{% if IS_RTL %}جار تحميل الأوقات...{% else %}Loading slots…{% endif %}</span>
           </div>
 
           {# Slots target — starts with placeholder text #}
@@ -246,7 +246,7 @@
               {# Form was re-rendered after error — preserve entered time #}
               <div>
                 <p class="text-xs text-amber-600 dark:text-amber-400 mb-2">
-                  <i class="fa-solid fa-circle-info mr-1"></i>Re-select a date to reload slots.
+                  <i class="fa-solid fa-circle-info mr-1"></i>{% if IS_RTL %}أعد اختيار التاريخ لإعادة تحميل الأوقات.{% else %}Re-select a date to reload slots.{% endif %}
                 </p>
                 <input type="time"
                        name="appointment_time"
@@ -256,7 +256,7 @@
               </div>
             {% else %}
               <p class="text-xs text-slate-400 dark:text-slate-500 italic py-1">
-                Select a date above to see available slots.
+                {% if IS_RTL %}اختر تاريخاً أعلاه لعرض الأوقات المتاحة.{% else %}Select a date above to see available slots.{% endif %}
               </p>
             {% endif %}
           </div>
@@ -270,12 +270,12 @@
         <div>
           <label for="followup-notes"
                  class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-            Notes <span class="font-normal text-slate-400 normal-case tracking-normal">(optional)</span>
+            {% if IS_RTL %}ملاحظات <span class="font-normal text-slate-400 normal-case tracking-normal">(اختياري)</span>{% else %}Notes <span class="font-normal text-slate-400 normal-case tracking-normal">(optional)</span>{% endif %}
           </label>
           <textarea name="notes"
                     id="followup-notes"
                     rows="2"
-                    placeholder="Reason for follow-up, post-visit instructions…"
+                    placeholder="{% if IS_RTL %}سبب المتابعة، تعليمات ما بعد الزيارة...{% else %}Reason for follow-up, post-visit instructions…{% endif %}"
                     class="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 resize-none transition-colors">{{ post_data.notes|default:'' }}</textarea>
         </div>
 
@@ -294,7 +294,7 @@
         <button type="button"
                 @click="close()"
                 class="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors">
-          Cancel
+          {% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}
         </button>
         <button type="submit"
                 :disabled="submitting"
@@ -305,7 +305,7 @@
             <i class="fa-solid fa-spinner fa-spin text-xs"></i>
           </span>
           <i class="fa-solid fa-calendar-check text-xs"></i>
-          Schedule Follow-up
+          {% if IS_RTL %}جدولة متابعة{% else %}Schedule Follow-up{% endif %}
         </button>
       </div>
 

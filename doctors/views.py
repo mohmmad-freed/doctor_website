@@ -1758,12 +1758,13 @@ def patient_workspace(request, patient_id):
 
     ctx["active_tab"] = tab
     ctx["last_visit"] = _ws_last_visit(patient_id, ctx["doctor"])
+    _rtl = getattr(request, "LANGUAGE_CODE", "ar") == "ar"
     ctx["tabs"] = [
-        ("overview",      "Overview",       "fa-solid fa-chart-pie"),
-        ("notes",         "Clinical Notes", "fa-solid fa-file-medical"),
-        ("orders",        "Orders",         "fa-solid fa-flask"),
-        ("prescriptions", "Prescriptions",  "fa-solid fa-prescription"),
-        ("records",       "Records",        "fa-solid fa-folder-open"),
+        ("overview",      "نظرة عامة"       if _rtl else "Overview",       "fa-solid fa-chart-pie"),
+        ("notes",         "ملاحظات سريرية"  if _rtl else "Clinical Notes", "fa-solid fa-file-medical"),
+        ("orders",        "الطلبات"          if _rtl else "Orders",         "fa-solid fa-flask"),
+        ("prescriptions", "الوصفات"          if _rtl else "Prescriptions",  "fa-solid fa-prescription"),
+        ("records",       "السجلات"          if _rtl else "Records",        "fa-solid fa-folder-open"),
     ]
     patient = ctx["patient"]
     cids = ctx["shared_clinic_ids"]

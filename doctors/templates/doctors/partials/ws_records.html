@@ -1,7 +1,7 @@
 <!-- Medical Records Tab -->
 {% if record_saved %}
 <div class="mb-4 flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700/40 text-emerald-700 dark:text-emerald-300 text-sm font-medium">
-  <i class="fa-solid fa-circle-check"></i> Record uploaded successfully.
+  <i class="fa-solid fa-circle-check"></i> {% if IS_RTL %}تم رفع السجل بنجاح.{% else %}Record uploaded successfully.{% endif %}
 </div>
 {% endif %}
 {% if record_error %}
@@ -16,7 +16,7 @@
        @click="open = !open">
     <div class="flex items-center gap-2">
       <i class="fa-solid fa-upload text-blue-500 text-sm"></i>
-      <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">Upload Medical Record</span>
+      <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">{% if IS_RTL %}رفع سجل طبي{% else %}Upload Medical Record{% endif %}</span>
     </div>
     <i class="fa-solid fa-chevron-down text-xs text-slate-400 transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
   </div>
@@ -33,7 +33,7 @@
       {% csrf_token %}
       {% if clinics|length > 1 %}
       <div>
-        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Clinic</label>
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{% if IS_RTL %}العيادة{% else %}Clinic{% endif %}</label>
         <select name="clinic_id" class="ws-select">
           {% for clinic in clinics %}<option value="{{ clinic.id }}">{{ clinic.name }}</option>{% endfor %}
         </select>
@@ -44,14 +44,14 @@
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Title</label>
-          <input type="text" name="title" class="ws-input" placeholder="e.g. CBC Result, Chest X-Ray">
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{% if IS_RTL %}العنوان{% else %}Title{% endif %}</label>
+          <input type="text" name="title" class="ws-input" placeholder="{% if IS_RTL %}مثال: نتيجة صورة دم، أشعة صدر{% else %}e.g. CBC Result, Chest X-Ray{% endif %}">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Category</label>
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{% if IS_RTL %}الفئة{% else %}Category{% endif %}</label>
           <select name="category" class="ws-select">
             {% for val, label in record_categories %}
-            <option value="{{ val }}">{{ label }}</option>
+            <option value="{{ val }}">{% if IS_RTL %}{% if val == 'LAB' %}تقرير مختبر{% elif val == 'RADIOLOGY' %}أشعة{% elif val == 'GENERAL' %}وثيقة عامة{% else %}{{ label }}{% endif %}{% else %}{{ label }}{% endif %}</option>
             {% endfor %}
           </select>
         </div>
@@ -59,7 +59,7 @@
 
       <!-- File drop zone -->
       <div>
-        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">File *</label>
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{% if IS_RTL %}الملف *{% else %}File *{% endif %}</label>
         <label class="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-xl cursor-pointer transition-colors
                       border-slate-200 dark:border-slate-600 hover:border-primary-400 dark:hover:border-primary-500
                       bg-slate-50 dark:bg-slate-800/40 hover:bg-primary-50/40 dark:hover:bg-primary-900/10"
@@ -69,27 +69,27 @@
                @drop.prevent="dragover = false; $refs.fileInput.files = $event.dataTransfer.files; $dispatch('change')">
           <i class="fa-solid fa-cloud-arrow-up fa-lg text-slate-400 dark:text-slate-500 mb-2"></i>
           <span class="text-sm text-slate-500 dark:text-slate-400">
-            <span class="font-semibold text-primary-600 dark:text-primary-400">Click to browse</span> or drag & drop
+            <span class="font-semibold text-primary-600 dark:text-primary-400">{% if IS_RTL %}انقر للاستعراض{% else %}Click to browse{% endif %}</span> {% if IS_RTL %}أو اسحب وأفلت{% else %}or drag & drop{% endif %}
           </span>
-          <span class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">PDF, PNG, JPG, JPEG — max 20 MB</span>
+          <span class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{% if IS_RTL %}PDF، PNG، JPG، JPEG — الحد الأقصى 20 ميغابايت{% else %}PDF, PNG, JPG, JPEG — max 20 MB{% endif %}</span>
           <input type="file" name="record_file" accept=".pdf,.png,.jpg,.jpeg" required class="hidden" x-ref="fileInput"
                  @change="$el.closest('label').querySelector('span:first-of-type').textContent = $el.files[0]?.name || 'No file chosen'">
         </label>
       </div>
 
       <div>
-        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Notes (optional)</label>
-        <textarea name="record_notes" rows="2" class="ws-textarea" placeholder="Observations or context..."></textarea>
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{% if IS_RTL %}ملاحظات (اختياري){% else %}Notes (optional){% endif %}</label>
+        <textarea name="record_notes" rows="2" class="ws-textarea" placeholder="{% if IS_RTL %}ملاحظات أو سياق...{% else %}Observations or context...{% endif %}"></textarea>
       </div>
 
       <div class="flex items-center gap-3 pt-1">
         <button type="submit"
                 class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors shadow-sm">
-          <i class="fa-solid fa-upload text-xs"></i> Upload
+          <i class="fa-solid fa-upload text-xs"></i> {% if IS_RTL %}رفع{% else %}Upload{% endif %}
         </button>
         <button type="button" @click="open = false"
                 class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-          Cancel
+          {% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}
         </button>
       </div>
     </form>
@@ -98,19 +98,19 @@
 
 <!-- Category filter -->
 <div class="flex items-center gap-2 mb-4 flex-wrap">
-  <span class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Filter:</span>
+  <span class="text-xs font-semibold text-slate-400 uppercase tracking-wide">{% if IS_RTL %}تصفية:{% else %}Filter:{% endif %}</span>
   <a href="?tab=records"
      hx-get="{% url 'doctors:patient_workspace' patient.id %}?tab=records"
      hx-target="#tab-content"
      class="px-3 py-1 rounded-full text-xs font-semibold transition-colors {% if not record_cat_filter %}bg-primary-600 text-white{% else %}bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600{% endif %}">
-    All
+    {% if IS_RTL %}الكل{% else %}All{% endif %}
   </a>
   {% for val, label in record_categories %}
   <a href="?tab=records&record_cat={{ val }}"
      hx-get="{% url 'doctors:patient_workspace' patient.id %}?tab=records&record_cat={{ val }}"
      hx-target="#tab-content"
      class="px-3 py-1 rounded-full text-xs font-semibold transition-colors {% if record_cat_filter == val %}bg-primary-600 text-white{% else %}bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600{% endif %}">
-    {{ label }}
+    {% if IS_RTL %}{% if val == 'LAB' %}تقرير مختبر{% elif val == 'RADIOLOGY' %}أشعة{% elif val == 'GENERAL' %}وثيقة عامة{% else %}{{ label }}{% endif %}{% else %}{{ label }}{% endif %}
   </a>
   {% endfor %}
 </div>
@@ -140,7 +140,7 @@
               action="{% url 'doctors:ws_record_delete' patient.id rec.id %}"
               hx-post="{% url 'doctors:ws_record_delete' patient.id rec.id %}"
               hx-target="#tab-content"
-              hx-confirm="Delete this record permanently?">
+              hx-confirm="{% if IS_RTL %}حذف هذا السجل نهائياً؟{% else %}Delete this record permanently?{% endif %}">
           {% csrf_token %}
           <button type="submit"
                   class="w-9 h-9 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shadow text-slate-700 dark:text-slate-200 hover:text-red-600 dark:hover:text-red-400 transition-colors">
@@ -157,7 +157,7 @@
           {% if rec.category == 'LAB' %}bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300
           {% elif rec.category == 'RADIOLOGY' %}bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300
           {% else %}bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400{% endif %}">
-          {{ rec.get_category_display }}
+          {% if IS_RTL %}{% if rec.category == 'LAB' %}تقرير مختبر{% elif rec.category == 'RADIOLOGY' %}أشعة{% elif rec.category == 'GENERAL' %}وثيقة عامة{% else %}{{ rec.get_category_display }}{% endif %}{% else %}{{ rec.get_category_display }}{% endif %}
         </span>
         <span class="text-xs text-slate-400 dark:text-slate-500">{{ rec.uploaded_at|date:"d M Y" }}</span>
       </div>
@@ -165,7 +165,7 @@
       <p class="text-xs text-slate-400 dark:text-slate-500 mt-1.5 truncate">{{ rec.notes }}</p>
       {% endif %}
       <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-        by {{ rec.uploaded_by.name|default:"—" }}
+        {% if IS_RTL %}بواسطة{% else %}by{% endif %} {{ rec.uploaded_by.name|default:"—" }}
         {% if rec.file_size %}· {{ rec.file_size|filesizeformat }}{% endif %}
       </p>
     </div>
@@ -175,6 +175,6 @@
 {% else %}
 <div class="ws-card py-16 text-center">
   <i class="fa-solid fa-folder-open fa-2x text-slate-300 dark:text-slate-600 mb-3 block"></i>
-  <p class="text-slate-500 dark:text-slate-400 font-medium">No records{% if record_cat_filter %} in this category{% endif %}</p>
+  <p class="text-slate-500 dark:text-slate-400 font-medium">{% if IS_RTL %}لا توجد سجلات{% if record_cat_filter %} في هذه الفئة{% endif %}{% else %}No records{% if record_cat_filter %} in this category{% endif %}{% endif %}</p>
 </div>
 {% endif %}

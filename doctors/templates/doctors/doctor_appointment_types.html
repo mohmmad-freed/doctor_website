@@ -25,14 +25,14 @@
                 </div>
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">د. {{ doctor.name }}</h1>
-                    <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">أنواع المواعيد المتاحة</p>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">{% if IS_RTL %}أنواع المواعيد المتاحة{% else %}Available Appointment Types{% endif %}</p>
                 </div>
             </div>
             <div class="flex flex-col gap-2 w-full sm:w-auto mt-4 sm:mt-0">
                 <a href="{% url 'doctors:doctor_availability' doctor.id %}?clinic_id={{ clinic_id }}"
                    class="inline-flex justify-center items-center gap-2 text-sm font-medium text-secondary-600 dark:text-secondary-400 hover:text-secondary-700 dark:hover:text-secondary-300 transition-colors bg-secondary-50 dark:bg-secondary-900/20 px-6 py-3 rounded-xl w-full">
                     <i class="fa-regular fa-calendar"></i>
-                    الجدول والمواعيد
+                    {% if IS_RTL %}الجدول والمواعيد{% else %}Schedule & Availability{% endif %}
                 </a>
             </div>
         </div>
@@ -63,7 +63,7 @@
                 <!-- Duration -->
                 <div class="flex items-center gap-1.5 text-sm">
                     <i class="fa-regular fa-clock text-gray-400"></i>
-                    <span class="text-gray-700 dark:text-gray-300 font-medium">{{ type.duration_minutes }} دقيقة</span>
+                    <span class="text-gray-700 dark:text-gray-300 font-medium">{{ type.duration_minutes }} {% if IS_RTL %}دقيقة{% else %}min{% endif %}</span>
                 </div>
 
                 <!-- Price -->
@@ -75,8 +75,8 @@
                 <!-- Book Link -->
                 <a href="{% url 'doctors:doctor_availability' doctor.id %}?clinic_id={{ clinic_id }}&appointment_type_id={{ type.id }}"
                    class="mr-auto inline-flex items-center gap-1.5 text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 opacity-0 group-hover:opacity-100 transition-all">
-                    <span>احجز الآن</span>
-                    <i class="fa-solid fa-arrow-left text-xs"></i>
+                    <span>{% if IS_RTL %}احجز الآن{% else %}Book Now{% endif %}</span>
+                    <i class="fa-solid {% if IS_RTL %}fa-arrow-left{% else %}fa-arrow-right{% endif %} text-xs"></i>
                 </a>
             </div>
         </div>
@@ -89,8 +89,8 @@
         <div class="w-20 h-20 bg-gray-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-5">
             <i class="fa-solid fa-clipboard-list text-gray-400 dark:text-gray-500 text-3xl"></i>
         </div>
-        <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">لا توجد أنواع مواعيد</h3>
-        <p class="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">لم يقم هذا الطبيب بتحديد أنواع المواعيد بعد في هذه العيادة.</p>
+        <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">{% if IS_RTL %}لا توجد أنواع مواعيد{% else %}No Appointment Types{% endif %}</h3>
+        <p class="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">{% if IS_RTL %}لم يقم هذا الطبيب بتحديد أنواع المواعيد بعد في هذه العيادة.{% else %}This doctor hasn't configured any appointment types for this clinic yet.{% endif %}</p>
     </div>
     {% endif %}
 

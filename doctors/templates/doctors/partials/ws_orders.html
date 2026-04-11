@@ -1,7 +1,7 @@
 <!-- Orders Tab -->
 {% if order_saved %}
 <div class="mb-4 flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700/40 text-emerald-700 dark:text-emerald-300 text-sm font-medium">
-  <i class="fa-solid fa-circle-check"></i> Order saved.
+  <i class="fa-solid fa-circle-check"></i> {% if IS_RTL %}تم حفظ الطلب.{% else %}Order saved.{% endif %}
 </div>
 {% endif %}
 
@@ -11,7 +11,7 @@
      x-data="{ orderType: '{{ edit_order.order_type }}' }">
   <div class="flex items-center gap-2 px-5 py-3.5 border-b border-amber-200 dark:border-amber-700/60 bg-amber-50/60 dark:bg-amber-900/10">
     <i class="fa-solid fa-pen text-amber-500 text-sm"></i>
-    <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">Edit Order</span>
+    <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">{% if IS_RTL %}تعديل الطلب{% else %}Edit Order{% endif %}</span>
   </div>
   <form method="post"
         action="{% url 'doctors:ws_order_edit' patient.id edit_order.id %}"
@@ -23,7 +23,7 @@
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
-        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Order Type *</label>
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{% if IS_RTL %}نوع الطلب *{% else %}Order Type *{% endif %}</label>
         <select name="order_type" x-model="orderType" class="ws-select">
           {% for val, label in order_types %}
           <option value="{{ val }}" {% if edit_order.order_type == val %}selected{% endif %}>{{ label }}</option>
@@ -31,7 +31,7 @@
         </select>
       </div>
       <div>
-        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Title / Name *</label>
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{% if IS_RTL %}العنوان / الاسم *{% else %}Title / Name *{% endif %}</label>
         <input type="text" name="title" required value="{{ edit_order.title }}" class="ws-input">
       </div>
     </div>
@@ -39,35 +39,35 @@
     <!-- Drug-specific fields -->
     <div x-show="orderType === 'DRUG'" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div>
-        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Dosage</label>
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{% if IS_RTL %}الجرعة{% else %}Dosage{% endif %}</label>
         <input type="text" name="dosage" value="{{ edit_order.dosage }}" class="ws-input" placeholder="e.g. 500mg">
       </div>
       <div>
-        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Frequency</label>
-        <input type="text" name="frequency" value="{{ edit_order.frequency }}" class="ws-input" placeholder="e.g. 3x daily">
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{% if IS_RTL %}التكرار{% else %}Frequency{% endif %}</label>
+        <input type="text" name="frequency" value="{{ edit_order.frequency }}" class="ws-input" placeholder="{% if IS_RTL %}مثال: 3 مرات يومياً{% else %}e.g. 3x daily{% endif %}">
       </div>
       <div>
-        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Duration</label>
-        <input type="text" name="duration" value="{{ edit_order.duration }}" class="ws-input" placeholder="e.g. 7 days">
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{% if IS_RTL %}المدة{% else %}Duration{% endif %}</label>
+        <input type="text" name="duration" value="{{ edit_order.duration }}" class="ws-input" placeholder="{% if IS_RTL %}مثال: 7 أيام{% else %}e.g. 7 days{% endif %}">
       </div>
     </div>
 
     <div>
-      <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Notes</label>
+      <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{% if IS_RTL %}ملاحظات{% else %}Notes{% endif %}</label>
       <textarea name="notes" rows="2" class="ws-textarea">{{ edit_order.notes }}</textarea>
     </div>
 
     <div class="flex items-center gap-3 pt-1">
       <button type="submit"
               class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-colors shadow-sm">
-        <i class="fa-solid fa-floppy-disk text-xs"></i> Save Changes
+        <i class="fa-solid fa-floppy-disk text-xs"></i> {% if IS_RTL %}حفظ التغييرات{% else %}Save Changes{% endif %}
       </button>
       <a href="{% url 'doctors:patient_workspace' patient.id %}?tab=orders"
          hx-get="{% url 'doctors:patient_workspace' patient.id %}?tab=orders"
          hx-target="#tab-content"
          hx-swap="innerHTML"
          class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer">
-        Cancel
+        {% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}
       </a>
     </div>
   </form>
@@ -107,7 +107,7 @@
        @click="open = !open">
     <div class="flex items-center gap-2">
       <i class="fa-solid fa-plus-circle text-amber-500 text-sm"></i>
-      <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">New Order</span>
+      <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">{% if IS_RTL %}طلب جديد{% else %}New Order{% endif %}</span>
     </div>
     <i class="fa-solid fa-chevron-down text-xs text-slate-400 transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
   </div>
@@ -122,7 +122,7 @@
       {% csrf_token %}
       {% if clinics|length > 1 %}
       <div>
-        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Clinic</label>
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{% if IS_RTL %}العيادة{% else %}Clinic{% endif %}</label>
         <select name="clinic_id" class="ws-select">
           {% for clinic in clinics %}<option value="{{ clinic.id }}">{{ clinic.name }}</option>{% endfor %}
         </select>
@@ -133,7 +133,7 @@
 
       <!-- Order Type -->
       <div>
-        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Order Type *</label>
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{% if IS_RTL %}نوع الطلب *{% else %}Order Type *{% endif %}</label>
         <select name="order_type" x-model="orderType" class="ws-select">
           {% for val, label in order_types %}
           <option value="{{ val }}">{{ label }}</option>
@@ -150,12 +150,12 @@
             <button type="button" @click="catalogMode = 'generic'"
                     :class="catalogMode === 'generic' ? 'bg-white dark:bg-slate-600 text-slate-700 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'"
                     class="px-3 py-1 rounded-md text-xs font-semibold transition-all">
-              <i class="fa-solid fa-flask-vial me-1 opacity-70"></i>Generic
+              <i class="fa-solid fa-flask-vial me-1 opacity-70"></i>{% if IS_RTL %}جنيسي{% else %}Generic{% endif %}
             </button>
             <button type="button" @click="catalogMode = 'commercial'"
                     :class="catalogMode === 'commercial' ? 'bg-white dark:bg-slate-600 text-slate-700 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'"
                     class="px-3 py-1 rounded-md text-xs font-semibold transition-all">
-              <i class="fa-solid fa-tag me-1 opacity-70"></i>Commercial
+              <i class="fa-solid fa-tag me-1 opacity-70"></i>{% if IS_RTL %}تجاري{% else %}Commercial{% endif %}
             </button>
           </div>
           <select x-ref="drugFamilySelect"
@@ -166,7 +166,7 @@
                   hx-include="[name='clinic_id'], [name='family_id'], [name='drug_q']"
                   :hx-vals='JSON.stringify({mode: catalogMode})'
                   class="ws-select text-sm flex-1 min-w-[140px]">
-            <option value="">All Families</option>
+            <option value="">{% if IS_RTL %}جميع العائلات{% else %}All Families{% endif %}</option>
             {% for fam in drug_families %}
             <option value="{{ fam.id }}">{{ fam.name }}</option>
             {% endfor %}
@@ -184,7 +184,7 @@
                  hx-trigger="input changed delay:250ms"
                  hx-include="[name='clinic_id'], [name='family_id'], [name='drug_q']"
                  :hx-vals='JSON.stringify({mode: catalogMode})'
-                 :placeholder="catalogMode === 'commercial' ? 'Search by commercial name…' : 'Search by generic name…'"
+                 :placeholder="catalogMode === 'commercial' ? '{% if IS_RTL %}بحث بالاسم التجاري...{% else %}Search by commercial name…{% endif %}' : '{% if IS_RTL %}بحث بالاسم الجنيسي...{% else %}Search by generic name…{% endif %}'"
                  class="ws-input text-sm pl-8">
         </div>
 
@@ -192,15 +192,15 @@
         <div id="drug-results"
              class="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden min-h-[2.5rem]">
           <p class="px-3 py-3 text-xs text-slate-400 dark:text-slate-500 text-center">
-            {% if drug_families or drug_products %}Select a family or search above.{% else %}No drugs in catalog yet. <a href="{% url 'doctors:order_catalog' %}?tab=drugs" class="text-primary-500 underline" target="_blank">Add drugs →</a>{% endif %}
+            {% if drug_families or drug_products %}{% if IS_RTL %}اختر عائلة أو ابحث أعلاه.{% else %}Select a family or search above.{% endif %}{% else %}{% if IS_RTL %}لا توجد أدوية في الكتالوج بعد. <a href="{% url 'doctors:order_catalog' %}?tab=drugs" class="text-primary-500 underline" target="_blank">أضف أدوية ←</a>{% else %}No drugs in catalog yet. <a href="{% url 'doctors:order_catalog' %}?tab=drugs" class="text-primary-500 underline" target="_blank">Add drugs →</a>{% endif %}{% endif %}
           </p>
         </div>
-        <p class="text-xs text-slate-400 dark:text-slate-500"><i class="fa-solid fa-circle-info me-1"></i>Click a drug to fill the title below.</p>
+        <p class="text-xs text-slate-400 dark:text-slate-500"><i class="fa-solid fa-circle-info me-1"></i>{% if IS_RTL %}انقر على دواء لملء العنوان أدناه.{% else %}Click a drug to fill the title below.{% endif %}</p>
       </div>
 
       <!-- ── Non-drug Catalog Search ────────────────────────── -->
       <div x-show="!isDrug" class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40 p-3 space-y-2">
-        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Search Catalog</span>
+        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{% if IS_RTL %}البحث في الكتالوج{% else %}Search Catalog{% endif %}</span>
         <input type="text"
                name="q"
                hx-get="{% url 'doctors:htmx_catalog_nondrug_search' patient.id %}"
@@ -208,51 +208,51 @@
                hx-trigger="focus, input changed delay:300ms"
                hx-include="[name='clinic_id']"
                :hx-vals='JSON.stringify({category: orderType})'
-               placeholder="Type to search…"
+               placeholder="{% if IS_RTL %}اكتب للبحث...{% else %}Type to search…{% endif %}"
                class="ws-input text-sm">
         <div id="nondrug-results"
              class="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden">
-          <p class="px-3 py-3 text-xs text-slate-400 dark:text-slate-500 text-center">Click the field above to see catalog items.</p>
+          <p class="px-3 py-3 text-xs text-slate-400 dark:text-slate-500 text-center">{% if IS_RTL %}انقر على الحقل أعلاه لعرض عناصر الكتالوج.{% else %}Click the field above to see catalog items.{% endif %}</p>
         </div>
-        <p class="text-xs text-slate-400 dark:text-slate-500"><i class="fa-solid fa-circle-info me-1"></i>Click an item to auto-fill the title below.</p>
+        <p class="text-xs text-slate-400 dark:text-slate-500"><i class="fa-solid fa-circle-info me-1"></i>{% if IS_RTL %}انقر على عنصر لملء العنوان تلقائياً أدناه.{% else %}Click an item to auto-fill the title below.{% endif %}</p>
       </div>
 
       <!-- Title -->
       <div>
-        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Title / Name *</label>
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{% if IS_RTL %}العنوان / الاسم *{% else %}Title / Name *{% endif %}</label>
         <input type="text" name="title" required x-ref="titleInput"
-               class="ws-input" placeholder="Auto-filled from catalog, or type manually…">
+               class="ws-input" placeholder="{% if IS_RTL %}يُملأ تلقائياً من الكتالوج، أو اكتب يدوياً...{% else %}Auto-filled from catalog, or type manually…{% endif %}">
       </div>
 
       <!-- Drug-specific fields -->
       <div x-show="isDrug" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
-          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Dosage</label>
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{% if IS_RTL %}الجرعة{% else %}Dosage{% endif %}</label>
           <input type="text" name="dosage" class="ws-input" placeholder="e.g. 500mg">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Frequency</label>
-          <input type="text" name="frequency" class="ws-input" placeholder="e.g. 3x daily">
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{% if IS_RTL %}التكرار{% else %}Frequency{% endif %}</label>
+          <input type="text" name="frequency" class="ws-input" placeholder="{% if IS_RTL %}مثال: 3 مرات يومياً{% else %}e.g. 3x daily{% endif %}">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Duration</label>
-          <input type="text" name="duration" class="ws-input" placeholder="e.g. 7 days">
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{% if IS_RTL %}المدة{% else %}Duration{% endif %}</label>
+          <input type="text" name="duration" class="ws-input" placeholder="{% if IS_RTL %}مثال: 7 أيام{% else %}e.g. 7 days{% endif %}">
         </div>
       </div>
 
       <div>
-        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Notes</label>
-        <textarea name="notes" rows="2" class="ws-textarea" placeholder="Special instructions or context..."></textarea>
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{% if IS_RTL %}ملاحظات{% else %}Notes {% endif %}</label>
+        <textarea name="notes" rows="2" class="ws-textarea" placeholder="{% if IS_RTL %}تعليمات خاصة أو سياق...{% else %}Special instructions or context...{% endif %}"></textarea>
       </div>
 
       <div class="flex items-center gap-3 pt-1">
         <button type="submit"
                 class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-colors shadow-sm">
-          <i class="fa-solid fa-flask text-xs"></i> Create Order
+          <i class="fa-solid fa-flask text-xs"></i> {% if IS_RTL %}إنشاء طلب{% else %}Create Order{% endif %}
         </button>
         <button type="button" @click="open = false; $el.closest('form').reset(); typeof wsDraftClearCurrent === 'function' && wsDraftClearCurrent()"
                 class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-          Cancel
+          {% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}
         </button>
       </div>
     </form>
@@ -261,12 +261,12 @@
 
 <!-- Type filter -->
 <div class="flex items-center gap-2 mb-4 flex-wrap">
-  <span class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Filter:</span>
+  <span class="text-xs font-semibold text-slate-400 uppercase tracking-wide">{% if IS_RTL %}تصفية:{% else %}Filter:{% endif %}</span>
   <a href="?tab=orders"
      hx-get="{% url 'doctors:patient_workspace' patient.id %}?tab=orders"
      hx-target="#tab-content"
      class="px-3 py-1 rounded-full text-xs font-semibold transition-colors {% if not order_type_filter %}bg-primary-600 text-white{% else %}bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600{% endif %}">
-    All
+    {% if IS_RTL %}الكل{% else %}All{% endif %}
   </a>
   {% for val, label in order_types %}
   <a href="?tab=orders&order_type={{ val }}"
@@ -285,11 +285,11 @@
     <table class="w-full text-sm">
       <thead>
         <tr class="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700">
-          <th class="text-left px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Type</th>
-          <th class="text-left px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Order</th>
-          <th class="text-left px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 hidden md:table-cell">Details</th>
-          <th class="text-left px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Status</th>
-          <th class="text-left px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 hidden sm:table-cell">Date</th>
+          <th class="text-left px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{% if IS_RTL %}النوع{% else %}Type{% endif %}</th>
+          <th class="text-left px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{% if IS_RTL %}الطلب{% else %}Order{% endif %}</th>
+          <th class="text-left px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 hidden md:table-cell">{% if IS_RTL %}التفاصيل{% else %}Details{% endif %}</th>
+          <th class="text-left px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{% if IS_RTL %}الحالة{% else %}Status{% endif %}</th>
+          <th class="text-left px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 hidden sm:table-cell">{% if IS_RTL %}التاريخ{% else %}Date{% endif %}</th>
           <th class="px-4 py-3"></th>
         </tr>
       </thead>
@@ -388,7 +388,7 @@
                     hx-post="{% url 'doctors:ws_order_delete' patient.id order.id %}"
                     hx-target="#tab-content"
                     hx-swap="innerHTML"
-                    hx-confirm="Delete this order? This cannot be undone."
+                    hx-confirm="{% if IS_RTL %}حذف هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء.{% else %}Delete this order? This cannot be undone.{% endif %}"
                     title="Delete order">
                 {% csrf_token %}
                 <button type="submit"
@@ -407,6 +407,6 @@
 {% else %}
 <div class="ws-card py-16 text-center">
   <i class="fa-solid fa-flask fa-2x text-slate-300 dark:text-slate-600 mb-3 block"></i>
-  <p class="text-slate-500 dark:text-slate-400 font-medium">No orders{% if order_type_filter %} of this type{% endif %}</p>
+  <p class="text-slate-500 dark:text-slate-400 font-medium">{% if IS_RTL %}لا توجد طلبات{% if order_type_filter %} من هذا النوع{% endif %}{% else %}No orders{% if order_type_filter %} of this type{% endif %}{% endif %}</p>
 </div>
 {% endif %}

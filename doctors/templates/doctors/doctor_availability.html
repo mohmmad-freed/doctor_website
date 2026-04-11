@@ -1,6 +1,6 @@
 {% extends 'patients/base_dashboard.html' %}
 
-{% block title %}مواعيد د. {{ doctor.name }} | {{ block.super }}{% endblock %}
+{% block title %}{% if IS_RTL %}مواعيد د. {{ doctor.name }}{% else %}Dr. {{ doctor.name }}'s Schedule{% endif %} | {{ block.super }}{% endblock %}
 
 {% block content %}
 <div class="max-w-5xl mx-auto space-y-6 animate-fade-in-up">
@@ -25,19 +25,19 @@
                 </div>
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">د. {{ doctor.name }}</h1>
-                    <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">جدول المواعيد المتاحة</p>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">{% if IS_RTL %}جدول المواعيد المتاحة{% else %}Available Schedule{% endif %}</p>
                 </div>
             </div>
             <div class="flex flex-col gap-2 w-full sm:w-auto mt-4 sm:mt-0">
                 <a href="{% url 'appointments:book_appointment' clinic_id=clinic_id %}?doctor_id={{ doctor.id }}"
                    class="inline-flex justify-center items-center gap-2 text-sm font-bold text-white bg-secondary-500 hover:bg-secondary-600 px-6 py-3 rounded-xl transition-all shadow-sm hover:shadow-md w-full">
                     <i class="fa-solid fa-calendar-check"></i>
-                    احجز موعد
+                    {% if IS_RTL %}احجز موعد{% else %}Book Appointment{% endif %}
                 </a>
                 <a href="{% url 'doctors:doctor_appointment_types' doctor.id %}?clinic_id={{ clinic_id }}"
                    class="inline-flex justify-center items-center gap-2 text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors bg-primary-50 dark:bg-primary-900/20 px-6 py-3 rounded-xl w-full">
                     <i class="fa-solid fa-list-check"></i>
-                    أنواع المواعيد
+                    {% if IS_RTL %}أنواع المواعيد{% else %}Appointment Types{% endif %}
                 </a>
             </div>
         </div>
@@ -47,7 +47,7 @@
     <div class="glass-card p-6">
         <h2 class="text-lg font-bold text-gray-800 dark:text-white mb-5 flex items-center gap-2 border-b border-gray-100 dark:border-slate-700 pb-4">
             <i class="fa-regular fa-calendar text-primary-500"></i>
-            الجدول الأسبوعي
+            {% if IS_RTL %}الجدول الأسبوعي{% else %}Weekly Schedule{% endif %}
         </h2>
 
         {% if weekly_schedule %}
@@ -79,7 +79,7 @@
             <div class="w-16 h-16 bg-gray-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
                 <i class="fa-regular fa-calendar-xmark text-gray-400 text-2xl"></i>
             </div>
-            <p class="text-gray-500 dark:text-gray-400 font-medium">لا يوجد جدول متاح لهذا الطبيب في هذه العيادة.</p>
+            <p class="text-gray-500 dark:text-gray-400 font-medium">{% if IS_RTL %}لا يوجد جدول متاح لهذا الطبيب في هذه العيادة.{% else %}No schedule available for this doctor at this clinic.{% endif %}</p>
         </div>
         {% endif %}
     </div>
@@ -89,7 +89,7 @@
     <div class="glass-card p-6">
         <h2 class="text-lg font-bold text-gray-800 dark:text-white mb-5 flex items-center gap-2 border-b border-gray-100 dark:border-slate-700 pb-4">
             <i class="fa-solid fa-clock text-secondary-500"></i>
-            البحث عن موعد متاح
+            {% if IS_RTL %}البحث عن موعد متاح{% else %}Find an Available Slot{% endif %}
         </h2>
 
         <!-- Picker Form -->
@@ -100,28 +100,28 @@
                 <!-- Appointment Type Select -->
                 <div>
                     <label for="appointment_type_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        نوع الموعد
+                        {% if IS_RTL %}نوع الموعد{% else %}Appointment Type{% endif %}
                     </label>
                     {% if appointment_types %}
                     <select name="appointment_type_id" id="appointment_type_id"
                             class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-sm"
                             required>
-                        <option value="">-- اختر نوع الموعد --</option>
+                        <option value="">{% if IS_RTL %}-- اختر نوع الموعد --{% else %}-- Select Appointment Type --{% endif %}</option>
                         {% for type in appointment_types %}
                         <option value="{{ type.id }}" {% if selected_type and selected_type.id == type.id %}selected{% endif %}>
-                            {{ type.display_name }} ({{ type.duration_minutes }} دقيقة – ₪{{ type.price }})
+                            {{ type.display_name }} ({{ type.duration_minutes }} {% if IS_RTL %}دقيقة{% else %}min{% endif %} – ₪{{ type.price }})
                         </option>
                         {% endfor %}
                     </select>
                     {% else %}
-                    <p class="text-gray-400 text-sm py-2">لا توجد أنواع مواعيد مسجلة.</p>
+                    <p class="text-gray-400 text-sm py-2">{% if IS_RTL %}لا توجد أنواع مواعيد مسجلة.{% else %}No appointment types registered.{% endif %}</p>
                     {% endif %}
                 </div>
 
                 <!-- Date Picker -->
                 <div>
                     <label for="date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        التاريخ
+                        {% if IS_RTL %}التاريخ{% else %}Date{% endif %}
                     </label>
                     <input type="date" name="date" id="date"
                            min="{{ today }}"
@@ -136,7 +136,7 @@
                             class="w-full bg-primary-600 hover:bg-primary-700 text-white px-6 py-2.5 rounded-xl font-medium shadow-md transition-all hover:shadow-lg focus:ring-4 focus:ring-primary-100 flex items-center justify-center gap-2"
                             {% if not appointment_types %}disabled{% endif %}>
                         <i class="fa-solid fa-magnifying-glass"></i>
-                        عرض المواعيد
+                        {% if IS_RTL %}عرض المواعيد{% else %}Show Slots{% endif %}
                     </button>
                 </div>
             </div>
@@ -148,11 +148,11 @@
             <div class="flex items-center justify-between mb-4">
                 <h3 class="font-semibold text-gray-800 dark:text-white flex items-center gap-2">
                     <i class="fa-regular fa-calendar-check text-secondary-500"></i>
-                    المواعيد المتاحة ليوم {{ target_date|date:"l، d M Y" }}
+                    {% if IS_RTL %}المواعيد المتاحة ليوم {{ target_date|date:"l، d M Y" }}{% else %}Available Slots for {{ target_date|date:"l, d M Y" }}{% endif %}
                 </h3>
                 {% if selected_type %}
                 <span class="text-xs bg-secondary-50 dark:bg-secondary-900/20 text-secondary-700 dark:text-secondary-300 px-3 py-1 rounded-full font-medium">
-                    {{ selected_type.display_name }} – {{ selected_type.duration_minutes }} دقيقة
+                    {{ selected_type.display_name }} – {{ selected_type.duration_minutes }} {% if IS_RTL %}دقيقة{% else %}min{% endif %}
                 </span>
                 {% endif %}
             </div>
@@ -166,7 +166,7 @@
                     {% else %}
                         bg-gray-100 dark:bg-slate-700/50 text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-slate-600 line-through opacity-60
                     {% endif %}"
-                    {% if not slot.is_available %}title="محجوز"{% endif %}>
+                    {% if not slot.is_available %}title="{% if IS_RTL %}محجوز{% else %}Booked{% endif %}"{% endif %}>
                     {{ slot.time|time:"H:i" }}
                 </div>
                 {% endfor %}
@@ -176,11 +176,11 @@
             <div class="flex items-center gap-6 mt-5 pt-4 border-t border-gray-50 dark:border-slate-700/50">
                 <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                     <span class="w-3 h-3 rounded bg-green-200 dark:bg-green-800 border border-green-300 dark:border-green-700"></span>
-                    متاح
+                    {% if IS_RTL %}متاح{% else %}Available{% endif %}
                 </div>
                 <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                     <span class="w-3 h-3 rounded bg-gray-200 dark:bg-slate-600 border border-gray-300 dark:border-slate-500"></span>
-                    محجوز
+                    {% if IS_RTL %}محجوز{% else %}Booked{% endif %}
                 </div>
             </div>
 
@@ -189,7 +189,7 @@
                 <a href="{% url 'appointments:book_appointment' clinic_id=clinic_id %}?doctor_id={{ doctor.id }}"
                    class="block w-full text-center bg-secondary-500 hover:bg-secondary-600 text-white px-6 py-3.5 rounded-xl font-bold text-base shadow-md transition-all hover:shadow-lg">
                     <i class="fa-solid fa-calendar-check ml-2"></i>
-                    احجز موعدك الآن مع د. {{ doctor.name }}
+                    {% if IS_RTL %}احجز موعدك الآن مع د. {{ doctor.name }}{% else %}Book Now with Dr. {{ doctor.name }}{% endif %}
                 </a>
             </div>
 
@@ -198,8 +198,8 @@
                 <div class="w-14 h-14 bg-gray-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-3">
                     <i class="fa-regular fa-face-frown text-gray-400 text-xl"></i>
                 </div>
-                <p class="text-gray-500 dark:text-gray-400 font-medium">لا توجد مواعيد متاحة في هذا اليوم.</p>
-                <p class="text-gray-400 dark:text-gray-500 text-sm mt-1">حاول اختيار يوم آخر ضمن الجدول الأسبوعي.</p>
+                <p class="text-gray-500 dark:text-gray-400 font-medium">{% if IS_RTL %}لا توجد مواعيد متاحة في هذا اليوم.{% else %}No available slots on this day.{% endif %}</p>
+                <p class="text-gray-400 dark:text-gray-500 text-sm mt-1">{% if IS_RTL %}حاول اختيار يوم آخر ضمن الجدول الأسبوعي.{% else %}Try selecting another day from the weekly schedule.{% endif %}</p>
             </div>
             {% endif %}
         </div>

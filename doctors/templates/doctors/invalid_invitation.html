@@ -1,5 +1,5 @@
 {% extends "doctors/base_doctor.html" %}
-{% block title %}Invalid Invitation | Doctor Portal{% endblock %}
+{% block title %}{% if IS_RTL %}دعوة غير صالحة | بوابة الطبيب{% else %}Invalid Invitation | Doctor Portal{% endif %}{% endblock %}
 
 {% block content %}
 <div class="min-h-[60vh] flex items-center justify-center px-4 py-12">
@@ -11,12 +11,12 @@
       <div class="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mx-auto mb-5">
         <i class="fa-solid fa-triangle-exclamation text-2xl text-amber-500"></i>
       </div>
-      <h2 class="text-xl font-bold text-red-600 dark:text-red-400 mb-3">Failed to process invitation</h2>
+      <h2 class="text-xl font-bold text-red-600 dark:text-red-400 mb-3">{% if IS_RTL %}فشل معالجة الدعوة{% else %}Failed to process invitation{% endif %}</h2>
       <p class="text-gray-600 dark:text-gray-300 mb-7 leading-relaxed">{{ error }}</p>
       <a href="{% url 'accounts:home' %}"
          class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-semibold text-sm px-6 py-2.5 rounded-xl transition-all shadow-sm">
         <i class="fa-solid fa-home text-xs"></i>
-        Back to Home
+        {% if IS_RTL %}العودة للرئيسية{% else %}Back to Home{% endif %}
       </a>
     </div>
 

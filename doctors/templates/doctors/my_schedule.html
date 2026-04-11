@@ -1,33 +1,31 @@
 {% extends "doctors/base_doctor.html" %}
 {% load static %}
 
-{% block title %}My Weekly Schedule | Doctor Portal{% endblock %}
+{% block title %}{% if IS_RTL %}جدولي الأسبوعي | بوابة الطبيب{% else %}My Weekly Schedule | Doctor Portal{% endif %}{% endblock %}
 
 {% block content %}
 <div class="max-w-5xl mx-auto animate-fade-in-up">
 
-    <!-- Page Header -->
     <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <i class="fa-solid fa-calendar-week text-primary-500 text-xl"></i>
-                My Weekly Schedule
+                {% if IS_RTL %}جدولي الأسبوعي{% else %}My Weekly Schedule{% endif %}
             </h1>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Set your working hours at each clinic — must fall within the clinic's working hours
+                {% if IS_RTL %}حدد ساعات عملك في كل عيادة — يجب أن تكون ضمن ساعات العمل في العيادة{% else %}Set your working hours at each clinic — must fall within the clinic's working hours{% endif %}
             </p>
         </div>
     </div>
 
     {% if not memberships %}
-    <!-- No clinics state -->
     <div class="glass-card p-10 text-center">
         <div class="w-16 h-16 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center mx-auto mb-4">
             <i class="fa-solid fa-hospital text-3xl text-gray-400"></i>
         </div>
-        <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">No linked clinics</h3>
+        <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">{% if IS_RTL %}لا توجد عيادات مرتبطة{% else %}No linked clinics{% endif %}</h3>
         <p class="text-sm text-gray-500 dark:text-gray-400">
-            You must join a clinic first to set up your schedule.
+            {% if IS_RTL %}يجب الانضمام إلى عيادة أولاً لإعداد جدولك.{% else %}You must join a clinic first to set up your schedule.{% endif %}
         </p>
     </div>
 
@@ -51,56 +49,61 @@
 
     {% if selected_clinic %}
 
-    <!-- Selected clinic info banner -->
     <div class="glass-card p-4 mb-6 flex items-center gap-3 bg-primary-50 dark:bg-primary-900/20 border border-primary-100 dark:border-primary-800">
         <div class="w-9 h-9 rounded-xl bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center text-primary-600 dark:text-primary-300 flex-shrink-0">
             <i class="fa-solid fa-circle-info"></i>
         </div>
         <div class="text-sm text-primary-700 dark:text-primary-300">
             <span class="font-bold">{{ selected_clinic.name }}</span> —
-            Your hours below must fall within the clinic's working hours shown in gray.
-            Two different doctors can have overlapping hours at the same clinic.
+            {% if IS_RTL %}ساعاتك أدناه يجب أن تكون ضمن ساعات عمل العيادة الظاهرة باللون الرمادي. يمكن لطبيبين مختلفين امتلاك ساعات متداخلة في نفس العيادة.{% else %}Your hours below must fall within the clinic's working hours shown in gray. Two different doctors can have overlapping hours at the same clinic.{% endif %}
         </div>
     </div>
 
-    <!-- Week Grid -->
     <div class="space-y-4">
         {% for day in days_data %}
         <div class="glass-card overflow-hidden">
 
-            <!-- Day Header -->
             <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-slate-700
                         {% if day.is_closed %}bg-red-50 dark:bg-red-900/10{% else %}bg-gray-50 dark:bg-slate-800/50{% endif %}">
                 <div class="flex items-center gap-3">
                     <span class="font-bold text-gray-800 dark:text-white text-base">
-                        {% if day.day_num == 0 %}Monday
-                        {% elif day.day_num == 1 %}Tuesday
-                        {% elif day.day_num == 2 %}Wednesday
-                        {% elif day.day_num == 3 %}Thursday
-                        {% elif day.day_num == 4 %}Friday
-                        {% elif day.day_num == 5 %}Saturday
-                        {% else %}Sunday{% endif %}
+                        {% if IS_RTL %}
+                            {% if day.day_num == 0 %}الاثنين
+                            {% elif day.day_num == 1 %}الثلاثاء
+                            {% elif day.day_num == 2 %}الأربعاء
+                            {% elif day.day_num == 3 %}الخميس
+                            {% elif day.day_num == 4 %}الجمعة
+                            {% elif day.day_num == 5 %}السبت
+                            {% else %}الأحد{% endif %}
+                        {% else %}
+                            {% if day.day_num == 0 %}Monday
+                            {% elif day.day_num == 1 %}Tuesday
+                            {% elif day.day_num == 2 %}Wednesday
+                            {% elif day.day_num == 3 %}Thursday
+                            {% elif day.day_num == 4 %}Friday
+                            {% elif day.day_num == 5 %}Saturday
+                            {% else %}Sunday{% endif %}
+                        {% endif %}
                     </span>
 
                     {% if day.is_closed %}
                     <span class="dr-badge bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">
                         <i class="fa-solid fa-circle-xmark text-xs"></i>
-                        Clinic closed
+                        {% if IS_RTL %}العيادة مغلقة{% else %}Clinic closed{% endif %}
                     </span>
                     {% elif day.open_ranges %}
                     <span class="dr-badge bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
                         <i class="fa-solid fa-circle-check text-xs"></i>
-                        Clinic open
+                        {% if IS_RTL %}العيادة مفتوحة{% else %}Clinic open{% endif %}
                     </span>
                     {% elif not day.clinic_has_hours %}
                     <span class="dr-badge bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
                         <i class="fa-solid fa-circle-question text-xs"></i>
-                        Clinic hours not set
+                        {% if IS_RTL %}ساعات العيادة غير محددة{% else %}Clinic hours not set{% endif %}
                     </span>
                     {% endif %}
                 </div>
 
-                <!-- Clinic working hours summary -->
                 {% if day.open_ranges %}
                 <div class="flex flex-wrap gap-1">
                     {% for start, end in day.open_ranges %}
@@ -113,7 +116,6 @@
             </div>
 
             <div class="px-5 py-4">
-                <!-- Doctor's existing slots for this day -->
                 {% if day.slots %}
                 <div class="flex flex-wrap gap-2 mb-4">
                     {% for slot in day.slots %}
@@ -130,8 +132,7 @@
                               dir="ltr">
                             {{ slot.start_time|time:"g:i A" }} – {{ slot.end_time|time:"g:i A" }}
                         </span>
-                        <!-- Delete button -->
-                        <form method="post" class="inline" onsubmit="return confirm('Delete this time slot?')">
+                        <form method="post" class="inline" onsubmit="return confirm('{% if IS_RTL %}حذف هذا الوقت؟{% else %}Delete this time slot?{% endif %}')">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="delete">
                             <input type="hidden" name="clinic_id" value="{{ selected_clinic.id }}">
@@ -140,7 +141,7 @@
                                     class="w-5 h-5 rounded-full flex items-center justify-center
                                            text-red-400 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30
                                            transition-colors"
-                                    title="Delete this slot">
+                                    title="{% if IS_RTL %}حذف{% else %}Delete this slot{% endif %}">
                                 <i class="fa-solid fa-xmark text-xs"></i>
                             </button>
                         </form>
@@ -149,7 +150,6 @@
                 </div>
                 {% endif %}
 
-                <!-- Add slot form -->
                 {% if not day.is_closed %}
                 <details class="group">
                     <summary class="flex items-center gap-2 text-sm font-semibold text-primary-600 dark:text-primary-400
@@ -159,7 +159,7 @@
                                      group-open:bg-gray-200 dark:group-open:bg-slate-600 transition-colors flex-shrink-0">
                             <i class="fa-solid fa-plus text-xs group-open:rotate-45 transition-transform"></i>
                         </span>
-                        Add working hours
+                        {% if IS_RTL %}إضافة ساعات عمل{% else %}Add working hours{% endif %}
                     </summary>
 
                     <form method="post" class="mt-3 flex flex-wrap items-end gap-3
@@ -170,7 +170,7 @@
                         <input type="hidden" name="day_of_week" value="{{ day.day_num }}">
 
                         <div class="flex flex-col gap-1">
-                            <label class="text-xs font-semibold text-gray-600 dark:text-gray-400">From</label>
+                            <label class="text-xs font-semibold text-gray-600 dark:text-gray-400">{% if IS_RTL %}من{% else %}From{% endif %}</label>
                             <input type="time"
                                    name="start_time"
                                    required
@@ -183,7 +183,7 @@
                         </div>
 
                         <div class="flex flex-col gap-1">
-                            <label class="text-xs font-semibold text-gray-600 dark:text-gray-400">To</label>
+                            <label class="text-xs font-semibold text-gray-600 dark:text-gray-400">{% if IS_RTL %}إلى{% else %}To{% endif %}</label>
                             <input type="time"
                                    name="end_time"
                                    required
@@ -195,7 +195,7 @@
                         {% if day.open_ranges %}
                         <div class="text-xs text-gray-400 dark:text-gray-500 self-end pb-2">
                             <i class="fa-solid fa-circle-info mr-1"></i>
-                            Clinic open:
+                            {% if IS_RTL %}العيادة مفتوحة:{% else %}Clinic open:{% endif %}
                             {% for start, end in day.open_ranges %}
                             <span dir="ltr" class="font-mono">{{ start|time:"g:i A" }}–{{ end|time:"g:i A" }}</span>{% if not forloop.last %}, {% endif %}
                             {% endfor %}
@@ -205,19 +205,19 @@
                         <button type="submit"
                                 class="px-5 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-bold transition-colors shadow-sm">
                             <i class="fa-solid fa-plus mr-1 text-xs"></i>
-                            Add
+                            {% if IS_RTL %}إضافة{% else %}Add{% endif %}
                         </button>
                     </form>
                 </details>
                 {% else %}
                 <p class="text-sm text-red-500 dark:text-red-400">
-                    Cannot add working hours on a clinic closure day.
+                    {% if IS_RTL %}لا يمكن إضافة ساعات عمل في يوم إغلاق العيادة.{% else %}Cannot add working hours on a clinic closure day.{% endif %}
                 </p>
                 {% endif %}
 
                 {% if not day.slots and not day.is_closed %}
                 <p class="text-sm text-gray-400 dark:text-gray-500 mt-2 {% if day.slots %}hidden{% endif %}">
-                    No working hours added for this day yet.
+                    {% if IS_RTL %}لم تُضف ساعات عمل لهذا اليوم بعد.{% else %}No working hours added for this day yet.{% endif %}
                 </p>
                 {% endif %}
             </div>

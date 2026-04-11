@@ -13,13 +13,15 @@ Variables:
       <div class="flex items-center gap-2 mb-0.5 flex-wrap">
         {% if tpl.id == effective_active_id %}
         <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300">
-          <i class="fa-solid fa-circle-check text-[9px]"></i> Active
+          <i class="fa-solid fa-circle-check text-[9px]"></i> {% if IS_RTL %}نشط{% else %}Active{% endif %}
         </span>
         {% endif %}
         <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold
           {% if badge == 'Default' or badge == 'System' %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300
           {% else %}bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300{% endif %}">
-          {{ badge }}
+          {% if badge == 'Default' %}{% if IS_RTL %}افتراضي{% else %}Default{% endif %}
+          {% elif badge == 'System' %}{% if IS_RTL %}نظام{% else %}System{% endif %}
+          {% else %}{% if IS_RTL %}مخصص{% else %}Custom{% endif %}{% endif %}
         </span>
       </div>
       <h4 class="font-semibold text-gray-900 dark:text-white text-sm">{{ tpl.name }}</h4>
@@ -40,7 +42,7 @@ Variables:
       {% if tpl.id == effective_active_id %}
       <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-slate-500 text-xs font-semibold cursor-default">
         <i class="fa-solid fa-circle-check text-[10px]"></i>
-        Active
+        {% if IS_RTL %}نشط{% else %}Active{% endif %}
       </span>
       {% else %}
       <form method="post" action="{% url 'doctors:clinical_note_template_activate' tpl.id %}">
@@ -48,7 +50,7 @@ Variables:
         <button type="submit"
                 class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold transition-colors">
           <i class="fa-solid fa-circle-check text-[10px]"></i>
-          Activate
+          {% if IS_RTL %}تفعيل{% else %}Activate{% endif %}
         </button>
       </form>
       {% endif %}
@@ -57,15 +59,15 @@ Variables:
       <a href="{% url 'doctors:clinical_note_template_edit' tpl.id %}"
          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 text-xs font-medium hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
         <i class="fa-solid fa-pen text-[10px]"></i>
-        Edit
+        {% if IS_RTL %}تعديل{% else %}Edit{% endif %}
       </a>
       <form method="post" action="{% url 'doctors:clinical_note_template_delete' tpl.id %}"
-            onsubmit="return confirm('Delete template {{ tpl.name|escapejs }}? This cannot be undone.');">
+            onsubmit="return confirm('{% if IS_RTL %}حذف القالب {{ tpl.name|escapejs }}؟ لا يمكن التراجع عن هذا الإجراء.{% else %}Delete template {{ tpl.name|escapejs }}? This cannot be undone.{% endif %}');">
         {% csrf_token %}
         <button type="submit"
                 class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 text-xs font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
           <i class="fa-solid fa-trash text-[10px]"></i>
-          Delete
+          {% if IS_RTL %}حذف{% else %}Delete{% endif %}
         </button>
       </form>
       {% endif %}

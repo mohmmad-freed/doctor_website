@@ -8,7 +8,7 @@
     <div class="flex items-center gap-2">
       <!-- Drag handle -->
       <span class="rx-drag-handle cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 px-1 -ml-1 touch-none"
-            title="Drag to change status">
+            title="{% if IS_RTL %}اسحب لتغيير الحالة{% else %}Drag to change status{% endif %}">
         <i class="fa-solid fa-grip-vertical text-xs"></i>
       </span>
       <i class="fa-solid fa-prescription text-emerald-600 dark:text-emerald-400 text-sm"></i>
@@ -20,7 +20,7 @@
             hx-post="{% url 'doctors:ws_prescription_delete' patient.id rx.id %}"
             hx-target="#tab-content"
             hx-swap="innerHTML"
-            hx-confirm="Delete this prescription? This cannot be undone.">
+            hx-confirm="{% if IS_RTL %}حذف هذه الوصفة؟ لا يمكن التراجع عن هذا الإجراء.{% else %}Delete this prescription? This cannot be undone.{% endif %}">
         {% csrf_token %}
         <button type="submit"
                 class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-800/50 text-xs font-semibold text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">

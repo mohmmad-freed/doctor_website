@@ -1,13 +1,13 @@
 {% extends "doctors/base_doctor.html" %}
-{% block title %}My Appointment Types | Doctor Portal{% endblock %}
+{% block title %}{% if IS_RTL %}أنواع مواعيدي | بوابة الطبيب{% else %}My Appointment Types | Doctor Portal{% endif %}{% endblock %}
 
 {% block content %}
 <div class="max-w-3xl mx-auto">
 
   <div class="mb-6">
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">My Appointment Types</h1>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{% if IS_RTL %}أنواع مواعيدي{% else %}My Appointment Types{% endif %}</h1>
     <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">
-      Specify the appointment types you offer at each clinic, and create a custom intake form for each type.
+      {% if IS_RTL %}حدد أنواع المواعيد التي تقدمها في كل عيادة، وأنشئ نموذج استقبال مخصصاً لكل نوع.{% else %}Specify the appointment types you offer at each clinic, and create a custom intake form for each type.{% endif %}
     </p>
   </div>
 
@@ -16,9 +16,9 @@
     <div class="w-16 h-16 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center mx-auto mb-4">
       <i class="fa-solid fa-calendar-xmark text-2xl text-primary-400"></i>
     </div>
-    <h3 class="text-base font-semibold text-gray-800 dark:text-white mb-1">No clinics with appointment types assigned</h3>
+    <h3 class="text-base font-semibold text-gray-800 dark:text-white mb-1">{% if IS_RTL %}لا توجد عيادات بأنواع مواعيد معيّنة{% else %}No clinics with appointment types assigned{% endif %}</h3>
     <p class="text-sm text-gray-500 dark:text-slate-400">
-      Ask the clinic owner to add appointment types first, then come back here to select what you offer.
+      {% if IS_RTL %}اطلب من صاحب العيادة إضافة أنواع المواعيد أولاً، ثم عد هنا لتحديد ما تقدمه.{% else %}Ask the clinic owner to add appointment types first, then come back here to select what you offer.{% endif %}
     </p>
   </div>
 
@@ -33,12 +33,12 @@
         </div>
         <div class="flex-1">
           <p class="font-bold text-gray-900 dark:text-white">{{ item.clinic.name }}</p>
-          <p class="text-xs text-gray-500 dark:text-slate-400">{{ item.assignments|length }} type(s) available</p>
+          <p class="text-xs text-gray-500 dark:text-slate-400">{{ item.assignments|length }} {% if IS_RTL %}نوع متاح{% else %}type(s) available{% endif %}</p>
         </div>
         <button type="submit" form="form-{{ item.clinic.id }}"
                 class="inline-flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white font-semibold text-xs px-4 py-2 rounded-lg transition-all shadow-sm">
           <i class="fa-solid fa-floppy-disk"></i>
-          Save selections
+          {% if IS_RTL %}حفظ الاختيارات{% else %}Save selections{% endif %}
         </button>
       </div>
 
@@ -59,16 +59,16 @@
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{{ a.appointment_type.name }}</p>
                 <p class="text-xs text-gray-500 dark:text-slate-400">
-                  <i class="fa-regular fa-clock mr-0.5 opacity-60"></i>{{ a.appointment_type.duration_minutes }} min
+                  <i class="fa-regular fa-clock mr-0.5 opacity-60"></i>{{ a.appointment_type.duration_minutes }} {% if IS_RTL %}دقيقة{% else %}min{% endif %}
                   {% if a.appointment_type.price %}<span class="mx-1 opacity-40">·</span>₪{{ a.appointment_type.price }}{% endif %}
                 </p>
               </div>
             </label>
 
             {% if a.is_active %}
-            <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex-shrink-0">Active</span>
+            <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex-shrink-0">{% if IS_RTL %}نشط{% else %}Active{% endif %}</span>
             {% else %}
-            <span class="text-xs text-gray-400 dark:text-slate-500 flex-shrink-0">Inactive</span>
+            <span class="text-xs text-gray-400 dark:text-slate-500 flex-shrink-0">{% if IS_RTL %}غير نشط{% else %}Inactive{% endif %}</span>
             {% endif %}
 
             <a href="{% url 'doctors:intake_form_builder' a.appointment_type.id %}"
@@ -79,7 +79,7 @@
                       bg-gray-50 dark:bg-slate-700/40 text-gray-500 dark:text-slate-400 border-gray-200 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-700
                       {% endif %}">
               <i class="fa-solid fa-clipboard-list text-[0.7rem]"></i>
-              Form
+              {% if IS_RTL %}نموذج{% else %}Form{% endif %}
               {% if a.question_count > 0 %}
               <span class="inline-flex items-center justify-center w-4 h-4 bg-indigo-600 dark:bg-indigo-500 text-white rounded-full text-[9px] font-bold">{{ a.question_count }}</span>
               {% endif %}
@@ -92,7 +92,7 @@
         <div class="px-5 py-3 border-t border-gray-100 dark:border-slate-700 bg-gray-50/60 dark:bg-slate-700/20">
           <p class="text-xs text-gray-400 dark:text-slate-500">
             <i class="fa-solid fa-circle-info me-1"></i>
-            If no types are selected, <strong>all active appointment types</strong> for this clinic will appear automatically.
+            {% if IS_RTL %}إذا لم يتم اختيار أي نوع، ستظهر <strong>جميع أنواع المواعيد النشطة</strong> لهذه العيادة تلقائياً.{% else %}If no types are selected, <strong>all active appointment types</strong> for this clinic will appear automatically.{% endif %}
           </p>
         </div>
       </form>

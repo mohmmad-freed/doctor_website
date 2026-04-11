@@ -1,5 +1,5 @@
 {% extends "doctors/base_doctor.html" %}
-{% block title %}Note Templates | Doctor Portal{% endblock %}
+{% block title %}{% if IS_RTL %}قوالب الملاحظات | بوابة الطبيب{% else %}Note Templates | Doctor Portal{% endif %}{% endblock %}
 
 {% block content %}
 <div class="max-w-3xl mx-auto animate-fade-in-up">
@@ -7,15 +7,15 @@
   <!-- Page header -->
   <div class="mb-6 flex items-start justify-between gap-4">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Note Templates</h1>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{% if IS_RTL %}قوالب الملاحظات{% else %}Note Templates{% endif %}</h1>
       <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">
-        Choose which sections appear in the Clinical Notes editor. One template is active at a time.
+        {% if IS_RTL %}اختر الأقسام التي تظهر في محرر الملاحظات السريرية. قالب واحد نشط في كل مرة.{% else %}Choose which sections appear in the Clinical Notes editor. One template is active at a time.{% endif %}
       </p>
     </div>
     <a href="{% url 'doctors:clinical_note_template_create' %}"
        class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors shadow-sm flex-shrink-0">
       <i class="fa-solid fa-plus text-xs"></i>
-      New Template
+      {% if IS_RTL %}قالب جديد{% else %}New Template{% endif %}
     </a>
   </div>
 
@@ -33,7 +33,7 @@
 
   <!-- ── Active Template ───────────────────────────────────────── -->
   <div class="mb-6">
-    <p class="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500 mb-2">Active Template</p>
+    <p class="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500 mb-2">{% if IS_RTL %}القالب النشط{% else %}Active Template{% endif %}</p>
     {% if effective_active %}
     <div class="glass-card p-5 border-2 border-primary-500 dark:border-primary-400">
       <div class="flex items-start justify-between gap-4">
@@ -42,11 +42,11 @@
             <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold
               {% if effective_active.template_type == 'SYSTEM' %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300
               {% else %}bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300{% endif %}">
-              {% if effective_active.template_type == 'SYSTEM' %}System{% else %}Custom{% endif %}
+              {% if effective_active.template_type == 'SYSTEM' %}{% if IS_RTL %}نظام{% else %}System{% endif %}{% else %}{% if IS_RTL %}مخصص{% else %}Custom{% endif %}{% endif %}
             </span>
             {% if not active_template %}
             <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-slate-400">
-              Default
+              {% if IS_RTL %}افتراضي{% else %}Default{% endif %}
             </span>
             {% endif %}
           </div>
@@ -70,21 +70,21 @@
     {% else %}
     <div class="glass-card p-6 text-center text-gray-400 dark:text-slate-500 text-sm">
       <i class="fa-regular fa-file-lines fa-lg mb-2 block"></i>
-      No default template found. Add a template to get started.
+      {% if IS_RTL %}لم يتم العثور على قالب افتراضي. أضف قالباً للبدء.{% else %}No default template found. Add a template to get started.{% endif %}
     </div>
     {% endif %}
   </div>
 
   <!-- ── System Templates ──────────────────────────────────────── -->
   <div class="mb-6">
-    <p class="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500 mb-2">Default Template</p>
+    <p class="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500 mb-2">{% if IS_RTL %}القالب الافتراضي{% else %}Default Template{% endif %}</p>
     {% if system_default %}
     {% include "doctors/partials/cnt_template_row.html" with tpl=system_default effective_active_id=effective_active.id badge="Default" %}
     {% endif %}
   </div>
 
   <div class="mb-6">
-    <p class="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500 mb-2">Specialty Templates</p>
+    <p class="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500 mb-2">{% if IS_RTL %}قوالب التخصص{% else %}Specialty Templates{% endif %}</p>
     {% if system_templates %}
     <div class="space-y-3">
       {% for tpl in system_templates %}
@@ -93,14 +93,14 @@
     </div>
     {% else %}
     <div class="glass-card p-4 text-center text-gray-400 dark:text-slate-500 text-sm">
-      No specialty templates available.
+      {% if IS_RTL %}لا توجد قوالب تخصص متاحة.{% else %}No specialty templates available.{% endif %}
     </div>
     {% endif %}
   </div>
 
   <!-- ── My Custom Templates ───────────────────────────────────── -->
   <div class="mb-6">
-    <p class="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500 mb-2">My Templates</p>
+    <p class="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500 mb-2">{% if IS_RTL %}قوالبي{% else %}My Templates{% endif %}</p>
     {% if my_templates %}
     <div class="space-y-3">
       {% for tpl in my_templates %}
@@ -112,12 +112,12 @@
       <div class="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center mx-auto mb-3">
         <i class="fa-solid fa-file-circle-plus text-xl text-indigo-400"></i>
       </div>
-      <p class="text-sm font-semibold text-gray-700 dark:text-slate-200 mb-1">No custom templates yet</p>
-      <p class="text-sm text-gray-400 dark:text-slate-500 mb-4">Create your own template to customise which sections appear when writing notes.</p>
+      <p class="text-sm font-semibold text-gray-700 dark:text-slate-200 mb-1">{% if IS_RTL %}لا توجد قوالب مخصصة بعد{% else %}No custom templates yet{% endif %}</p>
+      <p class="text-sm text-gray-400 dark:text-slate-500 mb-4">{% if IS_RTL %}أنشئ قالبك الخاص لتخصيص الأقسام التي تظهر عند كتابة الملاحظات.{% else %}Create your own template to customise which sections appear when writing notes.{% endif %}</p>
       <a href="{% url 'doctors:clinical_note_template_create' %}"
          class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm px-4 py-2 rounded-lg transition-colors">
         <i class="fa-solid fa-plus text-xs"></i>
-        Create Template
+        {% if IS_RTL %}إنشاء قالب{% else %}Create Template{% endif %}
       </a>
     </div>
     {% endif %}

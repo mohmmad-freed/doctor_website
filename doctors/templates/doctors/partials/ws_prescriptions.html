@@ -1,7 +1,7 @@
 <!-- Prescriptions Tab -->
 {% if rx_saved %}
 <div class="mb-4 flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700/40 text-emerald-700 dark:text-emerald-300 text-sm font-medium">
-  <i class="fa-solid fa-circle-check"></i> Prescription created.
+  <i class="fa-solid fa-circle-check"></i> {% if IS_RTL %}تم إنشاء الوصفة.{% else %}Prescription created.{% endif %}
 </div>
 {% endif %}
 {% if rx_error %}
@@ -22,7 +22,7 @@
        @click="open = !open">
     <div class="flex items-center gap-2">
       <i class="fa-solid fa-plus-circle text-emerald-500 text-sm"></i>
-      <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">Create New Prescription</span>
+      <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">{% if IS_RTL %}إنشاء وصفة جديدة{% else %}Create New Prescription{% endif %}</span>
     </div>
     <i class="fa-solid fa-chevron-down text-xs text-slate-400 transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
   </div>
@@ -37,7 +37,7 @@
       {% csrf_token %}
       {% if clinics|length > 1 %}
       <div>
-        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">Clinic</label>
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{% if IS_RTL %}العيادة{% else %}Clinic{% endif %}</label>
         <select name="clinic_id" class="ws-select">
           {% for clinic in clinics %}<option value="{{ clinic.id }}">{{ clinic.name }}</option>{% endfor %}
         </select>
@@ -49,10 +49,10 @@
       <!-- Medication rows -->
       <div>
         <div class="flex items-center justify-between mb-3">
-          <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Medications</label>
+          <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{% if IS_RTL %}الأدوية{% else %}Medications{% endif %}</label>
           <button type="button" @click="addMed()"
                   class="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-600 dark:text-primary-400 hover:underline">
-            <i class="fa-solid fa-plus text-[10px]"></i> Add medication
+            <i class="fa-solid fa-plus text-[10px]"></i> {% if IS_RTL %}إضافة دواء{% else %}Add medication{% endif %}
           </button>
         </div>
 
@@ -66,25 +66,25 @@
               </button>
               <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
                 <div class="col-span-2 sm:col-span-1">
-                  <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Medication *</label>
-                  <input type="text" :name="'med_name_' + (index + 1)" x-model="med.name" required class="ws-input text-sm" placeholder="Drug name">
+                  <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">{% if IS_RTL %}الدواء *{% else %}Medication *{% endif %}</label>
+                  <input type="text" :name="'med_name_' + (index + 1)" x-model="med.name" required class="ws-input text-sm" placeholder="{% if IS_RTL %}اسم الدواء{% else %}Drug name{% endif %}">
                 </div>
                 <div>
-                  <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Dosage *</label>
+                  <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">{% if IS_RTL %}الجرعة *{% else %}Dosage *{% endif %}</label>
                   <input type="text" :name="'dosage_' + (index + 1)" x-model="med.dosage" required class="ws-input text-sm" placeholder="500mg">
                 </div>
                 <div>
-                  <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Frequency *</label>
-                  <input type="text" :name="'frequency_' + (index + 1)" x-model="med.frequency" required class="ws-input text-sm" placeholder="3× daily">
+                  <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">{% if IS_RTL %}التكرار *{% else %}Frequency *{% endif %}</label>
+                  <input type="text" :name="'frequency_' + (index + 1)" x-model="med.frequency" required class="ws-input text-sm" placeholder="{% if IS_RTL %}3 مرات يومياً{% else %}3× daily{% endif %}">
                 </div>
                 <div>
-                  <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Duration</label>
-                  <input type="text" :name="'duration_' + (index + 1)" x-model="med.duration" class="ws-input text-sm" placeholder="7 days">
+                  <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">{% if IS_RTL %}المدة{% else %}Duration{% endif %}</label>
+                  <input type="text" :name="'duration_' + (index + 1)" x-model="med.duration" class="ws-input text-sm" placeholder="{% if IS_RTL %}7 أيام{% else %}7 days{% endif %}">
                 </div>
               </div>
               <div>
-                <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Instructions</label>
-                <input type="text" :name="'instructions_' + (index + 1)" x-model="med.instructions" class="ws-input text-sm" placeholder="With food, before sleep...">
+                <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">{% if IS_RTL %}التعليمات{% else %}Instructions{% endif %}</label>
+                <input type="text" :name="'instructions_' + (index + 1)" x-model="med.instructions" class="ws-input text-sm" placeholder="{% if IS_RTL %}مع الطعام، قبل النوم...{% else %}With food, before sleep...{% endif %}">
               </div>
             </div>
           </template>
@@ -92,18 +92,18 @@
       </div>
 
       <div>
-        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">General Notes (optional)</label>
-        <textarea name="rx_notes" rows="2" class="ws-textarea" placeholder="Additional instructions for the patient..."></textarea>
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{% if IS_RTL %}ملاحظات عامة (اختياري){% else %}General Notes (optional){% endif %}</label>
+        <textarea name="rx_notes" rows="2" class="ws-textarea" placeholder="{% if IS_RTL %}تعليمات إضافية للمريض...{% else %}Additional instructions for the patient...{% endif %}"></textarea>
       </div>
 
       <div class="flex items-center gap-3 pt-1">
         <button type="submit"
                 class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors shadow-sm">
-          <i class="fa-solid fa-prescription text-xs"></i> Save Prescription
+          <i class="fa-solid fa-prescription text-xs"></i> {% if IS_RTL %}حفظ الوصفة{% else %}Save Prescription{% endif %}
         </button>
         <button type="button" @click="open = false; meds = [{ name:'', dosage:'', frequency:'', duration:'', instructions:'' }]; $el.closest('form').reset(); typeof wsDraftClearCurrent === 'function' && wsDraftClearCurrent()"
                 class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-          Cancel
+          {% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}
         </button>
       </div>
     </form>
@@ -119,17 +119,17 @@
 <div class="ws-card mb-4 overflow-hidden">
   <div class="flex items-center gap-3 px-5 py-3 border-b border-slate-100 dark:border-slate-700 bg-emerald-50/60 dark:bg-emerald-900/10">
     <span class="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0"></span>
-    <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Active Prescriptions</h3>
+    <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">{% if IS_RTL %}الوصفات الفعّالة{% else %}Active Prescriptions{% endif %}</h3>
     <span class="ml-1 text-xs text-slate-400 dark:text-slate-500">({{ active_prescriptions|length }})</span>
     <div class="ml-auto flex items-center gap-3">
       <span class="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1">
-        <i class="fa-solid fa-arrows-up-down-left-right text-[10px]"></i> Drag to deactivate
+        <i class="fa-solid fa-arrows-up-down-left-right text-[10px]"></i> {% if IS_RTL %}اسحب لإلغاء التفعيل{% else %}Drag to deactivate{% endif %}
       </span>
       {% if active_prescriptions %}
       <a href="{% url 'doctors:ws_prescription_print_active' patient.id %}"
          target="_blank"
          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-        <i class="fa-solid fa-print text-xs"></i> Print
+        <i class="fa-solid fa-print text-xs"></i> {% if IS_RTL %}طباعة{% else %}Print{% endif %}
       </a>
       {% endif %}
     </div>
@@ -141,7 +141,7 @@
     {% include "doctors/partials/_rx_card.html" with rx=rx patient=patient %}
     {% empty %}
     <div class="rx-empty-state flex items-center justify-center h-14 text-sm text-slate-400 dark:text-slate-500 italic select-none">
-      No active prescriptions — drag one here to activate it
+      {% if IS_RTL %}لا توجد وصفات فعّالة — اسحب وصفة هنا لتفعيلها{% else %}No active prescriptions — drag one here to activate it{% endif %}
     </div>
     {% endfor %}
   </div>
@@ -151,10 +151,10 @@
 <div class="ws-card mb-4 overflow-hidden">
   <div class="flex items-center gap-3 px-5 py-3 border-b border-slate-100 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/30">
     <span class="w-2 h-2 rounded-full bg-slate-400 dark:bg-slate-500 flex-shrink-0"></span>
-    <h3 class="text-sm font-semibold text-slate-500 dark:text-slate-400">Inactive Prescriptions</h3>
+    <h3 class="text-sm font-semibold text-slate-500 dark:text-slate-400">{% if IS_RTL %}الوصفات غير الفعّالة{% else %}Inactive Prescriptions{% endif %}</h3>
     <span class="ml-1 text-xs text-slate-400 dark:text-slate-500">({{ inactive_prescriptions|length }})</span>
     <span class="ml-auto text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1">
-      <i class="fa-solid fa-arrows-up-down-left-right text-[10px]"></i> Drag to activate
+      <i class="fa-solid fa-arrows-up-down-left-right text-[10px]"></i> {% if IS_RTL %}اسحب للتفعيل{% else %}Drag to activate{% endif %}
     </span>
   </div>
   <div id="inactive-rx-list"
@@ -164,7 +164,7 @@
     {% include "doctors/partials/_rx_card.html" with rx=rx patient=patient %}
     {% empty %}
     <div class="rx-empty-state flex items-center justify-center h-14 text-sm text-slate-400 dark:text-slate-500 italic select-none">
-      No inactive prescriptions
+      {% if IS_RTL %}لا توجد وصفات غير فعّالة{% else %}No inactive prescriptions{% endif %}
     </div>
     {% endfor %}
   </div>
@@ -173,7 +173,7 @@
 {% else %}
 <div class="ws-card py-16 text-center">
   <i class="fa-solid fa-prescription fa-2x text-slate-300 dark:text-slate-600 mb-3 block"></i>
-  <p class="text-slate-500 dark:text-slate-400 font-medium">No prescriptions yet</p>
+  <p class="text-slate-500 dark:text-slate-400 font-medium">{% if IS_RTL %}لا توجد وصفات بعد{% else %}No prescriptions yet{% endif %}</p>
 </div>
 {% endif %}
 
@@ -212,8 +212,8 @@
         removeEmptyState(evt.to);
         addEmptyStateIfNeeded(evt.from,
           evt.from.dataset.list === 'active'
-            ? 'No active prescriptions — drag one here to activate it'
-            : 'No inactive prescriptions'
+            ? '{% if IS_RTL %}لا توجد وصفات فعّالة — اسحب وصفة هنا لتفعيلها{% else %}No active prescriptions — drag one here to activate it{% endif %}'
+            : '{% if IS_RTL %}لا توجد وصفات غير فعّالة{% else %}No inactive prescriptions{% endif %}'
         );
 
         // Update bullet dot colors immediately to reflect new status

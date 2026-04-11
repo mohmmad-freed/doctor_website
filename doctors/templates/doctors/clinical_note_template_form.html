@@ -1,5 +1,5 @@
 {% extends "doctors/base_doctor.html" %}
-{% block title %}{% if mode == 'edit' %}Edit Template{% else %}New Template{% endif %} | Doctor Portal{% endblock %}
+{% block title %}{% if mode == 'edit' %}{% if IS_RTL %}تعديل القالب{% else %}Edit Template{% endif %}{% else %}{% if IS_RTL %}قالب جديد{% else %}New Template{% endif %}{% endif %} | {% if IS_RTL %}بوابة الطبيب{% else %}Doctor Portal{% endif %}{% endblock %}
 
 {% block content %}
 <div class="max-w-xl mx-auto animate-fade-in-up">
@@ -8,15 +8,15 @@
   <div class="mb-6">
     <div class="flex items-center gap-2 text-sm text-gray-400 dark:text-slate-500 mb-2">
       <a href="{% url 'doctors:clinical_note_templates' %}"
-         class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Note Templates</a>
+         class="hover:text-primary-600 dark:hover:text-primary-400 transition-colors">{% if IS_RTL %}قوالب الملاحظات{% else %}Note Templates{% endif %}</a>
       <i class="fa-solid fa-chevron-right text-[10px]"></i>
-      <span>{% if mode == 'edit' %}Edit{% else %}New Template{% endif %}</span>
+      <span>{% if mode == 'edit' %}{% if IS_RTL %}تعديل{% else %}Edit{% endif %}{% else %}{% if IS_RTL %}قالب جديد{% else %}New Template{% endif %}{% endif %}</span>
     </div>
     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-      {% if mode == 'edit' %}Edit Template{% else %}Create Template{% endif %}
+      {% if mode == 'edit' %}{% if IS_RTL %}تعديل القالب{% else %}Edit Template{% endif %}{% else %}{% if IS_RTL %}إنشاء قالب{% else %}Create Template{% endif %}{% endif %}
     </h1>
     <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">
-      Choose a name and select the sections you want to appear in the Clinical Notes editor.
+      {% if IS_RTL %}اختر اسماً وحدد الأقسام التي تريد ظهورها في محرر الملاحظات السريرية.{% else %}Choose a name and select the sections you want to appear in the Clinical Notes editor.{% endif %}
     </p>
   </div>
 
@@ -41,32 +41,32 @@
       <!-- Name -->
       <div>
         <label class="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">
-          Template Name <span class="text-red-500">*</span>
+          {% if IS_RTL %}اسم القالب{% else %}Template Name{% endif %} <span class="text-red-500">*</span>
         </label>
         <input type="text"
                name="name"
                value="{% if mode == 'edit' %}{{ tpl.name }}{% endif %}"
                required
-               placeholder="e.g. My SOAP Template"
+               placeholder="{% if IS_RTL %}مثال: قالب SOAP الخاص بي{% else %}e.g. My SOAP Template{% endif %}"
                class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors">
       </div>
 
       <!-- Description -->
       <div>
         <label class="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-1.5">
-          Description <span class="font-normal normal-case text-gray-400 dark:text-slate-500">(optional)</span>
+          {% if IS_RTL %}الوصف{% else %}Description{% endif %} <span class="font-normal normal-case text-gray-400 dark:text-slate-500">({% if IS_RTL %}اختياري{% else %}optional{% endif %})</span>
         </label>
         <textarea name="description"
                   rows="2"
-                  placeholder="Short description of when to use this template…"
+                  placeholder="{% if IS_RTL %}وصف مختصر لمتى تستخدم هذا القالب...{% else %}Short description of when to use this template…{% endif %}"
                   class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors resize-none">{% if mode == 'edit' %}{{ tpl.description }}{% endif %}</textarea>
       </div>
 
       <!-- Elements -->
       <div>
         <label class="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-2">
-          Sections <span class="text-red-500">*</span>
-          <span class="font-normal normal-case text-gray-400 dark:text-slate-500 ml-1">— select and reorder</span>
+          {% if IS_RTL %}الأقسام{% else %}Sections {% endif %}<span class="text-red-500">*</span>
+          <span class="font-normal normal-case text-gray-400 dark:text-slate-500 ml-1">{% if IS_RTL %}— اختر وأعد الترتيب{% else %}— select and reorder{% endif %}</span>
         </label>
 
         <div id="element-builder" class="space-y-2">
@@ -86,7 +86,7 @@
           {% endfor %}
         </div>
         <p class="text-xs text-gray-400 dark:text-slate-500 mt-2">
-          The sections will appear in the order listed above. At least one section is required.
+          {% if IS_RTL %}ستظهر الأقسام بالترتيب المدرج أعلاه. مطلوب قسم واحد على الأقل.{% else %}The sections will appear in the order listed above. At least one section is required.{% endif %}
         </p>
       </div>
 
@@ -97,11 +97,11 @@
       <button type="submit"
               class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm transition-colors shadow-sm">
         <i class="fa-solid fa-floppy-disk text-xs"></i>
-        {% if mode == 'edit' %}Save Changes{% else %}Create Template{% endif %}
+        {% if mode == 'edit' %}{% if IS_RTL %}حفظ التغييرات{% else %}Save Changes{% endif %}{% else %}{% if IS_RTL %}إنشاء قالب{% else %}Create Template{% endif %}{% endif %}
       </button>
       <a href="{% url 'doctors:clinical_note_templates' %}"
          class="px-5 py-2.5 rounded-lg border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-slate-300 font-medium text-sm hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-        Cancel
+        {% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}
       </a>
     </div>
 

@@ -7,7 +7,7 @@
   <div class="mb-6">
     <a href="{% url 'doctors:order_catalog' %}?tab=drugs&clinic_id={{ clinic.id }}"
        class="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors mb-3">
-      <i class="fa-solid fa-arrow-left text-xs"></i> Back to Order Catalog
+      <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %} text-xs"></i> {% if IS_RTL %}رجوع إلى كتالوج الطلبات{% else %}Back to Order Catalog{% endif %}
     </a>
     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ form_title }}</h1>
     <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">{{ clinic.name }}</p>
@@ -29,20 +29,20 @@
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">
-            Family Name <span class="text-red-500">*</span>
+            {% if IS_RTL %}اسم العائلة{% else %}Family Name{% endif %} <span class="text-red-500">*</span>
           </label>
           <input type="text" name="name" value="{{ family.name|default:'' }}" required
-                 placeholder="e.g. Antibiotics, Beta-Blockers, NSAIDs"
+                 placeholder="{% if IS_RTL %}مثال: مضادات حيوية، حاصرات بيتا، مضادات التهاب{% else %}e.g. Antibiotics, Beta-Blockers, NSAIDs{% endif %}"
                  class="ws-input w-full"
                  autofocus>
         </div>
 
         <div>
           <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">
-            Description <span class="text-xs font-normal text-gray-400">(optional)</span>
+            {% if IS_RTL %}الوصف{% else %}Description{% endif %} <span class="text-xs font-normal text-gray-400">({% if IS_RTL %}اختياري{% else %}optional{% endif %})</span>
           </label>
           <textarea name="description" rows="2"
-                    placeholder="Brief description of this drug family"
+                    placeholder="{% if IS_RTL %}وصف مختصر لهذه العائلة الدوائية{% else %}Brief description of this drug family{% endif %}"
                     class="ws-input w-full resize-none">{{ family.description|default:'' }}</textarea>
         </div>
       </div>
@@ -54,7 +54,7 @@
         </button>
         <a href="{% url 'doctors:order_catalog' %}?tab=drugs&clinic_id={{ clinic.id }}"
            class="inline-flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-          Cancel
+          {% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}
         </a>
       </div>
     </form>

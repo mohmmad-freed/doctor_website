@@ -7,7 +7,7 @@
 <div>
   <p class="text-xs text-amber-600 dark:text-amber-400 mb-2.5 flex items-center gap-1.5">
     <i class="fa-solid fa-circle-info text-[11px]"></i>
-    No schedule set for this day. Enter a time manually.
+    {% if IS_RTL %}لا يوجد جدول لهذا اليوم. أدخل الوقت يدوياً.{% else %}No schedule set for this day. Enter a time manually.{% endif %}
   </p>
   <input type="time"
          name="appointment_time"
@@ -35,7 +35,7 @@
                    text-slate-400 dark:text-slate-500
                    {% endif %}"
             {% if not slot.is_available %}
-            title="Already booked — click to override"
+            title="{% if IS_RTL %}محجوز بالفعل — انقر للتجاوز{% else %}Already booked — click to override{% endif %}"
             {% endif %}>
       {{ slot.time|time:"H:i" }}
       {% if not slot.is_available %}
@@ -72,7 +72,7 @@
     var hint = document.getElementById('followup-slot-hint');
     var hintText = document.getElementById('followup-slot-hint-text');
     if (hint && hintText) {
-      hintText.textContent = t + ' selected';
+      hintText.textContent = t + '{% if IS_RTL %} تم الاختيار{% else %} selected{% endif %}';
       hint.classList.remove('hidden');
     }
   }

@@ -7,7 +7,7 @@
   <div class="mb-6">
     <a href="{% url 'doctors:order_catalog' %}?tab=drugs&clinic_id={{ clinic.id }}"
        class="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors mb-3">
-      <i class="fa-solid fa-arrow-left text-xs"></i> Back to Order Catalog
+      <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %} text-xs"></i> {% if IS_RTL %}رجوع إلى كتالوج الطلبات{% else %}Back to Order Catalog{% endif %}
     </a>
     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ form_title }}</h1>
     <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">{{ clinic.name }}</p>
@@ -30,29 +30,29 @@
 
         <div>
           <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">
-            Generic Name <span class="text-red-500">*</span>
+            {% if IS_RTL %}الاسم الجنيسي{% else %}Generic Name{% endif %} <span class="text-red-500">*</span>
           </label>
           <input type="text" name="generic_name" value="{{ product.generic_name|default:'' }}" required
-                 placeholder="e.g. Amoxicillin"
+                 placeholder="{% if IS_RTL %}مثال: أموكسيسيلين{% else %}e.g. Amoxicillin{% endif %}"
                  class="ws-input w-full" autofocus>
-          <p class="mt-1 text-xs text-gray-400 dark:text-slate-500">Used when a doctor selects this drug in generic mode.</p>
+          <p class="mt-1 text-xs text-gray-400 dark:text-slate-500">{% if IS_RTL %}يُستخدم عند اختيار الطبيب للدواء في وضع الاسم الجنيسي.{% else %}Used when a doctor selects this drug in generic mode.{% endif %}</p>
         </div>
 
         <div>
           <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">
-            Commercial / Brand Name <span class="text-red-500">*</span>
+            {% if IS_RTL %}الاسم التجاري{% else %}Commercial / Brand Name{% endif %} <span class="text-red-500">*</span>
           </label>
           <input type="text" name="commercial_name" value="{{ product.commercial_name|default:'' }}"
-                 placeholder="e.g. Amoxil, Augmentin" required
+                 placeholder="{% if IS_RTL %}مثال: أموكسيل، أوجمنتين{% else %}e.g. Amoxil, Augmentin{% endif %}" required
                  class="ws-input w-full">
         </div>
 
         <div>
           <label class="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">
-            Drug Family <span class="text-xs font-normal text-gray-400">(optional)</span>
+            {% if IS_RTL %}العائلة الدوائية{% else %}Drug Family{% endif %} <span class="text-xs font-normal text-gray-400">({% if IS_RTL %}اختياري{% else %}optional{% endif %})</span>
           </label>
           <select name="family_id" class="ws-input w-full">
-            <option value="">— No Family —</option>
+            <option value="">{% if IS_RTL %}— بلا عائلة —{% else %}— No Family —{% endif %}</option>
             {% for fam in families %}
             <option value="{{ fam.id }}"
               {% if product.family_id == fam.id or preselect_family_id == fam.id|stringformat:"s" %}selected{% endif %}>
@@ -71,7 +71,7 @@
         </button>
         <a href="{% url 'doctors:order_catalog' %}?tab=drugs&clinic_id={{ clinic.id }}"
            class="inline-flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-          Cancel
+          {% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}
         </a>
       </div>
     </form>

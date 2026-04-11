@@ -1,5 +1,5 @@
 {% extends "doctors/base_doctor.html" %}
-{% block title %}My Profile | Doctor Portal{% endblock %}
+{% block title %}{% if IS_RTL %}ملفي الشخصي | بوابة الطبيب{% else %}My Profile | Doctor Portal{% endif %}{% endblock %}
 
 {% block content %}
 <div class="max-w-2xl mx-auto px-4 pt-5 pb-8">
@@ -10,7 +10,7 @@
         <i class="fa-solid fa-user-doctor text-indigo-600 dark:text-indigo-400 text-xl"></i>
       </div>
       <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">My Profile</h1>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{% if IS_RTL %}ملفي الشخصي{% else %}My Profile{% endif %}</h1>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ request.user.name }}</p>
       </div>
     </div>
@@ -18,11 +18,11 @@
       <a href="{% url 'doctors:doctor_edit_profile' %}"
          class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors shadow-sm">
         <i class="fa-solid fa-pen-to-square text-xs"></i>
-        Edit
+        {% if IS_RTL %}تعديل{% else %}Edit{% endif %}
       </a>
       <a href="{% url 'doctors:dashboard' %}"
          class="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 transition-colors">
-        <i class="fa-solid fa-arrow-left"></i>
+        <i class="fa-solid fa-arrow-{% if IS_RTL %}right{% else %}left{% endif %}"></i>
       </a>
     </div>
   </div>
@@ -30,58 +30,58 @@
   <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 mb-5 overflow-hidden">
     <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
       <i class="fa-solid fa-id-card text-indigo-500 text-sm"></i>
-      <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">Account Info</span>
+      <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">{% if IS_RTL %}معلومات الحساب{% else %}Account Info{% endif %}</span>
     </div>
     <div class="divide-y divide-gray-100 dark:divide-gray-700">
 
       <div class="flex justify-between items-center px-5 py-3.5">
-        <span class="text-sm font-semibold text-gray-500 dark:text-gray-400">Name</span>
+        <span class="text-sm font-semibold text-gray-500 dark:text-gray-400">{% if IS_RTL %}الاسم{% else %}Name{% endif %}</span>
         <span class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ request.user.name }}</span>
       </div>
 
       <div class="flex justify-between items-center px-5 py-3.5">
-        <span class="text-sm font-semibold text-gray-500 dark:text-gray-400">Phone</span>
+        <span class="text-sm font-semibold text-gray-500 dark:text-gray-400">{% if IS_RTL %}الهاتف{% else %}Phone{% endif %}</span>
         <span class="text-sm font-mono text-gray-700 dark:text-gray-300" dir="ltr">{{ request.user.phone }}</span>
       </div>
 
       <div class="flex justify-between items-start px-5 py-3.5">
-        <span class="text-sm font-semibold text-gray-500 dark:text-gray-400 mt-0.5">Email</span>
+        <span class="text-sm font-semibold text-gray-500 dark:text-gray-400 mt-0.5">{% if IS_RTL %}البريد الإلكتروني{% else %}Email{% endif %}</span>
         <div class="flex items-center gap-2 flex-wrap justify-end">
-          <span class="text-sm text-gray-700 dark:text-gray-300">{{ request.user.email|default:"Not set" }}</span>
+          <span class="text-sm text-gray-700 dark:text-gray-300">{{ request.user.email|default:"—" }}</span>
           {% if request.user.email %}
             {% if request.user.email_verified %}
             <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-              <i class="fa-solid fa-circle-check text-xs"></i> Verified
+              <i class="fa-solid fa-circle-check text-xs"></i> {% if IS_RTL %}موثق{% else %}Verified{% endif %}
             </span>
             {% else %}
             <span class="text-xs font-bold text-amber-600 dark:text-amber-400">
-              <i class="fa-solid fa-circle-xmark text-xs"></i> Not verified
+              <i class="fa-solid fa-circle-xmark text-xs"></i> {% if IS_RTL %}غير موثق{% else %}Not verified{% endif %}
             </span>
             {% endif %}
           {% endif %}
           <a href="{% url 'accounts:change_email_request' %}"
              class="inline-flex items-center text-xs text-indigo-600 dark:text-indigo-400 border border-indigo-300 dark:border-indigo-600 px-2 py-0.5 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
-             title="Change Email">
+             title="{% if IS_RTL %}تغيير البريد{% else %}Change Email{% endif %}">
             <i class="fa-solid fa-pen text-[10px]"></i>
           </a>
         </div>
       </div>
 
       <div class="flex justify-between items-center px-5 py-3.5">
-        <span class="text-sm font-semibold text-gray-500 dark:text-gray-400">Phone Verified</span>
+        <span class="text-sm font-semibold text-gray-500 dark:text-gray-400">{% if IS_RTL %}الهاتف موثق{% else %}Phone Verified{% endif %}</span>
         {% if request.user.is_verified %}
         <span class="text-sm font-bold text-emerald-600 dark:text-emerald-400">
-          <i class="fa-solid fa-circle-check me-1 text-xs"></i>Verified
+          <i class="fa-solid fa-circle-check me-1 text-xs"></i>{% if IS_RTL %}موثق{% else %}Verified{% endif %}
         </span>
         {% else %}
         <div class="flex items-center gap-2.5">
           <span class="text-sm font-bold text-amber-600 dark:text-amber-400">
-            <i class="fa-solid fa-clock me-1 text-xs"></i>Unverified
+            <i class="fa-solid fa-clock me-1 text-xs"></i>{% if IS_RTL %}غير موثق{% else %}Unverified{% endif %}
           </span>
           <a href="{% url 'doctors:verify_phone' %}"
              class="inline-flex items-center gap-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-lg transition-colors shadow-sm">
             <i class="fa-solid fa-shield-halved text-[10px]"></i>
-            Verify Now
+            {% if IS_RTL %}توثيق الآن{% else %}Verify Now{% endif %}
           </a>
         </div>
         {% endif %}
@@ -93,7 +93,7 @@
   <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 mb-5 overflow-hidden">
     <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
       <i class="fa-solid fa-briefcase-medical text-teal-500 text-sm"></i>
-      <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">Specialties</span>
+      <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">{% if IS_RTL %}التخصصات{% else %}Specialties{% endif %}</span>
     </div>
     <div class="px-5 py-4">
       {% if specialties %}
@@ -106,7 +106,7 @@
       </div>
       {% else %}
       <p class="text-sm text-gray-400 dark:text-gray-500">
-        No specialties assigned yet. This happens automatically when you accept invitations.
+        {% if IS_RTL %}لا توجد تخصصات مُعيَّنة بعد. يحدث ذلك تلقائياً عند قبول الدعوات.{% else %}No specialties assigned yet. This happens automatically when you accept invitations.{% endif %}
       </p>
       {% endif %}
     </div>
@@ -115,7 +115,7 @@
   <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
     <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
       <i class="fa-solid fa-hospital text-violet-500 text-sm"></i>
-      <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">Clinics</span>
+      <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">{% if IS_RTL %}العيادات{% else %}Clinics{% endif %}</span>
     </div>
     {% if memberships %}
     <div class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -123,14 +123,16 @@
       <div class="flex justify-between items-center px-5 py-3.5">
         <span class="font-semibold text-gray-800 dark:text-gray-200 text-sm">{{ m.clinic.name }}</span>
         <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2.5 py-1 rounded-full">
-          {% if m.role == "MAIN_DOCTOR" %}Lead Doctor{% elif m.role == "DOCTOR" %}Doctor{% else %}{{ m.role }}{% endif %}
+          {% if m.role == "MAIN_DOCTOR" %}{% if IS_RTL %}طبيب رئيسي{% else %}Lead Doctor{% endif %}
+          {% elif m.role == "DOCTOR" %}{% if IS_RTL %}طبيب{% else %}Doctor{% endif %}
+          {% else %}{{ m.role }}{% endif %}
         </span>
       </div>
       {% endfor %}
     </div>
     {% else %}
     <div class="px-5 py-4">
-      <p class="text-sm text-gray-400 dark:text-gray-500">You haven't joined any clinic yet.</p>
+      <p class="text-sm text-gray-400 dark:text-gray-500">{% if IS_RTL %}لم تنضم إلى أي عيادة بعد.{% else %}You haven't joined any clinic yet.{% endif %}</p>
     </div>
     {% endif %}
   </div>

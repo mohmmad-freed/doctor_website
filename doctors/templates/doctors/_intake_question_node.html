@@ -8,7 +8,7 @@
     <div class="flex-1 min-w-0">
       <div class="flex items-center gap-2 flex-wrap">
         <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">{{ node_q.display_text }}</p>
-        {% if node_q.is_required %}<span class="text-red-500 text-xs font-bold">Required</span>{% endif %}
+        {% if node_q.is_required %}<span class="text-red-500 text-xs font-bold">{% if IS_RTL %}إلزامي{% else %}Required{% endif %}</span>{% endif %}
       </div>
       <div class="flex items-center gap-2 mt-1 flex-wrap">
         <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium
@@ -20,18 +20,18 @@
           {% else %}bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300{% endif %}">
           {{ node_q.get_field_type_display }}
         </span>
-        {% if node_q.choices %}<span class="text-xs text-gray-400 dark:text-slate-500">{{ node_q.choices|length }} option(s)</span>{% endif %}
-        {% if node_q.placeholder %}<span class="text-xs text-gray-400 dark:text-slate-500 truncate max-w-[200px]">Hint: {{ node_q.placeholder }}</span>{% endif %}
+        {% if node_q.choices %}<span class="text-xs text-gray-400 dark:text-slate-500">{{ node_q.choices|length }} {% if IS_RTL %}خيار{% else %}option(s){% endif %}</span>{% endif %}
+        {% if node_q.placeholder %}<span class="text-xs text-gray-400 dark:text-slate-500 truncate max-w-[200px]">{% if IS_RTL %}تلميح:{% else %}Hint:{% endif %} {{ node_q.placeholder }}</span>{% endif %}
       </div>
     </div>
     <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
       <a href="{% url 'doctors:intake_question_edit' template.id node_q.id %}"
-         class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 dark:hover:text-primary-400 transition-colors" title="Edit">
+         class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 dark:hover:text-primary-400 transition-colors" title="{% if IS_RTL %}تعديل{% else %}Edit{% endif %}">
         <i class="fa-solid fa-pen text-xs"></i>
       </a>
-      <form method="post" action="{% url 'doctors:intake_question_delete' template.id node_q.id %}" onsubmit="return confirm('Delete this question?')">
+      <form method="post" action="{% url 'doctors:intake_question_delete' template.id node_q.id %}" onsubmit="return confirm('{% if IS_RTL %}حذف هذا السؤال؟{% else %}Delete this question?{% endif %}')">
         {% csrf_token %}
-        <button type="submit" class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-colors" title="Delete">
+        <button type="submit" class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-colors" title="{% if IS_RTL %}حذف{% else %}Delete{% endif %}">
           <i class="fa-solid fa-trash-can text-xs"></i>
         </button>
       </form>
@@ -42,9 +42,9 @@
   <div class="flex items-start gap-2 group">
     <div class="flex-1 min-w-0">
       <div class="flex items-center gap-2 flex-wrap">
-        <span class="text-[9px] font-bold text-amber-500 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded uppercase tracking-wide flex-shrink-0">Branch {{ node_depth }}</span>
+        <span class="text-[9px] font-bold text-amber-500 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-1.5 py-0.5 rounded uppercase tracking-wide flex-shrink-0">{% if IS_RTL %}فرع{% else %}Branch{% endif %} {{ node_depth }}</span>
         <p class="text-xs font-semibold text-gray-800 dark:text-gray-100">{{ node_q.display_text }}</p>
-        {% if node_q.is_required %}<span class="text-red-500 text-[10px] font-bold">Required</span>{% endif %}
+        {% if node_q.is_required %}<span class="text-red-500 text-[10px] font-bold">{% if IS_RTL %}إلزامي{% else %}Required{% endif %}</span>{% endif %}
       </div>
       <div class="flex items-center gap-2 mt-0.5 flex-wrap">
         <span class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium
@@ -56,17 +56,17 @@
           {% else %}bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300{% endif %}">
           {{ node_q.get_field_type_display }}
         </span>
-        {% if node_q.choices %}<span class="text-[10px] text-gray-400 dark:text-slate-500">{{ node_q.choices|length }} option(s)</span>{% endif %}
+        {% if node_q.choices %}<span class="text-[10px] text-gray-400 dark:text-slate-500">{{ node_q.choices|length }} {% if IS_RTL %}خيار{% else %}option(s){% endif %}</span>{% endif %}
       </div>
     </div>
     <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
       <a href="{% url 'doctors:intake_question_edit' template.id node_q.id %}"
-         class="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 dark:hover:text-primary-400 transition-colors" title="Edit">
+         class="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 dark:hover:text-primary-400 transition-colors" title="{% if IS_RTL %}تعديل{% else %}Edit{% endif %}">
         <i class="fa-solid fa-pen text-[10px]"></i>
       </a>
-      <form method="post" action="{% url 'doctors:intake_question_delete' template.id node_q.id %}" onsubmit="return confirm('Delete this question and all its sub-questions?')">
+      <form method="post" action="{% url 'doctors:intake_question_delete' template.id node_q.id %}" onsubmit="return confirm('{% if IS_RTL %}حذف هذا السؤال وجميع فروعه؟{% else %}Delete this question and all its sub-questions?{% endif %}')">
         {% csrf_token %}
-        <button type="submit" class="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-colors" title="Delete">
+        <button type="submit" class="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-colors" title="{% if IS_RTL %}حذف{% else %}Delete{% endif %}">
           <i class="fa-solid fa-trash-can text-[10px]"></i>
         </button>
       </form>
@@ -83,10 +83,10 @@
       <div class="space-y-1">
         <div class="flex items-center gap-1.5">
           <i class="fa-solid fa-code-branch text-amber-400 dark:text-amber-500 text-[10px] rotate-90"></i>
-          <span class="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 rounded">If: {{ rule.expected_value }}</span>
-          <form method="post" action="{% url 'doctors:intake_rule_delete' template.id rule.id %}" onsubmit="return confirm('Delete this sub-question?')">
+          <span class="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-1.5 py-0.5 rounded">{% if IS_RTL %}إذا:{% else %}If:{% endif %} {{ rule.expected_value }}</span>
+          <form method="post" action="{% url 'doctors:intake_rule_delete' template.id rule.id %}" onsubmit="return confirm('{% if IS_RTL %}حذف هذا السؤال الفرعي؟{% else %}Delete this sub-question?{% endif %}')">
             {% csrf_token %}
-            <button type="submit" class="w-5 h-5 rounded flex items-center justify-center text-gray-300 dark:text-slate-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="Delete">
+            <button type="submit" class="w-5 h-5 rounded flex items-center justify-center text-gray-300 dark:text-slate-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="{% if IS_RTL %}حذف{% else %}Delete{% endif %}">
               <i class="fa-solid fa-trash-can text-[9px]"></i>
             </button>
           </form>
@@ -103,7 +103,7 @@
     <button type="button" onclick="toggleFollowupForm({{ node_q.id }})"
             class="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 px-2.5 py-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors border border-dashed border-amber-300 dark:border-amber-700/40">
       <i class="fa-solid fa-code-branch rotate-90 text-[10px]"></i>
-      {% if node_depth == 0 %}Add sub-question{% else %}Add branch here{% endif %}
+      {% if node_depth == 0 %}{% if IS_RTL %}إضافة سؤال فرعي{% else %}Add sub-question{% endif %}{% else %}{% if IS_RTL %}إضافة فرع هنا{% else %}Add branch here{% endif %}{% endif %}
     </button>
 
     <div id="followup-form-{{ node_q.id }}" class="hidden p-3.5 rounded-xl border border-amber-200 dark:border-amber-800/40 bg-amber-50/60 dark:bg-amber-900/10 space-y-3">
@@ -112,9 +112,9 @@
         <i class="fa-solid fa-code-branch rotate-90 text-amber-500 text-xs mt-0.5 flex-shrink-0"></i>
         <div class="min-w-0">
           <p class="text-xs font-bold text-amber-700 dark:text-amber-300">
-            {% if node_depth == 0 %}Sub-question{% else %}Branch {{ node_depth|add:1 }}{% endif %}
+            {% if node_depth == 0 %}{% if IS_RTL %}سؤال فرعي{% else %}Sub-question{% endif %}{% else %}{% if IS_RTL %}فرع{% else %}Branch{% endif %} {{ node_depth|add:1 }}{% endif %}
           </p>
-          <p class="text-[10px] text-amber-600/70 dark:text-amber-400/60 truncate mt-0.5">For: {{ node_q.display_text }}</p>
+          <p class="text-[10px] text-amber-600/70 dark:text-amber-400/60 truncate mt-0.5">{% if IS_RTL %}لـ:{% else %}For:{% endif %} {{ node_q.display_text }}</p>
         </div>
       </div>
 
@@ -124,46 +124,46 @@
 
         <div>
           <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-            Show this question when the answer is: <span class="text-red-500">*</span>
+            {% if IS_RTL %}أظهر هذا السؤال عندما تكون الإجابة:{% else %}Show this question when the answer is:{% endif %} <span class="text-red-500">*</span>
           </label>
           {% if node_q.field_type == "CHECKBOX" %}
           <div class="flex items-center gap-4">
             <label class="flex items-center gap-2 cursor-pointer">
               <input type="radio" name="trigger_value" value="نعم" required class="w-3.5 h-3.5 accent-amber-500">
-              <span class="text-xs text-gray-700 dark:text-gray-300">Yes</span>
+              <span class="text-xs text-gray-700 dark:text-gray-300">{% if IS_RTL %}نعم{% else %}Yes{% endif %}</span>
             </label>
             <label class="flex items-center gap-2 cursor-pointer">
               <input type="radio" name="trigger_value" value="لا" class="w-3.5 h-3.5 accent-amber-500">
-              <span class="text-xs text-gray-700 dark:text-gray-300">No</span>
+              <span class="text-xs text-gray-700 dark:text-gray-300">{% if IS_RTL %}لا{% else %}No{% endif %}</span>
             </label>
           </div>
           {% elif node_q.field_type == "SELECT" or node_q.field_type == "MULTISELECT" %}
           <select name="trigger_value" required
                   class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 transition">
-            <option value="">-- Select trigger option --</option>
+            <option value="">{% if IS_RTL %}-- اختر الخيار المحفز --{% else %}-- Select trigger option --{% endif %}</option>
             {% for choice in node_q.choices %}
             <option value="{{ choice }}">{{ choice }}</option>
             {% endfor %}
           </select>
           {% else %}
           <input type="text" name="trigger_value" required
-                 placeholder="e.g. Yes, or any specific answer that triggers this question"
+                 placeholder="{% if IS_RTL %}مثال: نعم، أو أي إجابة محددة تحفز هذا السؤال{% else %}e.g. Yes, or any specific answer that triggers this question{% endif %}"
                  class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 transition">
           {% endif %}
         </div>
 
         <div>
           <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-            Sub-question text <span class="text-red-500">*</span>
+            {% if IS_RTL %}نص السؤال الفرعي{% else %}Sub-question text{% endif %} <span class="text-red-500">*</span>
           </label>
           <input type="text" name="followup_text_ar" required
-                 placeholder="e.g. Name the medication"
+                 placeholder="{% if IS_RTL %}مثال: اذكر اسم الدواء{% else %}e.g. Name the medication{% endif %}"
                  class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 transition">
         </div>
 
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Field Type</label>
+            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">{% if IS_RTL %}نوع الحقل{% else %}Field Type{% endif %}</label>
             <select name="followup_field_type" id="fu-type-{{ node_q.id }}"
                     class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 transition">
               {% for val, label in field_types %}
@@ -174,13 +174,13 @@
           <div class="flex items-end pb-0.5">
             <label class="flex items-center gap-2 cursor-pointer select-none">
               <input type="checkbox" name="followup_is_required" class="w-3.5 h-3.5 rounded accent-amber-500 cursor-pointer">
-              <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Required</span>
+              <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">{% if IS_RTL %}إلزامي{% else %}Required{% endif %}</span>
             </label>
           </div>
         </div>
 
         <div id="fu-choices-{{ node_q.id }}" class="hidden">
-          <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Choices <span class="text-red-500">*</span></label>
+          <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">{% if IS_RTL %}الخيارات{% else %}Choices{% endif %} <span class="text-red-500">*</span></label>
           <div class="space-y-2" id="fu-choices-list-{{ node_q.id }}">
             <div class="choice-row flex items-center gap-2">
               <div class="w-5 h-5 rounded bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-[10px] font-bold text-amber-600 dark:text-amber-400 flex-shrink-0 choice-num">1</div>
@@ -195,24 +195,24 @@
           </div>
           <button type="button" onclick="addChoice('fu-choices-list-{{ node_q.id }}', 'amber')"
                   class="mt-2 inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-700 px-2 py-1 rounded hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors border border-dashed border-amber-300 dark:border-amber-700/40">
-            <i class="fa-solid fa-plus text-[9px]"></i> Add option
+            <i class="fa-solid fa-plus text-[9px]"></i> {% if IS_RTL %}إضافة خيار{% else %}Add option{% endif %}
           </button>
           <textarea name="followup_choices_raw" id="fu-choices-raw-{{ node_q.id }}" class="hidden"></textarea>
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Placeholder <span class="text-[10px] font-normal text-gray-400">(optional)</span></label>
-          <input type="text" name="followup_placeholder" placeholder="e.g. Type your answer here..."
+          <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">{% if IS_RTL %}نص التلميح{% else %}Placeholder{% endif %} <span class="text-[10px] font-normal text-gray-400">({% if IS_RTL %}اختياري{% else %}optional{% endif %})</span></label>
+          <input type="text" name="followup_placeholder" placeholder="{% if IS_RTL %}مثال: اكتب إجابتك هنا...{% else %}e.g. Type your answer here...{% endif %}"
                  class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-xs placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 transition">
         </div>
 
         <div class="flex items-center gap-2 pt-1">
           <button type="submit" class="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-semibold text-xs px-4 py-2 rounded-lg transition-all shadow-sm">
-            <i class="fa-solid fa-plus text-[10px]"></i> Add
+            <i class="fa-solid fa-plus text-[10px]"></i> {% if IS_RTL %}إضافة{% else %}Add{% endif %}
           </button>
           <button type="button" onclick="toggleFollowupForm({{ node_q.id }})"
                   class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
-            Cancel
+            {% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}
           </button>
         </div>
       </form>
