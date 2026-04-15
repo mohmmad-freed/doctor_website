@@ -1,11 +1,11 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" data-theme="light">
+<html lang="{{ CURRENT_LANG }}" dir="{{ DIR }}" data-theme="light">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>منصتي الطبية | رعاية صحية متطورة</title>
+    <title>{% if IS_RTL %}منصتي الطبية | رعاية صحية متطورة{% else %}My Medical Platform | Advanced Healthcare{% endif %}</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -48,22 +48,38 @@
     </div>
 
     <!-- Navbar -->
-    <!-- Navbar -->
     {% include 'accounts/navbar.html' %}
 
     <!-- Hero Section -->
     <header class="hero">
         <div class="container hero-grid">
             <div class="hero-content">
-                <h1 class="text-display animate-text-gradient">رعاية صحية متطورة <br> في متناول يدك</h1>
-                <p class="text-body-l text-muted">منصة طبية شاملة تربطك بأفضل الأطباء والخدمات الصحية بسهولة. إدارة
-                    مواعيد، سجلات إلكترونية، واستشارات عن بعد.</p>
-                <div class="hero-actions" style="display: flex; gap: var(--space-4); justify-content: center; flex-wrap: wrap;">
-                    {% if user.is_authenticated %}
-                    <a href="{% url 'accounts:home' %}" class="btn btn-primary btn-pulse">ابدأ رحلتك الصحية</a>
+                <h1 class="text-display animate-text-gradient">
+                    {% if IS_RTL %}
+                        رعاية صحية متطورة <br> في متناول يدك
                     {% else %}
-                    <a href="{% url 'accounts:register' %}" class="btn btn-primary btn-pulse">انضم إلينا الآن</a>
-                    <a href="#features" class="btn btn-secondary">اكتشف المزيد</a>
+                        Advanced Healthcare <br> At Your Fingertips
+                    {% endif %}
+                </h1>
+                <p class="text-body-l text-muted">
+                    {% if IS_RTL %}
+                        منصة طبية شاملة تربطك بأفضل الأطباء والخدمات الصحية بسهولة. إدارة مواعيد، سجلات إلكترونية، واستشارات عن بعد.
+                    {% else %}
+                        A comprehensive medical platform connecting you with the best doctors and health services. Manage appointments, digital records, and remote consultations.
+                    {% endif %}
+                </p>
+                <div class="hero-actions" style="display: flex; gap: var(--space-4); flex-wrap: wrap;">
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'accounts:home' %}" class="btn btn-primary btn-pulse">
+                        {% if IS_RTL %}ابدأ رحلتك الصحية{% else %}Go to Dashboard{% endif %}
+                    </a>
+                    {% else %}
+                    <a href="{% url 'accounts:register' %}" class="btn btn-primary btn-pulse">
+                        {% if IS_RTL %}انضم إلينا الآن{% else %}Join Us Now{% endif %}
+                    </a>
+                    <a href="#features" class="btn btn-secondary">
+                        {% if IS_RTL %}اكتشف المزيد{% else %}Explore Features{% endif %}
+                    </a>
                     {% endif %}
                 </div>
             </div>
@@ -79,8 +95,8 @@
                             <i class="fa-solid fa-user-check"></i>
                         </div>
                         <div class="badge-text">
-                            <span>أطباء</span>
-                            <strong>معتمدون 100%</strong>
+                            <span>{% if IS_RTL %}أطباء{% else %}Doctors{% endif %}</span>
+                            <strong>{% if IS_RTL %}معتمدون 100%{% else %}100% Certified{% endif %}</strong>
                         </div>
                     </div>
 
@@ -90,8 +106,8 @@
                             <i class="fa-solid fa-star"></i>
                         </div>
                         <div class="badge-text">
-                            <span>تقييم</span>
-                            <strong>4.9/5 نجوم</strong>
+                            <span>{% if IS_RTL %}تقييم{% else %}Rating{% endif %}</span>
+                            <strong>4.9/5 {% if IS_RTL %}نجوم{% else %}Stars{% endif %}</strong>
                         </div>
                     </div>
                 </div>
@@ -103,8 +119,14 @@
     <section id="features" class="features">
         <div class="container">
             <div class="features-header reveal-on-scroll">
-                <h2 class="text-h2">ميزات منصتنا</h2>
-                <p class="text-body-m text-muted">حلول متكاملة مصممة لراحتك وكفاءة العمل الطبي</p>
+                <h2 class="text-h2">{% if IS_RTL %}ميزات منصتنا{% else %}Platform Features{% endif %}</h2>
+                <p class="text-body-m text-muted">
+                    {% if IS_RTL %}
+                        حلول متكاملة مصممة لراحتك وكفاءة العمل الطبي
+                    {% else %}
+                        Integrated solutions designed for your comfort and medical workflow efficiency
+                    {% endif %}
+                </p>
             </div>
 
             <div class="features-grid">
@@ -113,9 +135,14 @@
                     <div class="feature-icon">
                         <i class="fa-solid fa-user-doctor"></i>
                     </div>
-                    <h3 class="text-h3">أطباء معتمدون</h3>
-                    <p class="text-body-m text-muted">نضمن لك الوصول إلى شبكة واسعة من الأطباء المؤهلين وذوي الخبرة في
-                        مختلف التخصصات.</p>
+                    <h3 class="text-h3">{% if IS_RTL %}أطباء معتمدون{% else %}Certified Doctors{% endif %}</h3>
+                    <p class="text-body-m text-muted">
+                        {% if IS_RTL %}
+                            نضمن لك الوصول إلى شبكة واسعة من الأطباء المؤهلين وذوي الخبرة في مختلف التخصصات.
+                        {% else %}
+                            We guarantee access to a wide network of qualified and experienced doctors across all specialties.
+                        {% endif %}
+                    </p>
                 </div>
 
                 <!-- Card 2 -->
@@ -123,9 +150,14 @@
                     <div class="feature-icon">
                         <i class="fa-regular fa-calendar-check"></i>
                     </div>
-                    <h3 class="text-h3">حجز سهل وسريع</h3>
-                    <p class="text-body-m text-muted">إدارة مواعيدك الطبية بنقرة واحدة. اختر الوقت المناسب لك دون عناء
-                        الانتظار.</p>
+                    <h3 class="text-h3">{% if IS_RTL %}حجز سهل وسريع{% else %}Easy & Fast Booking{% endif %}</h3>
+                    <p class="text-body-m text-muted">
+                        {% if IS_RTL %}
+                            إدارة مواعيدك الطبية بنقرة واحدة. اختر الوقت المناسب لك دون عناء الانتظار.
+                        {% else %}
+                            Manage your medical appointments with one click. Choose the time that suits you without the hassle of waiting.
+                        {% endif %}
+                    </p>
                 </div>
 
                 <!-- Card 3 -->
@@ -133,9 +165,14 @@
                     <div class="feature-icon">
                         <i class="fa-solid fa-file-medical"></i>
                     </div>
-                    <h3 class="text-h3">سجلات طبية آمنة</h3>
-                    <p class="text-body-m text-muted">نحافظ على خصوصية بياناتك الصحية بأحدث تقنيات الأمان والتشفير
-                        العالمي.</p>
+                    <h3 class="text-h3">{% if IS_RTL %}سجلات طبية آمنة{% else %}Secure Medical Records{% endif %}</h3>
+                    <p class="text-body-m text-muted">
+                        {% if IS_RTL %}
+                            نحافظ على خصوصية بياناتك الصحية بأحدث تقنيات الأمان والتشفير العالمي.
+                        {% else %}
+                            We protect your health data privacy using the latest security technologies and global encryption standards.
+                        {% endif %}
+                    </p>
                 </div>
             </div>
         </div>
@@ -145,24 +182,42 @@
     <section id="how-it-works" class="how-it-works">
         <div class="container">
             <div class="text-center reveal-on-scroll">
-                <h2 class="text-h2">كيف يعمل</h2>
+                <h2 class="text-h2">{% if IS_RTL %}كيف يعمل{% else %}How It Works{% endif %}</h2>
             </div>
 
             <div class="steps-container">
                 <div class="step-card reveal-on-scroll stagger-1">
                     <div class="step-number">1</div>
-                    <h3 class="text-h3">أنشئ حسابك</h3>
-                    <p class="text-body-m text-muted">سجل مجاناً وتصفح قائمة الأطباء المتاحين.</p>
+                    <h3 class="text-h3">{% if IS_RTL %}أنشئ حسابك{% else %}Create Your Account{% endif %}</h3>
+                    <p class="text-body-m text-muted">
+                        {% if IS_RTL %}
+                            سجل مجاناً وتصفح قائمة الأطباء المتاحين.
+                        {% else %}
+                            Register for free and browse the list of available doctors.
+                        {% endif %}
+                    </p>
                 </div>
                 <div class="step-card reveal-on-scroll stagger-2">
                     <div class="step-number">2</div>
-                    <h3 class="text-h3">اختر طبيبك</h3>
-                    <p class="text-body-m text-muted">قارن التخصصات والمراجعات، ثم اختر العيادة المناسبة.</p>
+                    <h3 class="text-h3">{% if IS_RTL %}اختر طبيبك{% else %}Choose Your Doctor{% endif %}</h3>
+                    <p class="text-body-m text-muted">
+                        {% if IS_RTL %}
+                            قارن التخصصات والمراجعات، ثم اختر العيادة المناسبة.
+                        {% else %}
+                            Compare specialties and reviews, then choose the right clinic.
+                        {% endif %}
+                    </p>
                 </div>
                 <div class="step-card reveal-on-scroll stagger-3">
                     <div class="step-number">3</div>
-                    <h3 class="text-h3">احجز موعدك</h3>
-                    <p class="text-body-m text-muted">تواصل مع طبيبك واستلم وصفتك الطبية إلكترونياً.</p>
+                    <h3 class="text-h3">{% if IS_RTL %}احجز موعدك{% else %}Book Your Appointment{% endif %}</h3>
+                    <p class="text-body-m text-muted">
+                        {% if IS_RTL %}
+                            تواصل مع طبيبك واستلم وصفتك الطبية إلكترونياً.
+                        {% else %}
+                            Connect with your doctor and receive your prescription digitally.
+                        {% endif %}
+                    </p>
                 </div>
             </div>
         </div>
@@ -172,10 +227,18 @@
     <section class="cta-section">
         <div class="container">
             <div class="cta-banner reveal-on-scroll">
-                <h2 class="text-h1">ابدأ رحلتك الصحية اليوم</h2>
-                <p class="text-body-l">انضم إلى الآلاف الذين يثقون بمنصتنا لرعايتهم الصحية.</p>
+                <h2 class="text-h1">{% if IS_RTL %}ابدأ رحلتك الصحية اليوم{% else %}Start Your Health Journey Today{% endif %}</h2>
+                <p class="text-body-l">
+                    {% if IS_RTL %}
+                        انضم إلى الآلاف الذين يثقون بمنصتنا لرعايتهم الصحية.
+                    {% else %}
+                        Join thousands who trust our platform for their healthcare.
+                    {% endif %}
+                </p>
                 {% if not user.is_authenticated %}
-                <a href="{% url 'accounts:register' %}" class="btn btn-white">ابدأ تجربتك المجانية</a>
+                <a href="{% url 'accounts:register' %}" class="btn btn-white">
+                    {% if IS_RTL %}ابدأ تجربتك المجانية{% else %}Start Your Free Trial{% endif %}
+                </a>
                 {% endif %}
             </div>
         </div>
@@ -185,21 +248,21 @@
     <nav class="mobile-nav-glass md:hidden">
         <a href="{% url 'accounts:landing' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'landing' %}active{% endif %}">
             <i class="fa-solid fa-house"></i>
-            <span class="text">الرئيسية</span>
+            <span class="text">{% if IS_RTL %}الرئيسية{% else %}Home{% endif %}</span>
         </a>
         {% if user.is_authenticated %}
         <a href="{% url 'accounts:home' %}" class="mobile-nav-item">
             <i class="fa-solid fa-cubes"></i>
-            <span class="text">لوحة التحكم</span>
+            <span class="text">{% if IS_RTL %}لوحة التحكم{% else %}Dashboard{% endif %}</span>
         </a>
         {% else %}
         <a href="{% url 'accounts:login' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'login' %}active{% endif %}">
             <i class="fa-solid fa-right-to-bracket"></i>
-            <span class="text">دخول</span>
+            <span class="text">{% if IS_RTL %}دخول{% else %}Login{% endif %}</span>
         </a>
         <a href="{% url 'accounts:register' %}" class="mobile-nav-item {% if 'register' in request.resolver_match.url_name %}active{% endif %}">
             <i class="fa-solid fa-user-plus"></i>
-            <span class="text">حساب جديد</span>
+            <span class="text">{% if IS_RTL %}حساب جديد{% else %}Register{% endif %}</span>
         </a>
         {% endif %}
     </nav>
@@ -226,15 +289,15 @@
 
                 var href = link.getAttribute('href');
                 if (!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:') || link.target === '_blank') return;
-                
+
                 if (link.hasAttribute('download')) return;
 
                 // Check for same-page hash links (anchors) even if absolute path
                 try {
                     var targetUrl = new URL(link.href, window.location.origin);
                     var currentUrl = new URL(window.location.href);
-                    if (targetUrl.pathname === currentUrl.pathname && 
-                        targetUrl.search === currentUrl.search && 
+                    if (targetUrl.pathname === currentUrl.pathname &&
+                        targetUrl.search === currentUrl.search &&
                         targetUrl.hash) {
                         return;
                     }

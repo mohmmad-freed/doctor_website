@@ -38,14 +38,15 @@ class LanguagePreferenceMiddleware:
 
         response = self.get_response(request)
 
-        # Keep cookie in sync so LocaleMiddleware picks it up on the next hit
-        # and SSR sends the correct dir on the very first load.
-        response.set_cookie(
-            "lang",
-            lang,
-            max_age=365 * 24 * 3600,
-            samesite="Lax",
-        )
+        # Keep cookie in sync — but don't overwrite if the view (e.g.
+        # set_language_preference) already set a fresh lang cookie.
+        if "lang" not in response.cookies:
+            response.set_cookie(
+                "lang",
+                lang,
+                max_age=365 * 24 * 3600,
+                samesite="Lax",
+            )
         return response
 
     def _resolve_language(self, request):
