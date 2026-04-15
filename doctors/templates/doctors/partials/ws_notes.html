@@ -6,12 +6,12 @@
 {% endif %}
 
 <!-- Add Note Form -->
-<div class="ws-card mb-5" x-data="{ open: {{ request.GET.action|default:'false'|lower }} === 'add' || false }" id="note-form-section">
+<div class="ws-card mb-5" x-data="{ open: '{{ request.GET.action|default:''|lower }}' === 'add' }" id="note-form-section">
   <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-slate-700 cursor-pointer select-none"
        @click="open = !open">
     <div class="flex items-center gap-2">
       <i class="fa-solid fa-plus-circle text-primary-500 text-sm"></i>
-      <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">{% if IS_RTL %}إضافة ملاحظة سريرية{% else %}Add Clinical Note{% endif %}</span>
+      <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">{% if IS_RTL %}إضافة ملاحظة طبية{% else %}Add Clinical Note{% endif %}</span>
     </div>
     <i class="fa-solid fa-chevron-down text-xs text-slate-400 transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
   </div>
@@ -216,7 +216,7 @@
 {% else %}
 <div class="ws-card py-16 text-center">
   <i class="fa-regular fa-file-lines fa-2x text-slate-300 dark:text-slate-600 mb-3 block"></i>
-  <p class="text-slate-500 dark:text-slate-400 font-medium">{% if IS_RTL %}لا توجد ملاحظات سريرية بعد{% else %}No clinical notes yet{% endif %}</p>
-  <p class="text-sm text-slate-400 dark:text-slate-500 mt-1">{% if IS_RTL %}انقر على "إضافة ملاحظة سريرية" أعلاه لكتابة الملاحظة الأولى.{% else %}Click "Add Clinical Note" above to write the first note.{% endif %}</p>
+  <p class="text-slate-500 dark:text-slate-400 font-medium">{% if IS_RTL %}لا توجد ملاحظات طبية بعد{% else %}No clinical notes yet{% endif %}</p>
+  <p class="text-sm text-slate-400 dark:text-slate-500 mt-1">{% if IS_RTL %}انقر على "إضافة ملاحظة طبية" أعلاه لكتابة الملاحظة الأولى.{% else %}Click "Add Clinical Note" above to write the first note.{% endif %}</p>
 </div>
 {% endif %}

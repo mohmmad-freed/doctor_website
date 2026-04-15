@@ -1761,7 +1761,7 @@ def patient_workspace(request, patient_id):
     _rtl = getattr(request, "LANGUAGE_CODE", "ar") == "ar"
     ctx["tabs"] = [
         ("overview",      "نظرة عامة"       if _rtl else "Overview",       "fa-solid fa-chart-pie"),
-        ("notes",         "ملاحظات سريرية"  if _rtl else "Clinical Notes", "fa-solid fa-file-medical"),
+        ("notes",         "ملاحظات طبية"     if _rtl else "Clinical Notes", "fa-solid fa-file-medical"),
         ("orders",        "الطلبات"          if _rtl else "Orders",         "fa-solid fa-flask"),
         ("prescriptions", "الوصفات"          if _rtl else "Prescriptions",  "fa-solid fa-prescription"),
         ("records",       "السجلات"          if _rtl else "Records",        "fa-solid fa-folder-open"),

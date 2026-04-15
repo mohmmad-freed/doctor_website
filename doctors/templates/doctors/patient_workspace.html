@@ -288,6 +288,11 @@
   // ── Tab state management ──────────────────────────────────────────────
   const PATIENT_ID = {{ patient.id }};
 
+  // Track the tab that switchTab() just requested so htmx:afterSwap can
+  // use it directly (htmx.ajax doesn't accept pushUrl as a JS option, so
+  // we cannot rely on window.location to reflect the new tab yet).
+  let _pendingTab = null;
+
   function setActiveTab(tabId) {
     document.querySelectorAll('.ws-tab').forEach(btn => {
       btn.classList.toggle('active', btn.id === 'tab-btn-' + tabId);
@@ -299,10 +304,12 @@
     const btn = document.getElementById('tab-btn-' + tabId);
     if (btn) {
       setActiveTab(tabId);
-      // Trigger HTMX request on the button
+      _pendingTab = tabId;
       const url = btn.getAttribute('hx-get');
       const fullUrl = openForm ? url + '&action=add' : url;
-      htmx.ajax('GET', fullUrl, { target: '#tab-content', swap: 'innerHTML', pushUrl: true });
+      // Push the URL ourselves — htmx.ajax ignores pushUrl in its context object
+      history.pushState({}, '', fullUrl);
+      htmx.ajax('GET', fullUrl, { target: '#tab-content', swap: 'innerHTML' });
     }
   }
 
@@ -318,8 +325,16 @@
   // After HTMX tab swap, re-sync active indicator and persist active tab
   document.body.addEventListener('htmx:afterSwap', function (e) {
     if (e.detail.target.id === 'tab-content') {
-      const url = new URL(window.location.href);
-      const tab = url.searchParams.get('tab') || 'overview';
+      // Use _pendingTab if set by switchTab() (URL push may not have
+      // happened yet when htmx.ajax fires this event), otherwise fall back
+      // to the current URL (covers normal hx-get tab button clicks).
+      let tab;
+      if (_pendingTab) {
+        tab = _pendingTab;
+        _pendingTab = null;
+      } else {
+        tab = new URL(window.location.href).searchParams.get('tab') || 'overview';
+      }
       setActiveTab(tab);
       // Persist active tab to localStorage so sidebar link restores it
       if (typeof mpwUpdateTab === 'function') mpwUpdateTab(PATIENT_ID, tab);
