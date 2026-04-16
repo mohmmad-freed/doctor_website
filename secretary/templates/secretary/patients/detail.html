@@ -1,5 +1,5 @@
 {% extends "secretary/base_secretary.html" %}
-{% load static %}
+{% load static i18n %}
 
 {% block title %}{{ patient.name }} — {{ clinic.name }}{% endblock %}
 
@@ -9,7 +9,7 @@
   {# ── Back + header ── #}
   <div class="flex items-start gap-4">
     <a href="{% url 'secretary:patient_list' %}"
-       aria-label="العودة إلى قائمة المرضى"
+       aria-label="{% trans 'العودة إلى قائمة المرضى' %}"
        class="mt-1 p-2 rounded-xl text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0">
       <i class="fa-solid fa-arrow-right"></i>
     </a>
@@ -35,7 +35,7 @@
             {% endif %}
             {% if age is not None %}
             <span class="text-gray-300 dark:text-gray-600">|</span>
-            <span>{{ age }} سنة</span>
+            <span>{% blocktrans with a=age %}{{ a }} سنة{% endblocktrans %}</span>
             {% endif %}
           </div>
         </div>
@@ -43,11 +43,11 @@
       <div class="flex items-center gap-2 flex-shrink-0">
         <a href="{% url 'secretary:create_appointment' %}?patient_id={{ patient.id }}"
            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold shadow transition-colors">
-          <i class="fa-solid fa-calendar-plus"></i> حجز موعد
+          <i class="fa-solid fa-calendar-plus"></i> {% trans "حجز موعد" %}
         </a>
         <a href="{% url 'secretary:edit_patient' patient.id %}"
            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-semibold transition-colors">
-          <i class="fa-solid fa-pen"></i> تعديل
+          <i class="fa-solid fa-pen"></i> {% trans "تعديل" %}
         </a>
       </div>
     </div>
@@ -75,31 +75,31 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
         {# Contact #}
         <div class="space-y-4">
-          <h3 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">بيانات التواصل</h3>
+          <h3 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">{% trans "بيانات التواصل" %}</h3>
           <dl class="space-y-3">
             <div>
-              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">الاسم الكامل</dt>
+              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{% trans "الاسم الكامل" %}</dt>
               <dd class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ patient.name }}</dd>
             </div>
             <div>
-              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">رقم الهاتف</dt>
+              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{% trans "رقم الهاتف" %}</dt>
               <dd class="text-sm text-gray-900 dark:text-gray-100 dir-ltr">{{ patient.phone }}</dd>
             </div>
             {% if patient.national_id %}
             <div>
-              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">رقم الهوية</dt>
+              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{% trans "رقم الهوية" %}</dt>
               <dd class="text-sm text-gray-900 dark:text-gray-100 dir-ltr">{{ patient.national_id|slice:":4" }}****</dd>
             </div>
             {% endif %}
             {% if patient.city %}
             <div>
-              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">المدينة</dt>
+              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{% trans "المدينة" %}</dt>
               <dd class="text-sm text-gray-900 dark:text-gray-100">{{ patient.city }}</dd>
             </div>
             {% endif %}
             {% if patient.email %}
             <div>
-              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">البريد الإلكتروني</dt>
+              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{% trans "البريد الإلكتروني" %}</dt>
               <dd class="text-sm text-gray-900 dark:text-gray-100 dir-ltr">{{ patient.email }}</dd>
             </div>
             {% endif %}
@@ -108,31 +108,31 @@
 
         {# Medical basics #}
         <div class="space-y-4">
-          <h3 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">البيانات الطبية</h3>
+          <h3 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">{% trans "البيانات الطبية" %}</h3>
           <dl class="space-y-3">
             {% if profile.date_of_birth %}
             <div>
-              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">تاريخ الميلاد</dt>
+              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{% trans "تاريخ الميلاد" %}</dt>
               <dd class="text-sm text-gray-900 dark:text-gray-100">{{ profile.date_of_birth|date:"Y/m/d" }}
-                {% if age is not None %}<span class="text-gray-400 text-xs"> ({{ age }} سنة)</span>{% endif %}
+                {% if age is not None %}<span class="text-gray-400 text-xs"> ({% blocktrans with a=age %}{{ a }} سنة{% endblocktrans %})</span>{% endif %}
               </dd>
             </div>
             {% endif %}
             {% if profile.gender %}
             <div>
-              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">الجنس</dt>
+              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{% trans "الجنس" %}</dt>
               <dd class="text-sm text-gray-900 dark:text-gray-100">{{ profile.get_gender_display }}</dd>
             </div>
             {% endif %}
             {% if profile.blood_type %}
             <div>
-              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">فصيلة الدم</dt>
+              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{% trans "فصيلة الدم" %}</dt>
               <dd class="text-sm text-gray-900 dark:text-gray-100">{{ profile.blood_type }}</dd>
             </div>
             {% endif %}
             {% if profile.allergies %}
             <div>
-              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">الحساسية</dt>
+              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{% trans "الحساسية" %}</dt>
               <dd class="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-line">{{ profile.allergies }}</dd>
             </div>
             {% endif %}
@@ -142,17 +142,17 @@
         {# Emergency contact #}
         {% if profile.emergency_contact_name or profile.emergency_contact_phone %}
         <div class="sm:col-span-2 pt-4 border-t border-gray-100 dark:border-gray-700">
-          <h3 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">جهة الاتصال في الطوارئ</h3>
+          <h3 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">{% trans "جهة الاتصال في الطوارئ" %}</h3>
           <dl class="flex flex-wrap gap-6">
             {% if profile.emergency_contact_name %}
             <div>
-              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">الاسم</dt>
+              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{% trans "الاسم" %}</dt>
               <dd class="text-sm text-gray-900 dark:text-gray-100">{{ profile.emergency_contact_name }}</dd>
             </div>
             {% endif %}
             {% if profile.emergency_contact_phone %}
             <div>
-              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">الهاتف</dt>
+              <dt class="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{% trans "الهاتف" %}</dt>
               <dd class="text-sm text-gray-900 dark:text-gray-100 dir-ltr">{{ profile.emergency_contact_phone }}</dd>
             </div>
             {% endif %}
@@ -163,7 +163,7 @@
         {# Clinic notes #}
         {% if clinic_patient.notes %}
         <div class="sm:col-span-2 pt-4 border-t border-gray-100 dark:border-gray-700">
-          <h3 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">ملاحظات العيادة</h3>
+          <h3 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">{% trans "ملاحظات العيادة" %}</h3>
           <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line leading-relaxed">{{ clinic_patient.notes }}</p>
         </div>
         {% endif %}
@@ -173,10 +173,10 @@
       {% elif active_tab == 'appointments' %}
       <div class="space-y-3">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="font-semibold text-gray-900 dark:text-white">سجل المواعيد ({{ appointments.count }})</h3>
+          <h3 class="font-semibold text-gray-900 dark:text-white">{% blocktrans with count=appointments.count %}سجل المواعيد ({{ count }}){% endblocktrans %}</h3>
           <a href="{% url 'secretary:create_appointment' %}?patient_id={{ patient.id }}"
              class="inline-flex items-center gap-1.5 text-sm text-purple-600 dark:text-purple-400 hover:underline font-medium">
-            <i class="fa-solid fa-plus text-xs"></i> موعد جديد
+            <i class="fa-solid fa-plus text-xs"></i> {% trans "موعد جديد" %}
           </a>
         </div>
         {% for appt in appointments %}
@@ -189,7 +189,7 @@
           </div>
           <div class="flex-1 min-w-0">
             <div class="font-medium text-gray-900 dark:text-gray-100 truncate">
-              {{ appt.appointment_type.name }} — الدكتور {{ appt.doctor.name }}
+              {{ appt.appointment_type.name }} — {% trans "الدكتور" %} {{ appt.doctor.name }}
             </div>
             <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ appt.appointment_time|time:"H:i" }}</div>
           </div>
@@ -199,10 +199,10 @@
         {% empty %}
         <div class="flex flex-col items-center py-10 gap-3 text-gray-400 dark:text-gray-500 text-sm">
           <i class="fa-solid fa-calendar-xmark text-3xl opacity-50"></i>
-          <p>لا توجد مواعيد مسجلة</p>
+          <p>{% trans "لا توجد مواعيد مسجلة" %}</p>
           <a href="{% url 'secretary:create_appointment' %}?patient_id={{ patient.id }}"
              class="text-purple-600 dark:text-purple-400 hover:underline font-medium text-sm">
-            حجز أول موعد
+            {% trans "حجز أول موعد" %}
           </a>
         </div>
         {% endfor %}
@@ -212,7 +212,7 @@
       {% elif active_tab == 'records' %}
       <div class="space-y-3">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="font-semibold text-gray-900 dark:text-white">السجلات الطبية ({{ medical_records.count }})</h3>
+          <h3 class="font-semibold text-gray-900 dark:text-white">{% blocktrans with count=medical_records.count %}السجلات الطبية ({{ count }}){% endblocktrans %}</h3>
         </div>
         {% for rec in medical_records %}
         <div class="flex items-center gap-4 p-4 rounded-xl border border-gray-100 dark:border-gray-700">
@@ -237,7 +237,7 @@
           {% if rec.file %}
           <a href="{{ rec.file.url }}" target="_blank"
              class="p-2 rounded-lg text-gray-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors flex-shrink-0"
-             title="تنزيل">
+             title="{% trans 'تنزيل' %}">
             <i class="fa-solid fa-download text-sm"></i>
           </a>
           {% endif %}
@@ -245,7 +245,7 @@
         {% empty %}
         <div class="flex flex-col items-center py-10 gap-3 text-gray-400 dark:text-gray-500 text-sm">
           <i class="fa-solid fa-folder-open text-3xl opacity-50"></i>
-          <p>لا توجد سجلات طبية</p>
+          <p>{% trans "لا توجد سجلات طبية" %}</p>
         </div>
         {% endfor %}
       </div>
@@ -256,15 +256,15 @@
         {# Summary cards #}
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-2">
           <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-700">
-            <div class="text-xs text-gray-400 dark:text-gray-500 mb-1">إجمالي الفواتير</div>
+            <div class="text-xs text-gray-400 dark:text-gray-500 mb-1">{% trans "إجمالي الفواتير" %}</div>
             <div class="text-xl font-bold text-gray-900 dark:text-white">{{ invoices.count }}</div>
           </div>
           <div class="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800">
-            <div class="text-xs text-emerald-600 dark:text-emerald-400 mb-1">إجمالي المدفوع</div>
+            <div class="text-xs text-emerald-600 dark:text-emerald-400 mb-1">{% trans "إجمالي المدفوع" %}</div>
             <div class="text-xl font-bold text-emerald-700 dark:text-emerald-300">₪ —</div>
           </div>
           <div class="p-4 rounded-xl {% if balance_due_total > 0 %}bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800{% else %}bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-700{% endif %}">
-            <div class="text-xs {% if balance_due_total > 0 %}text-red-600 dark:text-red-400{% else %}text-gray-400 dark:text-gray-500{% endif %} mb-1">رصيد مستحق</div>
+            <div class="text-xs {% if balance_due_total > 0 %}text-red-600 dark:text-red-400{% else %}text-gray-400 dark:text-gray-500{% endif %} mb-1">{% trans "رصيد مستحق" %}</div>
             <div class="text-xl font-bold {% if balance_due_total > 0 %}text-red-700 dark:text-red-300{% else %}text-gray-900 dark:text-white{% endif %}">₪ {{ balance_due_total|default:"0" }}</div>
           </div>
         </div>
@@ -273,7 +273,7 @@
         {% for inv in invoices %}
         <div class="flex items-center gap-4 p-4 rounded-xl border border-gray-100 dark:border-gray-700">
           <div class="flex-1 min-w-0">
-            <div class="font-medium text-gray-900 dark:text-gray-100">فاتورة #{{ inv.id }}</div>
+            <div class="font-medium text-gray-900 dark:text-gray-100">{% trans "فاتورة" %} #{{ inv.id }}</div>
             <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ inv.created_at|date:"Y/m/d" }}</div>
           </div>
           <div class="text-sm font-semibold text-gray-900 dark:text-gray-100">₪ {{ inv.total }}</div>
@@ -287,7 +287,7 @@
         {% empty %}
         <div class="flex flex-col items-center py-10 gap-3 text-gray-400 dark:text-gray-500 text-sm">
           <i class="fa-solid fa-receipt text-3xl opacity-50"></i>
-          <p>لا توجد فواتير</p>
+          <p>{% trans "لا توجد فواتير" %}</p>
         </div>
         {% endfor %}
       </div>

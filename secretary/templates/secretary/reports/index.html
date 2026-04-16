@@ -1,33 +1,33 @@
 {% extends "secretary/base_secretary.html" %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}التقارير — {{ clinic.name }}{% endblock %}
+{% block title %}{% trans "التقارير" %} — {{ clinic.name }}{% endblock %}
 
 {% block content %}
 <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
   <div>
-    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">التقارير</h1>
-    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">تحليلات ومؤشرات أداء العيادة</p>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{% trans "التقارير" %}</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{% trans "تحليلات ومؤشرات أداء العيادة" %}</p>
   </div>
 
   {# ── Quick stats: today ── #}
   <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
     <h2 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">
-      اليوم — {{ today|date:"l، j F Y" }}
+      {% trans "اليوم" %} — {{ today|date:"l، j F Y" }}
     </h2>
     <div class="grid grid-cols-3 gap-4">
       <div class="text-center">
         <div class="text-3xl font-bold text-gray-900 dark:text-white">{{ stats.today_total }}</div>
-        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">إجمالي المواعيد</div>
+        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{% trans "إجمالي المواعيد" %}</div>
       </div>
       <div class="text-center">
         <div class="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{{ stats.today_completed }}</div>
-        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">مكتملة</div>
+        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{% trans "مكتملة" %}</div>
       </div>
       <div class="text-center">
         <div class="text-3xl font-bold text-amber-600 dark:text-amber-400">{{ stats.today_noshows }}</div>
-        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">لم يحضروا</div>
+        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{% trans "لم يحضروا" %}</div>
       </div>
     </div>
   </div>
@@ -35,24 +35,24 @@
   {# ── Quick stats: this month ── #}
   <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
     <h2 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">
-      هذا الشهر
+      {% trans "هذا الشهر" %}
     </h2>
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
       <div class="text-center">
         <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.month_total }}</div>
-        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">إجمالي</div>
+        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{% trans "إجمالي" %}</div>
       </div>
       <div class="text-center">
         <div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ stats.month_completed }}</div>
-        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">مكتملة</div>
+        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{% trans "مكتملة" %}</div>
       </div>
       <div class="text-center">
         <div class="text-2xl font-bold text-red-600 dark:text-red-400">{{ stats.month_cancelled }}</div>
-        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">ملغاة</div>
+        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{% trans "ملغاة" %}</div>
       </div>
       <div class="text-center">
         <div class="text-2xl font-bold text-amber-600 dark:text-amber-400">{{ stats.month_noshows }}</div>
-        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">لم يحضروا</div>
+        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{% trans "لم يحضروا" %}</div>
       </div>
     </div>
   </div>
@@ -68,10 +68,10 @@
         </div>
         <div>
           <h3 class="font-semibold text-gray-900 dark:text-white group-hover:text-purple-700 dark:group-hover:text-purple-400 transition-colors">
-            تقرير المواعيد اليومي
+            {% trans "تقرير المواعيد اليومي" %}
           </h3>
           <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            قائمة مواعيد يوم محدد مع تفصيل الحالات وتوزيع الأطباء
+            {% trans "قائمة مواعيد يوم محدد مع تفصيل الحالات وتوزيع الأطباء" %}
           </p>
         </div>
         <i class="fa-solid fa-chevron-left text-gray-300 dark:text-gray-600 group-hover:text-purple-400 transition-colors ms-auto flex-shrink-0 mt-1"></i>
@@ -86,10 +86,10 @@
         </div>
         <div>
           <h3 class="font-semibold text-gray-900 dark:text-white group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors">
-            تقرير زيارات المرضى
+            {% trans "تقرير زيارات المرضى" %}
           </h3>
           <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            الزيارات خلال فترة زمنية مع تمييز المرضى الجدد والمتكررين
+            {% trans "الزيارات خلال فترة زمنية مع تمييز المرضى الجدد والمتكررين" %}
           </p>
         </div>
         <i class="fa-solid fa-chevron-left text-gray-300 dark:text-gray-600 group-hover:text-blue-400 transition-colors ms-auto flex-shrink-0 mt-1"></i>
@@ -104,10 +104,10 @@
         </div>
         <div>
           <h3 class="font-semibold text-gray-900 dark:text-white group-hover:text-amber-700 dark:group-hover:text-amber-400 transition-colors">
-            تقرير الغياب والإلغاء
+            {% trans "تقرير الغياب والإلغاء" %}
           </h3>
           <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            نسب الغياب والإلغاء مع أسباب الإلغاء وأكثر المرضى غياباً
+            {% trans "نسب الغياب والإلغاء مع أسباب الإلغاء وأكثر المرضى غياباً" %}
           </p>
         </div>
         <i class="fa-solid fa-chevron-left text-gray-300 dark:text-gray-600 group-hover:text-amber-400 transition-colors ms-auto flex-shrink-0 mt-1"></i>
@@ -122,10 +122,10 @@
         </div>
         <div>
           <h3 class="font-semibold text-gray-900 dark:text-white group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
-            تقرير أداء الأطباء
+            {% trans "تقرير أداء الأطباء" %}
           </h3>
           <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            استخدام الجلسات، نسبة الإنجاز، متوسط المواعيد اليومية لكل طبيب
+            {% trans "استخدام الجلسات، نسبة الإنجاز، متوسط المواعيد اليومية لكل طبيب" %}
           </p>
         </div>
         <i class="fa-solid fa-chevron-left text-gray-300 dark:text-gray-600 group-hover:text-emerald-400 transition-colors ms-auto flex-shrink-0 mt-1"></i>

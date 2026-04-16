@@ -1,4 +1,4 @@
-{% load static %}
+{% load static i18n %}
 {# HTMX partial — Column B: CHECKED_IN today, ordered by checked_in_at (queue order) #}
 {% for entry in checkedin_list %}
 {% with appt=entry.appt %}
@@ -19,7 +19,7 @@
       <div class="min-w-0 flex-1">
         <div class="font-semibold text-gray-900 dark:text-gray-100 truncate">{{ appt.patient.name }}</div>
         <div class="flex items-center gap-2 mt-0.5 text-xs text-gray-500 dark:text-gray-400 flex-wrap">
-          <span>د. {{ appt.doctor.name|default:"—" }}</span>
+          <span>{% trans "د." %} {{ appt.doctor.name|default:"—" }}</span>
           {% if appt.appointment_type %}
           <span class="text-gray-300 dark:text-gray-600">·</span>
           <span>{{ appt.appointment_type.display_name }}</span>
@@ -34,7 +34,7 @@
       {# Wait time badge #}
       <div class="flex-shrink-0 text-right">
         <span class="text-sm font-bold {{ entry.wait_class }} tabular-nums">
-          {{ entry.wait_minutes }}<span class="text-xs font-normal ms-0.5">د</span>
+          {{ entry.wait_minutes }}<span class="text-xs font-normal ms-0.5">{% trans "د" %}</span>
         </span>
       </div>
     </div>
@@ -50,22 +50,22 @@
         {% csrf_token %}
         <input type="hidden" name="new_status" value="IN_PROGRESS">
         <button type="submit"
-                title="استدعاء المريض"
+                title="{% trans 'استدعاء المريض' %}"
                 class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold shadow-sm transition-colors">
-          <i class="fa-solid fa-bell text-xs"></i> استدعاء
+          <i class="fa-solid fa-bell text-xs"></i> {% trans "استدعاء" %}
         </button>
       </form>
 
       {# Cancel / remove from queue #}
       <button type="button"
-              title="إزالة من الطابور"
+              title="{% trans 'إزالة من الطابور' %}"
               onclick="openRemoveModal({{ appt.id }}, '{{ appt.patient.name }}')"
               class="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
         <i class="fa-solid fa-xmark text-sm"></i>
       </button>
 
       <a href="{% url 'secretary:appointment_detail' appt.id %}"
-         title="تفاصيل"
+         title="{% trans 'تفاصيل' %}"
          class="p-1.5 rounded-lg text-gray-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors">
         <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
       </a>
@@ -77,10 +77,10 @@
 {% empty %}
 <div class="px-5 py-10 flex flex-col items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
   <i class="fa-solid fa-chair text-2xl opacity-40"></i>
-  <p>الطابور فارغ — لا يوجد مرضى في الانتظار</p>
+  <p>{% trans "الطابور فارغ — لا يوجد مرضى في الانتظار" %}</p>
   <a href="{% url 'secretary:checkin_search' %}"
      class="text-purple-600 dark:text-purple-400 hover:underline text-xs font-medium">
-    تسجيل وصول مريض
+    {% trans "تسجيل وصول مريض" %}
   </a>
 </div>
 {% endfor %}

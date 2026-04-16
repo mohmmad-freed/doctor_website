@@ -1,7 +1,7 @@
 {% extends "secretary/base_secretary.html" %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}المرضى — {{ clinic.name }}{% endblock %}
+{% block title %}{% trans "قائمة المرضى" %} — {{ clinic.name }}{% endblock %}
 
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -9,14 +9,14 @@
   {# ── Header ── #}
   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">قائمة المرضى</h1>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{% trans "قائمة المرضى" %}</h1>
       <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-        {{ total_count }} مريض مسجل في العيادة
+        {% blocktrans with count=total_count %}{{ count }} مريض مسجل في العيادة{% endblocktrans %}
       </p>
     </div>
     <a href="{% url 'secretary:create_new_patient' %}"
        class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold shadow transition-colors">
-      <i class="fa-solid fa-user-plus"></i> تسجيل مريض جديد
+      <i class="fa-solid fa-user-plus"></i> {% trans "تسجيل مريض جديد" %}
     </a>
   </div>
 
@@ -45,7 +45,7 @@
           name="q"
           id="patient-search-input"
           value="{{ search }}"
-          placeholder="ابحث بالاسم أو الهاتف أو رقم الملف..."
+          placeholder="{% trans 'ابحث بالاسم أو الهاتف أو رقم الملف...' %}"
           class="w-full pr-9 pl-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400 transition"
           hx-get="{% url 'secretary:patient_list_htmx' %}"
           hx-trigger="input changed delay:400ms, search"
@@ -63,17 +63,17 @@
       {# Sort select #}
       <select name="sort" onchange="this.form.submit()"
               class="px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
-        <option value="name" {% if sort == 'name' %}selected{% endif %}>الاسم أ-ي</option>
-        <option value="-name" {% if sort == '-name' %}selected{% endif %}>الاسم ي-أ</option>
-        <option value="-registered_at" {% if sort == '-registered_at' %}selected{% endif %}>الأحدث تسجيلاً</option>
-        <option value="registered_at" {% if sort == 'registered_at' %}selected{% endif %}>الأقدم تسجيلاً</option>
-        <option value="-last_visit" {% if sort == '-last_visit' %}selected{% endif %}>آخر زيارة</option>
+        <option value="name" {% if sort == 'name' %}selected{% endif %}>{% trans "الاسم أ-ي" %}</option>
+        <option value="-name" {% if sort == '-name' %}selected{% endif %}>{% trans "الاسم ي-أ" %}</option>
+        <option value="-registered_at" {% if sort == '-registered_at' %}selected{% endif %}>{% trans "الأحدث تسجيلاً" %}</option>
+        <option value="registered_at" {% if sort == 'registered_at' %}selected{% endif %}>{% trans "الأقدم تسجيلاً" %}</option>
+        <option value="-last_visit" {% if sort == '-last_visit' %}selected{% endif %}>{% trans "آخر زيارة" %}</option>
       </select>
 
       {% if search %}
       <a href="{% url 'secretary:patient_list' %}"
          class="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-        مسح
+        {% trans "مسح" %}
       </a>
       {% endif %}
     </form>
@@ -85,13 +85,13 @@
       <table class="min-w-full divide-y divide-gray-100 dark:divide-gray-700 text-sm">
         <thead>
           <tr class="bg-gray-50 dark:bg-gray-900/50">
-            <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400">المريض</th>
-            <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400">الهاتف</th>
-            <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400">رقم الملف</th>
-            <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400">آخر زيارة</th>
-            <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400">عدد الزيارات</th>
-            <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400">تاريخ التسجيل</th>
-            <th class="px-4 py-3 text-center font-semibold text-gray-600 dark:text-gray-400">إجراءات</th>
+            <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400">{% trans "المريض" %}</th>
+            <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400">{% trans "الهاتف" %}</th>
+            <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400">{% trans "رقم الملف" %}</th>
+            <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400">{% trans "آخر زيارة" %}</th>
+            <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400">{% trans "عدد الزيارات" %}</th>
+            <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400">{% trans "تاريخ التسجيل" %}</th>
+            <th class="px-4 py-3 text-center font-semibold text-gray-600 dark:text-gray-400">{% trans "إجراءات" %}</th>
           </tr>
         </thead>
         <tbody id="patient-table-body" class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -103,13 +103,13 @@
               <div class="flex flex-col items-center gap-3 text-gray-400 dark:text-gray-500">
                 <i class="fa-solid fa-users-slash text-3xl"></i>
                 <p class="text-sm">
-                  {% if search %}لا توجد نتائج لـ "{{ search }}"
-                  {% else %}لا يوجد مرضى مسجلون بعد{% endif %}
+                  {% if search %}{% blocktrans with q=search %}لا توجد نتائج لـ "{{ q }}"{% endblocktrans %}
+                  {% else %}{% trans "لا يوجد مرضى مسجلون بعد" %}{% endif %}
                 </p>
                 {% if not search %}
                 <a href="{% url 'secretary:create_new_patient' %}"
                    class="text-purple-600 dark:text-purple-400 hover:underline text-sm font-medium">
-                  تسجيل أول مريض
+                  {% trans "تسجيل أول مريض" %}
                 </a>
                 {% endif %}
               </div>
@@ -124,20 +124,19 @@
     {% if page_obj.has_other_pages %}
     <div class="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between text-sm">
       <span class="text-gray-500 dark:text-gray-400">
-        صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}
-        ({{ total_count }} نتيجة)
+        {% blocktrans with num=page_obj.number total=page_obj.paginator.num_pages count=total_count %}صفحة {{ num }} من {{ total }} ({{ count }} نتيجة){% endblocktrans %}
       </span>
       <div class="flex items-center gap-2">
         {% if page_obj.has_previous %}
         <a href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if sort %}sort={{ sort }}&{% endif %}page={{ page_obj.previous_page_number }}"
            class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition">
-          <i class="fa-solid fa-chevron-right text-xs"></i> السابق
+          <i class="fa-solid fa-chevron-right text-xs"></i> {% trans "السابق" %}
         </a>
         {% endif %}
         {% if page_obj.has_next %}
         <a href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if sort %}sort={{ sort }}&{% endif %}page={{ page_obj.next_page_number }}"
            class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition">
-          التالي <i class="fa-solid fa-chevron-left text-xs"></i>
+          {% trans "التالي" %} <i class="fa-solid fa-chevron-left text-xs"></i>
         </a>
         {% endif %}
       </div>

@@ -1,5 +1,6 @@
 {% extends "secretary/base_secretary.html" %}
-{% block title %}لوحة تحكم السكرتارية{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "لوحة تحكم السكرتارية" %}{% endblock %}
 
 {% block content %}
 <div class="max-w-5xl mx-auto space-y-6">
@@ -22,15 +23,15 @@
       <div class="flex items-center gap-2 flex-wrap flex-shrink-0">
         <a href="{% url 'secretary:create_appointment' %}"
            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 active:scale-95 text-white text-sm font-semibold transition-all shadow-sm">
-          <i class="fa-solid fa-calendar-plus text-xs"></i> حجز موعد
+          <i class="fa-solid fa-calendar-plus text-xs"></i> {% trans "حجز موعد" %}
         </a>
         <a href="{% url 'secretary:create_new_patient' %}"
            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 text-sm font-semibold transition-colors">
-          <i class="fa-solid fa-user-plus text-xs"></i> تسجيل مريض
+          <i class="fa-solid fa-user-plus text-xs"></i> {% trans "تسجيل مريض" %}
         </a>
         <a href="{% url 'secretary:waiting_room' %}"
            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 text-sm font-semibold transition-colors">
-          <i class="fa-solid fa-people-waiting text-xs"></i> غرفة الانتظار
+          <i class="fa-solid fa-people-waiting text-xs"></i> {% trans "غرفة الانتظار" %}
           {% if stat_checked_in > 0 %}
           <span class="w-5 h-5 flex items-center justify-center bg-blue-500 text-white text-[10px] font-bold rounded-full">{{ stat_checked_in }}</span>
           {% endif %}
@@ -45,35 +46,35 @@
     <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 flex flex-col items-center text-center">
       <span class="text-2xl font-bold text-gray-900 dark:text-white">{{ stat_total }}</span>
       <span class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
-        <i class="fa-regular fa-calendar"></i> مجموع اليوم
+        <i class="fa-regular fa-calendar"></i> {% trans "مجموع اليوم" %}
       </span>
     </div>
 
     <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 flex flex-col items-center text-center">
       <span class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{{ stat_pending }}</span>
       <span class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
-        <i class="fa-regular fa-clock"></i> في الانتظار
+        <i class="fa-regular fa-clock"></i> {% trans "في الانتظار" %}
       </span>
     </div>
 
     <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 flex flex-col items-center text-center">
       <span class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ stat_checked_in }}</span>
       <span class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
-        <i class="fa-solid fa-door-open"></i> وصل
+        <i class="fa-solid fa-door-open"></i> {% trans "وصل" %}
       </span>
     </div>
 
     <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 flex flex-col items-center text-center">
       <span class="text-2xl font-bold text-primary-600 dark:text-primary-400">{{ stat_in_progress }}</span>
       <span class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
-        <i class="fa-solid fa-spinner fa-spin"></i> جارٍ
+        <i class="fa-solid fa-spinner fa-spin"></i> {% trans "جارٍ" %}
       </span>
     </div>
 
     <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 flex flex-col items-center text-center">
       <span class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ stat_completed }}</span>
       <span class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
-        <i class="fa-solid fa-circle-check"></i> مكتمل
+        <i class="fa-solid fa-circle-check"></i> {% trans "مكتمل" %}
       </span>
     </div>
 
@@ -81,14 +82,14 @@
     <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 flex flex-col items-center text-center">
       <span class="text-2xl font-bold text-teal-600 dark:text-teal-400">₪{{ revenue_today|floatformat:0 }}</span>
       <span class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
-        <i class="fa-solid fa-coins"></i> إيرادات
+        <i class="fa-solid fa-coins"></i> {% trans "إيرادات" %}
       </span>
     </div>
     {% else %}
     <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 flex flex-col items-center text-center">
       <span class="text-2xl font-bold text-red-500 dark:text-red-400">{{ stat_cancelled }}</span>
       <span class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
-        <i class="fa-solid fa-xmark"></i> ملغى
+        <i class="fa-solid fa-xmark"></i> {% trans "ملغى" %}
       </span>
     </div>
     {% endif %}
@@ -105,7 +106,7 @@
       <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
         <div class="flex items-center gap-2 px-5 py-3 border-b border-gray-100 dark:border-slate-700 bg-amber-50 dark:bg-amber-900/10">
           <i class="fa-solid fa-bolt text-amber-500 text-sm"></i>
-          <span class="font-semibold text-gray-800 dark:text-gray-100 text-sm">المواعيد خلال الساعتين القادمتين</span>
+          <span class="font-semibold text-gray-800 dark:text-gray-100 text-sm">{% trans "المواعيد خلال الساعتين القادمتين" %}</span>
           <span class="mr-auto text-xs font-bold bg-amber-500 text-white px-2 py-0.5 rounded-full">{{ upcoming_2h|length }}</span>
         </div>
         <div class="divide-y divide-gray-100 dark:divide-slate-700">
@@ -124,7 +125,7 @@
               {% csrf_token %}
               <button type="submit"
                       class="flex-shrink-0 px-3 py-1.5 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors">
-                تسجيل الوصول
+                {% trans "تسجيل الوصول" %}
               </button>
             </form>
             {% endif %}
@@ -140,13 +141,13 @@
         <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/50">
           <div class="flex items-center gap-2">
             <i class="fa-solid fa-calendar-day text-primary-500 text-sm"></i>
-            <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">مواعيد اليوم</span>
+            <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">{% trans "مواعيد اليوم" %}</span>
           </div>
           <div class="flex items-center gap-2">
             <span class="text-xs text-gray-400 dark:text-gray-500">{{ today|date:"d/m/Y" }}</span>
             <a href="{% url 'secretary:appointments' %}"
                class="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline">
-              عرض الكل
+              {% trans "عرض الكل" %}
             </a>
           </div>
         </div>
@@ -156,12 +157,12 @@
           <table class="w-full text-sm">
             <thead>
               <tr class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide border-b border-gray-100 dark:border-slate-700">
-                <th class="px-5 py-3 text-right">الوقت</th>
-                <th class="px-5 py-3 text-right">المريض</th>
-                <th class="px-5 py-3 text-right hidden sm:table-cell">الطبيب</th>
-                <th class="px-5 py-3 text-right hidden md:table-cell">نوع الموعد</th>
-                <th class="px-5 py-3 text-right">الحالة</th>
-                <th class="px-5 py-3 text-left">إجراءات</th>
+                <th class="px-5 py-3 text-right">{% trans "الوقت" %}</th>
+                <th class="px-5 py-3 text-right">{% trans "المريض" %}</th>
+                <th class="px-5 py-3 text-right hidden sm:table-cell">{% trans "الطبيب" %}</th>
+                <th class="px-5 py-3 text-right hidden md:table-cell">{% trans "نوع الموعد" %}</th>
+                <th class="px-5 py-3 text-right">{% trans "الحالة" %}</th>
+                <th class="px-5 py-3 text-left">{% trans "إجراءات" %}</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
@@ -234,12 +235,12 @@
             <i class="fa-regular fa-calendar-xmark text-gray-400 dark:text-gray-500 text-xl"></i>
           </div>
           <div>
-            <p class="font-semibold text-gray-700 dark:text-gray-200">لا توجد مواعيد لهذا اليوم</p>
-            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">يمكنك حجز موعد جديد من الزر أعلاه</p>
+            <p class="font-semibold text-gray-700 dark:text-gray-200">{% trans "لا توجد مواعيد لهذا اليوم" %}</p>
+            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{% trans "يمكنك حجز موعد جديد من الزر أعلاه" %}</p>
           </div>
           <a href="{% url 'secretary:create_appointment' %}"
              class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold transition-colors mt-1">
-            <i class="fa-solid fa-plus text-xs"></i> حجز موعد
+            <i class="fa-solid fa-plus text-xs"></i> {% trans "حجز موعد" %}
           </a>
         </div>
         {% endif %}
@@ -254,7 +255,7 @@
       <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
         <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/50">
           <i class="fa-solid fa-stethoscope text-primary-500 text-sm"></i>
-          <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">حالة الأطباء اليوم</span>
+          <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">{% trans "حالة الأطباء اليوم" %}</span>
         </div>
         {# HTMX: refreshes every 60 seconds #}
         <div id="doctor-status-container"
@@ -281,7 +282,7 @@
       <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
         <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/50">
           <i class="fa-solid fa-clock-rotate-left text-primary-500 text-sm"></i>
-          <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">آخر النشاطات</span>
+          <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">{% trans "آخر النشاطات" %}</span>
         </div>
         {% if recent_activity %}
         <div class="divide-y divide-gray-100 dark:divide-slate-700">
@@ -313,13 +314,13 @@
         <div class="px-4 py-2.5 border-t border-gray-100 dark:border-slate-700">
           <a href="{% url 'appointments:secretary_notifications' %}"
              class="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1">
-            عرض كل الإشعارات <i class="fa-solid fa-arrow-left text-[10px]"></i>
+            {% trans "عرض كل الإشعارات" %} <i class="fa-solid fa-arrow-left text-[10px]"></i>
           </a>
         </div>
         {% else %}
         <div class="flex flex-col items-center py-8 gap-2 text-center px-4">
           <i class="fa-regular fa-clock text-gray-300 dark:text-slate-600 text-3xl"></i>
-          <p class="text-xs text-gray-400 dark:text-gray-500">لا توجد نشاطات حديثة</p>
+          <p class="text-xs text-gray-400 dark:text-gray-500">{% trans "لا توجد نشاطات حديثة" %}</p>
         </div>
         {% endif %}
       </div>

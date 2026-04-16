@@ -1,5 +1,6 @@
 {% extends "secretary/base_secretary.html" %}
-{% block title %}حجز موعد جديد{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "حجز موعد جديد" %}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -29,13 +30,13 @@
   <div class="flex items-center justify-between">
     <div>
       <h1 class="text-xl font-bold text-gray-900 dark:text-white">
-        {% if prefill_time %}تسجيل موعد — {{ prefill_time }}{% else %}حجز موعد جديد{% endif %}
+        {% if prefill_time %}{% trans "تسجيل موعد" %} — {{ prefill_time }}{% else %}{% trans "حجز موعد جديد" %}{% endif %}
       </h1>
       <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ clinic.name }}</p>
     </div>
     <a href="{% url 'secretary:appointments' %}"
        class="inline-flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
-      <i class="fa-solid fa-arrow-right text-xs"></i> العودة
+      <i class="fa-solid fa-arrow-right text-xs"></i> {% trans "العودة" %}
     </a>
   </div>
 
@@ -64,7 +65,7 @@
     {# ── Step 1: Patient ── #}
     <div class="step-card active bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-6" id="step-1">
       <h2 class="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">
-        <i class="fa-solid fa-user me-1.5"></i> اختيار المريض
+        <i class="fa-solid fa-user me-1.5"></i> {% trans "اختيار المريض" %}
       </h2>
 
       <div class="space-y-4">
@@ -77,16 +78,16 @@
               <p class="text-xs text-gray-500 dark:text-gray-400" id="selected-patient-phone" dir="ltr"></p>
             </div>
             <button type="button" onclick="clearPatient()"
-                    class="text-xs text-red-500 hover:text-red-700 font-semibold">تغيير</button>
+                    class="text-xs text-red-500 hover:text-red-700 font-semibold">{% trans "تغيير" %}</button>
           </div>
         </div>
 
         {# Search input #}
         <div id="patient-search-section">
           <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
-            بحث عن مريض <span class="text-red-500">*</span>
+            {% trans "بحث عن مريض" %} <span class="text-red-500">*</span>
           </label>
-          <input type="text" id="patient-search-input" placeholder="ابحث بالاسم أو رقم الهاتف..."
+          <input type="text" id="patient-search-input" placeholder="{% trans 'ابحث بالاسم أو رقم الهاتف...' %}"
                  autocomplete="off"
                  class="w-full text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500 transition"
                  hx-get="{% url 'secretary:patient_search' %}"
@@ -96,8 +97,8 @@
                  name="q_patient">
           <div id="patient-search-results" class="mt-2 rounded-xl border border-gray-200 dark:border-slate-600 overflow-hidden hidden"></div>
           <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
-            المريض غير موجود؟
-            <a href="{% url 'secretary:create_new_patient' %}" target="_blank" class="text-primary-600 dark:text-primary-400 hover:underline">سجّل مريضاً جديداً</a>
+            {% trans "المريض غير موجود؟" %}
+            <a href="{% url 'secretary:create_new_patient' %}" target="_blank" class="text-primary-600 dark:text-primary-400 hover:underline">{% trans "سجّل مريضاً جديداً" %}</a>
           </p>
         </div>
       </div>
@@ -106,7 +107,7 @@
         <button type="button" onclick="goToStep(2)" id="step1-next"
                 disabled
                 class="px-5 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-          التالي <i class="fa-solid fa-arrow-left text-xs me-1"></i>
+          {% trans "التالي" %} <i class="fa-solid fa-arrow-left text-xs me-1"></i>
         </button>
       </div>
     </div>
@@ -114,14 +115,14 @@
     {# ── Step 2: Doctor + Type + Date ── #}
     <div class="step-card bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-6" id="step-2">
       <h2 class="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">
-        <i class="fa-solid fa-stethoscope me-1.5"></i> تفاصيل الموعد
+        <i class="fa-solid fa-stethoscope me-1.5"></i> {% trans "تفاصيل الموعد" %}
       </h2>
 
       <div class="space-y-5">
         {# Doctor #}
         <div>
           <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
-            الطبيب <span class="text-red-500">*</span>
+            {% trans "الطبيب" %} <span class="text-red-500">*</span>
           </label>
           <select name="doctor_id" id="doctor-select" required
                   hx-get="{% url 'secretary:doctor_types_htmx' %}"
@@ -130,7 +131,7 @@
                   hx-include="[name='doctor_id']"
                   hx-swap="innerHTML"
                   class="w-full text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500 transition">
-            <option value="">— اختر الطبيب —</option>
+            <option value="">— {% trans "اختر الطبيب" %} —</option>
             {% for doc in doctor_users %}
             <option value="{{ doc.id }}">{{ doc.name }}</option>
             {% endfor %}
@@ -140,15 +141,15 @@
         {# Appointment type (HTMX reloaded) #}
         <div>
           <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
-            نوع الموعد <span class="text-red-500">*</span>
+            {% trans "نوع الموعد" %} <span class="text-red-500">*</span>
           </label>
           <div id="appt-type-container">
             <select name="appointment_type_id" id="appt-type-select" required
                     class="w-full text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500 transition">
-              <option value="">— اختر نوع الموعد —</option>
+              <option value="">— {% trans "اختر نوع الموعد" %} —</option>
               {% for at in appointment_types %}
               <option value="{{ at.id }}" data-duration="{{ at.duration_minutes }}" data-price="{{ at.price }}">
-                {{ at.display_name }} — {{ at.duration_minutes }} دقيقة
+                {{ at.display_name }} — {{ at.duration_minutes }} {% trans "دقيقة" %}
                 {% if at.price %}(₪{{ at.price }}){% endif %}
               </option>
               {% endfor %}
@@ -160,7 +161,7 @@
         {# Date #}
         <div>
           <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
-            تاريخ الموعد <span class="text-red-500">*</span>
+            {% trans "تاريخ الموعد" %} <span class="text-red-500">*</span>
           </label>
           <input type="date" name="appointment_date" id="appt-date-input" required
                  min="{{ today_str }}"
@@ -172,10 +173,10 @@
         <div>
           <div class="flex items-center justify-between mb-1.5">
             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200">
-              الوقت <span class="text-red-500">*</span>
+              {% trans "الوقت" %} <span class="text-red-500">*</span>
             </label>
             <span id="selected-time-label" class="text-xs text-primary-600 dark:text-primary-400 font-semibold hidden">
-              المختار: <span id="selected-time-display"></span>
+              {% trans "المختار:" %} <span id="selected-time-display"></span>
             </span>
           </div>
           <div id="time-slots-container"
@@ -184,7 +185,7 @@
                hx-include="#doctor-select, #appt-date-input, #appt-type-container select"
                hx-swap="innerHTML">
             <p class="text-xs text-gray-400 dark:text-gray-500 text-center py-6">
-              اختر الطبيب ونوع الموعد والتاريخ أولاً
+              {% trans "اختر الطبيب ونوع الموعد والتاريخ أولاً" %}
             </p>
           </div>
         </div>
@@ -193,12 +194,12 @@
       <div class="mt-6 flex items-center justify-between">
         <button type="button" onclick="goToStep(1)"
                 class="px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-300 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-          <i class="fa-solid fa-arrow-right text-xs me-1"></i> السابق
+          <i class="fa-solid fa-arrow-right text-xs me-1"></i> {% trans "السابق" %}
         </button>
         <button type="button" onclick="goToStep(3)" id="step2-next"
                 disabled
                 class="px-5 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-          التالي <i class="fa-solid fa-arrow-left text-xs me-1"></i>
+          {% trans "التالي" %} <i class="fa-solid fa-arrow-left text-xs me-1"></i>
         </button>
       </div>
     </div>
@@ -206,38 +207,38 @@
     {# ── Step 3: Notes & Confirm ── #}
     <div class="step-card bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-6" id="step-3">
       <h2 class="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">
-        <i class="fa-solid fa-clipboard-check me-1.5"></i> ملاحظات وتأكيد
+        <i class="fa-solid fa-clipboard-check me-1.5"></i> {% trans "ملاحظات وتأكيد" %}
       </h2>
 
       {# Summary card #}
       <div class="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 mb-5 text-sm space-y-2">
         <div class="flex justify-between">
-          <span class="text-gray-500 dark:text-gray-400">المريض</span>
+          <span class="text-gray-500 dark:text-gray-400">{% trans "المريض" %}</span>
           <span class="font-semibold text-gray-800 dark:text-gray-100" id="summary-patient">—</span>
         </div>
         <div class="flex justify-between">
-          <span class="text-gray-500 dark:text-gray-400">الطبيب</span>
+          <span class="text-gray-500 dark:text-gray-400">{% trans "الطبيب" %}</span>
           <span class="font-semibold text-gray-800 dark:text-gray-100" id="summary-doctor">—</span>
         </div>
         <div class="flex justify-between">
-          <span class="text-gray-500 dark:text-gray-400">نوع الموعد</span>
+          <span class="text-gray-500 dark:text-gray-400">{% trans "نوع الموعد" %}</span>
           <span class="font-semibold text-gray-800 dark:text-gray-100" id="summary-type">—</span>
         </div>
         <div class="flex justify-between">
-          <span class="text-gray-500 dark:text-gray-400">الوقت</span>
+          <span class="text-gray-500 dark:text-gray-400">{% trans "الوقت" %}</span>
           <span class="font-mono font-bold text-primary-600 dark:text-primary-400" id="summary-datetime">—</span>
         </div>
       </div>
 
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">سبب الزيارة</label>
-          <textarea name="reason" rows="2" placeholder="(اختياري) سبب الزيارة..."
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">{% trans "سبب الزيارة" %}</label>
+          <textarea name="reason" rows="2" placeholder="{% trans '(اختياري) سبب الزيارة...' %}"
                     class="w-full text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500 transition resize-none"></textarea>
         </div>
         <div>
-          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">ملاحظات داخلية</label>
-          <textarea name="notes" rows="2" placeholder="(اختياري) ملاحظات للطاقم..."
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">{% trans "ملاحظات داخلية" %}</label>
+          <textarea name="notes" rows="2" placeholder="{% trans '(اختياري) ملاحظات للطاقم...' %}"
                     class="w-full text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500 transition resize-none"></textarea>
         </div>
 
@@ -246,8 +247,8 @@
           <input type="checkbox" name="is_walkin" value="1" id="walkin-check"
                  class="w-4 h-4 mt-0.5 rounded text-blue-600 border-gray-300 focus:ring-blue-500 flex-shrink-0">
           <div>
-            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">حضور مباشر (Walk-in)</p>
-            <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">المريض موجود الآن — سيتم تسجيل حضوره فوراً</p>
+            <p class="text-sm font-semibold text-gray-800 dark:text-gray-100">{% trans "حضور مباشر" %}</p>
+            <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{% trans "المريض موجود الآن — سيتم تسجيل حضوره فوراً" %}</p>
           </div>
         </label>
       </div>
@@ -255,11 +256,11 @@
       <div class="mt-6 flex items-center justify-between">
         <button type="button" onclick="goToStep(2)"
                 class="px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-300 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-          <i class="fa-solid fa-arrow-right text-xs me-1"></i> السابق
+          <i class="fa-solid fa-arrow-right text-xs me-1"></i> {% trans "السابق" %}
         </button>
         <button type="submit"
                 class="px-6 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 active:scale-95 text-white text-sm font-bold transition-all shadow-sm">
-          <i class="fa-solid fa-calendar-check me-1.5"></i> تأكيد الحجز
+          <i class="fa-solid fa-calendar-check me-1.5"></i> {% trans "تأكيد الحجز" %}
         </button>
       </div>
     </div>
@@ -277,9 +278,9 @@ var currentStep = 1;
 var totalSteps = 3;
 
 var steps_config = [
-  {label: 'المريض'},
-  {label: 'الموعد'},
-  {label: 'التأكيد'},
+  {label: '{% trans "المريض" %}'},
+  {label: '{% trans "الموعد" %}'},
+  {label: '{% trans "التأكيد" %}'},
 ];
 
 // Pre-fill from query params
@@ -293,7 +294,7 @@ document.getElementById('appt-date-input').value = '{{ prefill_date }}';
 // ── Step navigation ──────────────────────────────────────────────────────────
 function goToStep(step) {
   if (step === 2 && !selectedPatient && !document.getElementById('hidden-patient-id').value) {
-    alert('يرجى اختيار مريض أولاً');
+    alert('{% trans "يرجى اختيار مريض أولاً" %}');
     return;
   }
   if (step === 3) {
@@ -301,7 +302,7 @@ function goToStep(step) {
     var type = document.querySelector('#appt-type-container select');
     var date = document.getElementById('appt-date-input');
     if (!doctor.value || !type || !type.value || !date.value || !selectedTime) {
-      alert('يرجى إكمال جميع بيانات الموعد (الطبيب، النوع، التاريخ، والوقت)');
+      alert('{% trans "يرجى إكمال جميع بيانات الموعد (الطبيب، النوع، التاريخ، والوقت)" %}');
       return;
     }
     updateSummary();
@@ -367,12 +368,11 @@ document.addEventListener('htmx:afterSwap', function(e) {
     if (results.innerHTML.trim()) {
       results.classList.remove('hidden');
       results.querySelectorAll('[data-patient-id]').forEach(function(row) {
-        // Disable HTMX on these buttons (we handle click ourselves)
         row.removeAttribute('hx-get');
         row.removeAttribute('hx-target');
         row.removeAttribute('hx-swap');
         row.removeAttribute('hx-indicator');
-        htmx.process(row);  // Re-process to clear HTMX bindings
+        htmx.process(row);
         row.addEventListener('click', function(ev) {
           ev.preventDefault();
           ev.stopPropagation();
@@ -385,7 +385,6 @@ document.addEventListener('htmx:afterSwap', function(e) {
       });
     }
   }
-  // After doctor types reload, re-attach slot refresh listener
   if (e.target.id === 'appt-type-container') {
     var sel = e.target.querySelector('select');
     if (sel) {
@@ -393,13 +392,11 @@ document.addEventListener('htmx:afterSwap', function(e) {
       showTypeMeta(sel);
     }
   }
-  // After time slots reload, re-attach click listeners
   if (e.target.id === 'time-slots-container') {
     attachSlotClicks();
   }
 });
 
-// Trigger slot refresh when doctor, type, or date changes
 function triggerSlotRefresh() {
   var doctor = document.getElementById('doctor-select').value;
   var date = document.getElementById('appt-date-input').value;
@@ -417,7 +414,6 @@ function triggerSlotRefresh() {
 document.getElementById('doctor-select').addEventListener('change', triggerSlotRefresh);
 document.getElementById('appt-date-input').addEventListener('change', triggerSlotRefresh);
 
-// Show type meta (duration/price)
 function showTypeMeta(sel) {
   if (!sel) return;
   sel.addEventListener('change', function() {
@@ -426,7 +422,7 @@ function showTypeMeta(sel) {
     var price = opt.dataset.price;
     var meta = document.getElementById('type-meta');
     if (dur) {
-      meta.textContent = 'المدة: ' + dur + ' دقيقة' + (price && price !== '0.00' ? ' — السعر: ₪' + price : '');
+      meta.textContent = '{% trans "المدة:" %} ' + dur + ' {% trans "دقيقة" %}' + (price && price !== '0.00' ? ' — {% trans "السعر:" %} ₪' + price : '');
       meta.classList.remove('hidden');
     } else {
       meta.classList.add('hidden');
@@ -436,7 +432,6 @@ function showTypeMeta(sel) {
 }
 showTypeMeta(document.querySelector('#appt-type-container select'));
 
-// ── Time slot selection ──────────────────────────────────────────────────────
 function attachSlotClicks() {
   document.querySelectorAll('.time-slot-btn:not(:disabled)').forEach(function(btn) {
     btn.addEventListener('click', function() {
@@ -450,7 +445,6 @@ function attachSlotClicks() {
       document.getElementById('step2-next').disabled = false;
     });
   });
-  // Restore prefill time selection
   {% if prefill_time %}
   document.querySelectorAll('.time-slot-btn').forEach(function(btn) {
     if (btn.dataset.time === '{{ prefill_time }}') btn.click();
@@ -459,7 +453,6 @@ function attachSlotClicks() {
 }
 attachSlotClicks();
 
-// ── Summary ──────────────────────────────────────────────────────────────────
 function updateSummary() {
   var patientName = selectedPatient ? selectedPatient.name :
     (document.getElementById('selected-patient-name').textContent || '—');
@@ -478,7 +471,6 @@ function updateSummary() {
     (dateVal || '—') + (selectedTime ? ' — ' + selectedTime : '');
 }
 
-// ── Init: if prefill_patient_id, enable step1-next ───────────────────────────
 {% if prefill_patient_id %}
 document.getElementById('step1-next').disabled = false;
 {% endif %}

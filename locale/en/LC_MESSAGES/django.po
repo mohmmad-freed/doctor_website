@@ -381,3 +381,865 @@ msgstr "English"
 
 msgid "تغيير اللغة"
 msgstr "Change Language"
+
+# ── Waiting Room ──────────────────────────────────────────────────────────────
+msgid "جميع الأطباء"
+msgstr "All Doctors"
+
+msgid "تسجيل وصول"
+msgstr "Check In"
+
+msgid "شاشة الانتظار"
+msgstr "Waiting Screen"
+
+msgid "فتح شاشة العرض"
+msgstr "Open Display Screen"
+
+msgid "ينتظرون الآن"
+msgstr "Waiting Now"
+
+msgid "مواعيد مؤكدة"
+msgstr "Confirmed Appointments"
+
+msgid "د"
+msgstr "m"
+
+msgid "متوسط الانتظار"
+msgstr "Avg. Wait"
+
+msgid "أطباء اليوم"
+msgstr "Today's Doctors"
+
+msgid "مواعيد مؤكدة اليوم"
+msgstr "Today's Confirmed"
+
+msgid "تحديث كل 30 ث"
+msgstr "Auto-refresh every 30s"
+
+msgid "طابور الانتظار"
+msgstr "Queue"
+
+msgid "وصل"
+msgstr "Arrived"
+
+msgid "تفاصيل الموعد"
+msgstr "Appointment Details"
+
+msgid "لا توجد مواعيد مؤكدة اليوم"
+msgstr "No confirmed appointments today"
+
+msgid "إضافة موعد"
+msgstr "Add Appointment"
+
+msgid "استدعاء المريض"
+msgstr "Call Patient"
+
+msgid "استدعاء"
+msgstr "Call"
+
+msgid "إزالة من الطابور"
+msgstr "Remove from Queue"
+
+msgid "تفاصيل"
+msgstr "Details"
+
+msgid "الطابور فارغ — لا يوجد مرضى في الانتظار"
+msgstr "Queue is empty — no patients waiting"
+
+msgid "تسجيل وصول مريض"
+msgstr "Check In Patient"
+
+# ── Check-in Search ───────────────────────────────────────────────────────────
+msgid "ابحث عن المريض"
+msgstr "Search for Patient"
+
+msgid "الاسم، رقم الهاتف، أو رقم الملف..."
+msgstr "Name, phone, or file number..."
+
+msgid "ابحث بالاسم الكامل أو جزء منه، رقم الهاتف، أو رقم الملف"
+msgstr "Search by full name or part of it, phone number, or file number"
+
+msgid "عرض الملف"
+msgstr "View File"
+
+msgid "تم تسجيل الوصول"
+msgstr "Checked In"
+
+msgid "مع الطبيب الآن"
+msgstr "With Doctor Now"
+
+msgid "سجّل الوصول"
+msgstr "Check In"
+
+msgid "وصول مباشر"
+msgstr "Walk-in"
+
+msgid "لا توجد مواعيد مسجلة لهذا المريض اليوم"
+msgstr "No appointments registered for this patient today"
+
+msgid "إضافة موعد حضوري"
+msgstr "Add Walk-in Appointment"
+
+msgid "لم يُعثر على مريض"
+msgstr "Patient Not Found"
+
+msgid "تسجيل مريض جديد"
+msgstr "Register New Patient"
+
+msgid "أدخل اسم المريض أو رقم هاتفه أو رقم ملفه للبحث عن مواعيده اليوم"
+msgstr "Enter patient name, phone number, or file number to search for today's appointments"
+
+msgid "هل تريد إزالة"
+msgstr "Do you want to remove"
+
+msgid "من طابور الانتظار؟"
+msgstr "from the waiting queue?"
+
+msgid "سبب الإزالة"
+msgstr "Removal Reason"
+
+msgid "اختياري..."
+msgstr "Optional..."
+
+msgid "تأكيد الإزالة"
+msgstr "Confirm Removal"
+
+# ── Patient search ────────────────────────────────────────────────────────────
+msgid "ابدأ الكتابة للبحث..."
+msgstr "Start typing to search..."
+
+msgid "تأكد من صحة الاسم أو الرقم — المريض يجب أن يكون لديه حساب على المنصة"
+msgstr "Check the name or number — the patient must have an account on the platform"
+
+msgid "إنشاء حساب مريض جديد"
+msgstr "Create New Patient Account"
+
+# ── Appointment status actions ────────────────────────────────────────────────
+msgid "وصل المريض"
+msgstr "Patient Arrived"
+
+msgid "بدء الجلسة"
+msgstr "Start Session"
+
+msgid "اكتمل"
+msgstr "Completed"
+
+msgid "هل لم يحضر المريض؟"
+msgstr "Did the patient not show up?"
+
+# ── Patients ──────────────────────────────────────────────────────────────────
+msgid "الاسم الكامل"
+msgstr "Full Name"
+
+msgid "رقم الهاتف"
+msgstr "Phone Number"
+
+msgid "رقم الهوية الوطنية"
+msgstr "National ID"
+
+msgid "المدينة"
+msgstr "City"
+
+msgid "البيانات الشخصية"
+msgstr "Personal Information"
+
+msgid "بيانات التواصل الأساسية"
+msgstr "Contact Information"
+
+msgid "جهة الاتصال في الطوارئ"
+msgstr "Emergency Contact"
+
+msgid "اسم المريض الرباعي"
+msgstr "Patient's full name"
+
+msgid "059 أو 056 — 10 أرقام"
+msgstr "059 or 056 — 10 digits"
+
+msgid "— اختر مدينة —"
+msgstr "— Select a city —"
+
+msgid "— اختر —"
+msgstr "— Select —"
+
+msgid "غير محدد"
+msgstr "Other"
+
+msgid "— غير محددة —"
+msgstr "— Not specified —"
+
+msgid "ملاحظات داخلية للعيادة (اختياري)..."
+msgstr "Internal clinic notes (optional)..."
+
+msgid "سيُنشئ النظام رقم ملف تلقائياً لهذا المريض."
+msgstr "The system will automatically create a file number for this patient."
+
+msgid "تسجيل المريض"
+msgstr "Register Patient"
+
+msgid "رقم الملف"
+msgstr "File Number"
+
+msgid "آخر زيارة"
+msgstr "Last Visit"
+
+msgid "عدد الزيارات"
+msgstr "Visit Count"
+
+msgid "تاريخ التسجيل"
+msgstr "Registration Date"
+
+msgid "إجراءات"
+msgstr "Actions"
+
+msgid "لا توجد زيارات"
+msgstr "No visits"
+
+msgid "عرض ملف المريض"
+msgstr "View Patient File"
+
+msgid "تعديل بيانات المريض"
+msgstr "Edit Patient"
+
+msgid "حجز موعد للمريض"
+msgstr "Book Appointment for Patient"
+
+msgid "حجز موعد"
+msgstr "Book Appointment"
+
+msgid "لا يوجد مرضى مسجلون"
+msgstr "No patients registered"
+
+msgid "الاسم أ-ي"
+msgstr "Name A-Z"
+
+msgid "الاسم ي-أ"
+msgstr "Name Z-A"
+
+msgid "الأحدث تسجيلاً"
+msgstr "Recently Registered"
+
+msgid "الأقدم تسجيلاً"
+msgstr "Oldest Registration"
+
+msgid "مسح"
+msgstr "Clear"
+
+msgid "لا يوجد مرضى مسجلون بعد"
+msgstr "No patients registered yet"
+
+msgid "تسجيل أول مريض"
+msgstr "Register First Patient"
+
+msgid "ابحث بالاسم أو الهاتف أو رقم الملف..."
+msgstr "Search by name, phone, or file number..."
+
+# ── Patient detail ────────────────────────────────────────────────────────────
+msgid "بيانات التواصل"
+msgstr "Contact Details"
+
+msgid "البيانات الطبية"
+msgstr "Medical Data"
+
+msgid "البريد الإلكتروني"
+msgstr "Email"
+
+msgid "الحساسية"
+msgstr "Allergies"
+
+msgid "ملاحظات العيادة"
+msgstr "Clinic Notes"
+
+msgid "الدكتور"
+msgstr "Doctor"
+
+msgid "لا توجد مواعيد مسجلة"
+msgstr "No appointments registered"
+
+msgid "حجز أول موعد"
+msgstr "Book First Appointment"
+
+msgid "لا توجد سجلات طبية"
+msgstr "No medical records"
+
+msgid "تنزيل"
+msgstr "Download"
+
+msgid "إجمالي الفواتير"
+msgstr "Total Invoices"
+
+msgid "إجمالي المدفوع"
+msgstr "Total Paid"
+
+msgid "رصيد مستحق"
+msgstr "Balance Due"
+
+msgid "فاتورة"
+msgstr "Invoice"
+
+msgid "لا توجد فواتير"
+msgstr "No invoices"
+
+# ── Patient edit ──────────────────────────────────────────────────────────────
+msgid "رقم الهاتف والهوية الوطنية والتاريخ الطبي محمية — لا يمكن تعديلها من هنا."
+msgstr "Phone number, national ID, and medical history are protected — cannot be edited here."
+
+msgid "حفظ التعديلات"
+msgstr "Save Changes"
+
+msgid "معلومات طبية"
+msgstr "Medical Information"
+
+msgid "أدخل أي حساسية معروفة..."
+msgstr "Enter any known allergies..."
+
+msgid "ملاحظات داخلية للعيادة..."
+msgstr "Internal clinic notes..."
+
+# ── Settings / Profile ────────────────────────────────────────────────────────
+msgid "إدارة معلوماتك الشخصية وإعدادات الحساب"
+msgstr "Manage your personal information and account settings"
+
+msgid "موثق"
+msgstr "Verified"
+
+msgid "المعلومات الشخصية"
+msgstr "Personal Information"
+
+msgid "أدخل اسمك الكامل"
+msgstr "Enter your full name"
+
+msgid "تغيير البريد الإلكتروني يتطلب التحقق عبر رمز يُرسل للعنوان الجديد."
+msgstr "Changing email requires verification via a code sent to the new address."
+
+msgid "رقم الهاتف هو معرّف الحساب ولا يمكن تغييره."
+msgstr "Phone number is the account identifier and cannot be changed."
+
+msgid "— اختر المدينة —"
+msgstr "— Select City —"
+
+msgid "تغيير كلمة المرور"
+msgstr "Change Password"
+
+msgid "كلمة المرور الحالية"
+msgstr "Current Password"
+
+msgid "كلمة المرور الجديدة"
+msgstr "New Password"
+
+msgid "تأكيد كلمة المرور"
+msgstr "Confirm Password"
+
+msgid "8 أحرف على الأقل"
+msgstr "At least 8 characters"
+
+msgid "التفضيلات"
+msgstr "Preferences"
+
+msgid "المظهر"
+msgstr "Appearance"
+
+msgid "الوضع الليلي أو النهاري"
+msgstr "Dark or light mode"
+
+msgid "نهاري"
+msgstr "Light"
+
+msgid "ليلي"
+msgstr "Dark"
+
+msgid "عرض التقويم الافتراضي"
+msgstr "Default Calendar View"
+
+msgid "العرض المفضل عند فتح التقويم"
+msgstr "Preferred view when opening calendar"
+
+msgid "شهري"
+msgstr "Monthly"
+
+msgid "أسبوعي"
+msgstr "Weekly"
+
+msgid "يومي"
+msgstr "Daily"
+
+msgid "قائمة"
+msgstr "List"
+
+msgid "مدة الموعد الافتراضية"
+msgstr "Default Appointment Duration"
+
+msgid "للاقتراح التلقائي عند الحجز"
+msgstr "For automatic suggestion when booking"
+
+msgid "15 دقيقة"
+msgstr "15 minutes"
+
+msgid "20 دقيقة"
+msgstr "20 minutes"
+
+msgid "30 دقيقة"
+msgstr "30 minutes"
+
+msgid "45 دقيقة"
+msgstr "45 minutes"
+
+msgid "ساعة"
+msgstr "1 hour"
+
+msgid "العيادة المرتبطة"
+msgstr "Assigned Clinic"
+
+msgid "نشط"
+msgstr "Active"
+
+msgid "غير نشط"
+msgstr "Inactive"
+
+# ── Schedule ──────────────────────────────────────────────────────────────────
+msgid "الأسبوع:"
+msgstr "Week:"
+
+msgid "الأسبوع السابق"
+msgstr "Previous Week"
+
+msgid "هذا الأسبوع"
+msgstr "This Week"
+
+msgid "الأسبوع التالي"
+msgstr "Next Week"
+
+msgid "حجب وقت طبيب"
+msgstr "Block Doctor Time"
+
+msgid "متاح"
+msgstr "Available"
+
+msgid "لديه مواعيد"
+msgstr "Has Appointments"
+
+msgid "محجوب"
+msgstr "Blocked"
+
+msgid "لا يعمل"
+msgstr "Off"
+
+msgid "مواعيد اليوم"
+msgstr "Today's Appointments"
+
+msgid "حجب وقت"
+msgstr "Block Time"
+
+msgid "لا يوجد أطباء مسجلون في هذه العيادة"
+msgstr "No doctors registered in this clinic"
+
+msgid "الأوقات المحجوبة القادمة"
+msgstr "Upcoming Blocked Times"
+
+msgid "+ إضافة حجب"
+msgstr "+ Add Block"
+
+msgid "أضافه:"
+msgstr "Added by:"
+
+msgid "هل تريد إلغاء حجب الوقت هذا؟"
+msgstr "Do you want to remove this time block?"
+
+msgid "إلغاء الحجب"
+msgstr "Remove Block"
+
+msgid "هل تريد إلغاء هذا الحجب؟"
+msgstr "Do you want to remove this block?"
+
+msgid "إضافة غياب أو إجازة أو حجب يدوي لفترة محددة"
+msgstr "Add absence, vacation, or manual block for a specific period"
+
+msgid "حجب الوقت يوقف إنشاء مواعيد جديدة للطبيب في هذه الفترة. المواعيد الموجودة مسبقاً لن تُلغى تلقائياً."
+msgstr "Blocking time prevents new appointments for the doctor during this period. Existing appointments will not be cancelled automatically."
+
+msgid "بيانات الحجب"
+msgstr "Block Details"
+
+msgid "— اختر الطبيب —"
+msgstr "— Select Doctor —"
+
+msgid "من تاريخ"
+msgstr "From Date"
+
+msgid "إلى تاريخ"
+msgstr "To Date"
+
+msgid "سبب الغياب"
+msgstr "Absence Reason"
+
+msgid "— اختر السبب —"
+msgstr "— Select Reason —"
+
+msgid "سبب آخر"
+msgstr "Other Reason"
+
+msgid "اكتب السبب..."
+msgstr "Write the reason..."
+
+msgid "تأكيد الحجب"
+msgstr "Confirm Block"
+
+msgid "تأكيد الحجب رغم ذلك"
+msgstr "Confirm Block Anyway"
+
+msgid "الاثنين"
+msgstr "Monday"
+
+msgid "الثلاثاء"
+msgstr "Tuesday"
+
+msgid "الأربعاء"
+msgstr "Wednesday"
+
+msgid "الخميس"
+msgstr "Thursday"
+
+msgid "الجمعة"
+msgstr "Friday"
+
+msgid "السبت"
+msgstr "Saturday"
+
+msgid "الأحد"
+msgstr "Sunday"
+
+msgid "حجز"
+msgstr "Book"
+
+# ── Reports ───────────────────────────────────────────────────────────────────
+msgid "تحليلات ومؤشرات أداء العيادة"
+msgstr "Clinic performance analytics and indicators"
+
+msgid "اليوم"
+msgstr "Today"
+
+msgid "إجمالي المواعيد"
+msgstr "Total Appointments"
+
+msgid "مكتملة"
+msgstr "Completed"
+
+msgid "لم يحضروا"
+msgstr "No Shows"
+
+msgid "هذا الشهر"
+msgstr "This Month"
+
+msgid "إجمالي"
+msgstr "Total"
+
+msgid "ملغاة"
+msgstr "Cancelled"
+
+msgid "تقرير المواعيد اليومي"
+msgstr "Daily Appointments Report"
+
+msgid "قائمة مواعيد يوم محدد مع تفصيل الحالات وتوزيع الأطباء"
+msgstr "Appointments list for a specific day with status breakdown and doctor distribution"
+
+msgid "تقرير زيارات المرضى"
+msgstr "Patient Visits Report"
+
+msgid "الزيارات خلال فترة زمنية مع تمييز المرضى الجدد والمتكررين"
+msgstr "Visits over a time period with distinction between new and returning patients"
+
+msgid "تقرير الغياب والإلغاء"
+msgstr "Absence & Cancellation Report"
+
+msgid "نسب الغياب والإلغاء مع أسباب الإلغاء وأكثر المرضى غياباً"
+msgstr "Absence and cancellation rates with reasons and top absent patients"
+
+msgid "تقرير أداء الأطباء"
+msgstr "Doctor Performance Report"
+
+msgid "استخدام الجلسات، نسبة الإنجاز، متوسط المواعيد اليومية لكل طبيب"
+msgstr "Session utilization, completion rate, average daily appointments per doctor"
+
+msgid "تصدير CSV"
+msgstr "Export CSV"
+
+msgid "عرض"
+msgstr "View"
+
+msgid "لا توجد مواعيد في هذا اليوم"
+msgstr "No appointments on this day"
+
+msgid "توزيع الحالات"
+msgstr "Status Distribution"
+
+msgid "أداء الأطباء"
+msgstr "Doctor Performance"
+
+msgid "إجمالي الزيارات"
+msgstr "Total Visits"
+
+msgid "مرضى مختلفون"
+msgstr "Unique Patients"
+
+msgid "مرضى جدد"
+msgstr "New Patients"
+
+msgid "مرضى متكررون"
+msgstr "Returning Patients"
+
+msgid "نسبة المرضى الجدد والمتكررين"
+msgstr "New vs Returning Patients Rate"
+
+msgid "تفاصيل الزيارات"
+msgstr "Visit Details"
+
+msgid "لا توجد زيارات في هذه الفترة"
+msgstr "No visits in this period"
+
+msgid "نسبة الغياب"
+msgstr "No-show Rate"
+
+msgid "نسبة الإلغاء"
+msgstr "Cancellation Rate"
+
+msgid "توزيع الغياب حسب أيام الأسبوع"
+msgstr "Absence Distribution by Day of Week"
+
+msgid "أكثر المرضى غياباً"
+msgstr "Top Absent Patients"
+
+msgid "لا يوجد غياب أو إلغاء في هذه الفترة"
+msgstr "No absences or cancellations in this period"
+
+msgid "المواعيد المحجوزة — مقارنة بين الأطباء"
+msgstr "Booked Appointments — Doctor Comparison"
+
+msgid "تفاصيل الأداء"
+msgstr "Performance Details"
+
+msgid "مجدولة"
+msgstr "Scheduled"
+
+msgid "محجوزة"
+msgstr "Booked"
+
+msgid "غياب"
+msgstr "Absences"
+
+msgid "الاستخدام"
+msgstr "Utilization"
+
+msgid "متوسط يومي"
+msgstr "Daily Avg."
+
+msgid "أكثر خدمة"
+msgstr "Top Service"
+
+msgid "لا توجد بيانات أطباء لهذه الفترة"
+msgstr "No doctor data for this period"
+
+msgid "استخدام عالٍ (≥ 80%)"
+msgstr "High utilization (≥ 80%)"
+
+msgid "استخدام متوسط (50–79%)"
+msgstr "Medium utilization (50–79%)"
+
+msgid "استخدام منخفض (< 50%)"
+msgstr "Low utilization (< 50%)"
+
+# ── Dashboard ─────────────────────────────────────────────────────────────────
+msgid "مجموع اليوم"
+msgstr "Today's Total"
+
+msgid "في الانتظار"
+msgstr "Waiting"
+
+msgid "وصل"
+msgstr "Arrived"
+
+msgid "جارٍ"
+msgstr "In Progress"
+
+msgid "إيرادات"
+msgstr "Revenue"
+
+msgid "ملغى"
+msgstr "Cancelled"
+
+msgid "حجز موعد"
+msgstr "Book Appointment"
+
+msgid "تسجيل مريض"
+msgstr "Register Patient"
+
+msgid "مواعيد اليوم"
+msgstr "Today's Appointments"
+
+msgid "حالة الأطباء اليوم"
+msgstr "Doctor Status Today"
+
+msgid "آخر النشاطات"
+msgstr "Recent Activity"
+
+msgid "الوقت"
+msgstr "Time"
+
+msgid "نوع الموعد"
+msgstr "Appointment Type"
+
+msgid "لا يوجد أطباء مسجلون في العيادة"
+msgstr "No doctors registered in the clinic"
+
+msgid "مع:"
+msgstr "With:"
+
+# ── Time slots / appointment types ────────────────────────────────────────────
+msgid "لا توجد مواعيد متاحة في هذا اليوم لهذا الطبيب."
+msgstr "No available appointments on this day for this doctor."
+
+msgid "دقيقة"
+msgstr "minute"
+
+msgid "المدة: {{ dur }} دقيقة لكل موعد"
+msgstr "Duration: {{ dur }} minute per appointment"
+
+msgid "— اختر نوع الموعد —"
+msgstr "— Select Appointment Type —"
+
+msgid "لا توجد أنواع مواعيد مُفعَّلة لهذا الطبيب في هذه العيادة."
+msgstr "No active appointment types for this doctor in this clinic."
+
+# ── Coming soon ───────────────────────────────────────────────────────────────
+msgid "هذه الصفحة قيد التطوير حالياً وستكون متاحة قريباً."
+msgstr "This page is currently under development and will be available soon."
+
+msgid "يمكنك العودة إلى لوحة التحكم في الوقت الحالي."
+msgstr "You can return to the dashboard for now."
+
+msgid "العودة للوحة التحكم"
+msgstr "Back to Dashboard"
+
+# ── Common forms ──────────────────────────────────────────────────────────────
+msgid "يرجى تصحيح الأخطاء التالية:"
+msgstr "Please correct the following errors:"
+
+msgid "العودة إلى قائمة المرضى"
+msgstr "Back to patients list"
+
+msgid "العودة إلى الملف الشخصي"
+msgstr "Back to profile"
+
+msgid "اختياري"
+msgstr "Optional"
+
+msgid "السابق"
+msgstr "Previous"
+
+# ── Patient Card (HTMX partial) ───────────────────────────────────────────────
+msgid "تأكيد هوية المريض"
+msgstr "Confirm Patient Identity"
+
+msgid "تغيير"
+msgstr "Change"
+
+msgid "هذا المريض مسجل بالفعل في عيادة {{ name }}"
+msgstr "This patient is already registered in clinic {{ name }}"
+
+msgid "لا يمكن تسجيله مرة أخرى في نفس العيادة."
+msgstr "Cannot register them again in the same clinic."
+
+msgid "رقم الهوية غير متوفر"
+msgstr "ID number not available"
+
+msgid "{{ a }} سنة"
+msgstr "{{ a }} years old"
+
+msgid "تاريخ الميلاد غير متوفر"
+msgstr "Date of birth not available"
+
+msgid "مسجل في:"
+msgstr "Registered in:"
+
+msgid "بيانات التسجيل"
+msgstr "Registration Data"
+
+msgid "الحقول المميزة بـ مُعبَّأ تلقائياً مأخوذة من ملف المريض. يمكنك تعديلها وستُحفظ عند التسجيل. الحقول الفارغة تحتاج تعبئة يدوية."
+msgstr "Fields marked as Auto-filled are taken from the patient file. You can edit them and they will be saved upon registration. Empty fields need manual entry."
+
+msgid "مُعبَّأ تلقائياً"
+msgstr "Auto-filled"
+
+msgid "مطلوب — غير متوفر"
+msgstr "Required — Not Available"
+
+msgid "غير متوفر"
+msgstr "Not Available"
+
+msgid "أدخل رقم الهوية"
+msgstr "Enter ID number"
+
+msgid "لم يُسجَّل رقم الهوية في الملف — يُرجى إدخاله"
+msgstr "ID number not recorded in file — please enter it"
+
+msgid "رقم الهوية مطلوب"
+msgstr "ID number is required"
+
+msgid "تسجيل المريض في العيادة"
+msgstr "Register Patient in Clinic"
+
+msgid "أي ملاحظات إضافية للسجل الطبي..."
+msgstr "Any additional notes for the medical record..."
+
+msgid "جاري التسجيل..."
+msgstr "Registering..."
+
+# ── Reports — shared strings ───────────────────────────────────────────────────
+msgid "العودة إلى التقارير"
+msgstr "Back to Reports"
+
+msgid "من تاريخ"
+msgstr "From Date"
+
+msgid "إلى تاريخ"
+msgstr "To Date"
+
+msgid "الجلسات المجدولة في الفترة"
+msgstr "Sessions scheduled in the period"
+
+msgid "الجلسات المجدولة = مجموع نوبات العمل × عدد أيام الفترة"
+msgstr "Scheduled sessions = sum of work shifts × number of days in the period"
+
+msgid "الشريط = إجمالي المواعيد"
+msgstr "Bar = total appointments"
+
+msgid "النسبة = الاستخدام (محجوز ÷ مجدول)"
+msgstr "Percentage = utilization (booked ÷ scheduled)"
+
+msgid "جدد ({{ n }})"
+msgstr "New ({{ n }})"
+
+msgid "متكررون ({{ n }})"
+msgstr "Returning ({{ n }})"
+
+msgid "تفاصيل الزيارات ({{ t }})"
+msgstr "Visit Details ({{ t }})"
+
+msgid "قائمة المواعيد ({{ t }})"
+msgstr "Appointments List ({{ t }})"
+
+msgid "لم يحضر"
+msgstr "No Show"
+
+msgid "{{ cnt }} مرة"
+msgstr "{{ cnt }} times"
+
+msgid "الغياب ({{ n }})"
+msgstr "Absences ({{ n }})"
+
+msgid "الإلغاءات ({{ n }})"
+msgstr "Cancellations ({{ n }})"
+
+msgid "سبب الإلغاء"
+msgstr "Cancellation Reason"
+
+msgid "إجمالي المرضى"
+msgstr "Total Patients"

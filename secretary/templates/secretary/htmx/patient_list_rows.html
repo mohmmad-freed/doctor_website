@@ -1,4 +1,4 @@
-{% load static %}
+{% load static i18n %}
 {# HTMX partial — returned by secretary:patient_list_htmx #}
 {% for cp in clinic_patients %}
   {% include "secretary/htmx/patient_list_row.html" with cp=cp %}
@@ -6,9 +6,9 @@
 <tr>
   <td colspan="7" class="px-4 py-10 text-center text-sm text-gray-400 dark:text-gray-500">
     {% if search %}
-    <i class="fa-solid fa-magnifying-glass-minus me-2"></i>لا توجد نتائج لـ "{{ search }}"
+    <i class="fa-solid fa-magnifying-glass-minus me-2"></i>{% blocktrans with q=search %}لا توجد نتائج لـ "{{ q }}"{% endblocktrans %}
     {% else %}
-    لا يوجد مرضى مسجلون
+    {% trans "لا يوجد مرضى مسجلون" %}
     {% endif %}
   </td>
 </tr>

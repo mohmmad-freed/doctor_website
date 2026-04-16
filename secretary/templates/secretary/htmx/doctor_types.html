@@ -1,21 +1,22 @@
 {# HTMX partial — appointment types for a specific doctor.
    Rendered by: secretary:doctor_types_htmx
    Target: #appt-type-container in create.html #}
+{% load i18n %}
 
 <select name="appointment_type_id" id="appt-type-select" required
         class="w-full text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500 transition">
-  <option value="">— اختر نوع الموعد —</option>
+  <option value="">{% trans "— اختر نوع الموعد —" %}</option>
   {% for at in appointment_types %}
   <option value="{{ at.id }}"
           data-duration="{{ at.duration_minutes }}"
           data-price="{{ at.price }}">
-    {{ at.display_name }} — {{ at.duration_minutes }} دقيقة{% if at.price %} (₪{{ at.price }}){% endif %}
+    {{ at.display_name }} — {{ at.duration_minutes }} {% trans "دقيقة" %}{% if at.price %} (₪{{ at.price }}){% endif %}
   </option>
   {% endfor %}
 </select>
 {% if not appointment_types %}
 <p class="text-xs text-amber-600 dark:text-amber-400 mt-1.5 flex items-center gap-1">
   <i class="fa-solid fa-triangle-exclamation"></i>
-  لا توجد أنواع مواعيد مُفعَّلة لهذا الطبيب في هذه العيادة.
+  {% trans "لا توجد أنواع مواعيد مُفعَّلة لهذا الطبيب في هذه العيادة." %}
 </p>
 {% endif %}

@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}HTMX partial — doctor status strip for dashboard. Rendered by: secretary:doctor_status_htmx. Target: #doctor-status-container{% endcomment %}
 {% if doctor_statuses %}
 <div class="px-4 py-3 space-y-3">
@@ -13,9 +14,9 @@
     <div class="flex-1 min-w-0">
       <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{{ ds.doctor.name }}</p>
       {% if ds.status == 'with_patient' and ds.in_progress_patient %}
-      <p class="text-xs text-gray-400 dark:text-gray-500 truncate">مع: {{ ds.in_progress_patient.name }}</p>
+      <p class="text-xs text-gray-400 dark:text-gray-500 truncate">{% trans "مع:" %} {{ ds.in_progress_patient.name }}</p>
       {% else %}
-      <p class="text-xs text-gray-400 dark:text-gray-500">{{ ds.today_count }} موعد اليوم</p>
+      <p class="text-xs text-gray-400 dark:text-gray-500">{% blocktrans with count=ds.today_count %}{{ count }} موعد اليوم{% endblocktrans %}</p>
       {% endif %}
     </div>
     {# Status badge #}
@@ -37,6 +38,6 @@
 {% else %}
 <div class="flex flex-col items-center py-8 gap-2 text-center px-4">
   <i class="fa-solid fa-stethoscope text-gray-200 dark:text-slate-600 text-3xl"></i>
-  <p class="text-xs text-gray-400 dark:text-gray-500">لا يوجد أطباء مسجلون في العيادة</p>
+  <p class="text-xs text-gray-400 dark:text-gray-500">{% trans "لا يوجد أطباء مسجلون في العيادة" %}</p>
 </div>
 {% endif %}

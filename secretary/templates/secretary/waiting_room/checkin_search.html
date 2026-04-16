@@ -1,7 +1,7 @@
 {% extends "secretary/base_secretary.html" %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}تسجيل الوصول — {{ clinic.name }}{% endblock %}
+{% block title %}{% trans "تسجيل الوصول" %} — {{ clinic.name }}{% endblock %}
 
 {% block content %}
 <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -13,7 +13,7 @@
       <i class="fa-solid fa-arrow-right"></i>
     </a>
     <div>
-      <h1 class="text-xl font-bold text-gray-900 dark:text-white">تسجيل الوصول</h1>
+      <h1 class="text-xl font-bold text-gray-900 dark:text-white">{% trans "تسجيل الوصول" %}</h1>
       <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ today|date:"l، j F Y" }}</p>
     </div>
   </div>
@@ -22,7 +22,7 @@
   <form method="get"
         class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
     <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
-      ابحث عن المريض
+      {% trans "ابحث عن المريض" %}
     </label>
     <div class="flex gap-3">
       <div class="relative flex-1">
@@ -31,17 +31,17 @@
                name="q"
                autofocus
                value="{{ search }}"
-               placeholder="الاسم، رقم الهاتف، أو رقم الملف..."
+               placeholder="{% trans 'الاسم، رقم الهاتف، أو رقم الملف...' %}"
                class="w-full pr-9 pl-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
       </div>
       <button type="submit"
               class="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold shadow transition-colors">
-        بحث
+        {% trans "بحث" %}
       </button>
     </div>
     <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">
       <i class="fa-solid fa-info-circle me-1"></i>
-      ابحث بالاسم الكامل أو جزء منه، رقم الهاتف (059...)، أو رقم الملف (YYYY-NNNN)
+      {% trans "ابحث بالاسم الكامل أو جزء منه، رقم الهاتف، أو رقم الملف" %}
     </p>
   </form>
 
@@ -71,14 +71,14 @@
         </div>
         <a href="{% url 'secretary:patient_detail' found_patient.id %}"
            class="text-sm text-purple-600 dark:text-purple-400 hover:underline font-medium flex-shrink-0">
-          عرض الملف
+          {% trans "عرض الملف" %}
         </a>
       </div>
 
       {# Today's appointments #}
       <div class="p-5">
         <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">
-          مواعيد اليوم ({{ today_appointments|length }})
+          {% blocktrans with count=today_appointments|length %}مواعيد اليوم ({{ count }}){% endblocktrans %}
         </h3>
 
         {% if today_appointments %}
@@ -100,10 +100,10 @@
             {# Info #}
             <div class="flex-1 min-w-0">
               <div class="font-semibold text-gray-900 dark:text-gray-100">
-                {{ appt.appointment_type.display_name|default:"موعد" }}
+                {{ appt.appointment_type.display_name|default:"{% trans 'موعد' %}" }}
               </div>
               <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                د. {{ appt.doctor.name|default:"—" }}
+                {% trans "د." %} {{ appt.doctor.name|default:"—" }}
               </div>
             </div>
 
@@ -112,24 +112,23 @@
               <span class="status-badge status-{{ appt.status|lower }}">{{ appt.get_status_display }}</span>
 
               {% if appt.status == 'CONFIRMED' %}
-              {# One-click check-in #}
               <form method="post" action="{% url 'secretary:checkin_appointment' appt.id %}">
                 {% csrf_token %}
                 <input type="hidden" name="next" value="{% url 'secretary:waiting_room' %}">
                 <button type="submit"
                         class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow transition-colors">
-                  <i class="fa-solid fa-user-check text-xs"></i> سجّل الوصول
+                  <i class="fa-solid fa-user-check text-xs"></i> {% trans "سجّل الوصول" %}
                 </button>
               </form>
 
               {% elif appt.status == 'CHECKED_IN' %}
               <span class="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 text-xs font-medium">
-                <i class="fa-solid fa-circle-check"></i> تم تسجيل الوصول
+                <i class="fa-solid fa-circle-check"></i> {% trans "تم تسجيل الوصول" %}
               </span>
 
               {% elif appt.status == 'IN_PROGRESS' %}
               <span class="inline-flex items-center gap-1 text-purple-600 dark:text-purple-400 text-xs font-medium">
-                <i class="fa-solid fa-stethoscope"></i> مع الطبيب الآن
+                <i class="fa-solid fa-stethoscope"></i> {% trans "مع الطبيب الآن" %}
               </span>
 
               {% elif appt.status == 'PENDING' %}
@@ -138,7 +137,7 @@
                 <input type="hidden" name="next" value="{% url 'secretary:waiting_room' %}">
                 <button type="submit"
                         class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold shadow transition-colors">
-                  <i class="fa-solid fa-user-check text-xs"></i> وصول مباشر
+                  <i class="fa-solid fa-user-check text-xs"></i> {% trans "وصول مباشر" %}
                 </button>
               </form>
               {% endif %}
@@ -152,10 +151,10 @@
         {# No appointments today — offer walk-in booking #}
         <div class="flex flex-col items-center py-6 gap-3 text-sm text-gray-400 dark:text-gray-500 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
           <i class="fa-solid fa-calendar-xmark text-2xl opacity-50"></i>
-          <p>لا توجد مواعيد مسجلة لهذا المريض اليوم</p>
+          <p>{% trans "لا توجد مواعيد مسجلة لهذا المريض اليوم" %}</p>
           <a href="{% url 'secretary:create_appointment' %}?patient_id={{ found_patient.id }}&walkin=1"
              class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold shadow transition-colors">
-            <i class="fa-solid fa-calendar-plus"></i> إضافة موعد حضوري (walk-in)
+            <i class="fa-solid fa-calendar-plus"></i> {% trans "إضافة موعد حضوري" %}
           </a>
         </div>
         {% endif %}
@@ -170,14 +169,14 @@
         <i class="fa-solid fa-user-question text-2xl"></i>
       </div>
       <div>
-        <h3 class="font-bold text-gray-900 dark:text-white text-base">لم يُعثر على مريض</h3>
+        <h3 class="font-bold text-gray-900 dark:text-white text-base">{% trans "لم يُعثر على مريض" %}</h3>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          لا يوجد مريض مسجل في هذه العيادة بالبحث عن "<strong>{{ search }}</strong>"
+          {% blocktrans with q=search %}لا يوجد مريض مسجل في هذه العيادة بالبحث عن "{{ q }}"{% endblocktrans %}
         </p>
       </div>
       <a href="{% url 'secretary:create_new_patient' %}"
          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold shadow transition-colors">
-        <i class="fa-solid fa-user-plus"></i> تسجيل مريض جديد
+        <i class="fa-solid fa-user-plus"></i> {% trans "تسجيل مريض جديد" %}
       </a>
     </div>
     {% endif %}
@@ -186,7 +185,7 @@
   {# No search yet — show quick instructions #}
   <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 flex flex-col items-center gap-4 text-center text-gray-400 dark:text-gray-500">
     <i class="fa-solid fa-magnifying-glass text-4xl opacity-30"></i>
-    <p class="text-sm">أدخل اسم المريض أو رقم هاتفه أو رقم ملفه للبحث عن مواعيده اليوم</p>
+    <p class="text-sm">{% trans "أدخل اسم المريض أو رقم هاتفه أو رقم ملفه للبحث عن مواعيده اليوم" %}</p>
   </div>
   {% endif %}
 
@@ -196,27 +195,27 @@
 <div id="remove-modal"
      class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm p-4">
   <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 w-full max-w-sm p-6 space-y-4">
-    <h3 class="font-bold text-gray-900 dark:text-white">إزالة من الطابور</h3>
+    <h3 class="font-bold text-gray-900 dark:text-white">{% trans "إزالة من الطابور" %}</h3>
     <p class="text-sm text-gray-600 dark:text-gray-300">
-      هل تريد إزالة <strong id="remove-patient-name"></strong> من طابور الانتظار؟
+      {% trans "هل تريد إزالة" %} <strong id="remove-patient-name"></strong> {% trans "من طابور الانتظار؟" %}
     </p>
     <form method="post" id="remove-form" action="">
       {% csrf_token %}
       <input type="hidden" name="new_status" value="CANCELLED">
       <div class="mb-4">
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">سبب الإزالة</label>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">{% trans "سبب الإزالة" %}</label>
         <textarea name="cancellation_reason" rows="2"
-                  placeholder="اختياري..."
+                  placeholder="{% trans 'اختياري...' %}"
                   class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-400 resize-none"></textarea>
       </div>
       <div class="flex items-center justify-end gap-3">
         <button type="button" onclick="closeRemoveModal()"
                 class="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-          إلغاء
+          {% trans "إلغاء" %}
         </button>
         <button type="submit"
                 class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors">
-          تأكيد الإزالة
+          {% trans "تأكيد الإزالة" %}
         </button>
       </div>
     </form>

@@ -1,4 +1,4 @@
-{% load static %}
+{% load static i18n %}
 {# Rendered inside #patient-detail-section via HTMX #}
 
 <!-- STEP 2: Patient Identity Card -->
@@ -8,12 +8,12 @@
   <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
     <div class="flex items-center gap-2">
       <span class="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
-      <span class="font-semibold text-gray-800 dark:text-gray-100 text-sm">تأكيد هوية المريض</span>
+      <span class="font-semibold text-gray-800 dark:text-gray-100 text-sm">{% trans "تأكيد هوية المريض" %}</span>
     </div>
     <button type="button"
       onclick="document.getElementById('patient-detail-section').innerHTML=''; document.getElementById('patient-search-input').value=''; document.getElementById('patient-search-input').focus();"
       class="text-xs text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors flex items-center gap-1">
-      <i class="fa-solid fa-xmark"></i> تغيير
+      <i class="fa-solid fa-xmark"></i> {% trans "تغيير" %}
     </button>
   </div>
 
@@ -23,8 +23,8 @@
     <div class="flex items-start gap-3 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 mb-4">
       <i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5 flex-shrink-0"></i>
       <div>
-        <p class="font-semibold text-amber-800 dark:text-amber-300 text-sm">هذا المريض مسجل بالفعل في عيادة {{ clinic.name }}</p>
-        <p class="text-xs text-amber-600 dark:text-amber-400 mt-0.5">لا يمكن تسجيله مرة أخرى في نفس العيادة.</p>
+        <p class="font-semibold text-amber-800 dark:text-amber-300 text-sm">{% blocktrans with name=clinic.name %}هذا المريض مسجل بالفعل في عيادة {{ name }}{% endblocktrans %}</p>
+        <p class="text-xs text-amber-600 dark:text-amber-400 mt-0.5">{% trans "لا يمكن تسجيله مرة أخرى في نفس العيادة." %}</p>
       </div>
     </div>
     {% endif %}
@@ -51,13 +51,13 @@
           {% else %}
           <div class="flex items-center gap-2 text-amber-500 text-xs">
             <i class="fa-solid fa-id-card text-xs w-3.5"></i>
-            <span>رقم الهوية غير متوفر</span>
+            <span>{% trans "رقم الهوية غير متوفر" %}</span>
           </div>
           {% endif %}
           {% if age %}
           <div class="flex items-center gap-2 text-gray-600 dark:text-gray-300">
             <i class="fa-solid fa-cake-candles text-xs text-gray-400 w-3.5"></i>
-            <span>{{ age }} سنة</span>
+            <span>{% blocktrans with a=age %}{{ a }} سنة{% endblocktrans %}</span>
           </div>
           {% elif profile.date_of_birth %}
           <div class="flex items-center gap-2 text-gray-600 dark:text-gray-300">
@@ -67,7 +67,7 @@
           {% else %}
           <div class="flex items-center gap-2 text-gray-400 text-xs">
             <i class="fa-solid fa-calendar text-xs w-3.5"></i>
-            <span>تاريخ الميلاد غير متوفر</span>
+            <span>{% trans "تاريخ الميلاد غير متوفر" %}</span>
           </div>
           {% endif %}
           {% if profile.gender %}
@@ -81,7 +81,7 @@
         {# Other clinics this patient is registered in #}
         {% if other_clinics %}
         <div class="mt-3 flex flex-wrap gap-1.5 items-center">
-          <span class="text-xs text-gray-400">مسجل في:</span>
+          <span class="text-xs text-gray-400">{% trans "مسجل في:" %}</span>
           {% for cp in other_clinics %}
           <span class="inline-flex items-center gap-1 text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full border border-blue-100 dark:border-blue-700/30">
             <i class="fa-solid fa-hospital text-[9px]"></i>
@@ -100,7 +100,7 @@
 <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
   <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
     <span class="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
-    <span class="font-semibold text-gray-800 dark:text-gray-100 text-sm">بيانات التسجيل</span>
+    <span class="font-semibold text-gray-800 dark:text-gray-100 text-sm">{% trans "بيانات التسجيل" %}</span>
   </div>
 
   <div class="px-5 py-5">
@@ -111,7 +111,7 @@
       {# Auto-fill notice #}
       <div class="flex items-center gap-2 mb-5 p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/40 text-xs text-purple-700 dark:text-purple-300">
         <i class="fa-solid fa-circle-info flex-shrink-0"></i>
-        <span>الحقول المميزة بـ <span class="font-bold">مُعبَّأ تلقائياً</span> مأخوذة من ملف المريض. يمكنك تعديلها وستُحفظ عند التسجيل. الحقول الفارغة تحتاج تعبئة يدوية.</span>
+        <span>{% trans "الحقول المميزة بـ مُعبَّأ تلقائياً مأخوذة من ملف المريض. يمكنك تعديلها وستُحفظ عند التسجيل. الحقول الفارغة تحتاج تعبئة يدوية." %}</span>
       </div>
 
       <div class="space-y-4">
@@ -119,8 +119,8 @@
         {# Full Name — read-only (primary identity field) #}
         <div>
           <div class="flex items-center justify-between mb-1.5">
-            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">الاسم الكامل</label>
-            <span class="autofill-badge">مُعبَّأ تلقائياً <i class="fa-solid fa-lock text-[9px] ms-0.5"></i></span>
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{% trans "الاسم الكامل" %}</label>
+            <span class="autofill-badge">{% trans "مُعبَّأ تلقائياً" %} <i class="fa-solid fa-lock text-[9px] ms-0.5"></i></span>
           </div>
           <input
             type="text"
@@ -129,14 +129,14 @@
             readonly
             tabindex="-1"
           >
-          <p class="text-xs text-gray-400 mt-1">الاسم مرتبط بحساب المريض ولا يمكن تغييره من هنا.</p>
+          <p class="text-xs text-gray-400 mt-1">{% trans "الاسم مرتبط بحساب المريض ولا يمكن تغييره من هنا." %}</p>
         </div>
 
         {# Phone — read-only #}
         <div>
           <div class="flex items-center justify-between mb-1.5">
-            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">رقم الهاتف</label>
-            <span class="autofill-badge">مُعبَّأ تلقائياً <i class="fa-solid fa-lock text-[9px] ms-0.5"></i></span>
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{% trans "رقم الهاتف" %}</label>
+            <span class="autofill-badge">{% trans "مُعبَّأ تلقائياً" %} <i class="fa-solid fa-lock text-[9px] ms-0.5"></i></span>
           </div>
           <input
             type="text"
@@ -151,13 +151,13 @@
         <div>
           <div class="flex items-center justify-between mb-1.5">
             <label for="field-nid" class="text-sm font-medium text-gray-700 dark:text-gray-300">
-              رقم الهوية
+              {% trans "رقم الهوية" %}
               {% if not patient.national_id %}<span class="text-red-500 ms-0.5">*</span>{% endif %}
             </label>
             {% if patient.national_id %}
-            <span class="autofill-badge">مُعبَّأ تلقائياً</span>
+            <span class="autofill-badge">{% trans "مُعبَّأ تلقائياً" %}</span>
             {% else %}
-            <span class="autofill-badge missing">مطلوب — غير متوفر</span>
+            <span class="autofill-badge missing">{% trans "مطلوب — غير متوفر" %}</span>
             {% endif %}
           </div>
           <input
@@ -166,28 +166,28 @@
             name="national_id"
             value="{{ patient.national_id|default:'' }}"
             {% if patient.national_id %}data-autofilled="true"{% endif %}
-            placeholder="أدخل رقم الهوية"
+            placeholder="{% trans 'أدخل رقم الهوية' %}"
             class="reg-field"
           >
           {% if not patient.national_id %}
           <p class="text-xs text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1">
             <i class="fa-solid fa-triangle-exclamation text-[10px]"></i>
-            لم يُسجَّل رقم الهوية في الملف — يُرجى إدخاله
+            {% trans "لم يُسجَّل رقم الهوية في الملف — يُرجى إدخاله" %}
           </p>
           {% endif %}
           <span class="field-error-msg text-red-500 text-xs mt-1 hidden" id="err-nid">
-            <i class="fa-solid fa-circle-exclamation me-1"></i>رقم الهوية مطلوب
+            <i class="fa-solid fa-circle-exclamation me-1"></i>{% trans "رقم الهوية مطلوب" %}
           </span>
         </div>
 
         {# Date of Birth — editable if missing #}
         <div>
           <div class="flex items-center justify-between mb-1.5">
-            <label for="field-dob" class="text-sm font-medium text-gray-700 dark:text-gray-300">تاريخ الميلاد</label>
+            <label for="field-dob" class="text-sm font-medium text-gray-700 dark:text-gray-300">{% trans "تاريخ الميلاد" %}</label>
             {% if profile.date_of_birth %}
-            <span class="autofill-badge">مُعبَّأ تلقائياً</span>
+            <span class="autofill-badge">{% trans "مُعبَّأ تلقائياً" %}</span>
             {% else %}
-            <span class="autofill-badge missing">غير متوفر</span>
+            <span class="autofill-badge missing">{% trans "غير متوفر" %}</span>
             {% endif %}
           </div>
           <input
@@ -203,11 +203,11 @@
         {# Gender — editable if missing #}
         <div>
           <div class="flex items-center justify-between mb-1.5">
-            <label for="field-gender" class="text-sm font-medium text-gray-700 dark:text-gray-300">الجنس</label>
+            <label for="field-gender" class="text-sm font-medium text-gray-700 dark:text-gray-300">{% trans "الجنس" %}</label>
             {% if profile.gender %}
-            <span class="autofill-badge">مُعبَّأ تلقائياً</span>
+            <span class="autofill-badge">{% trans "مُعبَّأ تلقائياً" %}</span>
             {% else %}
-            <span class="autofill-badge missing">غير متوفر</span>
+            <span class="autofill-badge missing">{% trans "غير متوفر" %}</span>
             {% endif %}
           </div>
           <select
@@ -216,23 +216,23 @@
             {% if profile.gender %}data-autofilled="true"{% endif %}
             class="reg-field"
           >
-            <option value="">-- اختر --</option>
-            <option value="M" {% if profile.gender == "M" %}selected{% endif %}>ذكر</option>
-            <option value="F" {% if profile.gender == "F" %}selected{% endif %}>أنثى</option>
-            <option value="O" {% if profile.gender == "O" %}selected{% endif %}>أخرى</option>
+            <option value="">{% trans "-- اختر --" %}</option>
+            <option value="M" {% if profile.gender == "M" %}selected{% endif %}>{% trans "ذكر" %}</option>
+            <option value="F" {% if profile.gender == "F" %}selected{% endif %}>{% trans "أنثى" %}</option>
+            <option value="O" {% if profile.gender == "O" %}selected{% endif %}>{% trans "أخرى" %}</option>
           </select>
         </div>
 
         {# Notes — always optional #}
         <div>
           <div class="flex items-center justify-between mb-1.5">
-            <label for="field-notes" class="text-sm font-medium text-gray-700 dark:text-gray-300">ملاحظات (اختياري)</label>
+            <label for="field-notes" class="text-sm font-medium text-gray-700 dark:text-gray-300">{% trans "ملاحظات (اختياري)" %}</label>
           </div>
           <textarea
             id="field-notes"
             name="notes"
             rows="2"
-            placeholder="أي ملاحظات إضافية للسجل الطبي..."
+            placeholder="{% trans 'أي ملاحظات إضافية للسجل الطبي...' %}"
             class="reg-field resize-none"
           ></textarea>
         </div>
@@ -247,14 +247,14 @@
           class="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white font-semibold text-sm transition-colors shadow-sm"
         >
           <i class="fa-solid fa-user-plus"></i>
-          تسجيل المريض في العيادة
+          {% trans "تسجيل المريض في العيادة" %}
         </button>
         <button
           type="button"
           onclick="document.getElementById('patient-detail-section').innerHTML=''; document.getElementById('patient-search-input').value=''; document.getElementById('patient-search-input').focus();"
           class="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 font-medium text-sm transition-colors"
         >
-          إلغاء
+          {% trans "إلغاء" %}
         </button>
       </div>
 
@@ -294,7 +294,7 @@
     const btn = document.getElementById('submit-btn');
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = '<svg class="animate-spin w-4 h-4 me-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg> جاري التسجيل...';
+      btn.innerHTML = '<svg class="animate-spin w-4 h-4 me-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg> {% trans "جاري التسجيل..." %}';
     }
   });
 

@@ -1,7 +1,7 @@
 {% extends "secretary/base_secretary.html" %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}تقرير الغياب والإلغاء — {{ clinic.name }}{% endblock %}
+{% block title %}{% trans "تقرير الغياب والإلغاء" %} — {{ clinic.name }}{% endblock %}
 
 {% block content %}
 <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 print:px-0 print:py-0 print:space-y-4">
@@ -15,7 +15,7 @@
         <i class="fa-solid fa-arrow-right"></i>
       </a>
       <div>
-        <h1 class="text-xl font-bold text-gray-900 dark:text-white">تقرير الغياب والإلغاء</h1>
+        <h1 class="text-xl font-bold text-gray-900 dark:text-white">{% trans "تقرير الغياب والإلغاء" %}</h1>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
           {{ date_from|date:"j F Y" }} — {{ date_to|date:"j F Y" }}
         </p>
@@ -24,11 +24,11 @@
     <div class="flex items-center gap-2 flex-wrap">
       <a href="?date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}{% if doctor_filter %}&doctor_id={{ doctor_filter }}{% endif %}&export=csv"
          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-        <i class="fa-solid fa-file-csv text-emerald-600"></i> تصدير CSV
+        <i class="fa-solid fa-file-csv text-emerald-600"></i> {% trans "تصدير CSV" %}
       </a>
       <button onclick="window.print()"
               class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-        <i class="fa-solid fa-print text-gray-500"></i> طباعة
+        <i class="fa-solid fa-print text-gray-500"></i> {% trans "طباعة" %}
       </button>
     </div>
   </div>
@@ -36,22 +36,22 @@
   {# ── Filters ── #}
   <form method="get" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 flex flex-wrap items-end gap-4 print:hidden">
     <div>
-      <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">من تاريخ</label>
+      <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{% trans "من تاريخ" %}</label>
       <input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}"
              max="{{ today|date:'Y-m-d' }}"
              class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
     </div>
     <div>
-      <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">إلى تاريخ</label>
+      <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{% trans "إلى تاريخ" %}</label>
       <input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}"
              max="{{ today|date:'Y-m-d' }}"
              class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
     </div>
     <div>
-      <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">الطبيب</label>
+      <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{% trans "الطبيب" %}</label>
       <select name="doctor_id"
               class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
-        <option value="">جميع الأطباء</option>
+        <option value="">{% trans "جميع الأطباء" %}</option>
         {% for doc in doctors %}
         <option value="{{ doc.id }}" {% if doctor_filter == doc.id|stringformat:"s" %}selected{% endif %}>
           د. {{ doc.name }}
@@ -61,13 +61,13 @@
     </div>
     <button type="submit"
             class="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold transition-colors">
-      عرض
+      {% trans "عرض" %}
     </button>
   </form>
 
   {# ── Print header ── #}
   <div class="hidden print:block mb-4">
-    <h1 class="text-xl font-bold">{{ clinic.name }} — تقرير الغياب والإلغاء</h1>
+    <h1 class="text-xl font-bold">{{ clinic.name }} — {% trans "تقرير الغياب والإلغاء" %}</h1>
     <p class="text-sm text-gray-500">{{ date_from|date:"j F Y" }} — {{ date_to|date:"j F Y" }}</p>
   </div>
 
@@ -75,27 +75,27 @@
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
     <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 text-center">
       <div class="text-3xl font-bold text-gray-900 dark:text-white">{{ total }}</div>
-      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">إجمالي المواعيد</div>
+      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{% trans "إجمالي المواعيد" %}</div>
     </div>
     <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 text-center">
       <div class="text-3xl font-bold text-amber-600 dark:text-amber-400">{{ noshow_count }}</div>
-      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">لم يحضروا</div>
+      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{% trans "لم يحضروا" %}</div>
     </div>
     <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 text-center">
       <div class="text-3xl font-bold text-red-600 dark:text-red-400">{{ cancelled_count }}</div>
-      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">ملغاة</div>
+      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{% trans "ملغاة" %}</div>
     </div>
     <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 text-center">
       <div class="text-2xl font-bold text-gray-700 dark:text-gray-300">{{ noshow_rate }}%</div>
-      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">نسبة الغياب</div>
+      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{% trans "نسبة الغياب" %}</div>
       <div class="text-lg font-bold text-gray-600 dark:text-gray-400 mt-1">{{ cancel_rate }}%</div>
-      <div class="text-xs text-gray-500 dark:text-gray-400">نسبة الإلغاء</div>
+      <div class="text-xs text-gray-500 dark:text-gray-400">{% trans "نسبة الإلغاء" %}</div>
     </div>
   </div>
 
   {# ── Day-of-week breakdown ── #}
   <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
-    <h2 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">توزيع الغياب حسب أيام الأسبوع</h2>
+    <h2 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">{% trans "توزيع الغياب حسب أيام الأسبوع" %}</h2>
     <div class="space-y-2">
       {% for day in dow_breakdown %}
       {% with day_total=day.noshows|add:day.cancelled %}
@@ -121,8 +121,8 @@
       {% endfor %}
     </div>
     <div class="flex items-center gap-4 mt-3 text-xs text-gray-500 dark:text-gray-400">
-      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-amber-500 inline-block"></span> غياب</span>
-      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-red-500 inline-block"></span> إلغاء</span>
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-amber-500 inline-block"></span> {% trans "غياب" %}</span>
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-red-500 inline-block"></span> {% trans "إلغاء" %}</span>
     </div>
   </div>
 
@@ -130,7 +130,7 @@
   {% if top_noshows %}
   <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
     <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
-      <h2 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">أكثر المرضى غياباً</h2>
+      <h2 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">{% trans "أكثر المرضى غياباً" %}</h2>
     </div>
     <div class="divide-y divide-gray-50 dark:divide-gray-700">
       {% for p in top_noshows %}
@@ -143,7 +143,7 @@
           <div class="text-xs text-gray-400 dark:text-gray-500">{{ p.patient__phone }}</div>
         </div>
         <div class="text-sm font-bold text-amber-600 dark:text-amber-400 shrink-0">
-          {{ p.count }} مرة
+          {% blocktrans with cnt=p.count %}{{ cnt }} مرة{% endblocktrans %}
         </div>
       </div>
       {% endfor %}
@@ -156,16 +156,16 @@
   <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
     <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
       <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
-      <h2 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">الغياب ({{ noshow_count }})</h2>
+      <h2 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">{% blocktrans with n=noshow_count %}الغياب ({{ n }}){% endblocktrans %}</h2>
     </div>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
           <tr class="bg-gray-50 dark:bg-gray-700/50">
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">المريض</th>
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">التاريخ</th>
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">الطبيب</th>
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">الخدمة</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "المريض" %}</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "التاريخ" %}</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "الطبيب" %}</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "الخدمة" %}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
@@ -198,16 +198,16 @@
   <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
     <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
       <span class="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
-      <h2 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">الإلغاءات ({{ cancelled_count }})</h2>
+      <h2 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">{% blocktrans with n=cancelled_count %}الإلغاءات ({{ n }}){% endblocktrans %}</h2>
     </div>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
           <tr class="bg-gray-50 dark:bg-gray-700/50">
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">المريض</th>
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">التاريخ</th>
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">الطبيب</th>
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">سبب الإلغاء</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "المريض" %}</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "التاريخ" %}</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "الطبيب" %}</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "سبب الإلغاء" %}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
@@ -238,7 +238,7 @@
   {% if not noshows and not cancellations %}
   <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-12 text-center text-gray-400 dark:text-gray-500">
     <i class="fa-solid fa-check-circle text-4xl opacity-30 mb-3 block text-emerald-500"></i>
-    <p class="text-sm">لا يوجد غياب أو إلغاء في هذه الفترة</p>
+    <p class="text-sm">{% trans "لا يوجد غياب أو إلغاء في هذه الفترة" %}</p>
   </div>
   {% endif %}
 

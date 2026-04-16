@@ -1,7 +1,7 @@
 {% extends "secretary/base_secretary.html" %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}حجب وقت طبيب — {{ clinic.name }}{% endblock %}
+{% block title %}{% trans "حجب وقت طبيب" %} — {{ clinic.name }}{% endblock %}
 
 {% block content %}
 <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -13,9 +13,9 @@
       <i class="fa-solid fa-arrow-right"></i>
     </a>
     <div>
-      <h1 class="text-xl font-bold text-gray-900 dark:text-white">حجب وقت طبيب</h1>
+      <h1 class="text-xl font-bold text-gray-900 dark:text-white">{% trans "حجب وقت طبيب" %}</h1>
       <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-        إضافة غياب أو إجازة أو حجب يدوي لفترة محددة
+        {% trans "إضافة غياب أو إجازة أو حجب يدوي لفترة محددة" %}
       </p>
     </div>
   </div>
@@ -24,8 +24,7 @@
   <div class="flex items-start gap-3 px-4 py-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 text-sm text-blue-700 dark:text-blue-300">
     <i class="fa-solid fa-circle-info mt-0.5 flex-shrink-0"></i>
     <span>
-      حجب الوقت يوقف إنشاء مواعيد جديدة للطبيب في هذه الفترة.
-      المواعيد الموجودة مسبقاً لن تُلغى تلقائياً.
+      {% trans "حجب الوقت يوقف إنشاء مواعيد جديدة للطبيب في هذه الفترة. المواعيد الموجودة مسبقاً لن تُلغى تلقائياً." %}
     </span>
   </div>
 
@@ -45,7 +44,7 @@
       <span>{{ warning }}</span>
     </div>
     <div class="text-xs text-amber-600 dark:text-amber-400 font-medium mb-1 pr-7">
-      المواعيد المتأثرة ({{ conflicting_appointments|length }}):
+      {% blocktrans with count=conflicting_appointments|length %}المواعيد المتأثرة ({{ count }}):{% endblocktrans %}
     </div>
     <div class="space-y-1.5 pr-7">
       {% for appt in conflicting_appointments %}
@@ -54,7 +53,7 @@
         <span class="text-gray-700 dark:text-gray-300">{{ appt.patient.name }}</span>
         <a href="{% url 'secretary:appointment_detail' appt.id %}"
            class="text-purple-600 dark:text-purple-400 hover:underline" target="_blank">
-          عرض <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+          {% trans "عرض" %} <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
         </a>
       </div>
       {% endfor %}
@@ -71,7 +70,7 @@
       <input type="hidden" name="force_create" value="1">
       <button type="submit"
               class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold shadow transition-colors">
-        <i class="fa-solid fa-ban"></i> تأكيد الحجب رغم ذلك
+        <i class="fa-solid fa-ban"></i> {% trans "تأكيد الحجب رغم ذلك" %}
       </button>
     </form>
   </div>
@@ -84,20 +83,20 @@
     {% csrf_token %}
 
     <div class="p-5 space-y-4">
-      <h2 class="text-sm font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">بيانات الحجب</h2>
+      <h2 class="text-sm font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">{% trans "بيانات الحجب" %}</h2>
 
       {# Doctor #}
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-          الطبيب <span class="text-red-500">*</span>
+          {% trans "الطبيب" %} <span class="text-red-500">*</span>
         </label>
         <select name="doctor_id" required
                 class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
-          <option value="">— اختر الطبيب —</option>
+          <option value="">{% trans "— اختر الطبيب —" %}</option>
           {% for doc in doctors %}
           <option value="{{ doc.id }}"
             {% if post.doctor_id == doc.id|stringformat:"s" or request.GET.doctor_id == doc.id|stringformat:"s" %}selected{% endif %}>
-            د. {{ doc.name }}
+            {% trans "د." %} {{ doc.name }}
           </option>
           {% endfor %}
         </select>
@@ -107,7 +106,7 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-            من تاريخ <span class="text-red-500">*</span>
+            {% trans "من تاريخ" %} <span class="text-red-500">*</span>
           </label>
           <input type="date" name="start_date" required
                  min="{{ today|date:'Y-m-d' }}"
@@ -116,7 +115,7 @@
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-            إلى تاريخ <span class="text-red-500">*</span>
+            {% trans "إلى تاريخ" %} <span class="text-red-500">*</span>
           </label>
           <input type="date" name="end_date" required
                  min="{{ today|date:'Y-m-d' }}"
@@ -128,12 +127,12 @@
       {# Reason dropdown #}
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-          سبب الغياب <span class="text-red-500">*</span>
+          {% trans "سبب الغياب" %} <span class="text-red-500">*</span>
         </label>
         <select name="reason" id="reason-select" required
                 class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400 transition"
                 onchange="document.getElementById('custom-reason-row').classList.toggle('hidden', this.value !== 'أخرى')">
-          <option value="">— اختر السبب —</option>
+          <option value="">{% trans "— اختر السبب —" %}</option>
           {% for val, label in reason_choices %}
           <option value="{{ val }}" {% if post.reason == val %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
@@ -143,11 +142,11 @@
       {# Custom reason (shown when "أخرى" selected) #}
       <div id="custom-reason-row" class="{% if post.reason != 'أخرى' %}hidden{% endif %}">
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-          سبب آخر
+          {% trans "سبب آخر" %}
         </label>
         <input type="text" name="custom_reason"
                value="{{ post.custom_reason|default:'' }}"
-               placeholder="اكتب السبب..."
+               placeholder="{% trans 'اكتب السبب...' %}"
                class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
       </div>
     </div>
@@ -156,11 +155,11 @@
     <div class="px-5 py-4 flex items-center justify-end gap-3">
       <a href="{% url 'secretary:doctor_schedule' %}"
          class="px-5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-        إلغاء
+        {% trans "إلغاء" %}
       </a>
       <button type="submit"
               class="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold shadow transition-colors">
-        <i class="fa-solid fa-ban me-1.5"></i> تأكيد الحجب
+        <i class="fa-solid fa-ban me-1.5"></i> {% trans "تأكيد الحجب" %}
       </button>
     </div>
   </form>

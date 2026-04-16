@@ -1,4 +1,4 @@
-{% load static %}
+{% load static i18n %}
 {% with patient=cp.patient profile=cp.patient.patient_profile %}
 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
   {# Name + avatar #}
@@ -41,7 +41,7 @@
     {% if cp.last_visit %}
       {{ cp.last_visit|date:"Y/m/d" }}
     {% else %}
-      <span class="text-gray-300 dark:text-gray-600">لا توجد زيارات</span>
+      <span class="text-gray-300 dark:text-gray-600">{% trans "لا توجد زيارات" %}</span>
     {% endif %}
   </td>
 
@@ -63,20 +63,20 @@
   <td class="px-4 py-3 text-center">
     <div class="flex items-center justify-center gap-1">
       <a href="{% url 'secretary:patient_detail' patient.id %}"
-         aria-label="عرض ملف المريض"
-         title="عرض الملف"
+         aria-label="{% trans 'عرض ملف المريض' %}"
+         title="{% trans 'عرض الملف' %}"
          class="p-1.5 rounded-lg text-gray-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors">
         <i class="fa-solid fa-eye text-xs"></i>
       </a>
       <a href="{% url 'secretary:edit_patient' patient.id %}"
-         aria-label="تعديل بيانات المريض"
-         title="تعديل"
+         aria-label="{% trans 'تعديل بيانات المريض' %}"
+         title="{% trans 'تعديل' %}"
          class="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
         <i class="fa-solid fa-pen text-xs"></i>
       </a>
       <a href="{% url 'secretary:create_appointment' %}?patient_id={{ patient.id }}"
-         aria-label="حجز موعد للمريض"
-         title="حجز موعد"
+         aria-label="{% trans 'حجز موعد للمريض' %}"
+         title="{% trans 'حجز موعد' %}"
          class="p-1.5 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors">
         <i class="fa-solid fa-calendar-plus text-xs"></i>
       </a>
