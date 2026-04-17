@@ -98,6 +98,49 @@ msgstr "Notifications"
 msgid "الدعوات"
 msgstr "Invitations"
 
+# ── Secretary Invitations inbox ───────────────────────────────────────────────
+msgid "دعوات الانضمام"
+msgstr "Join Invitations"
+
+msgid "السكرتارية"
+msgstr "Secretary"
+
+msgid "دعوات الانضمام الواردة"
+msgstr "Incoming Join Invitations"
+
+msgid "دعوات الانضمام إلى العيادات بصفة سكرتير/ة"
+msgstr "Clinic join invitations as a secretary"
+
+msgid "منتهية"
+msgstr "Expired"
+
+msgid "أُرسلت بواسطة"
+msgstr "Sent By"
+
+msgid "تاريخ الدعوة"
+msgstr "Invitation Date"
+
+msgid "منذ %(time)s"
+msgstr "%(time)s ago"
+
+msgid "قبول والانضمام"
+msgstr "Accept & Join"
+
+msgid "هل أنت متأكد من رفض هذه الدعوة؟"
+msgstr "Are you sure you want to reject this invitation?"
+
+msgid "رفض"
+msgstr "Reject"
+
+msgid "انتهت صلاحية هذه الدعوة"
+msgstr "This invitation has expired"
+
+msgid "لا توجد دعوات جديدة"
+msgstr "No new invitations"
+
+msgid "عندما يدعوك أحد الأطباء للانضمام إلى عيادته كـ سكرتير/ة، ستظهر الدعوة هنا."
+msgstr "When a doctor invites you to join their clinic as a secretary, the invitation will appear here."
+
 msgid "عياداتي"
 msgstr "My Clinics"
 
@@ -180,6 +223,21 @@ msgstr "Appointments List"
 
 msgid "التقويم"
 msgstr "Calendar"
+
+msgid "فلترة الطبيب"
+msgstr "Doctor Filter"
+
+msgid "الكل"
+msgstr "All"
+
+msgid "الحالات"
+msgstr "Statuses"
+
+msgid "عرض التفاصيل"
+msgstr "View Details"
+
+msgid "النوع"
+msgstr "Type"
 
 msgid "تفاصيل الموعد"
 msgstr "Appointment Details"
@@ -612,6 +670,9 @@ msgstr "The system will automatically create a file number for this patient."
 msgid "تسجيل المريض"
 msgstr "Register Patient"
 
+msgid "الهاتف"
+msgstr "Phone"
+
 msgid "رقم الملف"
 msgstr "File Number"
 
@@ -659,6 +720,18 @@ msgstr "Clear"
 
 msgid "لا يوجد مرضى مسجلون بعد"
 msgstr "No patients registered yet"
+
+msgid "%(count)s مريض مسجل في العيادة"
+msgstr "%(count)s patients registered in the clinic"
+
+msgid "لا توجد نتائج لـ \"%(q)s\""
+msgstr "No results for \"%(q)s\""
+
+msgid "صفحة %(num)s من %(total)s (%(count)s نتيجة)"
+msgstr "Page %(num)s of %(total)s (%(count)s results)"
+
+msgid "تعديل بيانات المريض"
+msgstr "Edit Patient"
 
 msgid "تسجيل أول مريض"
 msgstr "Register First Patient"
@@ -840,6 +913,12 @@ msgstr "This Week"
 
 msgid "الأسبوع التالي"
 msgstr "Next Week"
+
+msgid "د."
+msgstr "Dr."
+
+msgid "%(count)s موعد"
+msgstr "%(count)s appointment(s)"
 
 msgid "حجب وقت طبيب"
 msgstr "Block Doctor Time"

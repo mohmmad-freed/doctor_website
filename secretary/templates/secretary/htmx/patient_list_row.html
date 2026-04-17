@@ -19,14 +19,14 @@
   </td>
 
   {# Phone #}
-  <td class="px-4 py-3 text-gray-600 dark:text-gray-300 dir-ltr text-right">
+  <td class="px-4 py-3 text-gray-600 dark:text-gray-300 text-center" dir="ltr">
     <a href="tel:{{ patient.phone }}" class="hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
       {{ patient.phone }}
     </a>
   </td>
 
   {# File number #}
-  <td class="px-4 py-3">
+  <td class="px-4 py-3 text-center">
     {% if cp.file_number %}
     <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-mono font-medium">
       {{ cp.file_number }}
@@ -37,7 +37,7 @@
   </td>
 
   {# Last visit #}
-  <td class="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">
+  <td class="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs text-center">
     {% if cp.last_visit %}
       {{ cp.last_visit|date:"Y/m/d" }}
     {% else %}
@@ -55,7 +55,7 @@
   </td>
 
   {# Registration date #}
-  <td class="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">
+  <td class="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs text-center">
     {{ cp.registered_at|date:"Y/m/d" }}
   </td>
 
