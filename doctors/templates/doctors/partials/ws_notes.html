@@ -39,59 +39,69 @@
       <input type="hidden" name="clinic_id" value="{{ clinics.0.id }}">
       {% endif %}
 
-      <!-- Sections driven by the doctor's active Clinical Note Template -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {% if not active_note_elements or 'SUBJECTIVE' in active_note_elements %}
+      {# ── Sections — rendered in the exact order defined by the active template ── #}
+      {# active_note_sections is a list of dicts:                                    #}
+      {#   type, label, name, elem_id (CUSTOM only), value (edit pre-fill only)      #}
+      {% for section in active_note_sections %}
+        {% if section.type == 'BODY_DIAGRAM' %}
+        {# Body-diagram gets a warm orange card style #}
+        <div class="p-3 rounded-lg bg-orange-50/60 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/30">
+          <p class="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wide mb-1">
+            {{ section.label }}
+          </p>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">
+            {% if IS_RTL %}صف أو قيّد منطقة الجسم المصابة.{% else %}Describe or annotate the affected body region.{% endif %}
+          </p>
+          <textarea name="{{ section.name }}" rows="2" class="ws-textarea"
+                    placeholder="{% if IS_RTL %}مثال: ألم في الركبة اليمنى، إعاقة الكتف الأيسر...{% else %}e.g. Right knee lateral pain, left shoulder impingement…{% endif %}">{{ section.value }}</textarea>
+        </div>
+
+        {% elif section.type == 'DENTAL' %}
+        {# Dental chart gets a cyan card style #}
+        <div class="p-3 rounded-lg bg-cyan-50/60 dark:bg-cyan-900/10 border border-cyan-100 dark:border-cyan-900/30">
+          <p class="text-xs font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-wide mb-1">
+            {{ section.label }}
+          </p>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">
+            {% if IS_RTL %}وثّق النتائج على مستوى السن.{% else %}Document tooth-level findings.{% endif %}
+          </p>
+          <textarea name="{{ section.name }}" rows="2" class="ws-textarea"
+                    placeholder="{% if IS_RTL %}مثال: سن 36 – تسوس، سن 11 – كسر...{% else %}e.g. Tooth 36 – caries, Tooth 11 – fracture…{% endif %}">{{ section.value }}</textarea>
+        </div>
+
+        {% elif section.type == 'CUSTOM' %}
+        {# Custom sections get a subtle indigo card so they stand out from standard ones #}
+        <div class="p-3 rounded-lg bg-indigo-50/40 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30">
+          <label class="block text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide mb-1">
+            {{ section.label }}
+          </label>
+          <textarea name="{{ section.name }}" rows="3" class="ws-textarea"
+                    placeholder="{% if IS_RTL %}أدخل محتوى القسم...{% else %}Enter section content…{% endif %}">{{ section.value }}</textarea>
+        </div>
+
+        {% else %}
+        {# Standard sections: SUBJECTIVE, OBJECTIVE, ASSESSMENT, PLAN, FREE_TEXT, VITALS #}
         <div>
-          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{% if IS_RTL %}ذاتي{% else %}S — Subjective{% endif %}</label>
-          <textarea name="subjective" rows="3" class="ws-textarea" placeholder="{% if IS_RTL %}أعراض المريض وشكاواه...{% else %}Patient's symptoms and complaints...{% endif %}">{% if edit_note %}{{ edit_note.subjective }}{% endif %}</textarea>
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">
+            {{ section.label }}
+            {% if section.type == 'FREE_TEXT' %}
+            <span class="font-normal normal-case text-slate-400 dark:text-slate-500">
+              ({% if IS_RTL %}اختياري{% else %}optional{% endif %})
+            </span>
+            {% endif %}
+          </label>
+          <textarea name="{{ section.name }}"
+                    rows="{% if section.type == 'VITALS' %}2{% else %}3{% endif %}"
+                    class="ws-textarea"
+                    placeholder="{% if section.type == 'SUBJECTIVE' %}{% if IS_RTL %}أعراض المريض وشكاواه...{% else %}Patient's symptoms and complaints...{% endif %}{% elif section.type == 'OBJECTIVE' %}{% if IS_RTL %}النتائج الجسدية والعلامات الحيوية...{% else %}Physical findings, vitals, labs...{% endif %}{% elif section.type == 'ASSESSMENT' %}{% if IS_RTL %}التشخيص أو التشخيص التفريقي...{% else %}Diagnosis or differential...{% endif %}{% elif section.type == 'PLAN' %}{% if IS_RTL %}خطة العلاج والمتابعة...{% else %}Treatment plan, follow-up...{% endif %}{% elif section.type == 'VITALS' %}BP, HR, Temp, SpO2, weight…{% else %}{% if IS_RTL %}ملاحظات إضافية...{% else %}Additional notes...{% endif %}{% endif %}">{{ section.value }}</textarea>
         </div>
         {% endif %}
-        {% if not active_note_elements or 'OBJECTIVE' in active_note_elements %}
-        <div>
-          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{% if IS_RTL %}موضوعي{% else %}O — Objective{% endif %}</label>
-          <textarea name="objective" rows="3" class="ws-textarea" placeholder="{% if IS_RTL %}النتائج الجسدية والعلامات الحيوية...{% else %}Physical findings, vitals, labs...{% endif %}">{% if edit_note %}{{ edit_note.objective }}{% endif %}</textarea>
-        </div>
-        {% endif %}
-        {% if not active_note_elements or 'ASSESSMENT' in active_note_elements %}
-        <div>
-          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{% if IS_RTL %}التقييم{% else %}A — Assessment{% endif %}</label>
-          <textarea name="assessment" rows="3" class="ws-textarea" placeholder="{% if IS_RTL %}التشخيص أو التشخيص التفريقي...{% else %}Diagnosis or differential...{% endif %}">{% if edit_note %}{{ edit_note.assessment }}{% endif %}</textarea>
-        </div>
-        {% endif %}
-        {% if not active_note_elements or 'PLAN' in active_note_elements %}
-        <div>
-          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{% if IS_RTL %}الخطة{% else %}P — Plan{% endif %}</label>
-          <textarea name="plan" rows="3" class="ws-textarea" placeholder="{% if IS_RTL %}خطة العلاج والمتابعة...{% else %}Treatment plan, follow-up...{% endif %}">{% if edit_note %}{{ edit_note.plan }}{% endif %}</textarea>
-        </div>
-        {% endif %}
-      </div>
-      {% if not active_note_elements or 'VITALS' in active_note_elements %}
-      <div>
-        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{% if IS_RTL %}العلامات الحيوية{% else %}Vitals{% endif %}</label>
-        <textarea name="vitals" rows="2" class="ws-textarea" placeholder="BP, HR, Temp, SpO2, weight…"></textarea>
-      </div>
-      {% endif %}
-      {% if not active_note_elements or 'BODY_DIAGRAM' in active_note_elements %}
-      <div class="p-3 rounded-lg bg-orange-50/60 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/30">
-        <p class="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wide mb-1">{% if IS_RTL %}مخطط الجسم{% else %}Body Diagram{% endif %}</p>
-        <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">{% if IS_RTL %}صف أو قيّد منطقة الجسم المصابة.{% else %}Describe or annotate the affected body region.{% endif %}</p>
-        <textarea name="body_diagram_notes" rows="2" class="ws-textarea" placeholder="{% if IS_RTL %}مثال: ألم في الركبة اليمنى، إعاقة الكتف الأيسر...{% else %}e.g. Right knee lateral pain, left shoulder impingement…{% endif %}"></textarea>
-      </div>
-      {% endif %}
-      {% if not active_note_elements or 'DENTAL' in active_note_elements %}
-      <div class="p-3 rounded-lg bg-cyan-50/60 dark:bg-cyan-900/10 border border-cyan-100 dark:border-cyan-900/30">
-        <p class="text-xs font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-wide mb-1">{% if IS_RTL %}مخطط الأسنان{% else %}Dental Chart{% endif %}</p>
-        <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">{% if IS_RTL %}وثّق النتائج على مستوى السن.{% else %}Document tooth-level findings.{% endif %}</p>
-        <textarea name="dental_notes" rows="2" class="ws-textarea" placeholder="{% if IS_RTL %}مثال: سن 36 – تسوس، سن 11 – كسر...{% else %}e.g. Tooth 36 – caries, Tooth 11 – fracture…{% endif %}"></textarea>
-      </div>
-      {% endif %}
-      {% if not active_note_elements or 'FREE_TEXT' in active_note_elements %}
-      <div>
-        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{% if IS_RTL %}نص حر <span class="font-normal normal-case text-slate-400 dark:text-slate-500">(اختياري)</span>{% else %}Free Text <span class="font-normal normal-case text-slate-400 dark:text-slate-500">(optional)</span>{% endif %}</label>
-        <textarea name="free_text" rows="2" class="ws-textarea" placeholder="{% if IS_RTL %}ملاحظات إضافية...{% else %}Additional notes...{% endif %}">{% if edit_note %}{{ edit_note.free_text }}{% endif %}</textarea>
-      </div>
-      {% endif %}
+      {% empty %}
+      {# Fallback: active template has no elements (should not happen after migrations) #}
+      <p class="text-sm text-slate-400 dark:text-slate-500 italic">
+        {% if IS_RTL %}لا توجد أقسام في القالب النشط.{% else %}No sections defined in the active template.{% endif %}
+      </p>
+      {% endfor %}
 
       <div class="flex items-center gap-3 pt-1">
         <button type="submit"
@@ -151,6 +161,8 @@
 
     <!-- Note body -->
     <div class="px-5 py-4 space-y-3">
+
+      {# ── Standard SOAP fields (always stored in dedicated DB columns) ──────── #}
       {% if note.subjective or note.objective or note.assessment or note.plan %}
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {% if note.subjective %}
@@ -179,9 +191,24 @@
         {% endif %}
       </div>
       {% endif %}
+
       {% if note.free_text %}
       <p class="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{{ note.free_text }}</p>
       {% endif %}
+
+      {# ── Extra sections: VITALS, BODY_DIAGRAM, DENTAL, and all CUSTOM types ── #}
+      {# labeled_extras is precomputed by _ws_notes_data: list of {label, value} #}
+      {% if note.labeled_extras %}
+      <div class="space-y-2 pt-1">
+        {% for extra in note.labeled_extras %}
+        <div class="p-3 rounded-lg bg-slate-50/80 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
+          <p class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{{ extra.label }}</p>
+          <p class="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{{ extra.value }}</p>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
       {% if note.updated_at != note.created_at %}
       <p class="text-xs text-slate-400 dark:text-slate-500 italic">{% if IS_RTL %}تم التعديل{% else %}Edited{% endif %} {{ note.updated_at|date:"d M Y, H:i" }}</p>
       {% endif %}

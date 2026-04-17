@@ -134,6 +134,12 @@ class ClinicalNote(models.Model):
     assessment = models.TextField(blank=True)
     plan = models.TextField(blank=True)
     free_text = models.TextField(blank=True)
+    # Custom template sections: {str(element_id): text_content}
+    extra_sections = models.JSONField(default=dict, blank=True)
+    # Label snapshot: {str(element_id_or_key): display_label} written at note-save time.
+    # This is the source of truth for rendering historical notes.  Future template edits
+    # (including element deletion) cannot retroactively change old note section titles.
+    extra_sections_labels = models.JSONField(default=dict, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -587,6 +587,7 @@ class ClinicalNoteTemplateElement(models.Model):
         VITALS       = "VITALS",       "Vitals"
         BODY_DIAGRAM = "BODY_DIAGRAM", "Body Diagram"
         DENTAL       = "DENTAL",       "Dental Chart"
+        CUSTOM       = "CUSTOM",       "Custom Section"
 
     template = models.ForeignKey(
         ClinicalNoteTemplate,
@@ -594,16 +595,21 @@ class ClinicalNoteTemplateElement(models.Model):
         related_name="elements",
     )
     element_type = models.CharField(max_length=20, choices=ElementType.choices)
+    custom_label = models.CharField(max_length=100, blank=True)
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
         verbose_name = "Template Element"
         verbose_name_plural = "Template Elements"
         ordering = ["template", "order"]
-        unique_together = [("template", "element_type")]
+
+    def display_label(self):
+        """Return custom_label when set (CUSTOM type or renamed standard), else default."""
+        return self.custom_label or self.get_element_type_display()
 
     def __str__(self):
-        return f"{self.template.name} / {self.get_element_type_display()} (#{self.order})"
+        label = self.display_label()
+        return f"{self.template.name} / {label} (#{self.order})"
 
 
 class DoctorClinicalNoteSettings(models.Model):

@@ -355,7 +355,7 @@ Doctors can configure the layout/sections of their Clinical Notes editor.
 | `CUSTOM` | Doctor-created templates, each owned by a single doctor |
 
 ### Element types
-`SUBJECTIVE`, `OBJECTIVE`, `ASSESSMENT`, `PLAN`, `FREE_TEXT`, `VITALS`, `BODY_DIAGRAM`, `DENTAL`
+`SUBJECTIVE`, `OBJECTIVE`, `ASSESSMENT`, `PLAN`, `FREE_TEXT`, `VITALS`, `BODY_DIAGRAM`, `DENTAL`, `CUSTOM`
 
 ### Activation rules
 - Only one template is active per doctor at a time.
@@ -371,3 +371,90 @@ Doctors can configure the layout/sections of their Clinical Notes editor.
 ### Seed data
 Migration `0004_seed_system_templates` creates four system templates:
 Default, General, Orthopedic (includes Body Diagram), Dental (includes Dental Chart).
+
+### Section reordering UX (2026-04-17)
+Sections within the template builder are reordered via **drag-and-drop** (HTML5 native
+Drag and Drop API, no external library).
+
+- Each row shows a `fa-grip-vertical` drag handle on the leading edge.
+- Dragging a row shows a blue 3 px indicator line at the insertion point.
+- On drop, the row is inserted into the exact DOM position the indicator occupied.
+- On form submit, Django reads `section_type` / `section_label` via `getlist()` in DOM
+  order — so the final visual order is always the saved order. No index mapping needed.
+- Newly added rows (via "Add Sections" palette) receive drag handlers immediately via
+  `_attachDrag(newRow)` called inside `addStandardRow()` and `addCustomRow()`.
+- Works on both Create and Edit pages, for all section types including CUSTOM and
+  repeated types with custom labels.
+- Up / Down buttons have been removed entirely.
+
+### Note editor integration (bug fix 2026-04-17)
+Template sections are rendered in the Clinical Note create/edit form in
+**exact template order**, including CUSTOM, VITALS, BODY_DIAGRAM, and DENTAL sections.
+
+#### Storage model
+| Section type | How value is saved |
+|---|---|
+| `SUBJECTIVE`, `OBJECTIVE`, `ASSESSMENT`, `PLAN`, `FREE_TEXT` | Direct `ClinicalNote` model column |
+| `VITALS` | `ClinicalNote.extra_sections["vitals"]` |
+| `BODY_DIAGRAM` | `ClinicalNote.extra_sections["body_diagram_notes"]` |
+| `DENTAL` | `ClinicalNote.extra_sections["dental_notes"]` |
+| `CUSTOM` | `ClinicalNote.extra_sections[str(element_id)]` |
+
+#### Key helpers (`doctors/views.py`)
+| Helper | Purpose |
+|---|---|
+| `_get_active_note_sections(doctor, note=None)` | Returns ordered list of section descriptors for the editor form; pre-fills values when `note` is supplied (edit mode) |
+| `_collect_extra_sections(post_data)` | Parses POST data for VITALS, BODY_DIAGRAM, DENTAL, and `custom_section_<id>` fields into the `extra_sections` dict |
+| `_extract_note_field(note, element_type)` | Returns saved value for a given element type from a `ClinicalNote` instance |
+| `_ws_notes_data(...)` | Precomputes `note._labeled_extras` (list of `{label, value}`) for every note in the list, enabling display of all extra_sections in the note body |
+
+#### Root causes fixed
+- Custom sections were **silently omitted** from the note form — old architecture used
+  three separate context variables and only appended custom sections after all standard
+  sections, ignoring their defined position.
+- `VITALS`, `BODY_DIAGRAM`, and `DENTAL` POST values were **not collected** before save.
+- Saved `extra_sections` content was **never rendered** in the note body display.
+- `ws_note_delete` handler was missing `active_note_sections` in its response context,
+  causing the add-note form to render empty after a deletion.
+
+### Historical label preservation (bug fix 2026-04-17)
+
+**Problem:** Deleting a CUSTOM section from a template caused all previously saved notes
+that used that section to display "Custom Section" instead of the original label, because
+labels were resolved dynamically from the live `ClinicalNoteTemplateElement` record.
+
+**Fix:** `ClinicalNote` now carries a `extra_sections_labels` JSON snapshot — written at
+every note create/edit — so saved notes are immune to future template changes.
+
+#### New model field
+| Field | Type | Purpose |
+|---|---|---|
+| `extra_sections_labels` | `JSONField(default=dict)` | `{key: label}` snapshot of display labels at note-save time |
+
+Keys mirror `extra_sections` (e.g. `"123"` for CUSTOM elem id 42, `"vitals"` for VITALS).
+
+#### Label resolution order (rendering)
+`_annotate_notes_with_labeled_extras()` resolves each key in this priority:
+1. **`extra_sections_labels` snapshot** — historically persisted; immune to element deletion
+2. **`_EXTRA_SECTION_DISPLAY_LABELS`** — code constants for VITALS / BODY_DIAGRAM / DENTAL
+3. **Live `ClinicalNoteTemplateElement` DB lookup** — backward compat for pre-migration notes
+4. **"Custom Section"** — last resort when element was deleted before snapshot was recorded
+
+#### New helpers (`doctors/views.py`)
+| Helper | Purpose |
+|---|---|
+| `_collect_extra_sections_labels(active_sections)` | Builds `{key: label}` snapshot from current template sections at save time |
+| `_annotate_notes_with_labeled_extras(notes_list)` | Attaches `.labeled_extras` to each note using snapshot-first resolution; replaces the old per-function label loops |
+
+#### Migration
+`patients/migrations/0007_clinicalnote_extra_sections_labels.py` — adds the field and
+back-fills labels for existing notes from currently-alive elements (best-effort; elements
+already deleted before this migration cannot be recovered).
+
+#### Behavior summary
+| Note | Template element deleted after save | Displayed label |
+|---|---|---|
+| New note (post-fix) | Yes | Snapshot label — **correct** |
+| Old note (pre-fix, element still alive) | No | Live label via backward-compat lookup |
+| Old note (pre-fix, element already deleted) | Yes | "Custom Section" (unrecoverable) |
+| Old note (backfilled by migration) | Yes | Backfilled snapshot label — **correct** |

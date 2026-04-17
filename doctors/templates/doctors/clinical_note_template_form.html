@@ -1,6 +1,31 @@
 {% extends "doctors/base_doctor.html" %}
 {% block title %}{% if mode == 'edit' %}{% if IS_RTL %}تعديل القالب{% else %}Edit Template{% endif %}{% else %}{% if IS_RTL %}قالب جديد{% else %}New Template{% endif %}{% endif %} | {% if IS_RTL %}بوابة الطبيب{% else %}Doctor Portal{% endif %}{% endblock %}
 
+{% block extra_head %}
+<style>
+  .section-row[draggable="true"] { cursor: default; }
+  .drag-handle { cursor: grab; }
+  .drag-handle:active { cursor: grabbing; }
+  .section-row.is-dragging { opacity: 0.4; }
+  #drop-indicator {
+    height: 3px;
+    background: #0078D4;
+    border-radius: 3px;
+    margin: 2px 0;
+    pointer-events: none;
+  }
+  /* Undo toast */
+  #undo-toast {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+  #undo-toast.toast-hide {
+    opacity: 0;
+    transform: translateY(10px);
+    pointer-events: none;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="max-w-xl mx-auto animate-fade-in-up">
 
@@ -62,38 +87,108 @@
                   class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors resize-none">{% if mode == 'edit' %}{{ tpl.description }}{% endif %}</textarea>
       </div>
 
-      <!-- Elements -->
+      <!-- Template Builder Sections -->
       <div>
-        <label class="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-2">
-          {% if IS_RTL %}الأقسام{% else %}Sections {% endif %}<span class="text-red-500">*</span>
-          <span class="font-normal normal-case text-gray-400 dark:text-slate-500 ml-1">{% if IS_RTL %}— اختر وأعد الترتيب{% else %}— select and reorder{% endif %}</span>
+        <label class="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-3">
+          {% if IS_RTL %}بناء القالب{% else %}Template Builder{% endif %}
+          <span class="font-normal normal-case text-gray-400 dark:text-slate-500 ml-1">{% if IS_RTL %}— اسحب الأقسام لإعادة ترتيبها{% else %}— Drag sections to reorder{% endif %}</span>
         </label>
 
-        <div id="element-builder" class="space-y-2">
-          {% for et, label in element_choices %}
-          <label class="flex items-center gap-3 px-3.5 py-3 rounded-lg border cursor-pointer transition-colors
-            {% if et in selected_elements %}border-primary-300 bg-primary-50 dark:border-primary-700 dark:bg-primary-900/20
-            {% else %}border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/60{% endif %}">
-            <input type="checkbox"
-                   name="elements"
-                   value="{{ et }}"
-                   {% if et in selected_elements %}checked{% endif %}
-                   class="w-4 h-4 rounded accent-indigo-500 flex-shrink-0">
-            <span class="text-sm font-medium text-gray-800 dark:text-slate-100">
-              {{ label }}
-            </span>
-          </label>
-          {% endfor %}
+        <!-- Active sections canvas -->
+        <div class="space-y-2 mb-4" id="sections-list">
+          {% if tpl and tpl.elements.exists %}
+            {% for sec in tpl.elements.all|dictsort:"order" %}
+              {% if sec.element_type == 'CUSTOM' %}
+                <div class="section-row flex items-center gap-3 bg-white dark:bg-slate-800 border border-indigo-100 dark:border-indigo-900/50 p-2.5 rounded-lg shadow-sm transition-colors" draggable="true">
+                  <div class="drag-handle flex-shrink-0 flex items-center justify-center w-8 h-8 text-gray-300 dark:text-slate-600 hover:text-gray-500 dark:hover:text-slate-400 transition-colors"
+                       title="{% if IS_RTL %}اسحب لإعادة الترتيب{% else %}Drag to reorder{% endif %}">
+                    <i class="fa-solid fa-grip-vertical text-sm"></i>
+                  </div>
+                  <div class="flex-shrink-0 w-8 flex justify-center text-indigo-400 dark:text-indigo-500">
+                    <i class="fa-solid fa-pen-to-square text-sm"></i>
+                  </div>
+                  <input type="hidden" name="section_type" value="CUSTOM">
+                  <div class="flex-1">
+                    <input type="text" name="section_label" value="{{ sec.custom_label }}"
+                           placeholder="{% if IS_RTL %}أدخل اسم القسم (مثال: نص حر ٢){% else %}Enter section name (e.g. Free Text 2){% endif %}"
+                           class="w-full px-3 py-1.5 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors" required>
+                  </div>
+                  <button type="button" title="{% if IS_RTL %}إزالة{% else %}Remove{% endif %}"
+                          onclick="removeSection(this)"
+                          class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors focus:outline-none">
+                    <i class="fa-solid fa-trash text-xs"></i>
+                  </button>
+                </div>
+              {% else %}
+                <div class="section-row flex items-center gap-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 p-2.5 rounded-lg shadow-sm transition-colors" draggable="true">
+                  <div class="drag-handle flex-shrink-0 flex items-center justify-center w-8 h-8 text-gray-300 dark:text-slate-600 hover:text-gray-500 dark:hover:text-slate-400 transition-colors"
+                       title="{% if IS_RTL %}اسحب لإعادة الترتيب{% else %}Drag to reorder{% endif %}">
+                    <i class="fa-solid fa-grip-vertical text-sm"></i>
+                  </div>
+                  <div class="flex-shrink-0 w-8 flex justify-center text-gray-400 dark:text-slate-500">
+                    <i class="fa-solid fa-layer-group text-sm"></i>
+                  </div>
+                  <input type="hidden" name="section_type" value="{{ sec.element_type }}">
+                  <input type="hidden" name="section_label" value="{{ sec.custom_label }}">
+                  <div class="flex-1 font-medium text-sm text-gray-800 dark:text-slate-200 row-label-display">
+                    {{ sec.get_element_type_display }}
+                  </div>
+                  <button type="button" title="{% if IS_RTL %}إزالة{% else %}Remove{% endif %}"
+                          onclick="removeSection(this)"
+                          class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors focus:outline-none">
+                    <i class="fa-solid fa-trash text-xs"></i>
+                  </button>
+                </div>
+              {% endif %}
+            {% endfor %}
+          {% endif %}
         </div>
-        <p class="text-xs text-gray-400 dark:text-slate-500 mt-2">
-          {% if IS_RTL %}ستظهر الأقسام بالترتيب المدرج أعلاه. مطلوب قسم واحد على الأقل.{% else %}The sections will appear in the order listed above. At least one section is required.{% endif %}
-        </p>
+
+        <!-- Removed Sections Tray (hidden until something is removed) -->
+        <div id="removed-tray" style="display:none"
+             class="mb-4 rounded-lg border border-dashed border-red-200 dark:border-red-800/40 overflow-hidden">
+          <div class="flex items-center justify-between px-3 py-2 bg-red-50/70 dark:bg-red-900/10 border-b border-red-100 dark:border-red-800/30">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-clock-rotate-left text-xs text-red-400 dark:text-red-500"></i>
+              <span class="text-xs font-semibold text-red-500 dark:text-red-400 uppercase tracking-wide">
+                {% if IS_RTL %}الأقسام المحذوفة{% else %}Removed Sections{% endif %}
+              </span>
+            </div>
+            <button type="button" onclick="clearRemoved()"
+                    class="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-300 transition-colors">
+              {% if IS_RTL %}مسح الكل{% else %}Clear all{% endif %}
+            </button>
+          </div>
+          <div id="removed-list" class="p-2 space-y-0.5"></div>
+        </div>
+
+        <!-- Palette / Quick Add -->
+        <label class="block text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-2 pt-2 top-border">
+          {% if IS_RTL %}إضافة أقسام{% else %}Add Sections{% endif %}
+        </label>
+
+        <div class="flex flex-wrap gap-2">
+          {% for et_val, et_label, _ in element_choices %}
+            {% if et_val != 'CUSTOM' %}
+            <button type="button" onclick="addStandardRow('{{ et_val }}', '{{ et_label }}')"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-300 text-xs font-medium hover:bg-primary-50 hover:border-primary-200 hover:text-primary-700 dark:hover:bg-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/50 shadow-sm">
+              <i class="fa-solid fa-plus text-[10px]"></i> {{ et_label }}
+            </button>
+            {% endif %}
+          {% endfor %}
+
+          <button type="button" onclick="addCustomRow()"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-dashed border-indigo-300 dark:border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 text-xs font-medium hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500/50 shadow-sm">
+            <i class="fa-solid fa-plus text-[10px]"></i> {% if IS_RTL %}قسم مخصص جديد{% else %}Custom Section{% endif %}
+          </button>
+        </div>
+
       </div>
 
     </div><!-- /glass-card -->
 
     <!-- Actions -->
-    <div class="flex items-center gap-3 mt-5">
+    <div class="flex items-center gap-3 mt-8">
       <button type="submit"
               class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm transition-colors shadow-sm">
         <i class="fa-solid fa-floppy-disk text-xs"></i>
@@ -107,5 +202,388 @@
 
   </form>
 
+</div><!-- /max-w-xl -->
+
+<!-- ── Undo Toast (fixed bottom-center, auto-dismisses after 5 s) ────────── -->
+<div id="undo-toast" style="display:none"
+     class="toast-hide fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800 dark:bg-slate-700 shadow-xl border border-slate-700 dark:border-slate-600 min-w-[260px] max-w-sm">
+  <i class="fa-solid fa-trash-can text-slate-400 text-xs flex-shrink-0"></i>
+  <span id="undo-toast-text" class="flex-1 text-sm text-slate-300"></span>
+  <button type="button" onclick="undoLastRemoval()"
+          class="flex-shrink-0 px-3 py-1 rounded-lg bg-primary-500 hover:bg-primary-400 text-white text-xs font-semibold transition-colors">
+    {% if IS_RTL %}تراجع{% else %}Undo{% endif %}
+  </button>
+  <button type="button" onclick="dismissUndoToast()"
+          class="flex-shrink-0 w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white transition-colors">
+    <i class="fa-solid fa-xmark text-xs"></i>
+  </button>
 </div>
+
+<!-- ── HTML <template> blocks for dynamically added rows ───────────────── -->
+
+<template id="standard-row-template">
+  <div class="section-row flex items-center gap-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 p-2.5 rounded-lg shadow-sm transition-colors" draggable="true">
+    <div class="drag-handle flex-shrink-0 flex items-center justify-center w-8 h-8 text-gray-300 dark:text-slate-600 hover:text-gray-500 dark:hover:text-slate-400 transition-colors"
+         title="{% if IS_RTL %}اسحب لإعادة الترتيب{% else %}Drag to reorder{% endif %}">
+      <i class="fa-solid fa-grip-vertical text-sm"></i>
+    </div>
+    <div class="flex-shrink-0 w-8 flex justify-center text-gray-400 dark:text-slate-500">
+      <i class="fa-solid fa-layer-group text-sm"></i>
+    </div>
+    <input type="hidden" name="section_type" class="row-type-input" value="">
+    <input type="hidden" name="section_label" value="">
+    <div class="flex-1 font-medium text-sm text-gray-800 dark:text-slate-200 row-label-display">Label</div>
+    <button type="button" title="{% if IS_RTL %}إزالة{% else %}Remove{% endif %}"
+            onclick="removeSection(this)"
+            class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors focus:outline-none">
+      <i class="fa-solid fa-trash text-xs"></i>
+    </button>
+  </div>
+</template>
+
+<template id="custom-row-template">
+  <div class="section-row flex items-center gap-3 bg-white dark:bg-slate-800 border border-indigo-100 dark:border-indigo-900/50 p-2.5 rounded-lg shadow-sm transition-colors" draggable="true">
+    <div class="drag-handle flex-shrink-0 flex items-center justify-center w-8 h-8 text-gray-300 dark:text-slate-600 hover:text-gray-500 dark:hover:text-slate-400 transition-colors"
+         title="{% if IS_RTL %}اسحب لإعادة الترتيب{% else %}Drag to reorder{% endif %}">
+      <i class="fa-solid fa-grip-vertical text-sm"></i>
+    </div>
+    <div class="flex-shrink-0 w-8 flex justify-center text-indigo-400 dark:text-indigo-500">
+      <i class="fa-solid fa-pen-to-square text-sm"></i>
+    </div>
+    <input type="hidden" name="section_type" value="CUSTOM">
+    <div class="flex-1">
+      <input type="text" name="section_label" value=""
+             placeholder="{% if IS_RTL %}أدخل اسم القسم (مثال: نص حر ٢){% else %}Enter section name (e.g. Free Text 2){% endif %}"
+             class="w-full px-3 py-1.5 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors" required>
+    </div>
+    <button type="button" title="{% if IS_RTL %}إزالة{% else %}Remove{% endif %}"
+            onclick="removeSection(this)"
+            class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors focus:outline-none">
+      <i class="fa-solid fa-trash text-xs"></i>
+    </button>
+  </div>
+</template>
+
+<script>
+// ── RTL flag (resolved at server render time) ─────────────────────────────
+const _IS_RTL = {% if IS_RTL %}true{% else %}false{% endif %};
+
+// ── Drag-and-Drop reorder ─────────────────────────────────────────────────
+let _dragSrc = null;
+const _indicator = document.createElement('div');
+_indicator.id = 'drop-indicator';
+
+function _attachDrag(row) {
+  row.setAttribute('draggable', 'true');
+  row.addEventListener('dragstart', function (e) {
+    _dragSrc = this;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', '');
+    requestAnimationFrame(function () {
+      if (_dragSrc) _dragSrc.classList.add('is-dragging');
+    });
+  });
+  row.addEventListener('dragend', function () {
+    if (_dragSrc) _dragSrc.classList.remove('is-dragging');
+    _dragSrc = null;
+    _indicator.remove();
+  });
+}
+
+(function initDragContainer() {
+  const list = document.getElementById('sections-list');
+
+  list.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (!_dragSrc) return;
+
+    const rows = Array.from(list.querySelectorAll('.section-row')).filter(
+      function (r) { return r !== _dragSrc; }
+    );
+    if (rows.length === 0) { list.appendChild(_indicator); return; }
+
+    let best = null, bestDist = Infinity, insertBefore = true;
+    rows.forEach(function (row) {
+      const rect = row.getBoundingClientRect();
+      const mid  = rect.top + rect.height / 2;
+      const dist = e.clientY - mid;
+      if (Math.abs(dist) < bestDist) {
+        bestDist = Math.abs(dist);
+        best = row;
+        insertBefore = dist < 0;
+      }
+    });
+    if (best) {
+      insertBefore ? list.insertBefore(_indicator, best) : best.after(_indicator);
+    }
+  });
+
+  list.addEventListener('dragleave', function (e) {
+    if (!list.contains(e.relatedTarget)) _indicator.remove();
+  });
+
+  list.addEventListener('drop', function (e) {
+    e.preventDefault();
+    if (!_dragSrc) return;
+    if (_indicator.parentNode === list) list.insertBefore(_dragSrc, _indicator);
+    _indicator.remove();
+    _dragSrc.classList.remove('is-dragging');
+    _dragSrc = null;
+  });
+
+  list.querySelectorAll('.section-row').forEach(_attachDrag);
+})();
+
+// ── Removed Sections state ────────────────────────────────────────────────
+// Each entry: { id, type, label, displayLabel, isCustom }
+let _removedSections = [];
+
+// Last removal for undo: { entry, insertIndex }
+let _lastRemoval = null;
+
+// ── removeSection(btn) ────────────────────────────────────────────────────
+// Called by every trash button instead of a direct .remove().
+// Captures all data needed to restore the section exactly, then removes the row.
+function removeSection(btn) {
+  const row  = btn.closest('.section-row');
+  const list = document.getElementById('sections-list');
+
+  // Capture position so undo can go back to the same slot
+  const allRows    = Array.from(list.querySelectorAll('.section-row'));
+  const insertIndex = allRows.indexOf(row);
+
+  // Read data from the row
+  const typeInput   = row.querySelector('input[name="section_type"]');
+  const labelInput  = row.querySelector('input[name="section_label"]');
+  const displayDiv  = row.querySelector('.row-label-display');
+
+  const type        = typeInput  ? typeInput.value.trim()  : 'CUSTOM';
+  const isCustom    = type === 'CUSTOM';
+  // For CUSTOM: text input holds the label the doctor typed.
+  // For standard: hidden input holds optional custom_label; displayDiv holds the display name.
+  const label       = labelInput ? labelInput.value.trim() : '';
+  const displayLabel = isCustom
+    ? (label || (_IS_RTL ? 'قسم مخصص' : 'Custom Section'))
+    : (displayDiv ? displayDiv.textContent.trim() : type);
+
+  const entry = {
+    id:           Date.now() + Math.random(), // unique per removal
+    type:         type,
+    label:        label,
+    displayLabel: displayLabel,
+    isCustom:     isCustom,
+  };
+
+  _removedSections.push(entry);
+  _lastRemoval = { entry: entry, insertIndex: insertIndex };
+
+  row.remove();
+
+  _renderRemovedTray();
+  _showUndoToast(entry);
+}
+
+// ── _createRow(entry) ─────────────────────────────────────────────────────
+// Builds a new, fully wired .section-row from a removed-section entry.
+// Uses the existing <template> blocks so the row is identical in markup.
+function _createRow(entry) {
+  const tplId = entry.isCustom ? 'custom-row-template' : 'standard-row-template';
+  const frag  = document.getElementById(tplId).content.cloneNode(true);
+
+  if (entry.isCustom) {
+    // Pre-fill the label text input with the exact original label
+    var inp = frag.querySelector('input[name="section_label"]');
+    if (inp) inp.value = entry.label;
+  } else {
+    // Set type, optional custom_label, and display text
+    var typeInp    = frag.querySelector('.row-type-input');
+    var labelInp   = frag.querySelector('input[name="section_label"]');
+    var displayDiv = frag.querySelector('.row-label-display');
+    if (typeInp)    typeInp.value          = entry.type;
+    if (labelInp)   labelInp.value         = entry.label;
+    if (displayDiv) displayDiv.textContent = entry.displayLabel;
+  }
+
+  // A DocumentFragment can't be returned directly (no .scrollIntoView etc.).
+  // Move it into a temporary host element and return the real child.
+  var host = document.createElement('div');
+  host.appendChild(frag);
+  return host.firstElementChild;
+}
+
+// ── _restoreEntry(entry, insertIndex) ────────────────────────────────────
+// Shared by both undo (insert at original index) and tray restore (append).
+function _restoreEntry(entry, insertIndex) {
+  const list = document.getElementById('sections-list');
+  const row  = _createRow(entry);
+  _attachDrag(row);
+
+  // Remove from the removed list (in case called from tray restore while still there)
+  _removedSections = _removedSections.filter(function (e) { return e.id !== entry.id; });
+
+  const currentRows = Array.from(list.querySelectorAll('.section-row'));
+  if (insertIndex >= 0 && insertIndex <= currentRows.length) {
+    // Insert at the original position (best-effort; rows may have been reordered)
+    list.insertBefore(row, currentRows[insertIndex] || null);
+  } else {
+    list.appendChild(row);
+  }
+
+  row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  // Auto-focus custom label input so the doctor can verify/edit it immediately
+  if (entry.isCustom) {
+    setTimeout(function () {
+      var inp = row.querySelector('input[type="text"]');
+      if (inp) inp.focus();
+    }, 60);
+  }
+
+  _renderRemovedTray();
+}
+
+// ── undoLastRemoval() — undo button in the toast ──────────────────────────
+function undoLastRemoval() {
+  if (!_lastRemoval) return;
+  var ref = _lastRemoval;
+  _lastRemoval = null;
+  dismissUndoToast();
+  _restoreEntry(ref.entry, ref.insertIndex);
+}
+
+// ── restoreSection(id) — restore button in the tray ──────────────────────
+function restoreSection(id) {
+  var idx = _removedSections.findIndex(function (e) { return e.id === id; });
+  if (idx === -1) return;
+  var entry = _removedSections[idx];
+  _removedSections.splice(idx, 1);
+  // Append to end of list (tray restore — position no longer tracked)
+  _restoreEntry(entry, -1);
+}
+
+// ── clearRemoved() — "Clear all" in the tray header ──────────────────────
+function clearRemoved() {
+  _removedSections = [];
+  _lastRemoval     = null;
+  _renderRemovedTray();
+}
+
+// ── _renderRemovedTray() ──────────────────────────────────────────────────
+// Rebuilds the tray DOM from _removedSections[].
+function _renderRemovedTray() {
+  var tray    = document.getElementById('removed-tray');
+  var listEl  = document.getElementById('removed-list');
+  if (!tray || !listEl) return;
+
+  if (_removedSections.length === 0) {
+    tray.style.display = 'none';
+    listEl.innerHTML   = '';
+    return;
+  }
+
+  tray.style.display = '';
+  listEl.innerHTML   = '';
+
+  _removedSections.forEach(function (entry) {
+    var item = document.createElement('div');
+    item.className = 'flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors';
+
+    // Icon — indigo pen for CUSTOM, gray layers for standard
+    var iconClass = entry.isCustom
+      ? 'fa-solid fa-pen-to-square text-xs text-indigo-400'
+      : 'fa-solid fa-layer-group text-xs text-gray-400 dark:text-slate-500';
+
+    var restoreLabel = _IS_RTL ? 'استعادة' : 'Restore';
+    var iconEl       = document.createElement('i');
+    iconEl.className = iconClass + ' flex-shrink-0';
+
+    var nameEl       = document.createElement('span');
+    nameEl.className = 'flex-1 text-sm text-gray-600 dark:text-slate-300 truncate';
+    nameEl.textContent = entry.displayLabel;
+
+    var restoreBtn   = document.createElement('button');
+    restoreBtn.type  = 'button';
+    restoreBtn.className = 'flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors';
+    restoreBtn.innerHTML = '<i class="fa-solid fa-rotate-left text-[10px]"></i> ' + restoreLabel;
+    // Use closure to capture entry.id at this iteration
+    (function (eid) {
+      restoreBtn.onclick = function () { restoreSection(eid); };
+    }(entry.id));
+
+    item.appendChild(iconEl);
+    item.appendChild(nameEl);
+    item.appendChild(restoreBtn);
+    listEl.appendChild(item);
+  });
+}
+
+// ── Undo Toast ────────────────────────────────────────────────────────────
+var _toastTimer = null;
+
+function _showUndoToast(entry) {
+  var toast = document.getElementById('undo-toast');
+  var text  = document.getElementById('undo-toast-text');
+  if (!toast || !text) return;
+
+  clearTimeout(_toastTimer);
+
+  var removedWord = _IS_RTL ? 'تمت الإزالة' : 'Removed';
+  text.textContent = removedWord + ': ' + entry.displayLabel;
+
+  toast.style.display = 'flex';
+  // Trigger transition: remove hide class on next frame
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      toast.classList.remove('toast-hide');
+    });
+  });
+
+  _toastTimer = setTimeout(dismissUndoToast, 5000);
+}
+
+function dismissUndoToast() {
+  var toast = document.getElementById('undo-toast');
+  if (!toast) return;
+  clearTimeout(_toastTimer);
+  _toastTimer = null;
+  toast.classList.add('toast-hide');
+  setTimeout(function () {
+    // Only hide if still dismissed (undo wasn't triggered while fading)
+    if (toast.classList.contains('toast-hide')) {
+      toast.style.display = 'none';
+    }
+  }, 220);
+}
+
+// ── Add rows (palette buttons) ────────────────────────────────────────────
+
+function addStandardRow(typeVal, typeLabel) {
+  const list = document.getElementById('sections-list');
+  const frag = document.getElementById('standard-row-template').content.cloneNode(true);
+  frag.querySelector('.row-type-input').value          = typeVal;
+  frag.querySelector('.row-label-display').textContent = typeLabel;
+  // section_label stays '' — correct for freshly added standard rows
+
+  list.appendChild(frag);
+  const newRow = list.lastElementChild;
+  _attachDrag(newRow);
+  newRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function addCustomRow() {
+  const list = document.getElementById('sections-list');
+  const frag = document.getElementById('custom-row-template').content.cloneNode(true);
+
+  list.appendChild(frag);
+  const newRow = list.lastElementChild;
+  _attachDrag(newRow);
+  newRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  setTimeout(function () {
+    var inp = newRow.querySelector('input[type="text"]');
+    if (inp) inp.focus();
+  }, 50);
+}
+</script>
 {% endblock %}

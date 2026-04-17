@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, date
 
 from django.shortcuts import render, get_object_or_404, redirect
@@ -651,8 +652,12 @@ def doctor_appointment_types_view(request, doctor_id):
 from django.contrib import messages
 from django.shortcuts import redirect
 from django.urls import reverse
+from django.utils import translation
+from django.utils.translation import gettext as _
 from django.utils import timezone
 from django.core.exceptions import ValidationError
+
+from .clinical_note_template_service import create_clinical_note_template, update_clinical_note_template
 from clinics.models import ClinicInvitation
 from clinics.services import accept_invitation, reject_invitation
 from accounts.backends import PhoneNumberAuthBackend
@@ -1771,10 +1776,10 @@ def patient_workspace(request, patient_id):
 
     if tab == "overview":
         ctx.update(_ws_overview_data(patient, cids))
-        ctx["active_note_elements"] = _get_active_template_elements(ctx["doctor"])
+        ctx["active_note_sections"] = _get_active_note_sections(ctx["doctor"])
     elif tab == "notes":
         ctx.update(_ws_notes_data(patient, cids, request))
-        ctx["active_note_elements"] = _get_active_template_elements(ctx["doctor"])
+        ctx["active_note_sections"] = _get_active_note_sections(ctx["doctor"])
     elif tab == "orders":
         ctx.update(_ws_orders_data(patient, cids, request))
     elif tab == "prescriptions":
@@ -1798,7 +1803,14 @@ def patient_workspace(request, patient_id):
 # ── Tab data helpers ──────────────────────────────────────────────────────────
 
 def _ws_overview_data(patient, cids):
-    all_notes      = list(ClinicalNote.objects.filter(patient=patient, clinic_id__in=cids).select_related("doctor", "clinic").order_by("-created_at"))
+    all_notes = list(
+        ClinicalNote.objects.filter(patient=patient, clinic_id__in=cids)
+        .select_related("doctor", "clinic")
+        .order_by("-created_at")
+    )
+
+    _annotate_notes_with_labeled_extras(all_notes)
+
     active_orders  = list(Order.objects.filter(patient=patient, clinic_id__in=cids, status=Order.Status.PENDING).select_related("doctor")[:8])
     latest_rx      = Prescription.objects.filter(patient=patient, clinic_id__in=cids, is_active=True).prefetch_related("items").first()
     recent_records = list(MedicalRecord.objects.filter(patient=patient, clinic_id__in=cids)[:5])
@@ -1833,6 +1845,11 @@ def _ws_notes_data(patient, cids, request):
     qs = ClinicalNote.objects.filter(patient=patient, clinic_id__in=cids).select_related("doctor", "clinic")
     paginator = Paginator(qs, 10)
     notes_page = paginator.get_page(request.GET.get("notes_page", 1))
+
+    notes_list = list(notes_page.object_list)
+    _annotate_notes_with_labeled_extras(notes_list)
+    notes_page.object_list = notes_list
+
     return {"notes": notes_page, "notes_paginator": paginator}
 
 
@@ -1896,6 +1913,9 @@ def ws_note_add(request, patient_id):
         except (TypeError, ValueError):
             clinic_id = ctx["shared_clinic_ids"][0]
 
+        # Resolve sections first so we can snapshot labels alongside the content.
+        active_sections = _get_active_note_sections(ctx["doctor"])
+        extra_sections  = _collect_extra_sections(request.POST)
         ClinicalNote.objects.create(
             patient=ctx["patient"],
             clinic_id=clinic_id,
@@ -1905,10 +1925,12 @@ def ws_note_add(request, patient_id):
             assessment=request.POST.get("assessment", "").strip(),
             plan=request.POST.get("plan", "").strip(),
             free_text=request.POST.get("free_text", "").strip(),
+            extra_sections=extra_sections,
+            extra_sections_labels=_collect_extra_sections_labels(active_sections),
         )
         ctx.update(_ws_notes_data(ctx["patient"], ctx["shared_clinic_ids"], request))
-        ctx["note_saved"] = True
-        ctx["active_note_elements"] = _get_active_template_elements(ctx["doctor"])
+        ctx["note_saved"]           = True
+        ctx["active_note_sections"] = active_sections
         return render(request, "doctors/partials/ws_notes.html", ctx)
 
     return redirect("doctors:patient_workspace", patient_id=patient_id)
@@ -1924,20 +1946,26 @@ def ws_note_edit(request, patient_id, note_id):
     note = get_object_or_404(ClinicalNote, pk=note_id, patient_id=patient_id, doctor=ctx["doctor"])
 
     if request.method == "POST":
-        note.subjective = request.POST.get("subjective", "").strip()
-        note.objective  = request.POST.get("objective", "").strip()
-        note.assessment = request.POST.get("assessment", "").strip()
-        note.plan       = request.POST.get("plan", "").strip()
-        note.free_text  = request.POST.get("free_text", "").strip()
+        # Resolve sections first so we can snapshot labels at edit time too.
+        active_sections         = _get_active_note_sections(ctx["doctor"])
+        note.subjective         = request.POST.get("subjective", "").strip()
+        note.objective          = request.POST.get("objective", "").strip()
+        note.assessment         = request.POST.get("assessment", "").strip()
+        note.plan               = request.POST.get("plan", "").strip()
+        note.free_text          = request.POST.get("free_text", "").strip()
+        note.extra_sections     = _collect_extra_sections(request.POST)
+        note.extra_sections_labels = _collect_extra_sections_labels(active_sections)
         note.save()
         ctx.update(_ws_notes_data(ctx["patient"], ctx["shared_clinic_ids"], request))
-        ctx["note_saved"] = True
-        ctx["active_note_elements"] = _get_active_template_elements(ctx["doctor"])
+        ctx["note_saved"]           = True
+        ctx["active_note_sections"] = active_sections
         return render(request, "doctors/partials/ws_notes.html", ctx)
 
-    ctx["edit_note"] = note
+    # GET — open the form pre-filled with the note's existing content
+    ctx["edit_note"]          = note
     ctx.update(_ws_notes_data(ctx["patient"], ctx["shared_clinic_ids"], request))
-    ctx["active_note_elements"] = _get_active_template_elements(ctx["doctor"])
+    # Pass sections with pre-filled values so the template can populate the form
+    ctx["active_note_sections"] = _get_active_note_sections(ctx["doctor"], note=note)
     return render(request, "doctors/partials/ws_notes.html", ctx)
 
 
@@ -1952,6 +1980,7 @@ def ws_note_delete(request, patient_id, note_id):
         note = get_object_or_404(ClinicalNote, pk=note_id, patient_id=patient_id, doctor=ctx["doctor"])
         note.delete()
         ctx.update(_ws_notes_data(ctx["patient"], ctx["shared_clinic_ids"], request))
+        ctx["active_note_sections"] = _get_active_note_sections(ctx["doctor"])
         return render(request, "doctors/partials/ws_notes.html", ctx)
 
     return redirect("doctors:patient_workspace", patient_id=patient_id)
@@ -2584,12 +2613,14 @@ def htmx_followup_slots(request, patient_id):
 # CLINICAL NOTE TEMPLATES
 # ============================================
 
-# All element type codes in their canonical display order
+# All standard element type codes in their canonical display order.
+# NOTE: "CUSTOM" is intentionally absent — custom sections are handled separately.
 _ALL_ELEMENT_TYPES = [
     "SUBJECTIVE", "OBJECTIVE", "ASSESSMENT", "PLAN",
     "FREE_TEXT", "VITALS", "BODY_DIAGRAM", "DENTAL",
 ]
 
+# Default display labels for standard element types.
 _ELEMENT_LABELS = {
     "SUBJECTIVE":   "S — Subjective",
     "OBJECTIVE":    "O — Objective",
@@ -2601,14 +2632,31 @@ _ELEMENT_LABELS = {
     "DENTAL":       "Dental Chart",
 }
 
+# Maps standard element types to their HTML form field names.
+# CUSTOM sections use a dynamic name: custom_section_<elem_id>.
+# VITALS, BODY_DIAGRAM, DENTAL have no dedicated ClinicalNote model field;
+# their content is persisted in ClinicalNote.extra_sections under these keys.
+_SECTION_FIELD_MAP = {
+    "SUBJECTIVE":   "subjective",
+    "OBJECTIVE":    "objective",
+    "ASSESSMENT":   "assessment",
+    "PLAN":         "plan",
+    "FREE_TEXT":    "free_text",
+    "VITALS":       "vitals",
+    "BODY_DIAGRAM": "body_diagram_notes",
+    "DENTAL":       "dental_notes",
+}
 
-def _get_active_template_elements(doctor):
-    """
-    Return the ordered list of element type codes for the doctor's active
-    template.  Falls back to the system default template when no active
-    template is configured.  Returns None only when the system has no default
-    (should not happen after migrations).
-    """
+# Human-readable labels for the non-model standard section keys stored in extra_sections.
+_EXTRA_SECTION_DISPLAY_LABELS = {
+    "vitals":             "Vitals",
+    "body_diagram_notes": "Body Diagram",
+    "dental_notes":       "Dental Chart",
+}
+
+
+def _resolve_active_template(doctor):
+    """Return the active ClinicalNoteTemplate for a doctor, or None."""
     try:
         settings_obj = DoctorClinicalNoteSettings.objects.select_related(
             "active_template"
@@ -2618,18 +2666,205 @@ def _get_active_template_elements(doctor):
         tpl = None
 
     if tpl is None:
-        # Fall back to the system default template
         tpl = ClinicalNoteTemplate.objects.filter(
             template_type=ClinicalNoteTemplate.TemplateType.SYSTEM,
             is_system_default=True,
         ).first()
 
-    if tpl is None:
-        return _ALL_ELEMENT_TYPES  # ultimate fallback: show everything
+    return tpl
 
-    return list(
-        tpl.elements.order_by("order").values_list("element_type", flat=True)
-    )
+
+def _extract_note_field(note, element_type):
+    """
+    Return the saved text for a standard element type from a ClinicalNote.
+    VITALS, BODY_DIAGRAM, and DENTAL are stored in extra_sections (no DB column).
+    Returns empty string when note is None or the field is empty.
+    """
+    if note is None:
+        return ""
+    mapping = {
+        "SUBJECTIVE":   note.subjective,
+        "OBJECTIVE":    note.objective,
+        "ASSESSMENT":   note.assessment,
+        "PLAN":         note.plan,
+        "FREE_TEXT":    note.free_text,
+        "VITALS":       note.extra_sections.get("vitals", ""),
+        "BODY_DIAGRAM": note.extra_sections.get("body_diagram_notes", ""),
+        "DENTAL":       note.extra_sections.get("dental_notes", ""),
+    }
+    return mapping.get(element_type, "")
+
+
+def _collect_extra_sections(post_data):
+    """
+    Build the extra_sections dict from a POST payload.
+
+    Handles three categories:
+      1. Custom template sections:  custom_section_<elem_id>  → key = str(elem_id)
+      2. VITALS form field:         vitals                    → key = "vitals"
+      3. BODY_DIAGRAM form field:   body_diagram_notes        → key = "body_diagram_notes"
+      4. DENTAL form field:         dental_notes              → key = "dental_notes"
+
+    Only non-empty values are stored.  The keys must match _extract_note_field()
+    so that edit-form pre-filling works correctly.
+    """
+    extra = {}
+    # Standard sections without dedicated ClinicalNote model columns
+    for field_name in ("vitals", "body_diagram_notes", "dental_notes"):
+        val = post_data.get(field_name, "").strip()
+        if val:
+            extra[field_name] = val
+    # CUSTOM template sections keyed by their ClinicalNoteTemplateElement PK
+    for k, v in post_data.items():
+        if k.startswith("custom_section_"):
+            val = v.strip()
+            if val:
+                extra[k.removeprefix("custom_section_")] = val
+    return extra
+
+
+def _collect_extra_sections_labels(active_sections):
+    """
+    Build a {key: label} snapshot from the active template sections list.
+
+    Only covers sections whose content lands in extra_sections (CUSTOM, VITALS,
+    BODY_DIAGRAM, DENTAL). SOAP and FREE_TEXT use dedicated model columns whose
+    semantics are stable and do not require snapshotting.
+
+    This snapshot is written to ClinicalNote.extra_sections_labels at save time
+    so that future template edits — including element deletion — cannot
+    retroactively rename or erase section titles on already-saved notes.
+    """
+    labels = {}
+    for section in active_sections:
+        stype = section["type"]
+        if stype == "CUSTOM":
+            # key = str(elem_id), matching _collect_extra_sections
+            key = str(section["elem_id"])
+            labels[key] = section["label"]
+        elif stype in ("VITALS", "BODY_DIAGRAM", "DENTAL"):
+            # key = section["name"] e.g. "vitals", "body_diagram_notes"
+            key = section["name"]
+            labels[key] = section["label"]
+    return labels
+
+
+def _annotate_notes_with_labeled_extras(notes_list):
+    """
+    Attach .labeled_extras to every note in notes_list.
+
+    Label resolution order (highest → lowest priority):
+    1. note.extra_sections_labels  — snapshot saved at note-write time.
+       Immune to any future template change or element deletion.
+    2. _EXTRA_SECTION_DISPLAY_LABELS — code constants for the three built-in
+       extra keys (vitals / body_diagram_notes / dental_notes).  These never
+       change, so the snapshot and the constant agree; listed here as a safe
+       explicit fallback for old notes that predate the snapshot field.
+    3. Live ClinicalNoteTemplateElement lookup — backward-compat for notes
+       created before the extra_sections_labels field existed.  Still correct
+       as long as the element has not been deleted.
+    4. "Custom Section" — last resort when the element has already been deleted
+       and no snapshot was recorded (pre-migration notes only).
+    """
+    # Only fetch live element labels for keys not covered by a snapshot,
+    # to avoid unnecessary DB queries.
+    custom_elem_ids_needed = set()
+    for note in notes_list:
+        snapshot = note.extra_sections_labels or {}
+        for key in note.extra_sections:
+            if key in snapshot:
+                continue
+            if key in _EXTRA_SECTION_DISPLAY_LABELS:
+                continue
+            try:
+                custom_elem_ids_needed.add(int(key))
+            except (ValueError, TypeError):
+                pass
+
+    live_label_map = {}
+    if custom_elem_ids_needed:
+        live_label_map = dict(
+            ClinicalNoteTemplateElement.objects.filter(
+                id__in=custom_elem_ids_needed
+            ).values_list("id", "custom_label")
+        )
+
+    for note in notes_list:
+        snapshot = note.extra_sections_labels or {}
+        labeled = []
+        for key, val in note.extra_sections.items():
+            if not val:
+                continue
+            # 1. Snapshot (historically persisted — survives element deletion)
+            if key in snapshot and snapshot[key]:
+                label = snapshot[key]
+            # 2. Built-in constant labels
+            elif key in _EXTRA_SECTION_DISPLAY_LABELS:
+                label = _EXTRA_SECTION_DISPLAY_LABELS[key]
+            # 3. Live element lookup (backward compat for pre-snapshot notes)
+            else:
+                try:
+                    eid = int(key)
+                    label = live_label_map.get(eid) or "Custom Section"
+                except (ValueError, TypeError):
+                    label = key
+            labeled.append({"label": label, "value": val})
+        note.labeled_extras = labeled
+
+
+def _get_active_note_sections(doctor, note=None):
+    """
+    Return an ordered list of section descriptors for the clinical note editor,
+    in exactly the order defined by the doctor's active template.
+
+    Each descriptor is a dict:
+      type     – element type code ("SUBJECTIVE", "CUSTOM", "VITALS", …)
+      label    – display label (from template custom_label or platform default)
+      name     – HTML <textarea> name attribute
+      elem_id  – ClinicalNoteTemplateElement PK for CUSTOM sections; None otherwise
+      value    – pre-filled value (empty string for new notes; populated for edits)
+
+    ROOT CAUSE FIX: this replaces the old trio of helpers
+    (_get_active_template_elements, _get_active_template_element_labels,
+    _get_active_custom_sections) that scattered section data across three
+    separate context variables and rendered custom sections AFTER all standard
+    sections regardless of their defined position in the template.
+    """
+    tpl = _resolve_active_template(doctor)
+
+    if tpl is None:
+        # Ultimate fallback: no template configured at all — show every standard type
+        return [
+            {
+                "type":    et,
+                "label":   _ELEMENT_LABELS[et],
+                "name":    _SECTION_FIELD_MAP[et],
+                "elem_id": None,
+                "value":   _extract_note_field(note, et),
+            }
+            for et in _ALL_ELEMENT_TYPES
+        ]
+
+    sections = []
+    for elem in tpl.elements.order_by("order"):
+        et = elem.element_type
+        if et == ClinicalNoteTemplateElement.ElementType.CUSTOM:
+            sections.append({
+                "type":    "CUSTOM",
+                "label":   elem.custom_label or "Custom Section",
+                "name":    f"custom_section_{elem.id}",
+                "elem_id": elem.id,
+                "value":   note.extra_sections.get(str(elem.id), "") if note else "",
+            })
+        else:
+            sections.append({
+                "type":    et,
+                "label":   elem.custom_label or _ELEMENT_LABELS.get(et, et),
+                "name":    _SECTION_FIELD_MAP.get(et, et.lower()),
+                "elem_id": None,
+                "value":   _extract_note_field(note, et),
+            })
+    return sections
 
 
 def _require_doctor(request):
@@ -2692,38 +2927,37 @@ def clinical_note_template_create(request):
         return redirect("accounts:home")
 
     if request.method == "POST":
-        name = request.POST.get("name", "").strip()
-        description = request.POST.get("description", "").strip()
-        element_types = request.POST.getlist("elements")
+        name = request.POST.get("name", "")
+        description = request.POST.get("description", "")
+        section_types = request.POST.getlist("section_type")
+        section_labels = request.POST.getlist("section_label")
 
-        if not name:
-            messages.error(request, "Template name is required.")
-            return redirect("doctors:clinical_note_template_create")
-
-        # Only allow valid element types
-        valid = [e for e in element_types if e in _ALL_ELEMENT_TYPES]
-        if not valid:
-            messages.error(request, "Please select at least one element.")
-            return redirect("doctors:clinical_note_template_create")
-
-        tpl = ClinicalNoteTemplate.objects.create(
-            name=name,
-            description=description,
-            template_type=ClinicalNoteTemplate.TemplateType.CUSTOM,
-            doctor=user,
-        )
-        for idx, et in enumerate(valid):
-            ClinicalNoteTemplateElement.objects.create(
-                template=tpl, element_type=et, order=idx
+        try:
+            create_clinical_note_template(
+                doctor=user,
+                name=name,
+                description=description,
+                section_types=section_types,
+                section_labels=section_labels,
             )
+            messages.success(request, f'Template "{name}" created.')
+            return redirect("doctors:clinical_note_templates")
+        except ValidationError as e:
+            messages.error(request, e.message if hasattr(e, 'message') else str(e.args[0]))
+            return redirect("doctors:clinical_note_template_create")
 
-        messages.success(request, f'Template "{name}" created.')
-        return redirect("doctors:clinical_note_templates")
-
+    # Pass the available valid element choices dynamically, preserving the standard ordering.
+    element_choices = [
+        (et, _ELEMENT_LABELS[et], "")
+        for et in _ALL_ELEMENT_TYPES
+    ]
+    # Explicitly append CUSTOM as the base generic type
+    element_choices.append(("CUSTOM", "Generic Text Section", ""))
+    
     return render(request, "doctors/clinical_note_template_form.html", {
         "mode": "create",
-        "element_choices": [(et, _ELEMENT_LABELS[et]) for et in _ALL_ELEMENT_TYPES],
-        "selected_elements": set(_ALL_ELEMENT_TYPES[:5]),
+        "element_choices": element_choices,
+        "tpl": None,
     })
 
 
@@ -2742,41 +2976,36 @@ def clinical_note_template_edit(request, template_id):
     )
 
     if request.method == "POST":
-        name = request.POST.get("name", "").strip()
-        description = request.POST.get("description", "").strip()
-        element_types = request.POST.getlist("elements")
+        name = request.POST.get("name", "")
+        description = request.POST.get("description", "")
+        section_types = request.POST.getlist("section_type")
+        section_labels = request.POST.getlist("section_label")
 
-        if not name:
-            messages.error(request, "Template name is required.")
-            return redirect("doctors:clinical_note_template_edit", template_id=tpl.id)
-
-        valid = [e for e in element_types if e in _ALL_ELEMENT_TYPES]
-        if not valid:
-            messages.error(request, "Please select at least one element.")
-            return redirect("doctors:clinical_note_template_edit", template_id=tpl.id)
-
-        tpl.name = name
-        tpl.description = description
-        tpl.save()
-
-        # Replace elements
-        tpl.elements.all().delete()
-        for idx, et in enumerate(valid):
-            ClinicalNoteTemplateElement.objects.create(
-                template=tpl, element_type=et, order=idx
+        try:
+            update_clinical_note_template(
+                template_id=tpl.id,
+                doctor=user,
+                name=name,
+                description=description,
+                section_types=section_types,
+                section_labels=section_labels,
             )
+            messages.success(request, f'Template "{name}" updated.')
+            return redirect("doctors:clinical_note_templates")
+        except ValidationError as e:
+            messages.error(request, e.message if hasattr(e, 'message') else str(e.args[0]))
+            return redirect("doctors:clinical_note_template_edit", template_id=tpl.id)
 
-        messages.success(request, f'Template "{name}" updated.')
-        return redirect("doctors:clinical_note_templates")
-
-    selected_elements = set(
-        tpl.elements.order_by("order").values_list("element_type", flat=True)
-    )
+    element_choices = [
+        (et, _ELEMENT_LABELS[et], "")
+        for et in _ALL_ELEMENT_TYPES
+    ]
+    element_choices.append(("CUSTOM", "Generic Text Section", ""))
+    
     return render(request, "doctors/clinical_note_template_form.html", {
         "mode": "edit",
         "tpl": tpl,
-        "element_choices": [(et, _ELEMENT_LABELS[et]) for et in _ALL_ELEMENT_TYPES],
-        "selected_elements": selected_elements,
+        "element_choices": element_choices,
     })
 
 

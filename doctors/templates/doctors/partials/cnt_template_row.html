@@ -31,7 +31,7 @@ Variables:
       <div class="flex flex-wrap gap-1 mt-2">
         {% for elem in tpl.elements.all %}
         <span class="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 text-xs">
-          {{ elem.get_element_type_display }}
+          {% if elem.custom_label %}{{ elem.custom_label }}{% else %}{{ elem.get_element_type_display }}{% endif %}
         </span>
         {% endfor %}
       </div>
