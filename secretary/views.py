@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.db.models import Q, Sum
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.utils import timezone
+from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
 from appointments.models import Appointment, AppointmentType
@@ -49,7 +50,7 @@ def _get_doctor_statuses(clinic):
 
         if in_progress:
             status = "with_patient"
-            status_label = "مع مريض"
+            status_label = _("مع مريض")
         else:
             # Check regular schedule
             try:
@@ -61,10 +62,10 @@ def _get_doctor_statuses(clinic):
 
             if scheduled:
                 status = "available"
-                status_label = "متاح"
+                status_label = _("متاح")
             else:
                 status = "not_scheduled"
-                status_label = "غير مجدول"
+                status_label = _("غير مجدول")
 
         today_count = Appointment.objects.filter(
             clinic=clinic, doctor=doctor, appointment_date=today
@@ -2192,7 +2193,7 @@ def create_appointment(request):
     from clinics.models import ClinicStaff as CS
     doctors_qs = CS.objects.filter(
         clinic=clinic, role__in=["DOCTOR"], is_active=True
-    ).select_related("user__doctor_profile__doctor_specialties__specialty")
+    ).select_related("user")
     if clinic.main_doctor:
         doctor_users = [clinic.main_doctor] + [s.user for s in doctors_qs if s.user_id != clinic.main_doctor_id]
     else:
@@ -2287,7 +2288,7 @@ def create_appointment(request):
         "prefill_date": prefill_date,
         "prefill_time": prefill_time,
         "prefill_patient_id": prefill_patient_id,
-        "steps": [("المريض", 1), ("الموعد", 2), ("التأكيد", 3)],
+        "steps": [(_("المريض"), 1), (_("الموعد"), 2), (_("التأكيد"), 3)],
     })
 
 

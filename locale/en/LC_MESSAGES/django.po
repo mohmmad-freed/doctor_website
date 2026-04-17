@@ -238,6 +238,51 @@ msgstr "Status"
 msgid "ملاحظات"
 msgstr "Notes"
 
+msgid "عرض التقويم"
+msgstr "View Calendar"
+
+msgid "كل الحالات"
+msgstr "All Statuses"
+
+msgid "كل الأطباء"
+msgstr "All Doctors"
+
+msgid "من"
+msgstr "From"
+
+msgid "إلى"
+msgstr "To"
+
+msgid "إعادة تعيين"
+msgstr "Reset"
+
+msgid "التاريخ / الوقت"
+msgstr "Date / Time"
+
+msgid "صفحة %(num)s من %(total)s"
+msgstr "Page %(num)s of %(total)s"
+
+msgid "لا توجد مواعيد مطابقة"
+msgstr "No matching appointments"
+
+msgid "جرّب تغيير معايير البحث أو حجز موعد جديد"
+msgstr "Try changing the search criteria or book a new appointment"
+
+msgid "تأكيد الإلغاء"
+msgstr "Confirm Cancellation"
+
+msgid "تراجع"
+msgstr "Go Back"
+
+msgid "موعد"
+msgstr "Appointment"
+
+msgid "اسم المريض أو رقم هاتفه"
+msgstr "Patient name or phone number"
+
+msgid "يرجى ذكر سبب الإلغاء..."
+msgstr "Please state the reason for cancellation..."
+
 # ── Patients ─────────────────────────────────────────────────────────────────
 msgid "قائمة المرضى"
 msgstr "Patients List"
@@ -422,9 +467,6 @@ msgstr "Queue"
 msgid "وصل"
 msgstr "Arrived"
 
-msgid "تفاصيل الموعد"
-msgstr "Appointment Details"
-
 msgid "لا توجد مواعيد مؤكدة اليوم"
 msgstr "No confirmed appointments today"
 
@@ -483,9 +525,6 @@ msgstr "Add Walk-in Appointment"
 msgid "لم يُعثر على مريض"
 msgstr "Patient Not Found"
 
-msgid "تسجيل مريض جديد"
-msgstr "Register New Patient"
-
 msgid "أدخل اسم المريض أو رقم هاتفه أو رقم ملفه للبحث عن مواعيده اليوم"
 msgstr "Enter patient name, phone number, or file number to search for today's appointments"
 
@@ -530,9 +569,6 @@ msgstr "Did the patient not show up?"
 # ── Patients ──────────────────────────────────────────────────────────────────
 msgid "الاسم الكامل"
 msgstr "Full Name"
-
-msgid "رقم الهاتف"
-msgstr "Phone Number"
 
 msgid "رقم الهوية الوطنية"
 msgstr "National ID"
@@ -596,9 +632,6 @@ msgstr "No visits"
 
 msgid "عرض ملف المريض"
 msgstr "View Patient File"
-
-msgid "تعديل بيانات المريض"
-msgstr "Edit Patient"
 
 msgid "حجز موعد للمريض"
 msgstr "Book Appointment for Patient"
@@ -1053,9 +1086,6 @@ msgstr "Today's Total"
 msgid "في الانتظار"
 msgstr "Waiting"
 
-msgid "وصل"
-msgstr "Arrived"
-
 msgid "جارٍ"
 msgstr "In Progress"
 
@@ -1065,26 +1095,14 @@ msgstr "Revenue"
 msgid "ملغى"
 msgstr "Cancelled"
 
-msgid "حجز موعد"
-msgstr "Book Appointment"
-
 msgid "تسجيل مريض"
 msgstr "Register Patient"
-
-msgid "مواعيد اليوم"
-msgstr "Today's Appointments"
 
 msgid "حالة الأطباء اليوم"
 msgstr "Doctor Status Today"
 
 msgid "آخر النشاطات"
 msgstr "Recent Activity"
-
-msgid "الوقت"
-msgstr "Time"
-
-msgid "نوع الموعد"
-msgstr "Appointment Type"
 
 msgid "لا يوجد أطباء مسجلون في العيادة"
 msgstr "No doctors registered in the clinic"
@@ -1099,8 +1117,8 @@ msgstr "No available appointments on this day for this doctor."
 msgid "دقيقة"
 msgstr "minute"
 
-msgid "المدة: {{ dur }} دقيقة لكل موعد"
-msgstr "Duration: {{ dur }} minute per appointment"
+msgid "المدة: %(dur)s دقيقة لكل موعد"
+msgstr "Duration: %(dur)s minutes per appointment"
 
 msgid "— اختر نوع الموعد —"
 msgstr "— Select Appointment Type —"
@@ -1196,12 +1214,6 @@ msgstr "Registering..."
 msgid "العودة إلى التقارير"
 msgstr "Back to Reports"
 
-msgid "من تاريخ"
-msgstr "From Date"
-
-msgid "إلى تاريخ"
-msgstr "To Date"
-
 msgid "الجلسات المجدولة في الفترة"
 msgstr "Sessions scheduled in the period"
 
@@ -1226,9 +1238,6 @@ msgstr "Visit Details ({{ t }})"
 msgid "قائمة المواعيد ({{ t }})"
 msgstr "Appointments List ({{ t }})"
 
-msgid "لم يحضر"
-msgstr "No Show"
-
 msgid "{{ cnt }} مرة"
 msgstr "{{ cnt }} times"
 
@@ -1243,3 +1252,153 @@ msgstr "Cancellation Reason"
 
 msgid "إجمالي المرضى"
 msgstr "Total Patients"
+
+# ── Appointment status choices (model-level) ──────────────────────────────────
+msgid "قيد الانتظار"
+msgstr "Pending"
+
+# ── Doctor status labels (view-level) ─────────────────────────────────────────
+msgid "مع مريض"
+msgstr "With Patient"
+
+msgid "غير مجدول"
+msgstr "Not Scheduled"
+
+# ── Dashboard strings ──────────────────────────────────────────────────────────
+msgid "أهلاً، %(name)s"
+msgstr "Welcome, %(name)s"
+
+msgid "لا توجد مواعيد لهذا اليوم"
+msgstr "No appointments for today"
+
+msgid "يمكنك حجز موعد جديد من الزر أعلاه"
+msgstr "You can book a new appointment using the button above"
+
+msgid "المواعيد خلال الساعتين القادمتين"
+msgstr "Appointments in the Next 2 Hours"
+
+msgid "تسجيل الوصول"
+msgstr "Check In"
+
+msgid "هل أنت متأكد من إلغاء هذا الموعد؟"
+msgstr "Are you sure you want to cancel this appointment?"
+
+msgid "عرض كل الإشعارات"
+msgstr "View All Notifications"
+
+msgid "لا توجد نشاطات حديثة"
+msgstr "No recent activity"
+
+msgid "عرض الكل"
+msgstr "View All"
+
+# ── Create appointment wizard ──────────────────────────────────────────────────
+msgid "تسجيل موعد"
+msgstr "Schedule Appointment"
+
+msgid "العودة"
+msgstr "Back"
+
+msgid "اختيار المريض"
+msgstr "Select Patient"
+
+msgid "بحث عن مريض"
+msgstr "Search for a Patient"
+
+msgid "ابحث بالاسم أو رقم الهاتف..."
+msgstr "Search by name or phone number..."
+
+msgid "المريض غير موجود؟"
+msgstr "Patient not found?"
+
+msgid "سجّل مريضاً جديداً"
+msgstr "Register a new patient"
+
+msgid "اختر الطبيب"
+msgstr "Select Doctor"
+
+msgid "اختر نوع الموعد"
+msgstr "Select Appointment Type"
+
+msgid "تاريخ الموعد"
+msgstr "Appointment Date"
+
+msgid "المختار:"
+msgstr "Selected:"
+
+msgid "اختر الطبيب ونوع الموعد والتاريخ أولاً"
+msgstr "Select doctor, appointment type, and date first"
+
+msgid "ملاحظات وتأكيد"
+msgstr "Notes & Confirm"
+
+msgid "سبب الزيارة"
+msgstr "Reason for Visit"
+
+msgid "(اختياري) سبب الزيارة..."
+msgstr "(Optional) Reason for visit..."
+
+msgid "ملاحظات داخلية"
+msgstr "Internal Notes"
+
+msgid "(اختياري) ملاحظات للطاقم..."
+msgstr "(Optional) Notes for staff..."
+
+msgid "حضور مباشر"
+msgstr "Walk-in"
+
+msgid "المريض موجود الآن — سيتم تسجيل حضوره فوراً"
+msgstr "Patient is present now — will be checked in immediately"
+
+msgid "تأكيد الحجز"
+msgstr "Confirm Booking"
+
+msgid "الموعد"
+msgstr "Appointment"
+
+msgid "التأكيد"
+msgstr "Confirmation"
+
+msgid "يرجى اختيار مريض أولاً"
+msgstr "Please select a patient first"
+
+msgid "يرجى إكمال جميع بيانات الموعد (الطبيب، النوع، التاريخ، والوقت)"
+msgstr "Please complete all appointment details (doctor, type, date, and time)"
+
+msgid "المدة:"
+msgstr "Duration:"
+
+msgid "السعر:"
+msgstr "Price:"
+
+# ── Base template ──────────────────────────────────────────────────────────────
+msgid "تبديل المظهر"
+msgstr "Toggle Theme"
+
+msgid "سكرتارية"
+msgstr "Secretary"
+
+msgid "جارٍ الحفظ…"
+msgstr "Saving..."
+
+# ── Dashboard ──────────────────────────────────────────────────────────────────
+msgid "لوحة تحكم السكرتارية"
+msgstr "Secretary Dashboard"
+
+# ── Appointment detail ─────────────────────────────────────────────────────────
+msgid "العودة إلى قائمة المواعيد"
+msgstr "Back to Appointments"
+
+# ── Time slots (blocktrans) ────────────────────────────────────────────────────
+msgid "المدة: %(dur)s دقيقة لكل موعد"
+msgstr "Duration: %(dur)s minutes per appointment"
+
+msgid "محجوز"
+msgstr "Booked"
+
+# ── Patient search results (blocktrans) ───────────────────────────────────────
+msgid "%(count)s نتيجة — انقر على اسم المريض لعرض تفاصيله"
+msgstr "%(count)s result(s) — click on a patient name to view details"
+
+msgid "لا توجد نتائج لـ \"%(q)s\""
+msgstr "No results for \"%(q)s\""

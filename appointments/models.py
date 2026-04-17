@@ -1,6 +1,7 @@
 import uuid
 from django.db import models
 from django.conf import settings
+from django.utils.translation import gettext_lazy as _lazy
 from clinics.models import Clinic
 from core.validators.file_validators import validate_file_signature, validate_file_size
 
@@ -33,7 +34,11 @@ class AppointmentType(models.Model):
 
     @property
     def display_name(self):
-        return self.name_ar if self.name_ar else self.name
+        from django.utils.translation import get_language
+        lang = get_language() or "ar"
+        if lang.startswith("ar"):
+            return self.name_ar if self.name_ar else self.name
+        return self.name if self.name else self.name_ar
 
 
 class DoctorClinicAppointmentType(models.Model):
@@ -120,13 +125,13 @@ class Appointment(models.Model):
     """Core appointment booking record."""
 
     class Status(models.TextChoices):
-        PENDING = "PENDING", "قيد الانتظار"
-        CONFIRMED = "CONFIRMED", "مؤكد"
-        CHECKED_IN = "CHECKED_IN", "وصل المريض"
-        IN_PROGRESS = "IN_PROGRESS", "جارٍ"
-        COMPLETED = "COMPLETED", "مكتمل"
-        CANCELLED = "CANCELLED", "ملغى"
-        NO_SHOW = "NO_SHOW", "لم يحضر"
+        PENDING = "PENDING", _lazy("قيد الانتظار")
+        CONFIRMED = "CONFIRMED", _lazy("مؤكد")
+        CHECKED_IN = "CHECKED_IN", _lazy("وصل المريض")
+        IN_PROGRESS = "IN_PROGRESS", _lazy("جارٍ")
+        COMPLETED = "COMPLETED", _lazy("مكتمل")
+        CANCELLED = "CANCELLED", _lazy("ملغى")
+        NO_SHOW = "NO_SHOW", _lazy("لم يحضر")
 
     MAX_PATIENT_EDITS = 2
 

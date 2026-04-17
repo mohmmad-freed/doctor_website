@@ -9,7 +9,7 @@
   <div class="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
     <div>
       <h1 class="text-xl font-bold text-gray-900 dark:text-white">{% trans "قائمة المواعيد" %}</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ clinic.name }} &mdash; {{ total_count }} موعد</p>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ clinic.name }} &mdash; {{ total_count }} {% trans "موعد" %}</p>
     </div>
     <div class="flex items-center gap-2 flex-wrap">
       <a href="{% url 'secretary:calendar' %}"
@@ -28,13 +28,13 @@
     <form method="get" class="flex flex-wrap items-end gap-3">
 
       <div class="flex flex-col gap-1">
-        <label class="text-xs font-semibold text-gray-400 uppercase tracking-wide">{% trans "بحث" %}</label>
-        <input type="text" name="q" value="{{ search }}" placeholder="اسم المريض أو رقم هاتفه"
+        <label class="text-xs font-semibold text-gray-400 uppercase tracking-wide text-center">{% trans "بحث" %}</label>
+        <input type="text" name="q" value="{{ search }}" placeholder="{% trans 'اسم المريض أو رقم هاتفه' %}"
                class="text-sm rounded-xl border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-100 px-3 py-2 w-52 focus:outline-none focus:ring-2 focus:ring-primary-500">
       </div>
 
       <div class="flex flex-col gap-1">
-        <label class="text-xs font-semibold text-gray-400 uppercase tracking-wide">{% trans "الحالة" %}</label>
+        <label class="text-xs font-semibold text-gray-400 uppercase tracking-wide text-center">{% trans "الحالة" %}</label>
         <select name="status"
                 class="text-sm rounded-xl border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500">
           <option value="">{% trans "كل الحالات" %}</option>
@@ -45,7 +45,7 @@
       </div>
 
       <div class="flex flex-col gap-1">
-        <label class="text-xs font-semibold text-gray-400 uppercase tracking-wide">{% trans "الطبيب" %}</label>
+        <label class="text-xs font-semibold text-gray-400 uppercase tracking-wide text-center">{% trans "الطبيب" %}</label>
         <select name="doctor_id"
                 class="text-sm rounded-xl border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500">
           <option value="">{% trans "كل الأطباء" %}</option>
@@ -56,13 +56,13 @@
       </div>
 
       <div class="flex flex-col gap-1">
-        <label class="text-xs font-semibold text-gray-400 uppercase tracking-wide">{% trans "من" %}</label>
+        <label class="text-xs font-semibold text-gray-400 uppercase tracking-wide text-center">{% trans "من" %}</label>
         <input type="date" name="date_from" value="{{ current_date_from }}"
                class="text-sm rounded-xl border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500">
       </div>
 
       <div class="flex flex-col gap-1">
-        <label class="text-xs font-semibold text-gray-400 uppercase tracking-wide">{% trans "إلى" %}</label>
+        <label class="text-xs font-semibold text-gray-400 uppercase tracking-wide text-center">{% trans "إلى" %}</label>
         <input type="date" name="date_to" value="{{ current_date_to }}"
                class="text-sm rounded-xl border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500">
       </div>
@@ -87,12 +87,12 @@
       <table class="w-full text-sm">
         <thead>
           <tr class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/50">
-            <th class="px-5 py-3 text-right">{% trans "التاريخ / الوقت" %}</th>
-            <th class="px-5 py-3 text-right">{% trans "المريض" %}</th>
-            <th class="px-5 py-3 text-right hidden sm:table-cell">{% trans "الطبيب" %}</th>
-            <th class="px-5 py-3 text-right hidden md:table-cell">{% trans "نوع الموعد" %}</th>
-            <th class="px-5 py-3 text-right">{% trans "الحالة" %}</th>
-            <th class="px-5 py-3 text-left">{% trans "إجراءات" %}</th>
+            <th class="px-5 py-3 ltr:text-left rtl:text-right">{% trans "التاريخ / الوقت" %}</th>
+            <th class="px-5 py-3 ltr:text-left rtl:text-right">{% trans "المريض" %}</th>
+            <th class="px-5 py-3 ltr:text-left rtl:text-right hidden sm:table-cell">{% trans "الطبيب" %}</th>
+            <th class="px-5 py-3 ltr:text-left rtl:text-right hidden md:table-cell">{% trans "نوع الموعد" %}</th>
+            <th class="px-5 py-3 ltr:text-left rtl:text-right">{% trans "الحالة" %}</th>
+            <th class="px-5 py-3 ltr:text-left rtl:text-right">{% trans "إجراءات" %}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
@@ -117,8 +117,8 @@
             <td class="px-5 py-3">
               <div class="flex items-center gap-1">
                 <a href="{% url 'secretary:appointment_detail' appt.id %}"
-                   aria-label="تفاصيل الموعد"
-                   class="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors" title="تفاصيل">
+                   aria-label="{% trans 'تفاصيل الموعد' %}"
+                   class="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors" title="{% trans 'تفاصيل' %}">
                   <i class="fa-solid fa-eye text-xs"></i>
                 </a>
                 {% if appt.status not in terminal_statuses %}
@@ -126,18 +126,18 @@
                 <form method="post" action="{% url 'secretary:checkin_appointment' appt.id %}">
                   {% csrf_token %}
                   <input type="hidden" name="next" value="{{ request.path }}{{ request.META.QUERY_STRING|yesno:",?" }}{{ request.META.QUERY_STRING }}">
-                  <button type="submit" aria-label="تسجيل الوصول" class="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors" title="تسجيل الوصول">
+                  <button type="submit" aria-label="{% trans 'تسجيل الوصول' %}" class="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors" title="{% trans 'تسجيل الوصول' %}">
                     <i class="fa-solid fa-door-open text-xs"></i>
                   </button>
                 </form>
                 {% endif %}
                 <a href="{% url 'secretary:edit_appointment' appt.id %}"
-                   aria-label="تعديل الموعد"
-                   class="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors" title="تعديل">
+                   aria-label="{% trans 'تعديل الموعد' %}"
+                   class="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors" title="{% trans 'تعديل' %}">
                   <i class="fa-solid fa-pen-to-square text-xs"></i>
                 </a>
-                <button type="button" aria-label="إلغاء الموعد" onclick="openCancelModal({{ appt.id }}, '{{ appt.patient.name|escapejs }}')"
-                        class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="إلغاء">
+                <button type="button" aria-label="{% trans 'إلغاء الموعد' %}" onclick="openCancelModal({{ appt.id }}, '{{ appt.patient.name|escapejs }}')"
+                        class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="{% trans 'إلغاء' %}">
                   <i class="fa-solid fa-xmark text-xs"></i>
                 </button>
                 {% endif %}
@@ -204,7 +204,7 @@
           {% trans "سبب الإلغاء" %} <span class="text-red-500">*</span>
         </label>
         <textarea name="cancellation_reason" rows="3" required
-                  placeholder="يرجى ذكر سبب الإلغاء..."
+                  placeholder="{% trans 'يرجى ذكر سبب الإلغاء...' %}"
                   class="w-full text-sm rounded-xl border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-400 resize-none"></textarea>
       </div>
       <div class="flex gap-3">
@@ -226,7 +226,7 @@
 {% block extra_js %}
 <script>
 function openCancelModal(apptId, patientName) {
-  document.getElementById('cancel-modal-patient-name').textContent = 'المريض: ' + patientName;
+  document.getElementById('cancel-modal-patient-name').textContent = '{% trans "المريض" %}: ' + patientName;
   document.getElementById('cancel-modal-form').action = '/secretary/appointments/' + apptId + '/cancel/';
   document.getElementById('cancel-modal').classList.remove('hidden');
 }

@@ -14,7 +14,7 @@
       </div>
       <div class="flex-grow min-w-0">
         <h1 class="text-xl font-bold text-gray-900 dark:text-white">
-          أهلاً، {{ request.user.name }}
+          {% blocktrans with name=request.user.name %}أهلاً، {{ name }}{% endblocktrans %}
         </h1>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
           {{ today|date:"l — d/m/Y" }} &mdash; {{ clinic.name }}
@@ -190,36 +190,36 @@
                     <form method="post" action="{% url 'secretary:checkin_appointment' appt.id %}">
                       {% csrf_token %}
                       <button type="submit"
-                              aria-label="تسجيل الوصول"
-                              class="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors" title="تسجيل الوصول">
+                              aria-label="{% trans 'تسجيل الوصول' %}"
+                              class="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors" title="{% trans 'تسجيل الوصول' %}">
                         <i class="fa-solid fa-door-open text-xs"></i>
                       </button>
                     </form>
                     {% endif %}
                     <a href="{% url 'secretary:appointment_detail' appt.id %}"
-                       aria-label="تفاصيل الموعد"
-                       class="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors" title="تفاصيل">
+                       aria-label="{% trans 'تفاصيل الموعد' %}"
+                       class="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors" title="{% trans 'تفاصيل' %}">
                       <i class="fa-solid fa-eye text-xs"></i>
                     </a>
                     <a href="{% url 'secretary:edit_appointment' appt.id %}"
-                       aria-label="تعديل الموعد"
-                       class="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors" title="تعديل">
+                       aria-label="{% trans 'تعديل الموعد' %}"
+                       class="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors" title="{% trans 'تعديل' %}">
                       <i class="fa-solid fa-pen-to-square text-xs"></i>
                     </a>
                     <form method="post" action="{% url 'secretary:cancel_appointment' appt.id %}">
                       {% csrf_token %}
                       <button type="submit"
-                              aria-label="إلغاء الموعد"
+                              aria-label="{% trans 'إلغاء الموعد' %}"
                               class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                              title="إلغاء"
-                              onclick="return confirm('هل أنت متأكد من إلغاء هذا الموعد؟')">
+                              title="{% trans 'إلغاء' %}"
+                              onclick="return confirm('{% trans "هل أنت متأكد من إلغاء هذا الموعد؟" %}')">
                         <i class="fa-solid fa-xmark text-xs"></i>
                       </button>
                     </form>
                   </div>
                   {% else %}
                   <a href="{% url 'secretary:appointment_detail' appt.id %}"
-                     class="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors" title="تفاصيل">
+                     class="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors" title="{% trans 'تفاصيل' %}">
                     <i class="fa-solid fa-eye text-xs"></i>
                   </a>
                   {% endif %}

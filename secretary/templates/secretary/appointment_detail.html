@@ -26,7 +26,7 @@
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
           {{ appointment.appointment_date|date:"d/m/Y" }}
           &mdash; {{ appointment.appointment_time|time:"H:i" }}
-          &mdash; موعد #{{ appointment.id }}
+          &mdash; {% trans "موعد" %} #{{ appointment.id }}
         </p>
       </div>
       {# Status chip (HTMX target) #}
