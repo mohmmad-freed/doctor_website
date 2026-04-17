@@ -2720,6 +2720,15 @@ def _collect_extra_sections(post_data):
             val = v.strip()
             if val:
                 extra[k.removeprefix("custom_section_")] = val
+    # Orthopedic structured findings (JSON array of region finding objects)
+    ortho_raw = post_data.get("ortho_findings", "").strip()
+    if ortho_raw:
+        try:
+            parsed = json.loads(ortho_raw)
+            if isinstance(parsed, list) and parsed:
+                extra["ortho_findings"] = parsed
+        except (json.JSONDecodeError, TypeError):
+            pass
     return extra
 
 
@@ -2792,8 +2801,14 @@ def _annotate_notes_with_labeled_extras(notes_list):
     for note in notes_list:
         snapshot = note.extra_sections_labels or {}
         labeled = []
+        ortho_data = None
         for key, val in note.extra_sections.items():
             if not val:
+                continue
+            # Orthopedic structured findings — rendered separately, not as a text blob
+            if key == "ortho_findings":
+                if isinstance(val, list):
+                    ortho_data = val
                 continue
             # 1. Snapshot (historically persisted — survives element deletion)
             if key in snapshot and snapshot[key]:
@@ -2810,6 +2825,8 @@ def _annotate_notes_with_labeled_extras(notes_list):
                     label = key
             labeled.append({"label": label, "value": val})
         note.labeled_extras = labeled
+        note.ortho_findings_data = ortho_data
+        note.ortho_findings_json = json.dumps(ortho_data) if ortho_data else '[]'
 
 
 def _get_active_note_sections(doctor, note=None):

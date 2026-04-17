@@ -142,6 +142,360 @@
                     <label class="block text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide mb-1">{{ section.label }}</label>
                     <textarea name="{{ section.name }}" rows="3" class="ws-textarea">{{ section.value }}</textarea>
                   </div>
+                  {% elif section.type == 'OBJECTIVE' %}
+                  {# Overview form uses a plain textarea — full ortho workspace is in the dedicated notes tab #}
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{{ section.label }}</label>
+                    <textarea name="objective" rows="3" class="ws-textarea"
+                              placeholder="{% if IS_RTL %}النتائج الجسدية والعلامات الحيوية...{% else %}Physical findings, vitals, labs...{% endif %}">{{ section.value }}</textarea>
+                  </div>
+
+                    <script id="ortho-edit-init-overview" type="application/json">[]</script>
+                    <script>
+                    if (typeof orthoWorkspace === 'undefined') {
+                      function orthoWorkspace() {
+                        const REGIONS = [
+                          { id: 'cervical',      label: '{% if IS_RTL %}العمود الفقري العنقي{% else %}Cervical Spine{% endif %}',           labelEn: 'Cervical Spine',           group: 'spine' },
+                          { id: 'r_shoulder',    label: '{% if IS_RTL %}الكتف الأيمن{% else %}Right Shoulder{% endif %}',                   labelEn: 'Right Shoulder',           group: 'upper' },
+                          { id: 'l_shoulder',    label: '{% if IS_RTL %}الكتف الأيسر{% else %}Left Shoulder{% endif %}',                   labelEn: 'Left Shoulder',            group: 'upper' },
+                          { id: 'r_elbow',       label: '{% if IS_RTL %}الكوع الأيمن{% else %}Right Elbow{% endif %}',                     labelEn: 'Right Elbow',              group: 'upper' },
+                          { id: 'l_elbow',       label: '{% if IS_RTL %}الكوع الأيسر{% else %}Left Elbow{% endif %}',                     labelEn: 'Left Elbow',               group: 'upper' },
+                          { id: 'r_wrist',       label: '{% if IS_RTL %}الرسغ/اليد اليمنى{% else %}Right Wrist/Hand{% endif %}',          labelEn: 'Right Wrist/Hand',         group: 'upper' },
+                          { id: 'l_wrist',       label: '{% if IS_RTL %}الرسغ/اليد اليسرى{% else %}Left Wrist/Hand{% endif %}',          labelEn: 'Left Wrist/Hand',          group: 'upper' },
+                          { id: 'thoracolumbar', label: '{% if IS_RTL %}العمود الفقري الصدري/القطني{% else %}Thoracic/Lumbar Spine{% endif %}', labelEn: 'Thoracic/Lumbar Spine', group: 'spine' },
+                          { id: 'r_hip',         label: '{% if IS_RTL %}الورك الأيمن{% else %}Right Hip{% endif %}',                       labelEn: 'Right Hip',                group: 'lower' },
+                          { id: 'l_hip',         label: '{% if IS_RTL %}الورك الأيسر{% else %}Left Hip{% endif %}',                       labelEn: 'Left Hip',                 group: 'lower' },
+                          { id: 'r_knee',        label: '{% if IS_RTL %}الركبة اليمنى{% else %}Right Knee{% endif %}',                    labelEn: 'Right Knee',               group: 'lower' },
+                          { id: 'l_knee',        label: '{% if IS_RTL %}الركبة اليسرى{% else %}Left Knee{% endif %}',                    labelEn: 'Left Knee',                group: 'lower' },
+                          { id: 'r_ankle',       label: '{% if IS_RTL %}الكاحل/القدم الأيمن{% else %}Right Ankle/Foot{% endif %}',        labelEn: 'Right Ankle/Foot',         group: 'lower' },
+                          { id: 'l_ankle',       label: '{% if IS_RTL %}الكاحل/القدم الأيسر{% else %}Left Ankle/Foot{% endif %}',        labelEn: 'Left Ankle/Foot',          group: 'lower' },
+                        ];
+                        const mkFinding = (id) => ({
+                          id, pain: '', tenderness: false, swelling: false, rom: '', notes: '',
+                          instability: false, locking: false, clicking: false, weight_bearing_diff: false,
+                          active_rom: '', passive_rom: '', weakness: false, impingement: false,
+                          stiffness: false, radiation: false, numbness: false, posture_notes: ''
+                        });
+                        const PRESETS = {
+                          normal:      { pain: '0', tenderness: false, swelling: false, rom: 'Full range, painless', notes: 'No abnormality detected.' },
+                          tenderness:  { pain: '3', tenderness: true,  swelling: false, rom: 'Normal',               notes: 'Tenderness on palpation.' },
+                          swollen:     { pain: '4', tenderness: true,  swelling: true,  rom: 'Restricted',           notes: 'Swelling and tenderness present.' },
+                          painful_rom: { pain: '5', tenderness: false, swelling: false, rom: 'Painful and restricted', notes: 'Pain on ROM testing.' },
+                          post_trauma: { pain: '7', tenderness: true,  swelling: true,  rom: 'Severely restricted',  notes: 'Post-traumatic findings.' },
+                        };
+                        return {
+                          regions: REGIONS, selected: [], activeId: null, findings: {}, bodyView: 'front', open: false,
+                          init() {
+                            const el = document.getElementById('ortho-edit-init-overview');
+                            const data = el ? JSON.parse(el.textContent) : [];
+                            if (Array.isArray(data) && data.length) {
+                              data.forEach(f => { this.selected.push(f.id); this.findings[f.id] = { ...mkFinding(f.id), ...f }; });
+                              this.activeId = this.selected[0] || null; this.open = true;
+                            }
+                            const form = this.$el.closest('form');
+                            if (form) {
+                              const _this = this;
+                              form.addEventListener('formdata', function(e) {
+                                e.formData.set('ortho_findings', _this.serialized);
+                              });
+                            }
+                          },
+                          toggleRegion(id) {
+                            if (this.selected.includes(id)) {
+                              this.selected = this.selected.filter(r => r !== id); delete this.findings[id];
+                              this.activeId = this.selected.length ? this.selected[this.selected.length-1] : null;
+                            } else { this.selected.push(id); this.findings[id] = mkFinding(id); this.activeId = id; }
+                          },
+                          setActive(id) { if (this.selected.includes(id)) this.activeId = id; },
+                          get activeFinding() {
+                            if (!this.activeId) return null;
+                            if (!this.findings[this.activeId]) this.findings[this.activeId] = mkFinding(this.activeId);
+                            return this.findings[this.activeId];
+                          },
+                          getRegion(id) { return this.regions.find(r => r.id === id); },
+                          applyPreset(key) { if (!this.activeId || !PRESETS[key]) return; Object.assign(this.findings[this.activeId], PRESETS[key]); },
+                          isKnee(id)     { return id === 'r_knee' || id === 'l_knee'; },
+                          isShoulder(id) { return id === 'r_shoulder' || id === 'l_shoulder'; },
+                          isSpine(id)    { return id === 'cervical' || id === 'thoracolumbar'; },
+                          generateSummary() {
+                            if (!this.selected.length) return;
+                            const lines = [];
+                            this.selected.forEach(id => {
+                              const f = this.findings[id]; if (!f) return;
+                              const reg = this.getRegion(id); if (!reg) return;
+                              const parts = [reg.labelEn + ':'];
+                              if (f.pain !== '' && f.pain !== null) parts.push('Pain ' + f.pain + '/10');
+                              const signs = [];
+                              if (f.tenderness) signs.push('tenderness'); if (f.swelling) signs.push('swelling');
+                              if (f.instability) signs.push('instability'); if (f.locking) signs.push('locking');
+                              if (f.clicking) signs.push('clicking'); if (f.weakness) signs.push('weakness');
+                              if (f.impingement) signs.push('impingement'); if (f.stiffness) signs.push('stiffness');
+                              if (f.radiation) signs.push('radicular symptoms'); if (f.numbness) signs.push('numbness/tingling');
+                              if (signs.length) parts.push(signs.join(', '));
+                              if (f.rom) parts.push('ROM: ' + f.rom); if (f.notes) parts.push(f.notes);
+                              lines.push(parts.join(' '));
+                            });
+                            const ta = this.$el.closest('form').querySelector('[name="objective"]');
+                            if (ta) ta.value = lines.join('\n');
+                          },
+                          get serialized() {
+                            if (!this.selected.length) return '[]';
+                            return JSON.stringify(this.selected.map(id => this.findings[id]).filter(Boolean));
+                          },
+                          regionFill(id, base) {
+                            if (this.activeId === id) return '#0ea5e9';
+                            if (this.selected.includes(id)) return '#38bdf8';
+                            return base || '#e2e8f0';
+                          },
+                          regionStroke(id) { return this.selected.includes(id) ? '#0369a1' : '#cbd5e1'; },
+                          regionTextFill(id) { return this.selected.includes(id) ? '#fff' : '#64748b'; }
+                        };
+                      }
+                    }
+                    if (typeof orthoReadView === 'undefined') {
+                      function orthoReadView(findingsJson) {
+                        const FRONT_IDS = ['cervical', 'r_shoulder', 'l_shoulder', 'r_elbow', 'l_elbow', 'r_wrist', 'l_wrist', 'r_hip', 'l_hip', 'r_knee', 'l_knee', 'r_ankle', 'l_ankle'];
+                        const BACK_IDS  = ['cervical', 'thoracolumbar', 'r_shoulder', 'l_shoulder', 'r_hip', 'l_hip', 'r_knee', 'l_knee', 'r_ankle', 'l_ankle'];
+                        return {
+                          findings: findingsJson || [],
+                          get selectedIds() { return this.findings.map(f => f.id); },
+                          hasFront() { return this.findings.some(f => FRONT_IDS.includes(f.id)); },
+                          hasBack() { return this.findings.some(f => BACK_IDS.includes(f.id)); },
+                          getColor(id) {
+                            const f = this.findings.find(x => x.id === id);
+                            if (!f) return '#e2e8f0';
+                            const pain = parseInt(f.pain) || 0;
+                            if (pain >= 8) return '#ef4444';
+                            if (pain >= 5) return '#f97316';
+                            return '#2dd4bf';
+                          },
+                          getStroke(id) {
+                            return this.selectedIds.includes(id) ? 'rgba(0,0,0,0.1)' : '#cbd5e1';
+                          }
+                        };
+                      }
+                    }
+                    </script>
+
+                    <div x-data="orthoWorkspace()" class="mt-2">
+                      <button type="button" @click="open = !open"
+                              class="flex items-center gap-2 text-xs font-semibold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-700/40 rounded-lg px-3 py-1.5 hover:bg-teal-100 dark:hover:bg-teal-900/40 transition-colors w-full">
+                        <i class="fa-solid fa-person-walking-with-cane text-teal-500"></i>
+                        {% if IS_RTL %}فحص العظام والمفاصل{% else %}Orthopedic Exam{% endif %}
+                        <span x-show="selected.length" class="ms-1 px-1.5 py-0.5 rounded-full bg-teal-600 text-white text-[10px] font-bold" x-text="selected.length"></span>
+                        <i class="fa-solid fa-chevron-down text-xs ms-auto transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
+                      </button>
+
+                      <div x-show="open" x-collapse class="mt-2">
+                        <div class="rounded-xl border border-teal-100 dark:border-teal-900/40 bg-teal-50/30 dark:bg-teal-900/10 overflow-hidden text-xs">
+
+                          {# Affected Sites #}
+                          <div class="px-3 pt-2 pb-2 border-b border-teal-100 dark:border-teal-800/40">
+                            <p class="text-[10px] font-bold text-teal-600 uppercase tracking-wide mb-1.5">{% if IS_RTL %}المناطق المصابة{% else %}Affected Sites{% endif %}</p>
+                            <div class="flex flex-wrap gap-1 min-h-[24px]">
+                              <template x-if="!selected.length">
+                                <span class="text-[11px] text-slate-400 italic">{% if IS_RTL %}انقر على المنطقة للتحديد{% else %}Click a region to select{% endif %}</span>
+                              </template>
+                              <template x-for="id in selected" :key="id">
+                                <button type="button" @click="setActive(id)"
+                                        :class="activeId===id ? 'bg-teal-600 text-white border-teal-700' : 'bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-300 border-teal-300'"
+                                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-medium transition-colors">
+                                  <span x-text="getRegion(id)?.label||id"></span>
+                                  <i class="fa-solid fa-xmark text-[9px]" @click.stop="toggleRegion(id)"></i>
+                                </button>
+                              </template>
+                            </div>
+                          </div>
+
+                          {# Body Map + Detail side by side #}
+                          <div class="flex gap-0">
+                            {# Body map #}
+                            <div class="w-36 flex-shrink-0 p-2 border-e border-teal-100 dark:border-teal-800/40">
+                              <div class="flex gap-1 mb-1.5">
+                                <button type="button" @click="bodyView='front'"
+                                        :class="bodyView==='front'?'bg-teal-600 text-white':'bg-white dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-600'"
+                                        class="flex-1 text-[9px] font-semibold py-0.5 rounded transition-colors">{% if IS_RTL %}أمامي{% else %}Front{% endif %}</button>
+                                <button type="button" @click="bodyView='back'"
+                                        :class="bodyView==='back'?'bg-teal-600 text-white':'bg-white dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-600'"
+                                        class="flex-1 text-[9px] font-semibold py-0.5 rounded transition-colors">{% if IS_RTL %}خلفي{% else %}Back{% endif %}</button>
+                              </div>
+                              <div class="flex justify-between text-[8px] text-slate-400 mb-0.5 px-1"><span>{% if IS_RTL %}أيمن{% else %}R{% endif %}</span><span>{% if IS_RTL %}أيسر{% else %}L{% endif %}</span></div>
+
+                              {# Front SVG - compact version #}
+                              <div x-show="bodyView==='front'">
+                                <svg viewBox="0 0 160 340" class="w-full" style="height:auto">
+                                  <ellipse cx="80" cy="18" rx="14" ry="15" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+                                  <rect x="68" y="35" width="24" height="10" rx="3" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+                                  <rect x="52" y="60" width="56" height="16" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+                                  <rect x="62" y="76" width="36" height="68" rx="5" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+                                  <rect x="38" y="78" width="18" height="28" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+                                  <rect x="104" y="78" width="18" height="28" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+                                  <rect x="40" y="108" width="14" height="24" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+                                  <rect x="106" y="108" width="14" height="24" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+                                  <rect x="52" y="146" width="56" height="18" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+                                  <rect x="52" y="166" width="24" height="40" rx="5" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+                                  <rect x="84" y="166" width="24" height="40" rx="5" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+                                  <rect x="55" y="208" width="18" height="38" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+                                  <rect x="87" y="208" width="18" height="38" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+                                  <rect x="52" y="248" width="24" height="18" rx="5" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+                                  <rect x="84" y="248" width="24" height="18" rx="5" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+
+                                  <rect x="68" y="35" width="24" height="12" rx="3" class="cursor-pointer" :fill="regionFill('cervical','#e2e8f0')" :stroke="regionStroke('cervical')" stroke-width="1.5" @click="toggleRegion('cervical')"><title>Cervical</title></rect>
+                                  <text x="80" y="43" text-anchor="middle" font-size="5" :fill="regionTextFill('cervical')" pointer-events="none" font-family="sans-serif">{% if IS_RTL %}عنق{% else %}Cerv{% endif %}</text>
+                                  <rect x="37" y="58" width="30" height="16" rx="4" class="cursor-pointer" :fill="regionFill('r_shoulder','#e2e8f0')" :stroke="regionStroke('r_shoulder')" stroke-width="1.5" @click="toggleRegion('r_shoulder')"><title>R Shoulder</title></rect>
+                                  <text x="52" y="68" text-anchor="middle" font-size="4.5" :fill="regionTextFill('r_shoulder')" pointer-events="none" font-family="sans-serif">{% if IS_RTL %}ك.أ{% else %}R.Sh{% endif %}</text>
+                                  <rect x="93" y="58" width="30" height="16" rx="4" class="cursor-pointer" :fill="regionFill('l_shoulder','#e2e8f0')" :stroke="regionStroke('l_shoulder')" stroke-width="1.5" @click="toggleRegion('l_shoulder')"><title>L Shoulder</title></rect>
+                                  <text x="108" y="68" text-anchor="middle" font-size="4.5" :fill="regionTextFill('l_shoulder')" pointer-events="none" font-family="sans-serif">{% if IS_RTL %}ك.ي{% else %}L.Sh{% endif %}</text>
+                                  <rect x="38" y="108" width="16" height="14" rx="3" class="cursor-pointer" :fill="regionFill('r_elbow','#e2e8f0')" :stroke="regionStroke('r_elbow')" stroke-width="1.5" @click="toggleRegion('r_elbow')"><title>R Elbow</title></rect>
+                                  <text x="46" y="117" text-anchor="middle" font-size="4" :fill="regionTextFill('r_elbow')" pointer-events="none" font-family="sans-serif">{% if IS_RTL %}ك{% else %}R.El{% endif %}</text>
+                                  <rect x="106" y="108" width="16" height="14" rx="3" class="cursor-pointer" :fill="regionFill('l_elbow','#e2e8f0')" :stroke="regionStroke('l_elbow')" stroke-width="1.5" @click="toggleRegion('l_elbow')"><title>L Elbow</title></rect>
+                                  <text x="114" y="117" text-anchor="middle" font-size="4" :fill="regionTextFill('l_elbow')" pointer-events="none" font-family="sans-serif">{% if IS_RTL %}ك{% else %}L.El{% endif %}</text>
+                                  <rect x="36" y="132" width="18" height="20" rx="4" class="cursor-pointer" :fill="regionFill('r_wrist','#e2e8f0')" :stroke="regionStroke('r_wrist')" stroke-width="1.5" @click="toggleRegion('r_wrist')"><title>R Wrist</title></rect>
+                                  <text x="45" y="144" text-anchor="middle" font-size="4" :fill="regionTextFill('r_wrist')" pointer-events="none" font-family="sans-serif">{% if IS_RTL %}يد{% else %}R.W{% endif %}</text>
+                                  <rect x="106" y="132" width="18" height="20" rx="4" class="cursor-pointer" :fill="regionFill('l_wrist','#e2e8f0')" :stroke="regionStroke('l_wrist')" stroke-width="1.5" @click="toggleRegion('l_wrist')"><title>L Wrist</title></rect>
+                                  <text x="115" y="144" text-anchor="middle" font-size="4" :fill="regionTextFill('l_wrist')" pointer-events="none" font-family="sans-serif">{% if IS_RTL %}يد{% else %}L.W{% endif %}</text>
+                                  <rect x="52" y="148" width="27" height="16" rx="4" class="cursor-pointer" :fill="regionFill('r_hip','#e2e8f0')" :stroke="regionStroke('r_hip')" stroke-width="1.5" @click="toggleRegion('r_hip')"><title>R Hip</title></rect>
+                                  <text x="65" y="158" text-anchor="middle" font-size="4.5" :fill="regionTextFill('r_hip')" pointer-events="none" font-family="sans-serif">{% if IS_RTL %}و.أ{% else %}R.Hip{% endif %}</text>
+                                  <rect x="81" y="148" width="27" height="16" rx="4" class="cursor-pointer" :fill="regionFill('l_hip','#e2e8f0')" :stroke="regionStroke('l_hip')" stroke-width="1.5" @click="toggleRegion('l_hip')"><title>L Hip</title></rect>
+                                  <text x="94" y="158" text-anchor="middle" font-size="4.5" :fill="regionTextFill('l_hip')" pointer-events="none" font-family="sans-serif">{% if IS_RTL %}و.ي{% else %}L.Hip{% endif %}</text>
+                                  <rect x="52" y="208" width="22" height="18" rx="4" class="cursor-pointer" :fill="regionFill('r_knee','#e2e8f0')" :stroke="regionStroke('r_knee')" stroke-width="1.5" @click="toggleRegion('r_knee')"><title>R Knee</title></rect>
+                                  <text x="63" y="219" text-anchor="middle" font-size="4.5" :fill="regionTextFill('r_knee')" pointer-events="none" font-family="sans-serif">{% if IS_RTL %}ركبة{% else %}R.Kn{% endif %}</text>
+                                  <rect x="86" y="208" width="22" height="18" rx="4" class="cursor-pointer" :fill="regionFill('l_knee','#e2e8f0')" :stroke="regionStroke('l_knee')" stroke-width="1.5" @click="toggleRegion('l_knee')"><title>L Knee</title></rect>
+                                  <text x="97" y="219" text-anchor="middle" font-size="4.5" :fill="regionTextFill('l_knee')" pointer-events="none" font-family="sans-serif">{% if IS_RTL %}ركبة{% else %}L.Kn{% endif %}</text>
+                                  <rect x="50" y="248" width="26" height="18" rx="4" class="cursor-pointer" :fill="regionFill('r_ankle','#e2e8f0')" :stroke="regionStroke('r_ankle')" stroke-width="1.5" @click="toggleRegion('r_ankle')"><title>R Ankle</title></rect>
+                                  <text x="63" y="259" text-anchor="middle" font-size="4" :fill="regionTextFill('r_ankle')" pointer-events="none" font-family="sans-serif">{% if IS_RTL %}قدم{% else %}R.An{% endif %}</text>
+                                  <rect x="82" y="248" width="26" height="18" rx="4" class="cursor-pointer" :fill="regionFill('l_ankle','#e2e8f0')" :stroke="regionStroke('l_ankle')" stroke-width="1.5" @click="toggleRegion('l_ankle')"><title>L Ankle</title></rect>
+                                  <text x="95" y="259" text-anchor="middle" font-size="4" :fill="regionTextFill('l_ankle')" pointer-events="none" font-family="sans-serif">{% if IS_RTL %}قدم{% else %}L.An{% endif %}</text>
+                                </svg>
+                              </div>
+
+                              {# Back SVG - compact #}
+                              <div x-show="bodyView==='back'">
+                                <svg viewBox="0 0 160 340" class="w-full" style="height:auto">
+                                  <ellipse cx="80" cy="18" rx="14" ry="15" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+                                  <rect x="68" y="35" width="24" height="10" rx="3" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+                                  <rect x="52" y="60" width="56" height="16" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+                                  <rect x="62" y="76" width="36" height="68" rx="5" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+                                  <rect x="38" y="78" width="18" height="28" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+                                  <rect x="104" y="78" width="18" height="28" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+                                  <rect x="52" y="146" width="56" height="18" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+                                  <rect x="52" y="166" width="24" height="40" rx="5" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+                                  <rect x="84" y="166" width="24" height="40" rx="5" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+                                  <rect x="55" y="208" width="18" height="38" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+                                  <rect x="87" y="208" width="18" height="38" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+                                  <rect x="52" y="248" width="24" height="18" rx="5" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+                                  <rect x="84" y="248" width="24" height="18" rx="5" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+
+                                  <rect x="68" y="35" width="24" height="12" rx="3" class="cursor-pointer" :fill="regionFill('cervical','#e2e8f0')" :stroke="regionStroke('cervical')" stroke-width="1.5" @click="toggleRegion('cervical')"><title>Cervical</title></rect>
+                                  <text x="80" y="43" text-anchor="middle" font-size="5" :fill="regionTextFill('cervical')" pointer-events="none" font-family="sans-serif">{% if IS_RTL %}عنق{% else %}Cerv{% endif %}</text>
+                                  <rect x="66" y="76" width="28" height="66" rx="5" class="cursor-pointer" :fill="regionFill('thoracolumbar','#e2e8f0')" :stroke="regionStroke('thoracolumbar')" stroke-width="1.5" @click="toggleRegion('thoracolumbar')"><title>T/L Spine</title></rect>
+                                  <text x="80" y="104" text-anchor="middle" font-size="4.5" :fill="regionTextFill('thoracolumbar')" pointer-events="none" font-family="sans-serif">{% if IS_RTL %}ص/ق{% else %}T/L{% endif %}</text>
+                                  <text x="80" y="110" text-anchor="middle" font-size="4" :fill="regionTextFill('thoracolumbar')" pointer-events="none" font-family="sans-serif">{% if IS_RTL %}فقري{% else %}Spine{% endif %}</text>
+                                  <rect x="37" y="58" width="30" height="16" rx="4" class="cursor-pointer" :fill="regionFill('r_shoulder','#e2e8f0')" :stroke="regionStroke('r_shoulder')" stroke-width="1.5" @click="toggleRegion('r_shoulder')"><title>R Shoulder</title></rect>
+                                  <text x="52" y="68" text-anchor="middle" font-size="4.5" :fill="regionTextFill('r_shoulder')" pointer-events="none" font-family="sans-serif">{% if IS_RTL %}ك.أ{% else %}R.Sh{% endif %}</text>
+                                  <rect x="93" y="58" width="30" height="16" rx="4" class="cursor-pointer" :fill="regionFill('l_shoulder','#e2e8f0')" :stroke="regionStroke('l_shoulder')" stroke-width="1.5" @click="toggleRegion('l_shoulder')"><title>L Shoulder</title></rect>
+                                  <text x="108" y="68" text-anchor="middle" font-size="4.5" :fill="regionTextFill('l_shoulder')" pointer-events="none" font-family="sans-serif">{% if IS_RTL %}ك.ي{% else %}L.Sh{% endif %}</text>
+                                  <rect x="52" y="148" width="27" height="16" rx="4" class="cursor-pointer" :fill="regionFill('r_hip','#e2e8f0')" :stroke="regionStroke('r_hip')" stroke-width="1.5" @click="toggleRegion('r_hip')"><title>R Hip</title></rect>
+                                  <text x="65" y="158" text-anchor="middle" font-size="4.5" :fill="regionTextFill('r_hip')" pointer-events="none" font-family="sans-serif">{% if IS_RTL %}و.أ{% else %}R.Hip{% endif %}</text>
+                                  <rect x="81" y="148" width="27" height="16" rx="4" class="cursor-pointer" :fill="regionFill('l_hip','#e2e8f0')" :stroke="regionStroke('l_hip')" stroke-width="1.5" @click="toggleRegion('l_hip')"><title>L Hip</title></rect>
+                                  <text x="94" y="158" text-anchor="middle" font-size="4.5" :fill="regionTextFill('l_hip')" pointer-events="none" font-family="sans-serif">{% if IS_RTL %}و.ي{% else %}L.Hip{% endif %}</text>
+                                  <rect x="52" y="208" width="22" height="18" rx="4" class="cursor-pointer" :fill="regionFill('r_knee','#e2e8f0')" :stroke="regionStroke('r_knee')" stroke-width="1.5" @click="toggleRegion('r_knee')"><title>R Knee</title></rect>
+                                  <text x="63" y="219" text-anchor="middle" font-size="4.5" :fill="regionTextFill('r_knee')" pointer-events="none" font-family="sans-serif">{% if IS_RTL %}ركبة{% else %}R.Kn{% endif %}</text>
+                                  <rect x="86" y="208" width="22" height="18" rx="4" class="cursor-pointer" :fill="regionFill('l_knee','#e2e8f0')" :stroke="regionStroke('l_knee')" stroke-width="1.5" @click="toggleRegion('l_knee')"><title>L Knee</title></rect>
+                                  <text x="97" y="219" text-anchor="middle" font-size="4.5" :fill="regionTextFill('l_knee')" pointer-events="none" font-family="sans-serif">{% if IS_RTL %}ركبة{% else %}L.Kn{% endif %}</text>
+                                  <rect x="50" y="248" width="26" height="18" rx="4" class="cursor-pointer" :fill="regionFill('r_ankle','#e2e8f0')" :stroke="regionStroke('r_ankle')" stroke-width="1.5" @click="toggleRegion('r_ankle')"><title>R Ankle</title></rect>
+                                  <text x="63" y="259" text-anchor="middle" font-size="4" :fill="regionTextFill('r_ankle')" pointer-events="none" font-family="sans-serif">{% if IS_RTL %}قدم{% else %}R.An{% endif %}</text>
+                                  <rect x="82" y="248" width="26" height="18" rx="4" class="cursor-pointer" :fill="regionFill('l_ankle','#e2e8f0')" :stroke="regionStroke('l_ankle')" stroke-width="1.5" @click="toggleRegion('l_ankle')"><title>L Ankle</title></rect>
+                                  <text x="95" y="259" text-anchor="middle" font-size="4" :fill="regionTextFill('l_ankle')" pointer-events="none" font-family="sans-serif">{% if IS_RTL %}قدم{% else %}L.An{% endif %}</text>
+                                </svg>
+                              </div>
+                            </div>{# /body map #}
+
+                            {# Detail panel (compact) #}
+                            <div class="flex-1 p-2 min-w-0 overflow-y-auto" style="max-height:320px">
+                              <template x-if="!activeId">
+                                <p class="text-[11px] text-slate-400 text-center py-4">{% if IS_RTL %}اختر منطقة{% else %}Select a region{% endif %}</p>
+                              </template>
+                              <template x-if="activeId">
+                                <div class="space-y-2">
+                                  <div class="flex items-center justify-between">
+                                    <span class="text-[11px] font-bold text-teal-700 dark:text-teal-300" x-text="getRegion(activeId)?.label"></span>
+                                    <button type="button" @click="toggleRegion(activeId)" class="text-red-400 hover:text-red-600 text-[10px]"><i class="fa-solid fa-trash"></i></button>
+                                  </div>
+                                  {# Presets #}
+                                  <div class="flex flex-wrap gap-1">
+                                    <button type="button" @click="applyPreset('normal')" class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors">{% if IS_RTL %}طبيعي{% else %}Normal{% endif %}</button>
+                                    <button type="button" @click="applyPreset('tenderness')" class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-yellow-50 text-yellow-700 border border-yellow-200 hover:bg-yellow-100 transition-colors">{% if IS_RTL %}إيلام{% else %}Tender{% endif %}</button>
+                                    <button type="button" @click="applyPreset('swollen')" class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors">{% if IS_RTL %}تورم{% else %}Swollen{% endif %}</button>
+                                    <button type="button" @click="applyPreset('painful_rom')" class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100 transition-colors">{% if IS_RTL %}حركة مؤلمة{% else %}Painful ROM{% endif %}</button>
+                                    <button type="button" @click="applyPreset('post_trauma')" class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-colors">{% if IS_RTL %}إصابة{% else %}Trauma{% endif %}</button>
+                                  </div>
+                                  {# Pain #}
+                                  <div class="flex items-center gap-2">
+                                    <label class="text-[9px] font-semibold text-slate-500 uppercase w-14 flex-shrink-0">{% if IS_RTL %}الألم{% else %}Pain{% endif %}</label>
+                                    <input type="number" x-model="activeFinding.pain" min="0" max="10" placeholder="0-10"
+                                           class="w-14 px-1.5 py-1 text-[11px] rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-teal-400"/>
+                                    <span class="text-[9px] text-slate-400">/10</span>
+                                  </div>
+                                  {# Signs checkboxes #}
+                                  <div class="grid grid-cols-2 gap-x-2 gap-y-1">
+                                    <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" x-model="activeFinding.tenderness" class="w-3 h-3 rounded text-teal-600"/><span class="text-[10px] text-slate-600 dark:text-slate-300">{% if IS_RTL %}إيلام{% else %}Tenderness{% endif %}</span></label>
+                                    <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" x-model="activeFinding.swelling" class="w-3 h-3 rounded text-teal-600"/><span class="text-[10px] text-slate-600 dark:text-slate-300">{% if IS_RTL %}تورم{% else %}Swelling{% endif %}</span></label>
+                                    <template x-if="isKnee(activeId)">
+                                      <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" x-model="activeFinding.instability" class="w-3 h-3 rounded text-teal-600"/><span class="text-[10px] text-slate-600 dark:text-slate-300">{% if IS_RTL %}عدم استقرار{% else %}Instability{% endif %}</span></label>
+                                    </template>
+                                    <template x-if="isKnee(activeId)">
+                                      <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" x-model="activeFinding.locking" class="w-3 h-3 rounded text-teal-600"/><span class="text-[10px] text-slate-600 dark:text-slate-300">{% if IS_RTL %}تقفل{% else %}Locking{% endif %}</span></label>
+                                    </template>
+                                    <template x-if="isKnee(activeId)">
+                                      <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" x-model="activeFinding.clicking" class="w-3 h-3 rounded text-teal-600"/><span class="text-[10px] text-slate-600 dark:text-slate-300">{% if IS_RTL %}طقطقة{% else %}Clicking{% endif %}</span></label>
+                                    </template>
+                                    <template x-if="isShoulder(activeId)">
+                                      <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" x-model="activeFinding.weakness" class="w-3 h-3 rounded text-teal-600"/><span class="text-[10px] text-slate-600 dark:text-slate-300">{% if IS_RTL %}ضعف{% else %}Weakness{% endif %}</span></label>
+                                    </template>
+                                    <template x-if="isShoulder(activeId)">
+                                      <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" x-model="activeFinding.impingement" class="w-3 h-3 rounded text-teal-600"/><span class="text-[10px] text-slate-600 dark:text-slate-300">{% if IS_RTL %}انضغاط{% else %}Impingement{% endif %}</span></label>
+                                    </template>
+                                    <template x-if="isSpine(activeId)">
+                                      <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" x-model="activeFinding.stiffness" class="w-3 h-3 rounded text-teal-600"/><span class="text-[10px] text-slate-600 dark:text-slate-300">{% if IS_RTL %}تيبس{% else %}Stiffness{% endif %}</span></label>
+                                    </template>
+                                    <template x-if="isSpine(activeId)">
+                                      <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" x-model="activeFinding.radiation" class="w-3 h-3 rounded text-teal-600"/><span class="text-[10px] text-slate-600 dark:text-slate-300">{% if IS_RTL %}انتشار{% else %}Radiation{% endif %}</span></label>
+                                    </template>
+                                    <template x-if="isSpine(activeId)">
+                                      <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" x-model="activeFinding.numbness" class="w-3 h-3 rounded text-teal-600"/><span class="text-[10px] text-slate-600 dark:text-slate-300">{% if IS_RTL %}تنميل{% else %}Numbness{% endif %}</span></label>
+                                    </template>
+                                  </div>
+                                  {# ROM #}
+                                  <div>
+                                    <label class="block text-[9px] font-semibold text-slate-500 uppercase mb-0.5">ROM</label>
+                                    <input type="text" x-model="activeFinding.rom" class="w-full px-1.5 py-1 text-[11px] rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-teal-400"/>
+                                  </div>
+                                  {# Notes #}
+                                  <div>
+                                    <label class="block text-[9px] font-semibold text-slate-500 uppercase mb-0.5">{% if IS_RTL %}ملاحظات{% else %}Notes{% endif %}</label>
+                                    <textarea x-model="activeFinding.notes" rows="2" class="w-full px-1.5 py-1 text-[11px] rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-teal-400 resize-none"></textarea>
+                                  </div>
+                                </div>
+                              </template>
+                            </div>{# /detail #}
+                          </div>{# /map+detail #}
+
+                          {# Generate summary #}
+                          <div class="px-3 py-2 border-t border-teal-100 dark:border-teal-800/40">
+                            <button type="button" @click="generateSummary()" :disabled="!selected.length"
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 disabled:opacity-40 text-white text-[11px] font-semibold transition-colors">
+                              <i class="fa-solid fa-wand-magic-sparkles text-[9px]"></i>
+                              {% if IS_RTL %}توليد الملخص{% else %}Generate Summary{% endif %}
+                            </button>
+                          </div>
+
+                        </div>{# /workspace card #}
+                      </div>{# /collapse #}
+
+                      <input type="hidden" name="ortho_findings" :value="serialized">
+                    </div>{# /Alpine #}
+
                   {% else %}
                   <div>
                     <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">{{ section.label }}</label>
@@ -168,6 +522,31 @@
             </div><!-- /new note form -->
 
             <!-- Existing note viewer -->
+            <script>
+            if (typeof orthoReadView === 'undefined') {
+              function orthoReadView(findingsJson) {
+                const FRONT_IDS = ['cervical', 'r_shoulder', 'l_shoulder', 'r_elbow', 'l_elbow', 'r_wrist', 'l_wrist', 'r_hip', 'l_hip', 'r_knee', 'l_knee', 'r_ankle', 'l_ankle'];
+                const BACK_IDS  = ['cervical', 'thoracolumbar', 'r_shoulder', 'l_shoulder', 'r_hip', 'l_hip', 'r_knee', 'l_knee', 'r_ankle', 'l_ankle'];
+                return {
+                  findings: findingsJson || [],
+                  get selectedIds() { return this.findings.map(f => f.id); },
+                  hasFront() { return this.findings.some(f => FRONT_IDS.includes(f.id)); },
+                  hasBack()  { return this.findings.some(f => BACK_IDS.includes(f.id)); },
+                  getColor(id) {
+                    const f = this.findings.find(x => x.id === id);
+                    if (!f) return '#e2e8f0';
+                    const pain = parseInt(f.pain) || 0;
+                    if (pain >= 8) return '#ef4444';
+                    if (pain >= 5) return '#f97316';
+                    return '#2dd4bf';
+                  },
+                  getStroke(id) {
+                    return this.selectedIds.includes(id) ? 'rgba(0,0,0,0.1)' : '#cbd5e1';
+                  }
+                };
+              }
+            }
+            </script>
             <div x-show="activeMode === 'view'" class="p-4">
               {% for note in all_notes %}
               <div x-show="activeNoteId === {{ note.id }}">
@@ -222,6 +601,117 @@
                 {% endif %}
                 {% if note.free_text %}
                 <p class="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{{ note.free_text }}</p>
+                {% endif %}
+                {# Orthopedic Diagram (Read-Only) ── #}
+                {% if note.ortho_findings_data %}
+                <div x-data="orthoReadView(JSON.parse('{{ note.ortho_findings_json|escapejs }}'))" class="mb-3">
+                  <div class="flex flex-wrap gap-4 items-center justify-center p-3 rounded-xl bg-teal-50/40 dark:bg-teal-900/10 border border-teal-100 dark:border-teal-900/30">
+                    <div x-show="hasFront()" class="w-24 sm:w-28 flex-shrink-0">
+                      <p class="text-[8px] font-bold text-teal-600 dark:text-teal-400 uppercase text-center mb-1">{% if IS_RTL %}أمامي{% else %}Front{% endif %}</p>
+                      <svg viewBox="0 0 160 275" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto">
+                        <ellipse cx="80" cy="18" rx="15" ry="16" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="0.5"/>
+                        <rect x="68" y="35" width="24" height="10" rx="3" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="0.5"/>
+                        <rect x="52" y="60" width="56" height="18" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.5"/>
+                        <rect x="62" y="78" width="36" height="68" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.5"/>
+                        <rect x="38" y="78" width="18" height="30" rx="5" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.5"/>
+                        <rect x="104" y="78" width="18" height="30" rx="5" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.5"/>
+                        <rect x="40" y="110" width="14" height="24" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.5"/>
+                        <rect x="106" y="110" width="14" height="24" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.5"/>
+                        <rect x="52" y="148" width="56" height="18" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.5"/>
+                        <rect x="52" y="168" width="24" height="42" rx="5" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.5"/>
+                        <rect x="84" y="168" width="24" height="42" rx="5" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.5"/>
+                        <rect x="55" y="212" width="20" height="38" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.5"/>
+                        <rect x="85" y="212" width="20" height="38" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.5"/>
+                        <rect x="52" y="252" width="26" height="20" rx="5" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.5"/>
+                        <rect x="82" y="252" width="26" height="20" rx="5" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.5"/>
+                        <rect x="68" y="35" width="24" height="12" rx="3" :fill="getColor('cervical')" :stroke="getStroke('cervical')" stroke-width="1.5"/>
+                        <rect x="37" y="58" width="30" height="18" rx="5" :fill="getColor('r_shoulder')" :stroke="getStroke('r_shoulder')" stroke-width="1.5"/>
+                        <rect x="93" y="58" width="30" height="18" rx="5" :fill="getColor('l_shoulder')" :stroke="getStroke('l_shoulder')" stroke-width="1.5"/>
+                        <rect x="38" y="108" width="16" height="16" rx="4" :fill="getColor('r_elbow')" :stroke="getStroke('r_elbow')" stroke-width="1.5"/>
+                        <rect x="106" y="108" width="16" height="16" rx="4" :fill="getColor('l_elbow')" :stroke="getStroke('l_elbow')" stroke-width="1.5"/>
+                        <rect x="36" y="134" width="18" height="22" rx="4" :fill="getColor('r_wrist')" :stroke="getStroke('r_wrist')" stroke-width="1.5"/>
+                        <rect x="106" y="134" width="18" height="22" rx="4" :fill="getColor('l_wrist')" :stroke="getStroke('l_wrist')" stroke-width="1.5"/>
+                        <rect x="52" y="148" width="27" height="18" rx="5" :fill="getColor('r_hip')" :stroke="getStroke('r_hip')" stroke-width="1.5"/>
+                        <rect x="81" y="148" width="27" height="18" rx="5" :fill="getColor('l_hip')" :stroke="getStroke('l_hip')" stroke-width="1.5"/>
+                        <rect x="52" y="210" width="22" height="20" rx="5" :fill="getColor('r_knee')" :stroke="getStroke('r_knee')" stroke-width="1.5"/>
+                        <rect x="86" y="210" width="22" height="20" rx="5" :fill="getColor('l_knee')" :stroke="getStroke('l_knee')" stroke-width="1.5"/>
+                        <rect x="50" y="250" width="28" height="20" rx="5" :fill="getColor('r_ankle')" :stroke="getStroke('r_ankle')" stroke-width="1.5"/>
+                        <rect x="82" y="250" width="28" height="20" rx="5" :fill="getColor('l_ankle')" :stroke="getStroke('l_ankle')" stroke-width="1.5"/>
+                        <rect x="63" y="78" width="34" height="66" rx="4" fill="none" :stroke="selectedIds.includes('thoracolumbar') ? getColor('thoracolumbar') : 'none'" stroke-width="1.5" stroke-dasharray="2,1"/>
+                      </svg>
+                    </div>
+                    <div x-show="hasBack()" class="w-24 sm:w-28 flex-shrink-0">
+                      <p class="text-[8px] font-bold text-teal-600 dark:text-teal-400 uppercase text-center mb-1">{% if IS_RTL %}خلفي{% else %}Back{% endif %}</p>
+                      <svg viewBox="0 0 160 275" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto">
+                        <ellipse cx="80" cy="18" rx="15" ry="16" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="0.5"/>
+                        <rect x="68" y="35" width="24" height="10" rx="3" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="0.5"/>
+                        <rect x="52" y="60" width="56" height="18" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.5"/>
+                        <rect x="62" y="78" width="36" height="68" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.5"/>
+                        <rect x="38" y="78" width="18" height="30" rx="5" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.5"/>
+                        <rect x="104" y="78" width="18" height="30" rx="5" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.5"/>
+                        <rect x="52" y="148" width="56" height="18" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.5"/>
+                        <rect x="52" y="168" width="24" height="42" rx="5" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.5"/>
+                        <rect x="84" y="168" width="24" height="42" rx="5" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.5"/>
+                        <rect x="55" y="212" width="20" height="38" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.5"/>
+                        <rect x="85" y="212" width="20" height="38" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.5"/>
+                        <rect x="52" y="252" width="26" height="20" rx="5" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.5"/>
+                        <rect x="82" y="252" width="26" height="20" rx="5" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.5"/>
+                        <rect x="68" y="35" width="24" height="12" rx="3" :fill="getColor('cervical')" :stroke="getStroke('cervical')" stroke-width="1.5"/>
+                        <rect x="66" y="78" width="28" height="66" rx="5" :fill="getColor('thoracolumbar')" :stroke="getStroke('thoracolumbar')" stroke-width="1.5"/>
+                        <rect x="37" y="58" width="30" height="18" rx="5" :fill="getColor('r_shoulder')" :stroke="getStroke('r_shoulder')" stroke-width="1.5"/>
+                        <rect x="93" y="58" width="30" height="18" rx="5" :fill="getColor('l_shoulder')" :stroke="getStroke('l_shoulder')" stroke-width="1.5"/>
+                        <rect x="52" y="148" width="27" height="18" rx="5" :fill="getColor('r_hip')" :stroke="getStroke('r_hip')" stroke-width="1.5"/>
+                        <rect x="81" y="148" width="27" height="18" rx="5" :fill="getColor('l_hip')" :stroke="getStroke('l_hip')" stroke-width="1.5"/>
+                        <rect x="52" y="210" width="22" height="20" rx="5" :fill="getColor('r_knee')" :stroke="getStroke('r_knee')" stroke-width="1.5"/>
+                        <rect x="86" y="210" width="22" height="20" rx="5" :fill="getColor('l_knee')" :stroke="getStroke('l_knee')" stroke-width="1.5"/>
+                        <rect x="50" y="250" width="28" height="20" rx="5" :fill="getColor('r_ankle')" :stroke="getStroke('r_ankle')" stroke-width="1.5"/>
+                        <rect x="82" y="250" width="28" height="20" rx="5" :fill="getColor('l_ankle')" :stroke="getStroke('l_ankle')" stroke-width="1.5"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                {# Orthopedic structured findings #}
+                <div class="p-3 rounded-lg bg-teal-50/60 dark:bg-teal-900/10 border border-teal-100 dark:border-teal-900/30 mb-3">
+                  <p class="text-xs font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wide mb-2">
+                    <i class="fa-solid fa-person-walking-with-cane me-1"></i>
+                    {% if IS_RTL %}فحص عظام وعمود فقري{% else %}Orthopedic Exam{% endif %}
+                  </p>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {% for finding in note.ortho_findings_data %}
+                    <div class="p-2 rounded-md bg-white/70 dark:bg-slate-800/60 border border-teal-100 dark:border-teal-800/40">
+                      <p class="text-[11px] font-bold text-teal-700 dark:text-teal-300 mb-1">
+                        {% if finding.id == 'cervical' %}{% if IS_RTL %}العمود الفقري العنقي{% else %}Cervical Spine{% endif %}
+                        {% elif finding.id == 'r_shoulder' %}{% if IS_RTL %}الكتف الأيمن{% else %}Right Shoulder{% endif %}
+                        {% elif finding.id == 'l_shoulder' %}{% if IS_RTL %}الكتف الأيسر{% else %}Left Shoulder{% endif %}
+                        {% elif finding.id == 'r_elbow' %}{% if IS_RTL %}الكوع الأيمن{% else %}Right Elbow{% endif %}
+                        {% elif finding.id == 'l_elbow' %}{% if IS_RTL %}الكوع الأيسر{% else %}Left Elbow{% endif %}
+                        {% elif finding.id == 'r_wrist' %}{% if IS_RTL %}الرسغ/اليد اليمنى{% else %}Right Wrist/Hand{% endif %}
+                        {% elif finding.id == 'l_wrist' %}{% if IS_RTL %}الرسغ/اليد اليسرى{% else %}Left Wrist/Hand{% endif %}
+                        {% elif finding.id == 'thoracolumbar' %}{% if IS_RTL %}العمود الفقري الصدري/القطني{% else %}Thoracic/Lumbar Spine{% endif %}
+                        {% elif finding.id == 'r_hip' %}{% if IS_RTL %}الورك الأيمن{% else %}Right Hip{% endif %}
+                        {% elif finding.id == 'l_hip' %}{% if IS_RTL %}الورك الأيسر{% else %}Left Hip{% endif %}
+                        {% elif finding.id == 'r_knee' %}{% if IS_RTL %}الركبة اليمنى{% else %}Right Knee{% endif %}
+                        {% elif finding.id == 'l_knee' %}{% if IS_RTL %}الركبة اليسرى{% else %}Left Knee{% endif %}
+                        {% elif finding.id == 'r_ankle' %}{% if IS_RTL %}الكاحل/القدم الأيمن{% else %}Right Ankle/Foot{% endif %}
+                        {% elif finding.id == 'l_ankle' %}{% if IS_RTL %}الكاحل/القدم الأيسر{% else %}Left Ankle/Foot{% endif %}
+                        {% else %}{{ finding.id }}{% endif %}
+                      </p>
+                      <div class="flex flex-wrap gap-1 mb-1">
+                        {% if finding.pain != '' and finding.pain != None %}<span class="px-1.5 py-0.5 rounded text-[10px] bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300">{% if IS_RTL %}ألم{% else %}Pain{% endif %} {{ finding.pain }}/10</span>{% endif %}
+                        {% if finding.tenderness %}<span class="px-1.5 py-0.5 rounded text-[10px] bg-yellow-100 text-yellow-700">{% if IS_RTL %}إيلام{% else %}Tenderness{% endif %}</span>{% endif %}
+                        {% if finding.swelling %}<span class="px-1.5 py-0.5 rounded text-[10px] bg-blue-100 text-blue-700">{% if IS_RTL %}تورم{% else %}Swelling{% endif %}</span>{% endif %}
+                        {% if finding.instability %}<span class="px-1.5 py-0.5 rounded text-[10px] bg-orange-100 text-orange-700">{% if IS_RTL %}عدم استقرار{% else %}Instability{% endif %}</span>{% endif %}
+                        {% if finding.weakness %}<span class="px-1.5 py-0.5 rounded text-[10px] bg-purple-100 text-purple-700">{% if IS_RTL %}ضعف{% else %}Weakness{% endif %}</span>{% endif %}
+                        {% if finding.radiation %}<span class="px-1.5 py-0.5 rounded text-[10px] bg-rose-100 text-rose-700">{% if IS_RTL %}انتشار{% else %}Radiation{% endif %}</span>{% endif %}
+                        {% if finding.numbness %}<span class="px-1.5 py-0.5 rounded text-[10px] bg-rose-100 text-rose-700">{% if IS_RTL %}تنميل{% else %}Numbness{% endif %}</span>{% endif %}
+                      </div>
+                      {% if finding.rom %}<p class="text-[10px] text-slate-500 dark:text-slate-400">ROM: {{ finding.rom }}</p>{% endif %}
+                      {% if finding.notes %}<p class="text-[10px] text-slate-600 dark:text-slate-300 italic mt-0.5">{{ finding.notes }}</p>{% endif %}
+                    </div>
+                    {% endfor %}
+                  </div>
+                </div>
                 {% endif %}
                 {# Extra sections: VITALS, BODY_DIAGRAM, DENTAL, and CUSTOM types #}
                 {% if note.labeled_extras %}
@@ -407,9 +897,10 @@ function cnPanel() {
     cnActiveField: null,   // tracks the last-focused Clinical Notes textarea
 
     openNew() {
-      this.panelOpen = true;
       this.activeMode = 'new';
       this.activeNoteId = null;
+      this.cnActiveField = null;
+      this.panelOpen = true;
     },
 
     openNote(noteId) {
