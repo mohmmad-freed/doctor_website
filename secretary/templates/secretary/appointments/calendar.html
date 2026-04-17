@@ -1,12 +1,13 @@
 {% extends "secretary/base_secretary.html" %}
-{% block title %}التقويم{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "التقويم" %}{% endblock %}
 
 {% block extra_css %}
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 <style>
   #calendar-wrap .fc {
     font-family: 'Cairo', sans-serif;
-    direction: rtl;
+    direction: {{ DIR }};
   }
   #calendar-wrap .fc-toolbar-title { font-size: 1rem; font-weight: 700; }
   #calendar-wrap .fc-button {
@@ -60,17 +61,17 @@
   {# ── Header ── #}
   <div class="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
     <div>
-      <h1 class="text-xl font-bold text-gray-900 dark:text-white">التقويم</h1>
+      <h1 class="text-xl font-bold text-gray-900 dark:text-white">{% trans "التقويم" %}</h1>
       <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ clinic.name }}</p>
     </div>
     <div class="flex items-center gap-2 flex-wrap">
       <a href="{% url 'secretary:appointments' %}"
          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors">
-        <i class="fa-solid fa-list text-xs"></i> قائمة المواعيد
+        <i class="fa-solid fa-list text-xs"></i> {% trans "قائمة المواعيد" %}
       </a>
       <a href="{% url 'secretary:create_appointment' %}"
          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold transition-colors shadow-sm">
-        <i class="fa-solid fa-plus text-xs"></i> حجز موعد جديد
+        <i class="fa-solid fa-plus text-xs"></i> {% trans "حجز موعد جديد" %}
       </a>
     </div>
   </div>
@@ -78,10 +79,10 @@
   {# ── Doctor filter ── #}
   <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm px-5 py-3">
     <div class="flex flex-wrap items-center gap-4">
-      <span class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">فلترة الطبيب:</span>
+      <span class="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">{% trans "فلترة الطبيب" %}:</span>
       <label class="flex items-center gap-1.5 cursor-pointer">
         <input type="radio" name="cal-doctor" value="" checked class="text-primary-600 focus:ring-primary-500">
-        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">الكل</span>
+        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{% trans "الكل" %}</span>
       </label>
       {% for doc in doctor_users %}
       <label class="flex items-center gap-1.5 cursor-pointer">
@@ -94,7 +95,7 @@
 
   {# ── Status legend ── #}
   <div class="flex flex-wrap items-center gap-3 px-1">
-    <span class="text-xs text-gray-400 dark:text-gray-500 font-semibold">الحالات:</span>
+    <span class="text-xs text-gray-400 dark:text-gray-500 font-semibold">{% trans "الحالات" %}:</span>
     {% for status, label, color in status_legend %}
     <span class="flex items-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-400">
       <span class="w-3 h-3 rounded-full" style="background:{{ color }}"></span>{{ label }}
@@ -116,7 +117,7 @@
   <p class="text-gray-500 dark:text-gray-400" id="tt-doctor"></p>
   <p class="text-gray-500 dark:text-gray-400" id="tt-type"></p>
   <a id="tt-link" href="#" class="inline-flex items-center gap-1 text-primary-600 dark:text-primary-400 font-semibold mt-2 hover:underline text-xs">
-    <i class="fa-solid fa-eye text-[10px]"></i> عرض التفاصيل
+    <i class="fa-solid fa-eye text-[10px]"></i> {% trans "عرض التفاصيل" %}
   </a>
 </div>
 
@@ -126,6 +127,26 @@
 <script>
 var selectedDoctorId = '';
 var calendarInstance = null;
+var currentLang = '{{ CURRENT_LANG }}';
+var isRTL = {{ IS_RTL|yesno:"true,false" }};
+
+// Translated strings for JS tooltip
+var ttLabelStatus = '{% trans "الحالة" %}';
+var ttLabelDoctor = '{% trans "الطبيب" %}';
+var ttLabelType   = '{% trans "النوع" %}';
+
+// FullCalendar button translations
+var fcButtonText = isRTL ? {
+  today: '{% trans "اليوم" %}',
+  month: '{% trans "شهر" %}',
+  week:  '{% trans "أسبوع" %}',
+  day:   '{% trans "يوم" %}',
+} : {
+  today: 'Today',
+  month: 'Month',
+  week:  'Week',
+  day:   'Day',
+};
 
 // Determine initial date (today or from URL param)
 var initialDate = new Date().toISOString().slice(0,10);
@@ -140,8 +161,8 @@ document.addEventListener('DOMContentLoaded', function() {
   var calEl = document.getElementById('calendar');
 
   calendarInstance = new FullCalendar.Calendar(calEl, {
-    locale: 'ar',
-    direction: 'rtl',
+    locale: currentLang,
+    direction: isRTL ? 'rtl' : 'ltr',
     initialView: 'timeGridWeek',
     initialDate: initialDate,
     headerToolbar: {
@@ -149,12 +170,7 @@ document.addEventListener('DOMContentLoaded', function() {
       center: 'title',
       left: 'timeGridDay,timeGridWeek,dayGridMonth',
     },
-    buttonText: {
-      today: 'اليوم',
-      month: 'شهر',
-      week: 'أسبوع',
-      day: 'يوم',
-    },
+    buttonText: fcButtonText,
     allDaySlot: false,
     slotMinTime: '07:00:00',
     slotMaxTime: '21:00:00',
@@ -189,9 +205,9 @@ document.addEventListener('DOMContentLoaded', function() {
       var props = info.event.extendedProps;
       var tt = document.getElementById('event-tooltip');
       document.getElementById('tt-title').textContent = info.event.title;
-      document.getElementById('tt-status').textContent = 'الحالة: ' + props.status_label;
-      document.getElementById('tt-doctor').textContent = props.doctor ? 'الطبيب: ' + props.doctor : '';
-      document.getElementById('tt-type').textContent = props.type ? 'النوع: ' + props.type : '';
+      document.getElementById('tt-status').textContent = ttLabelStatus + ': ' + props.status_label;
+      document.getElementById('tt-doctor').textContent = props.doctor ? ttLabelDoctor + ': ' + props.doctor : '';
+      document.getElementById('tt-type').textContent = props.type ? ttLabelType + ': ' + props.type : '';
       document.getElementById('tt-link').href = info.event.url || '#';
       tt.style.display = 'block';
       positionTooltip(info.jsEvent, tt);
@@ -217,7 +233,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Styling
     eventContent: function(arg) {
       var time = arg.event.start ?
-        arg.event.start.toLocaleTimeString('ar', {hour:'2-digit',minute:'2-digit',hour12:false}) : '';
+        arg.event.start.toLocaleTimeString(currentLang, {hour:'2-digit',minute:'2-digit',hour12:false}) : '';
       return {
         html: '<div class="fc-event-inner p-0.5 overflow-hidden">' +
               '<span class="font-bold">' + time + '</span> ' +

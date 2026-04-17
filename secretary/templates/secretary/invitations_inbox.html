@@ -1,5 +1,6 @@
 {% extends "secretary/base_secretary.html" %}
-{% block title %}دعوات الانضمام — السكرتارية{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "دعوات الانضمام" %} — {% trans "السكرتارية" %}{% endblock %}
 
 {% block content %}
 <div class="max-w-3xl mx-auto px-4 pt-5 pb-8">
@@ -10,9 +11,9 @@
       <i class="fa-solid fa-envelope-open-text text-white text-xl"></i>
     </div>
     <div>
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">دعوات الانضمام الواردة</h1>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{% trans "دعوات الانضمام الواردة" %}</h1>
       <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-        دعوات الانضمام إلى العيادات بصفة سكرتير/ة
+        {% trans "دعوات الانضمام إلى العيادات بصفة سكرتير/ة" %}
         {% if invitations %}
         <span class="font-semibold text-purple-600 dark:text-purple-400">({{ invitations|length }})</span>
         {% endif %}
@@ -42,11 +43,11 @@
 
         <div class="flex items-center gap-2 flex-shrink-0">
           <span class="inline-flex items-center gap-1.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-semibold px-2.5 py-1 rounded-full">
-            <i class="fa-solid fa-user-tie text-[10px]"></i> سكرتير/ة
+            <i class="fa-solid fa-user-tie text-[10px]"></i> {% trans "سكرتير/ة" %}
           </span>
           {% if inv.is_expired %}
           <span class="inline-flex items-center gap-1.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-xs font-semibold px-2.5 py-1 rounded-full">
-            <i class="fa-solid fa-clock text-[10px]"></i> منتهية
+            <i class="fa-solid fa-clock text-[10px]"></i> {% trans "منتهية" %}
           </span>
           {% endif %}
         </div>
@@ -57,7 +58,7 @@
       {# Details grid #}
       <div class="grid grid-cols-2 gap-4 p-5">
         <div>
-          <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">أُرسلت بواسطة</p>
+          <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">{% trans "أُرسلت بواسطة" %}</p>
           <p class="font-semibold text-gray-800 dark:text-gray-200 text-sm">{{ inv.invited_by.name }}</p>
           {% if inv.invited_by.phone %}
           <p class="text-xs font-mono text-gray-400 dark:text-gray-500" dir="ltr">{{ inv.invited_by.phone }}</p>
@@ -65,9 +66,9 @@
         </div>
 
         <div>
-          <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">تاريخ الدعوة</p>
+          <p class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">{% trans "تاريخ الدعوة" %}</p>
           <p class="font-medium text-gray-700 dark:text-gray-300 text-sm" title="{{ inv.created_at|date:'Y-m-d H:i' }}">
-            منذ {{ inv.created_at|timesince }}
+            {% blocktrans with time=inv.created_at|timesince %}منذ {{ time }}{% endblocktrans %}
           </p>
         </div>
       </div>
@@ -79,22 +80,22 @@
           {% csrf_token %}
           <button type="submit"
                   class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all shadow-sm">
-            <i class="fa-solid fa-check text-xs"></i> قبول والانضمام
+            <i class="fa-solid fa-check text-xs"></i> {% trans "قبول والانضمام" %}
           </button>
         </form>
         <form method="post" action="{% url 'secretary:reject_invitation' inv.id %}"
-              onsubmit="return confirm('هل أنت متأكد من رفض هذه الدعوة؟');">
+              onsubmit="return confirm('{% trans "هل أنت متأكد من رفض هذه الدعوة؟" %}');">
           {% csrf_token %}
           <button type="submit"
                   class="inline-flex items-center gap-2 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-red-400 hover:text-red-600 dark:hover:text-red-400 dark:hover:border-red-500 bg-white dark:bg-gray-800 text-sm font-semibold px-4 py-2 rounded-xl transition-colors">
-            <i class="fa-solid fa-times text-xs"></i> رفض
+            <i class="fa-solid fa-times text-xs"></i> {% trans "رفض" %}
           </button>
         </form>
       </div>
       {% else %}
       <div class="border-t border-gray-100 dark:border-gray-700 px-5 py-3 bg-gray-50/50 dark:bg-gray-700/30">
         <p class="text-sm text-gray-400 dark:text-gray-500 text-center">
-          <i class="fa-regular fa-clock me-1"></i>انتهت صلاحية هذه الدعوة
+          <i class="fa-regular fa-clock me-1"></i>{% trans "انتهت صلاحية هذه الدعوة" %}
         </p>
       </div>
       {% endif %}
@@ -107,8 +108,8 @@
     <div class="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mx-auto mb-4">
       <i class="fa-solid fa-inbox text-2xl text-gray-400 dark:text-gray-500"></i>
     </div>
-    <p class="font-bold text-gray-700 dark:text-gray-200 mb-2">لا توجد دعوات جديدة</p>
-    <p class="text-sm text-gray-500 dark:text-gray-400">عندما يدعوك أحد الأطباء للانضمام إلى عيادته كـ سكرتير/ة، ستظهر الدعوة هنا.</p>
+    <p class="font-bold text-gray-700 dark:text-gray-200 mb-2">{% trans "لا توجد دعوات جديدة" %}</p>
+    <p class="text-sm text-gray-500 dark:text-gray-400">{% trans "عندما يدعوك أحد الأطباء للانضمام إلى عيادته كـ سكرتير/ة، ستظهر الدعوة هنا." %}</p>
   </div>
   {% endif %}
 

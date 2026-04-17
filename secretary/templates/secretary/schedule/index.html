@@ -35,7 +35,7 @@
         <a href="?week={{ prev_week }}{% if selected_doctor_id %}&doctor_id={{ selected_doctor_id }}{% endif %}"
            class="p-2 rounded-xl border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
            title="{% trans 'الأسبوع السابق' %}">
-          <i class="fa-solid fa-chevron-right text-sm"></i>
+          <i class="fa-solid {% if IS_RTL %}fa-chevron-right{% else %}fa-chevron-left{% endif %} text-sm"></i>
         </a>
         <a href="?{% if selected_doctor_id %}doctor_id={{ selected_doctor_id }}{% endif %}"
            class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs text-gray-600 dark:text-gray-300 font-medium transition-colors">
@@ -44,7 +44,7 @@
         <a href="?week={{ next_week }}{% if selected_doctor_id %}&doctor_id={{ selected_doctor_id }}{% endif %}"
            class="p-2 rounded-xl border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors"
            title="{% trans 'الأسبوع التالي' %}">
-          <i class="fa-solid fa-chevron-left text-sm"></i>
+          <i class="fa-solid {% if IS_RTL %}fa-chevron-left{% else %}fa-chevron-right{% endif %} text-sm"></i>
         </a>
       </div>
 
