@@ -1,6 +1,7 @@
 {% extends 'patients/base_dashboard.html' %}
+{% load i18n %}
 
-{% block title %}تصفح الأطباء {% if selected_specialty %} - {{ selected_specialty.name_ar }}{% endif %} | {{ block.super }}{% endblock %}
+{% block title %}{% trans "تصفح الأطباء" %} {% if selected_specialty %} - {{ selected_specialty.name_ar }}{% endif %} | {{ block.super }}{% endblock %}
 
 {% block content %}
 <div class="max-w-5xl mx-auto space-y-6 animate-fade-in-up">
@@ -14,13 +15,13 @@
                     <i class="fa-solid fa-user-doctor text-primary-500 text-xl"></i>
                 </div>
                 <div>
-                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">تصفح الأطباء</h1>
-                    <p class="text-gray-500 dark:text-gray-400 text-sm">ابحث عن طبيب أو تصفح حسب التخصص</p>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{% trans "تصفح الأطباء" %}</h1>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">{% trans "ابحث عن طبيب أو تصفح حسب التخصص" %}</p>
                 </div>
             </div>
             <a href="{% url 'patients:dashboard' %}"
                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                <i class="fa-solid fa-arrow-right text-lg"></i>
+                <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %} text-lg"></i>
             </a>
         </div>
     </div>
@@ -30,18 +31,18 @@
         <form method="get" action="{% url 'patients:browse_doctors' %}" id="searchForm">
             <div class="flex flex-col sm:flex-row gap-3">
                 <div class="relative flex-1">
-                    <div class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
+                    <div class="absolute inset-y-0 end-0 flex items-center pe-4 pointer-events-none">
                         <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
                     </div>
                     <input type="text" name="q" value="{{ search_query }}"
-                        placeholder="ابحث باسم الطبيب أو العيادة..."
-                        class="w-full pr-12 pl-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-sm">
+                        placeholder="{% trans 'ابحث باسم الطبيب أو العيادة...' %}"
+                        class="w-full pe-12 ps-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-sm">
                 </div>
                 <div class="sm:w-56">
                     <select name="specialty_id"
                             class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-sm appearance-none"
                             onchange="document.getElementById('searchForm').submit();">
-                        <option value="">كل التخصصات</option>
+                        <option value="">{% trans "كل التخصصات" %}</option>
                         {% for spec in all_specialties %}
                         <option value="{{ spec.id }}" {% if selected_specialty and selected_specialty.id == spec.id %}selected{% endif %}>
                             {{ spec.name_ar }}
@@ -52,7 +53,7 @@
                 <button type="submit"
                         class="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 text-sm shadow-sm">
                     <i class="fa-solid fa-magnifying-glass text-xs"></i>
-                    بحث
+                    {% trans "بحث" %}
                 </button>
             </div>
         </form>
@@ -67,7 +68,7 @@
                 <i class="fa-solid fa-magnifying-glass text-[10px]"></i>
                 "{{ search_query }}"
                 <a href="{% url 'patients:browse_doctors' %}{% if selected_specialty %}?specialty_id={{ selected_specialty.id }}{% endif %}"
-                   class="mr-1 hover:text-blue-900 dark:hover:text-blue-100">
+                   class="ms-1 hover:text-blue-900 dark:hover:text-blue-100">
                     <i class="fa-solid fa-xmark"></i>
                 </a>
             </span>
@@ -77,18 +78,18 @@
                 <i class="fa-solid fa-stethoscope text-[10px]"></i>
                 {{ selected_specialty.name_ar }}
                 <a href="{% url 'patients:browse_doctors' %}{% if search_query %}?q={{ search_query }}{% endif %}"
-                   class="mr-1 hover:text-primary-900 dark:hover:text-primary-100">
+                   class="ms-1 hover:text-primary-900 dark:hover:text-primary-100">
                     <i class="fa-solid fa-xmark"></i>
                 </a>
             </span>
             {% endif %}
             <a href="{% url 'patients:browse_doctors' %}"
                class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                مسح الكل
+                {% trans "مسح الكل" %}
             </a>
         </div>
         <span class="text-xs text-gray-500 dark:text-gray-400">
-            {{ total_doctors }} طبيب
+            {% blocktrans with count=total_doctors %}{{ count }} طبيب{% endblocktrans %}
         </span>
     </div>
     {% endif %}
@@ -107,7 +108,7 @@
                         <h2 class="text-lg font-bold text-gray-800 dark:text-white">{{ clinic_data.clinic.name }}</h2>
                         {% if clinic_data.clinic.address %}
                         <p class="text-sm text-gray-500 dark:text-gray-400">
-                            <i class="fa-solid fa-map-pin ml-1 text-xs"></i>
+                            <i class="fa-solid fa-map-pin ms-1 text-xs"></i>
                             {{ clinic_data.clinic.address }}
                         </p>
                         {% endif %}
@@ -117,8 +118,8 @@
                     </div>
                 </div>
                 {% if clinic_data.clinic.city %}
-                <span class="w-fit sm:mr-auto text-xs bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400 px-3 py-1 rounded-full mt-2 sm:mt-0">
-                    <i class="fa-solid fa-location-dot ml-1"></i>
+                <span class="w-fit sm:ms-auto text-xs bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400 px-3 py-1 rounded-full mt-2 sm:mt-0">
+                    <i class="fa-solid fa-location-dot ms-1"></i>
                     {{ clinic_data.clinic.city.name }}
                 </span>
                 {% endif %}
@@ -134,18 +135,18 @@
                             <span class="text-lg font-bold text-primary-600 dark:text-primary-400">{{ doc.user.name|slice:":1" }}</span>
                         </div>
                         <div class="min-w-0 flex-1">
-                            <h3 class="font-bold text-gray-900 dark:text-white">د. {{ doc.user.name }}</h3>
+                            <h3 class="font-bold text-gray-900 dark:text-white">{% trans "د." %} {{ doc.user.name }}</h3>
                             <div class="flex items-center gap-2 flex-wrap mt-0.5">
                                 {% if doc.profile and doc.profile.years_of_experience %}
                                 <span class="text-xs text-gray-500 dark:text-gray-400">
-                                    <i class="fa-solid fa-briefcase-medical ml-1"></i>
-                                    {{ doc.profile.years_of_experience }} سنوات خبرة
+                                    <i class="fa-solid fa-briefcase-medical ms-1"></i>
+                                    {{ doc.profile.years_of_experience }} {% trans "سنوات خبرة" %}
                                 </span>
                                 {% endif %}
                                 {% if doc.appointment_type_count %}
                                 <span class="text-xs text-gray-400 dark:text-gray-500">·</span>
                                 <span class="text-xs text-gray-500 dark:text-gray-400">
-                                    {{ doc.appointment_type_count }} خدمة
+                                    {{ doc.appointment_type_count }} {% trans "خدمة" %}
                                 </span>
                                 {% endif %}
                             </div>
@@ -169,7 +170,7 @@
                         {% if doc.has_intake_form %}
                         <span class="inline-flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 px-2.5 py-1 rounded-full text-xs font-medium">
                             <i class="fa-solid fa-clipboard-list text-[10px]"></i>
-                            نموذج استقبال
+                            {% trans "نموذج استقبال" %}
                         </span>
                         {% endif %}
                     </div>
@@ -185,21 +186,21 @@
                         <!-- Book Appointment (Primary CTA) -->
                         <a href="{% url 'appointments:book_appointment' clinic_id=clinic_data.clinic.id %}?doctor_id={{ doc.user.id }}"
                            class="block w-full text-center bg-secondary-500 hover:bg-secondary-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition-all shadow-sm hover:shadow-md">
-                            <i class="fa-solid fa-calendar-check ml-1"></i>
-                            احجز موعد
+                            <i class="fa-solid fa-calendar-check ms-1"></i>
+                            {% trans "احجز موعد" %}
                         </a>
 
                         <!-- Secondary Actions -->
                         <div class="flex items-center gap-2">
                             <a href="{% url 'doctors:doctor_availability' doc.user.id %}?clinic_id={{ clinic_data.clinic.id }}"
                                class="flex-1 text-center bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/40 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
-                                <i class="fa-regular fa-calendar ml-1"></i>
-                                المواعيد المتاحة
+                                <i class="fa-regular fa-calendar ms-1"></i>
+                                {% trans "المواعيد المتاحة" %}
                             </a>
                             <a href="{% url 'doctors:doctor_appointment_types' doc.user.id %}?clinic_id={{ clinic_data.clinic.id }}"
                                class="flex-1 text-center bg-gray-100 dark:bg-slate-600/50 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
-                                <i class="fa-solid fa-list-check ml-1"></i>
-                                أنواع الخدمات
+                                <i class="fa-solid fa-list-check ms-1"></i>
+                                {% trans "أنواع الخدمات" %}
                             </a>
                         </div>
                     </div>
@@ -221,44 +222,43 @@
         </div>
 
         {% if search_query and selected_specialty %}
-            <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">لا توجد نتائج</h3>
+            <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">{% trans "لا توجد نتائج" %}</h3>
             <p class="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-5">
-                لم يتم العثور على أطباء تطابق بحثك "<span class="font-semibold text-gray-700 dark:text-gray-200">{{ search_query }}</span>"
-                في تخصص "<span class="font-semibold text-gray-700 dark:text-gray-200">{{ selected_specialty.name_ar }}</span>".
+                {% blocktrans with q=search_query spec=selected_specialty.name_ar %}لم يتم العثور على أطباء تطابق بحثك "<span class="font-semibold text-gray-700 dark:text-gray-200">{{ q }}</span>" في تخصص "<span class="font-semibold text-gray-700 dark:text-gray-200">{{ spec }}</span>".{% endblocktrans %}
             </p>
             <div class="flex items-center justify-center gap-3 flex-wrap">
                 <a href="{% url 'patients:browse_doctors' %}?q={{ search_query }}"
                    class="inline-flex items-center gap-2 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-xl text-sm font-medium transition-colors">
                     <i class="fa-solid fa-filter-circle-xmark"></i>
-                    إزالة فلتر التخصص
+                    {% trans "إزالة فلتر التخصص" %}
                 </a>
                 <a href="{% url 'patients:browse_doctors' %}"
                    class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors">
-                    <i class="fa-solid fa-arrow-right"></i>
-                    عرض جميع الأطباء
+                    <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %}"></i>
+                    {% trans "عرض جميع الأطباء" %}
                 </a>
             </div>
         {% elif search_query %}
-            <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">لا توجد نتائج لـ "{{ search_query }}"</h3>
-            <p class="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-5">جرّب البحث باسم مختلف أو اختر تخصصاً من القائمة.</p>
+            <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">{% blocktrans with q=search_query %}لا توجد نتائج لـ "{{ q }}"{% endblocktrans %}</h3>
+            <p class="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-5">{% trans "جرّب البحث باسم مختلف أو اختر تخصصاً من القائمة." %}</p>
             <a href="{% url 'patients:browse_doctors' %}"
                class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors">
-                <i class="fa-solid fa-arrow-right"></i>
-                عرض جميع الأطباء
+                <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %}"></i>
+                {% trans "عرض جميع الأطباء" %}
             </a>
         {% elif selected_specialty %}
-            <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">لا يوجد أطباء في هذا التخصص</h3>
+            <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">{% trans "لا يوجد أطباء في هذا التخصص" %}</h3>
             <p class="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-5">
-                لم يتم العثور على أطباء في تخصص "<span class="font-semibold text-gray-700 dark:text-gray-200">{{ selected_specialty.name_ar }}</span>".
+                {% blocktrans with spec=selected_specialty.name_ar %}لم يتم العثور على أطباء في تخصص "<span class="font-semibold text-gray-700 dark:text-gray-200">{{ spec }}</span>".{% endblocktrans %}
             </p>
             <a href="{% url 'patients:browse_doctors' %}"
                class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors">
-                <i class="fa-solid fa-arrow-right"></i>
-                عرض جميع الأطباء
+                <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %}"></i>
+                {% trans "عرض جميع الأطباء" %}
             </a>
         {% else %}
-            <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">لا يوجد أطباء حالياً</h3>
-            <p class="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">لم يتم تسجيل أي أطباء في المنصة بعد. تحقق لاحقاً.</p>
+            <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">{% trans "لا يوجد أطباء حالياً" %}</h3>
+            <p class="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">{% trans "لم يتم تسجيل أي أطباء في المنصة بعد. تحقق لاحقاً." %}</p>
         {% endif %}
     </div>
     {% endif %}

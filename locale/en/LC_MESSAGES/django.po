@@ -1481,3 +1481,194 @@ msgstr "%(count)s result(s) — click on a patient name to view details"
 
 msgid "لا توجد نتائج لـ \"%(q)s\""
 msgstr "No results for \"%(q)s\""
+
+# ── Patient portal — dashboard ────────────────────────────────────────────────
+msgid "مرحباً، %(name)s 👋"
+msgstr "Welcome, %(name)s 👋"
+
+msgid "إحجز موعد"
+msgstr "Book Appointment"
+
+msgid "تصفّح الأطباء"
+msgstr "Browse Doctors"
+
+msgid "تصفّح العيادات"
+msgstr "Browse Clinics"
+
+msgid "عرض ملفي"
+msgstr "View My Profile"
+
+msgid "المواعيد القادمة"
+msgstr "Upcoming Appointments"
+
+msgid "لا توجد مواعيد قادمة"
+msgstr "No upcoming appointments"
+
+msgid "لم يتم العثور على أطباء"
+msgstr "No doctors found"
+
+msgid "لم يتم العثور على عيادات"
+msgstr "No clinics found"
+
+msgid "عرض التفاصيل"
+msgstr "View Details"
+
+# ── Patient portal — base dashboard ───────────────────────────────────────────
+msgid "الملف الشخصي"
+msgstr "Profile"
+
+msgid "منصتي الطبية. جميع الحقوق محفوظة."
+msgstr "My Medical Platform. All rights reserved."
+
+# ── Patient portal — profile ──────────────────────────────────────────────────
+msgid "تغيير رقم الهاتف"
+msgstr "Change Phone Number"
+
+msgid "المعلومات الطبية"
+msgstr "Medical Information"
+
+msgid "جهة اتصال الطوارئ"
+msgstr "Emergency Contact"
+
+msgid "تاريخ مرضي"
+msgstr "Medical History"
+
+msgid "لا يوجد سجل حساسية معروف."
+msgstr "No known allergy records."
+
+msgid "سجلك الطبي نظيف، ممتاز!"
+msgstr "Your medical record is clean, excellent!"
+
+msgid "لم يتم إضافة جهة اتصال للطوارئ."
+msgstr "No emergency contact has been added."
+
+msgid "تعديل الملف"
+msgstr "Edit Profile"
+
+msgid "إضافة الآن"
+msgstr "Add Now"
+
+msgid "تغيير البريد الإلكتروني"
+msgstr "Change Email"
+
+# ── Patient portal — edit profile ─────────────────────────────────────────────
+msgid "تعديل الملف الشخصي"
+msgstr "Edit Profile"
+
+msgid "صورة الملف الشخصي"
+msgstr "Profile Picture"
+
+msgid "المعلومات الطبية والطارئة"
+msgstr "Medical & Emergency Information"
+
+msgid "قص الصورة"
+msgstr "Crop Image"
+
+msgid "حفظ القص"
+msgstr "Save Crop"
+
+msgid "حذف الصورة"
+msgstr "Delete Picture"
+
+msgid "هل أنت متأكد من حذف الصورة الشخصية؟"
+msgstr "Are you sure you want to delete the profile picture?"
+
+msgid "الرجاء اختيار ملف صورة."
+msgstr "Please select an image file."
+
+msgid "يوم/شهر/سنة"
+msgstr "DD/MM/YYYY"
+
+msgid "اسم جهة اتصال الطوارئ"
+msgstr "Emergency Contact Name"
+
+msgid "رقم جهة اتصال الطوارئ"
+msgstr "Emergency Contact Phone"
+
+msgid "التاريخ الطبي (قائمة التشخيصات، العمليات الجراحية، إلخ)"
+msgstr "Medical History (list of diagnoses, surgeries, etc.)"
+
+# ── Patient portal — edit appointment ─────────────────────────────────────────
+msgid "التعديلات المتبقية:"
+msgstr "Edits Remaining:"
+
+msgid "من %(total)s"
+msgstr "of %(total)s"
+
+msgid "لا يمكن تغيير الطبيب"
+msgstr "Doctor cannot be changed"
+
+msgid "وصف الحالة الطبية"
+msgstr "Describe Medical Condition"
+
+msgid "نموذج الاستقبال"
+msgstr "Intake Form"
+
+msgid "اختر تاريخاً لعرض المواعيد المتاحة..."
+msgstr "Select a date to view available time slots..."
+
+msgid "اختياري · الحد الأقصى 1000 حرف"
+msgstr "Optional · Maximum 1000 characters"
+
+msgid "صف حالتك الطبية أو سبب زيارتك باختصار..."
+msgstr "Briefly describe your medical condition or reason for visit..."
+
+# ── Patient portal — my appointments ──────────────────────────────────────────
+msgid "تم تسجيل الدخول"
+msgstr "Checked In"
+
+msgid "جارٍ الآن"
+msgstr "In Progress"
+
+msgid "التعديلات المتبقية: %(remaining)s"
+msgstr "Edits Remaining: %(remaining)s"
+
+msgid "هل أنت متأكد أنك تريد إلغاء هذا الموعد؟"
+msgstr "Are you sure you want to cancel this appointment?"
+
+# ── Patient portal — browse doctors & clinics ────────────────────────────────
+msgid "%(count)s طبيب"
+msgstr "%(count)s doctor(s)"
+
+msgid "%(count)s عيادة"
+msgstr "%(count)s clinic(s)"
+
+msgid "لا توجد عيادات تطابق بحثك"
+msgstr "No clinics match your search"
+
+msgid "لا يوجد أطباء يطابقون بحثك"
+msgstr "No doctors match your search"
+
+# ── Patient portal — intake form ──────────────────────────────────────────────
+msgid "(اختياري)"
+msgstr "(Optional)"
+
+msgid "-- اختر --"
+msgstr "-- Select --"
+
+msgid "الملفات الحالية:"
+msgstr "Current Files:"
+
+msgid "رفع ملفات جديدة سيستبدل الملفات الحالية"
+msgstr "Uploading new files will replace existing files"
+
+msgid "الصيغ:"
+msgstr "Formats:"
+
+msgid "الحد: %(max)s MB"
+msgstr "Limit: %(max)s MB"
+
+msgid "اسحب الملفات هنا أو انقر للرفع"
+msgstr "Drag files here or click to upload"
+
+msgid "إضافة مجموعة ملفات بتاريخ"
+msgstr "Add Dated File Group"
+
+msgid "الحد الأقصى: 7 مجموعات، كل مجموعة حتى 5 ملفات"
+msgstr "Maximum: 7 groups, each up to 5 files"
+
+msgid "%(max)s MB لكل ملف"
+msgstr "%(max)s MB per file"
+
+msgid "لا يوجد نموذج استقبال لنوع الموعد المحدد."
+msgstr "No intake form for the selected appointment type."

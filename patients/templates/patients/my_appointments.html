@@ -1,6 +1,7 @@
 {% extends 'patients/base_dashboard.html' %}
+{% load i18n %}
 
-{% block title %}مواعيدي | {{ block.super }}{% endblock %}
+{% block title %}{% trans "مواعيدي" %} | {{ block.super }}{% endblock %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto space-y-8 animate-fade-in-up">
@@ -14,14 +15,14 @@
                     <span class="w-10 h-10 rounded-xl bg-secondary-50 dark:bg-secondary-900/30 flex items-center justify-center">
                         <i class="fa-regular fa-calendar-check text-secondary-500 text-lg"></i>
                     </span>
-                    مواعيدي
+                    {% trans "مواعيدي" %}
                 </h1>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 mr-13">تابع مواعيدك القادمة والسابقة وحالتها</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1 ms-13">{% trans "تابع مواعيدك القادمة والسابقة وحالتها" %}</p>
             </div>
             <a href="{% url 'patients:browse_doctors' %}"
                class="inline-flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium rounded-xl transition-colors">
                 <i class="fa-solid fa-plus"></i>
-                حجز موعد جديد
+                {% trans "حجز موعد جديد" %}
             </a>
         </div>
     </div>
@@ -30,7 +31,7 @@
     <section>
         <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
             <i class="fa-solid fa-clock text-primary-500"></i>
-            المواعيد القادمة
+            {% trans "المواعيد القادمة" %}
             {% if upcoming_count %}
             <span class="text-xs font-medium bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 px-2.5 py-0.5 rounded-full">
                 {{ upcoming_count }}
@@ -43,7 +44,7 @@
             {% for appt in upcoming_appointments %}
             <div class="glass-card p-5 hover:shadow-md transition-shadow relative overflow-hidden group">
                 {# Left accent bar — color by status #}
-                <div class="absolute top-0 right-0 w-1 h-full
+                <div class="absolute top-0 end-0 w-1 h-full
                     {% if appt.status == 'CONFIRMED' %}bg-green-400
                     {% elif appt.status == 'PENDING' %}bg-yellow-400
                     {% elif appt.status == 'CHECKED_IN' or appt.status == 'IN_PROGRESS' %}bg-blue-400
@@ -66,15 +67,15 @@
                     <div class="flex-grow min-w-0">
                         <div class="flex flex-wrap items-center gap-2 mb-1">
                             <h3 class="text-base font-semibold text-gray-900 dark:text-white">
-                                د. {{ appt.doctor_name }}
+                                {% trans "د." %} {{ appt.doctor_name }}
                             </h3>
                             {% if appt.doctor_specialty %}
                             <span class="text-xs text-gray-400 dark:text-gray-500">· {{ appt.doctor_specialty }}</span>
                             {% endif %}
                         </div>
                         <div class="flex flex-wrap gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
-                            <span><i class="fa-solid fa-hospital text-xs ml-1"></i>{{ appt.clinic_name }}</span>
-                            <span><i class="fa-regular fa-clock text-xs ml-1"></i>{{ appt.appointment_time|time:"H:i" }}</span>
+                            <span><i class="fa-solid fa-hospital text-xs ms-1"></i>{{ appt.clinic_name }}</span>
+                            <span><i class="fa-regular fa-clock text-xs ms-1"></i>{{ appt.appointment_time|time:"H:i" }}</span>
                             {% if appt.appointment_type %}<span>{{ appt.appointment_type }}</span>{% endif %}
                         </div>
                     </div>
@@ -92,7 +93,11 @@
                                 {% elif appt.status == 'PENDING' %}bg-yellow-500
                                 {% elif appt.status == 'CHECKED_IN' or appt.status == 'IN_PROGRESS' %}bg-blue-500
                                 {% else %}bg-gray-400{% endif %}"></span>
-                            {{ appt.status_display }}
+                            {% if appt.status == 'CONFIRMED' %}{% trans "مؤكد" %}
+                            {% elif appt.status == 'PENDING' %}{% trans "قيد الانتظار" %}
+                            {% elif appt.status == 'CHECKED_IN' %}{% trans "تم تسجيل الدخول" %}
+                            {% elif appt.status == 'IN_PROGRESS' %}{% trans "جارٍ الآن" %}
+                            {% else %}{{ appt.status_display }}{% endif %}
                         </span>
 
                         {# Action buttons — only for editable/cancellable statuses #}
@@ -102,9 +107,9 @@
                             {% if appt.can_edit %}
                             <a href="{% url 'patients:edit_appointment' appt.id %}"
                                class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl border border-amber-300 dark:border-amber-700 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
-                               title="التعديلات المتبقية: {{ appt.edits_remaining }}">
+                               title="{% blocktrans with remaining=appt.edits_remaining %}التعديلات المتبقية: {{ remaining }}{% endblocktrans %}">
                                 <i class="fa-solid fa-pen text-xs"></i>
-                                تعديل
+                                {% trans "تعديل" %}
                                 <span class="text-[10px] opacity-70">({{ appt.edits_remaining }})</span>
                             </a>
                             {% endif %}
@@ -112,12 +117,12 @@
                             {# Cancel button #}
                             <form method="post"
                                   action="{% url 'patients:cancel_appointment' appt.id %}"
-                                  onsubmit="return confirm('هل أنت متأكد أنك تريد إلغاء هذا الموعد؟');">
+                                  onsubmit="return confirm('{% trans "هل أنت متأكد أنك تريد إلغاء هذا الموعد؟" %}');">
                                 {% csrf_token %}
                                 <button type="submit"
                                         class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
                                     <i class="fa-solid fa-xmark text-xs"></i>
-                                    إلغاء
+                                    {% trans "إلغاء" %}
                                 </button>
                             </form>
                         </div>
@@ -135,7 +140,7 @@
             <button type="button"
                     class="inline-flex items-center gap-2 px-5 py-2.5 border border-primary-300 dark:border-primary-700 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 text-sm font-medium rounded-xl transition-colors">
                 <i class="fa-solid fa-chevron-down text-xs"></i>
-                عرض المزيد من المواعيد القادمة
+                {% trans "عرض المزيد من المواعيد القادمة" %}
             </button>
         </div>
         {% endif %}
@@ -146,12 +151,12 @@
             <div class="w-16 h-16 rounded-full bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center mx-auto mb-4">
                 <i class="fa-regular fa-calendar-plus text-primary-400 text-2xl"></i>
             </div>
-            <h3 class="text-base font-semibold text-gray-700 dark:text-gray-300 mb-1">لا توجد مواعيد قادمة</h3>
-            <p class="text-sm text-gray-400 dark:text-gray-500 mb-5">ابدأ بحجز موعد مع طبيبك المفضّل الآن</p>
+            <h3 class="text-base font-semibold text-gray-700 dark:text-gray-300 mb-1">{% trans "لا توجد مواعيد قادمة" %}</h3>
+            <p class="text-sm text-gray-400 dark:text-gray-500 mb-5">{% trans "ابدأ بحجز موعد مع طبيبك المفضّل الآن" %}</p>
             <a href="{% url 'patients:browse_doctors' %}"
                class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium rounded-xl transition-colors">
                 <i class="fa-solid fa-user-doctor"></i>
-                تصفح الأطباء
+                {% trans "تصفح الأطباء" %}
             </a>
         </div>
         {% endif %}
@@ -161,7 +166,7 @@
     <section>
         <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
             <i class="fa-solid fa-history text-gray-400"></i>
-            المواعيد السابقة
+            {% trans "المواعيد السابقة" %}
             {% if past_count %}
             <span class="text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400 px-2.5 py-0.5 rounded-full">
                 {{ past_count }}
@@ -175,7 +180,7 @@
             <div class="glass-card p-4 opacity-80 hover:opacity-100 transition-opacity relative overflow-hidden">
 
                 {# Accent bar #}
-                <div class="absolute top-0 right-0 w-1 h-full
+                <div class="absolute top-0 end-0 w-1 h-full
                     {% if appt.status == 'COMPLETED' %}bg-gray-300 dark:bg-slate-600
                     {% elif appt.status == 'CANCELLED' %}bg-red-400
                     {% elif appt.status == 'NO_SHOW' %}bg-orange-400
@@ -198,7 +203,7 @@
                     <div class="flex-grow min-w-0">
                         <div class="flex flex-wrap items-center gap-2 mb-0.5">
                             <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                د. {{ appt.doctor_name }}
+                                {% trans "د." %} {{ appt.doctor_name }}
                             </h3>
                             {% if appt.doctor_specialty %}
                             <span class="text-xs text-gray-400 dark:text-gray-500">· {{ appt.doctor_specialty }}</span>
@@ -218,7 +223,10 @@
                             {% elif appt.status == 'CANCELLED' %}bg-red-50 text-red-500 dark:bg-red-900/20 dark:text-red-400
                             {% elif appt.status == 'NO_SHOW' %}bg-orange-50 text-orange-500 dark:bg-orange-900/20 dark:text-orange-400
                             {% else %}bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-gray-400{% endif %}">
-                            {{ appt.status_display }}
+                            {% if appt.status == 'COMPLETED' %}{% trans "اكتمل" %}
+                            {% elif appt.status == 'CANCELLED' %}{% trans "ملغي" %}
+                            {% elif appt.status == 'NO_SHOW' %}{% trans "لم يحضر" %}
+                            {% else %}{{ appt.status_display }}{% endif %}
                         </span>
                     </div>
 
@@ -233,7 +241,7 @@
             <button type="button"
                     class="inline-flex items-center gap-2 px-5 py-2.5 border border-gray-300 dark:border-slate-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700 text-sm font-medium rounded-xl transition-colors">
                 <i class="fa-solid fa-chevron-down text-xs"></i>
-                عرض المزيد من المواعيد السابقة
+                {% trans "عرض المزيد من المواعيد السابقة" %}
             </button>
         </div>
         {% endif %}
@@ -244,7 +252,7 @@
             <div class="w-12 h-12 rounded-full bg-gray-50 dark:bg-slate-700 flex items-center justify-center mx-auto mb-3">
                 <i class="fa-regular fa-folder-open text-gray-300 dark:text-slate-500 text-xl"></i>
             </div>
-            <p class="text-sm text-gray-400 dark:text-gray-500">لا توجد مواعيد سابقة بعد</p>
+            <p class="text-sm text-gray-400 dark:text-gray-500">{% trans "لا توجد مواعيد سابقة بعد" %}</p>
         </div>
         {% endif %}
     </section>

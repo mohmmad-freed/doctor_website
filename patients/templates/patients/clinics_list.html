@@ -1,6 +1,7 @@
 {% extends 'patients/base_dashboard.html' %}
+{% load i18n %}
 
-{% block title %}العيادات {% if selected_city %}- {{ selected_city.name_ar }}{% endif %} | {{ block.super }}{% endblock %}
+{% block title %}{% trans "العيادات" %} {% if selected_city %}- {{ selected_city.name_ar }}{% endif %} | {{ block.super }}{% endblock %}
 
 {% block content %}
 <div class="max-w-5xl mx-auto space-y-6 animate-fade-in-up">
@@ -14,13 +15,13 @@
                     <i class="fa-solid fa-hospital-user text-primary-500 text-xl"></i>
                 </div>
                 <div>
-                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">العيادات الطبية</h1>
-                    <p class="text-gray-500 dark:text-gray-400 text-sm">ابحث عن العيادة المناسبة واحجز موعداً</p>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{% trans "العيادات الطبية" %}</h1>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">{% trans "ابحث عن العيادة المناسبة واحجز موعداً" %}</p>
                 </div>
             </div>
             <a href="{% url 'patients:dashboard' %}"
                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                <i class="fa-solid fa-arrow-right text-lg"></i>
+                <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %} text-lg"></i>
             </a>
         </div>
     </div>
@@ -30,18 +31,18 @@
         <form method="get" action="{% url 'patients:clinics_list' %}" id="searchForm">
             <div class="flex flex-col sm:flex-row gap-3">
                 <div class="relative flex-1">
-                    <div class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
+                    <div class="absolute inset-y-0 end-0 flex items-center pe-4 pointer-events-none">
                         <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
                     </div>
                     <input type="text" name="q" value="{{ search_query }}"
-                        placeholder="ابحث باسم العيادة، العنوان، أو التخصص..."
-                        class="w-full pr-12 pl-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-sm">
+                        placeholder="{% trans 'ابحث باسم العيادة، العنوان، أو التخصص...' %}"
+                        class="w-full pe-12 ps-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-sm">
                 </div>
                 <div class="sm:w-56">
                     <select name="city_id"
                             class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-sm appearance-none"
                             onchange="document.getElementById('searchForm').submit();">
-                        <option value="">كل المدن</option>
+                        <option value="">{% trans "كل المدن" %}</option>
                         {% for city in all_cities %}
                         <option value="{{ city.id }}" {% if selected_city and selected_city.id == city.id %}selected{% endif %}>
                             {{ city.name_ar }}
@@ -52,7 +53,7 @@
                 <button type="submit"
                         class="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 text-sm shadow-sm">
                     <i class="fa-solid fa-magnifying-glass text-xs"></i>
-                    بحث
+                    {% trans "بحث" %}
                 </button>
             </div>
         </form>
@@ -67,7 +68,7 @@
                 <i class="fa-solid fa-magnifying-glass text-[10px]"></i>
                 "{{ search_query }}"
                 <a href="{% url 'patients:clinics_list' %}{% if selected_city %}?city_id={{ selected_city.id }}{% endif %}"
-                   class="mr-1 hover:text-blue-900 dark:hover:text-blue-100">
+                   class="ms-1 hover:text-blue-900 dark:hover:text-blue-100">
                     <i class="fa-solid fa-xmark"></i>
                 </a>
             </span>
@@ -77,18 +78,18 @@
                 <i class="fa-solid fa-location-dot text-[10px]"></i>
                 {{ selected_city.name_ar }}
                 <a href="{% url 'patients:clinics_list' %}{% if search_query %}?q={{ search_query }}{% endif %}"
-                   class="mr-1 hover:text-primary-900 dark:hover:text-primary-100">
+                   class="ms-1 hover:text-primary-900 dark:hover:text-primary-100">
                     <i class="fa-solid fa-xmark"></i>
                 </a>
             </span>
             {% endif %}
             <a href="{% url 'patients:clinics_list' %}"
                class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                مسح الكل
+                {% trans "مسح الكل" %}
             </a>
         </div>
         <span class="text-xs text-gray-500 dark:text-gray-400">
-            {{ total_clinics }} عيادة
+            {% blocktrans with count=total_clinics %}{{ count }} عيادة{% endblocktrans %}
         </span>
     </div>
     {% endif %}
@@ -100,13 +101,13 @@
             <div class="glass-card flex flex-col hover:shadow-lg transition-all hover:-translate-y-1">
                 <!-- Card Header with Accent -->
                 <div class="h-2 bg-gradient-to-r from-secondary-400 to-primary-500 rounded-t-2xl"></div>
-                
+
                 <div class="p-5 flex-grow flex flex-col">
                     <div class="flex justify-between items-start mb-4">
                         <div class="w-12 h-12 rounded-xl bg-gray-50 dark:bg-slate-700/50 border border-gray-100 dark:border-slate-600 flex items-center justify-center flex-shrink-0">
                             <i class="fa-solid fa-hospital text-gray-400 dark:text-gray-500 text-xl"></i>
                         </div>
-                        
+
                         <!-- Doctor Count Badge -->
                         <div class="bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border border-primary-100 dark:border-primary-800 rounded-lg px-2 py-1 text-xs font-semibold flex items-center gap-1.5">
                             <i class="fa-solid fa-user-doctor text-[10px]"></i>
@@ -118,7 +119,7 @@
                     <h3 class="font-bold text-lg text-gray-900 dark:text-white mb-1 line-clamp-1" title="{{ item.clinic.name }}">
                         {{ item.clinic.name }}
                     </h3>
-                    
+
                     {% if item.clinic.specialization %}
                     <span class="inline-block text-xs text-secondary-600 dark:text-secondary-400 bg-secondary-50 dark:bg-secondary-900/20 px-2 py-0.5 rounded-full mb-3">
                         {{ item.clinic.specialization }}
@@ -135,7 +136,7 @@
                             {{ item.clinic.city.name_ar }}
                         </p>
                         {% endif %}
-                        
+
                         {% if item.clinic.address %}
                         <p class="flex items-start gap-2">
                             <i class="fa-solid fa-map-pin w-4 text-center text-gray-400 mt-0.5"></i>
@@ -168,7 +169,7 @@
                     <a href="{% url 'patients:browse_doctors' %}?q={{ item.clinic.name }}"
                        class="flex items-center justify-center gap-2 w-full py-2.5 bg-gray-50 hover:bg-gray-100 dark:bg-slate-700/50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-semibold transition-colors border border-gray-200 dark:border-slate-600">
                         <i class="fa-solid fa-users text-xs"></i>
-                        أطباء العيادة
+                        {% trans "أطباء العيادة" %}
                     </a>
                 </div>
             </div>
@@ -186,44 +187,43 @@
         </div>
 
         {% if search_query and selected_city %}
-            <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">لا توجد عيادات</h3>
+            <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">{% trans "لا توجد عيادات" %}</h3>
             <p class="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-5">
-                لم يتم العثور على عيادات تطابق بحثك "<span class="font-semibold text-gray-700 dark:text-gray-200">{{ search_query }}</span>"
-                في مدينة "<span class="font-semibold text-gray-700 dark:text-gray-200">{{ selected_city.name_ar }}</span>".
+                {% blocktrans with q=search_query city=selected_city.name_ar %}لم يتم العثور على عيادات تطابق بحثك "<span class="font-semibold text-gray-700 dark:text-gray-200">{{ q }}</span>" في مدينة "<span class="font-semibold text-gray-700 dark:text-gray-200">{{ city }}</span>".{% endblocktrans %}
             </p>
             <div class="flex items-center justify-center gap-3 flex-wrap">
                 <a href="{% url 'patients:clinics_list' %}?q={{ search_query }}"
                    class="inline-flex items-center gap-2 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-xl text-sm font-medium transition-colors">
                     <i class="fa-solid fa-filter-circle-xmark"></i>
-                    إزالة فلتر المدينة
+                    {% trans "إزالة فلتر المدينة" %}
                 </a>
                 <a href="{% url 'patients:clinics_list' %}"
                    class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors">
-                    <i class="fa-solid fa-arrow-right"></i>
-                    عرض جميع العيادات
+                    <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %}"></i>
+                    {% trans "عرض جميع العيادات" %}
                 </a>
             </div>
         {% elif search_query %}
-            <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">لا توجد نتائج لـ "{{ search_query }}"</h3>
-            <p class="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-5">جرّب البحث باسم أو عنوان مختلف أو اختر مدينة من القائمة.</p>
+            <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">{% blocktrans with q=search_query %}لا توجد نتائج لـ "{{ q }}"{% endblocktrans %}</h3>
+            <p class="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-5">{% trans "جرّب البحث باسم أو عنوان مختلف أو اختر مدينة من القائمة." %}</p>
             <a href="{% url 'patients:clinics_list' %}"
                class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors">
-                <i class="fa-solid fa-arrow-right"></i>
-                عرض جميع العيادات
+                <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %}"></i>
+                {% trans "عرض جميع العيادات" %}
             </a>
         {% elif selected_city %}
-            <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">لا يوجد عيادات في هذه المدينة</h3>
+            <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">{% trans "لا يوجد عيادات في هذه المدينة" %}</h3>
             <p class="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-5">
-                لم يتم العثور على عيادات مسجلة في مدينة "<span class="font-semibold text-gray-700 dark:text-gray-200">{{ selected_city.name_ar }}</span>".
+                {% blocktrans with city=selected_city.name_ar %}لم يتم العثور على عيادات مسجلة في مدينة "<span class="font-semibold text-gray-700 dark:text-gray-200">{{ city }}</span>".{% endblocktrans %}
             </p>
             <a href="{% url 'patients:clinics_list' %}"
                class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors">
-                <i class="fa-solid fa-arrow-right"></i>
-                عرض جميع العيادات
+                <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %}"></i>
+                {% trans "عرض جميع العيادات" %}
             </a>
         {% else %}
-            <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">لا توجد عيادات حالياً</h3>
-            <p class="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">لم يتم تسجيل أي عيادات في المنصة بعد. تحقق لاحقاً.</p>
+            <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">{% trans "لا توجد عيادات حالياً" %}</h3>
+            <p class="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">{% trans "لم يتم تسجيل أي عيادات في المنصة بعد. تحقق لاحقاً." %}</p>
         {% endif %}
     </div>
     {% endif %}

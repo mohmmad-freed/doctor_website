@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.auth import get_user_model
+from django.utils.translation import gettext_lazy as _
 from .models import PatientProfile
 from accounts.models import City
 from accounts.services.identity_claim_service import normalize_national_id, validate_national_id
@@ -36,10 +37,9 @@ class UserUpdateForm(forms.ModelForm):
             ),
         }
         labels = {
-            "name": "الاسم الكامل",
-            
-            "national_id": "رقم الهوية",
-            "city": "المدينة",
+            "name": _("الاسم الكامل"),
+            "national_id": _("رقم الهوية"),
+            "city": _("المدينة"),
         }
 
 
@@ -61,7 +61,7 @@ class PatientProfileUpdateForm(forms.ModelForm):
             "date_of_birth": forms.TextInput(
                 attrs={
                     "class": "w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-slate-800 dark:border-slate-700 dark:text-white datepicker",
-                    "placeholder": "يوم/شهر/سنة",
+                    "placeholder": _("يوم/شهر/سنة"),
                 }
             ),
             "gender": forms.Select(
@@ -98,11 +98,11 @@ class PatientProfileUpdateForm(forms.ModelForm):
             ),
         }
         labels = {
-            "date_of_birth": "تاريخ الميلاد",
-            "gender": "الجنس",
-            "blood_type": "فصيلة الدم",
-            "allergies": "الحساسية",
-            "medical_history": "التاريخ الطبي (قائمة التشخيصات، العمليات الجراحية، إلخ)",
-            "emergency_contact_name": "اسم جهة اتصال الطوارئ",
-            "emergency_contact_phone": "رقم جهة اتصال الطوارئ",
+            "date_of_birth": _("تاريخ الميلاد"),
+            "gender": _("الجنس"),
+            "blood_type": _("فصيلة الدم"),
+            "allergies": _("الحساسية"),
+            "medical_history": _("التاريخ الطبي (قائمة التشخيصات، العمليات الجراحية، إلخ)"),
+            "emergency_contact_name": _("اسم جهة اتصال الطوارئ"),
+            "emergency_contact_phone": _("رقم جهة اتصال الطوارئ"),
         }

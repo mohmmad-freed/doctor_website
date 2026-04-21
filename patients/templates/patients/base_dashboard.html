@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}بوابة المرضى | منصتي الطبية{% endblock %}</title>
+    <title>{% block title %}{% trans "بوابة المرضى" %} | {% trans "منصتي الطبية" %}{% endblock %}</title>
 
     <!-- Google Fonts: Cairo & Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -177,7 +177,7 @@
             box-shadow: 0 8px 15px rgba(37, 99, 235, 0.3);
         }
         .mobile-nav-item.active i {
-            margin-left: 8px; /* RTL space */
+            margin-inline-end: 8px;
         }
         .mobile-nav-item .text {
             font-size: 14px;
@@ -296,7 +296,7 @@
                        class="relative inline-flex items-center justify-center w-9 h-9 rounded-full
                               text-gray-500 dark:text-gray-400
                               hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
-                       title="الإشعارات">
+                       title="{% trans "الإشعارات" %}">
                         <i class="fa-regular fa-bell text-lg"></i>
                         {% if unread_patient_notification_count > 0 %}
                         <span class="absolute -top-0.5 -end-0.5 min-w-[18px] h-[18px] px-0.5
@@ -358,7 +358,7 @@
 
                             <a href="{% url 'patients:profile' %}" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
                                 <i class="fa-solid fa-user w-4 text-center text-gray-400"></i>
-                                الملف الشخصي
+                                {% trans "الملف الشخصي" %}
                             </a>
 
                             {% if request.user.roles|length > 1 %}
@@ -471,7 +471,7 @@
     <footer
         class="bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 py-6 mt-auto transition-colors duration-300">
         <div class="container mx-auto px-4 text-center text-sm text-gray-500 dark:text-gray-400">
-            &copy; {% now "Y" %} منصتي الطبية. جميع الحقوق محفوظة.
+            &copy; {% now "Y" %} {% trans "منصتي الطبية. جميع الحقوق محفوظة." %}
         </div>
     </footer>
 
