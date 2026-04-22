@@ -123,9 +123,25 @@
                 <div class="flex-grow min-w-0">
                     <p class="text-sm font-semibold text-gray-900 dark:text-white truncate
                                {% if not notif.is_read %}text-primary-900 dark:text-primary-100{% endif %}">
-                        {{ notif.title }}
+                        {% if notif.notification_type == "APPOINTMENT_BOOKED" %}{% trans "تم تأكيد موعدك" %}
+                        {% elif notif.notification_type == "APPOINTMENT_CANCELLED" %}{% trans "تم إلغاء موعدك" %}
+                        {% elif notif.notification_type == "APPOINTMENT_RESCHEDULED" %}{% trans "تم تعديل موعدك" %}
+                        {% elif notif.notification_type == "APPOINTMENT_REMINDER" %}{% trans "تذكير بموعدك" %}
+                        {% else %}{{ notif.title }}{% endif %}
                     </p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{{ notif.message }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                        {% if notif.appointment %}{% with apt=notif.appointment %}
+                            {% if notif.notification_type == "APPOINTMENT_BOOKED" %}
+                                {% blocktrans with doctor=apt.doctor.name date=apt.appointment_date time=apt.appointment_time|time:"H:i" clinic=apt.clinic.name %}تم تأكيد موعدك مع د. {{ doctor }} بتاريخ {{ date }} الساعة {{ time }} في {{ clinic }}.{% endblocktrans %}
+                            {% elif notif.notification_type == "APPOINTMENT_CANCELLED" %}
+                                {% blocktrans with doctor=apt.doctor.name date=apt.appointment_date time=apt.appointment_time|time:"H:i" clinic=apt.clinic.name %}تم إلغاء موعدك مع د. {{ doctor }} بتاريخ {{ date }} الساعة {{ time }} في {{ clinic }}.{% endblocktrans %}
+                            {% elif notif.notification_type == "APPOINTMENT_RESCHEDULED" %}
+                                {% blocktrans with doctor=apt.doctor.name date=apt.appointment_date time=apt.appointment_time|time:"H:i" clinic=apt.clinic.name %}تم تعديل موعدك مع د. {{ doctor }} إلى {{ date }} الساعة {{ time }} في {{ clinic }}.{% endblocktrans %}
+                            {% elif notif.notification_type == "APPOINTMENT_REMINDER" %}
+                                {% blocktrans with doctor=apt.doctor.name date=apt.appointment_date time=apt.appointment_time|time:"H:i" clinic=apt.clinic.name %}تذكير: لديك موعد مع د. {{ doctor }} بتاريخ {{ date }} الساعة {{ time }} في {{ clinic }}.{% endblocktrans %}
+                            {% else %}{{ notif.message }}{% endif %}
+                        {% endwith %}{% else %}{{ notif.message }}{% endif %}
+                    </p>
                 </div>
 
                 <!-- Time -->

@@ -1,7 +1,7 @@
 {% extends 'patients/base_dashboard.html' %}
 {% load i18n %}
 
-{% block title %}{% trans "العيادات" %} {% if selected_city %}- {{ selected_city.name_ar }}{% endif %} | {{ block.super }}{% endblock %}
+{% block title %}{% trans "العيادات" %} {% if selected_city %}- {{ selected_city.name }}{% endif %} | {{ block.super }}{% endblock %}
 
 {% block content %}
 <div class="max-w-5xl mx-auto space-y-6 animate-fade-in-up">
@@ -45,7 +45,7 @@
                         <option value="">{% trans "كل المدن" %}</option>
                         {% for city in all_cities %}
                         <option value="{{ city.id }}" {% if selected_city and selected_city.id == city.id %}selected{% endif %}>
-                            {{ city.name_ar }}
+                            {{ city.name }}
                         </option>
                         {% endfor %}
                     </select>
@@ -76,7 +76,7 @@
             {% if selected_city %}
             <span class="inline-flex items-center gap-1.5 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 px-3 py-1 rounded-full text-xs font-medium">
                 <i class="fa-solid fa-location-dot text-[10px]"></i>
-                {{ selected_city.name_ar }}
+                {{ selected_city.name }}
                 <a href="{% url 'patients:clinics_list' %}{% if search_query %}?q={{ search_query }}{% endif %}"
                    class="ms-1 hover:text-primary-900 dark:hover:text-primary-100">
                     <i class="fa-solid fa-xmark"></i>
@@ -133,7 +133,7 @@
                         {% if item.clinic.city %}
                         <p class="flex items-center gap-2">
                             <i class="fa-solid fa-location-dot w-4 text-center text-gray-400"></i>
-                            {{ item.clinic.city.name_ar }}
+                            {{ item.clinic.city.name }}
                         </p>
                         {% endif %}
 
@@ -189,7 +189,7 @@
         {% if search_query and selected_city %}
             <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">{% trans "لا توجد عيادات" %}</h3>
             <p class="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-5">
-                {% blocktrans with q=search_query city=selected_city.name_ar %}لم يتم العثور على عيادات تطابق بحثك "<span class="font-semibold text-gray-700 dark:text-gray-200">{{ q }}</span>" في مدينة "<span class="font-semibold text-gray-700 dark:text-gray-200">{{ city }}</span>".{% endblocktrans %}
+                {% blocktrans with q=search_query city=selected_city.name %}لم يتم العثور على عيادات تطابق بحثك "<span class="font-semibold text-gray-700 dark:text-gray-200">{{ q }}</span>" في مدينة "<span class="font-semibold text-gray-700 dark:text-gray-200">{{ city }}</span>".{% endblocktrans %}
             </p>
             <div class="flex items-center justify-center gap-3 flex-wrap">
                 <a href="{% url 'patients:clinics_list' %}?q={{ search_query }}"
@@ -214,7 +214,7 @@
         {% elif selected_city %}
             <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">{% trans "لا يوجد عيادات في هذه المدينة" %}</h3>
             <p class="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-5">
-                {% blocktrans with city=selected_city.name_ar %}لم يتم العثور على عيادات مسجلة في مدينة "<span class="font-semibold text-gray-700 dark:text-gray-200">{{ city }}</span>".{% endblocktrans %}
+                {% blocktrans with city=selected_city.name %}لم يتم العثور على عيادات مسجلة في مدينة "<span class="font-semibold text-gray-700 dark:text-gray-200">{{ city }}</span>".{% endblocktrans %}
             </p>
             <a href="{% url 'patients:clinics_list' %}"
                class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors">

@@ -22,6 +22,7 @@ from datetime import datetime
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
+from django.utils.translation import get_language
 
 from appointments.models import Appointment
 
@@ -78,23 +79,24 @@ def _serialize_appointment(appointment):
     doctor_name = appointment.doctor.name if appointment.doctor else "\u2014"
 
     # Primary specialty via prefetched doctor_profile
+    use_arabic = (get_language() or "ar").startswith("ar")
     doctor_specialty = ""
     if appointment.doctor:
         try:
             profile = appointment.doctor.doctor_profile
             primary = profile.primary_specialty
             if primary:
-                doctor_specialty = primary.name_ar or primary.name
+                doctor_specialty = (
+                    (primary.name_ar if use_arabic else primary.name)
+                    or primary.name_ar or primary.name
+                )
         except Exception:
             pass
 
-    # Appointment type display name (Arabic preferred)
+    # Appointment type display name — display_name property is already language-aware
     apt_type_name = ""
     if appointment.appointment_type:
-        apt_type_name = (
-            appointment.appointment_type.name_ar
-            or appointment.appointment_type.name
-        )
+        apt_type_name = appointment.appointment_type.display_name
 
     return {
         "id": appointment.id,

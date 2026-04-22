@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
 from clinics.models import Clinic
 
 
@@ -201,8 +202,8 @@ class ClinicDoctorCredential(models.Model):
 
 class DoctorAvailability(models.Model):
     DAY_CHOICES = [
-        (0, "الاثنين"), (1, "الثلاثاء"), (2, "الأربعاء"), (3, "الخميس"),
-        (4, "الجمعة"), (5, "السبت"), (6, "الأحد"),
+        (0, _("الاثنين")), (1, _("الثلاثاء")), (2, _("الأربعاء")), (3, _("الخميس")),
+        (4, _("الجمعة")), (5, _("السبت")), (6, _("الأحد")),
     ]
 
     doctor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="availability_slots")

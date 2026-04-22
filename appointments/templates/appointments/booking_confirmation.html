@@ -1,6 +1,7 @@
 {% extends 'patients/base_dashboard.html' %}
+{% load i18n %}
 
-{% block title %}تم الحجز بنجاح | {{ block.super }}{% endblock %}
+{% block title %}{% if IS_RTL %}تم الحجز بنجاح{% else %}Booking Confirmed{% endif %} | {{ block.super }}{% endblock %}
 
 {% block content %}
 <div class="max-w-2xl mx-auto space-y-6 animate-fade-in-up">
@@ -11,13 +12,13 @@
         <div class="w-20 h-20 bg-secondary-100 dark:bg-secondary-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
             <i class="fa-solid fa-circle-check text-secondary-500 text-4xl"></i>
         </div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">تم حجز موعدك بنجاح!</h1>
-        <p class="text-gray-500 dark:text-gray-400">رقم الحجز: <span class="font-bold text-primary-600 dark:text-primary-400">#{{ appointment.id }}</span></p>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">{% trans "تم حجز موعدك بنجاح!" %}</h1>
+        <p class="text-gray-500 dark:text-gray-400">{% trans "رقم الحجز:" %} <span class="font-bold text-primary-600 dark:text-primary-400">#{{ appointment.id }}</span></p>
     </div>
 
     <!-- Appointment Details -->
     <div class="glass-card p-6 space-y-4">
-        <h2 class="text-lg font-bold text-gray-900 dark:text-white border-b border-gray-200 dark:border-slate-600 pb-3">تفاصيل الموعد</h2>
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white border-b border-gray-200 dark:border-slate-600 pb-3">{% trans "تفاصيل الموعد" %}</h2>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <!-- Clinic -->
@@ -26,7 +27,7 @@
                     <i class="fa-solid fa-hospital text-primary-500"></i>
                 </div>
                 <div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">العيادة</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{% trans "العيادة" %}</p>
                     <p class="font-semibold text-gray-900 dark:text-white">{{ appointment.clinic.name }}</p>
                 </div>
             </div>
@@ -37,8 +38,8 @@
                     <i class="fa-solid fa-user-doctor text-primary-500"></i>
                 </div>
                 <div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">الطبيب</p>
-                    <p class="font-semibold text-gray-900 dark:text-white">د. {{ appointment.doctor.name }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{% trans "الطبيب" %}</p>
+                    <p class="font-semibold text-gray-900 dark:text-white">{% trans "د." %} {{ appointment.doctor.name }}</p>
                 </div>
             </div>
 
@@ -48,8 +49,10 @@
                     <i class="fa-regular fa-calendar text-secondary-500"></i>
                 </div>
                 <div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">التاريخ</p>
-                    <p class="font-semibold text-gray-900 dark:text-white">{{ appointment_date_ar }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{% trans "التاريخ" %}</p>
+                    <p class="font-semibold text-gray-900 dark:text-white">
+                        {% if IS_RTL %}{{ appointment_date_ar }}{% else %}{{ appointment.appointment_date|date:"l, d M Y" }}{% endif %}
+                    </p>
                 </div>
             </div>
 
@@ -59,7 +62,7 @@
                     <i class="fa-regular fa-clock text-secondary-500"></i>
                 </div>
                 <div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">الوقت</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{% trans "الوقت" %}</p>
                     <p class="font-semibold text-gray-900 dark:text-white">{{ appointment.appointment_time|time:"H:i" }}</p>
                 </div>
             </div>
@@ -71,9 +74,9 @@
                     <i class="fa-solid fa-stethoscope text-blue-500"></i>
                 </div>
                 <div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">نوع الموعد</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{% trans "نوع الموعد" %}</p>
                     <p class="font-semibold text-gray-900 dark:text-white">{{ appointment.appointment_type.display_name }}</p>
-                    <p class="text-sm text-gray-500">{{ appointment.appointment_type.duration_minutes }} دقيقة · ₪{{ appointment.appointment_type.price }}</p>
+                    <p class="text-sm text-gray-500">{{ appointment.appointment_type.duration_minutes }} {% trans "دقيقة" %} · ₪{{ appointment.appointment_type.price }}</p>
                 </div>
             </div>
             {% endif %}
@@ -84,7 +87,7 @@
                     <i class="fa-solid fa-check text-green-500"></i>
                 </div>
                 <div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">الحالة</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{% trans "الحالة" %}</p>
                     <p class="font-semibold text-green-600 dark:text-green-400">{{ appointment.get_status_display }}</p>
                 </div>
             </div>
@@ -92,7 +95,7 @@
 
         {% if appointment.reason %}
         <div class="pt-3 border-t border-gray-200 dark:border-slate-600">
-            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">وصف الحالة الطبية</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">{% trans "وصف الحالة الطبية" %}</p>
             <p class="text-gray-900 dark:text-white break-words whitespace-pre-wrap">{{ appointment.reason|truncatechars:500 }}</p>
         </div>
         {% endif %}
@@ -102,7 +105,7 @@
         <div class="pt-3 border-t border-gray-200 dark:border-slate-600">
             <p class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
                 <i class="fa-solid fa-clipboard-list text-primary-500"></i>
-                إجابات نموذج ما قبل الزيارة
+                {% trans "إجابات نموذج ما قبل الزيارة" %}
             </p>
             <div class="space-y-3">
                 {% for item in intake_display %}
@@ -120,7 +123,7 @@
         <div class="pt-3 border-t border-gray-200 dark:border-slate-600">
             <p class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
                 <i class="fa-solid fa-paperclip text-primary-500"></i>
-                المرفقات
+                {% trans "المرفقات" %}
             </p>
             <div class="space-y-2">
                 {% for att in attachments %}
@@ -141,7 +144,7 @@
         <div class="pt-3 border-t border-gray-200 dark:border-slate-600">
             <p class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
                 <i class="fa-solid fa-calendar-days text-primary-500"></i>
-                ملفات مؤرخة
+                {% trans "ملفات مؤرخة" %}
             </p>
             <div class="space-y-4">
                 {% for group_date, group_atts in dated_file_groups %}
@@ -149,7 +152,7 @@
                     <div class="flex items-center gap-2 bg-primary-50 dark:bg-primary-900/20 px-4 py-2">
                         <i class="fa-regular fa-calendar text-primary-500 text-sm"></i>
                         <span class="text-sm font-semibold text-primary-700 dark:text-primary-300">{{ group_date|date:"Y/m/d" }}</span>
-                        <span class="text-xs text-gray-400 mr-auto">({{ group_atts|length }} ملف)</span>
+                        <span class="text-xs text-gray-400 {% if IS_RTL %}mr-auto{% else %}ml-auto{% endif %}">{% blocktrans with count=group_atts|length %}({{ count }} ملف){% endblocktrans %}</span>
                     </div>
                     <div class="divide-y divide-gray-100 dark:divide-slate-700">
                         {% for att in group_atts %}
@@ -173,13 +176,13 @@
     <div class="flex flex-col sm:flex-row gap-3">
         <a href="{% url 'patients:my_appointments' %}"
            class="flex-1 text-center bg-primary-500 hover:bg-primary-600 text-white px-6 py-3 rounded-lg font-medium shadow-md transition-all hover:shadow-lg">
-            <i class="fa-regular fa-calendar-check ml-2"></i>
-            مواعيدي
+            <i class="fa-regular fa-calendar-check {% if IS_RTL %}ml-2{% else %}mr-2{% endif %}"></i>
+            {% trans "مواعيدي" %}
         </a>
         <a href="{% url 'patients:dashboard' %}"
            class="flex-1 text-center border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 px-6 py-3 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-            <i class="fa-solid fa-house ml-2"></i>
-            الرئيسية
+            <i class="fa-solid fa-house {% if IS_RTL %}ml-2{% else %}mr-2{% endif %}"></i>
+            {% trans "الرئيسية" %}
         </a>
     </div>
 

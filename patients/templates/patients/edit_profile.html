@@ -132,7 +132,8 @@
             </div>
         </form>
 
-        {% include 'accounts/_heartbeat_loader.html' with overlay_id='editProfileOverlay' loader_text='جارٍ حفظ التعديلات' loader_icon='fa-floppy-disk' %}
+        {% trans "جارٍ حفظ التعديلات" as loader_txt %}
+        {% include 'accounts/_heartbeat_loader.html' with overlay_id='editProfileOverlay' loader_text=loader_txt loader_icon='fa-floppy-disk' %}
     </div>
 </div>
 

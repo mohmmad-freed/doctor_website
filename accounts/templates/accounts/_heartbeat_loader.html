@@ -1,4 +1,4 @@
-{% comment %}
+{% load i18n %}{% comment %}
 Heartbeat Medical Loader — Reusable Form Overlay
 Usage:
 {% include "accounts/_heartbeat_loader.html" with loader_text="جارٍ تسجيل الدخول" loader_icon="fa-stethoscope" overlay_id="myOverlay" %}
@@ -28,5 +28,6 @@ Required: parent element must have position: relative; overflow: hidden;
             </svg>
         </div>
     </div>
-    <span class="hb-text">{{ loader_text|default:'جارٍ التحميل' }}</span>
+    {% trans "جارٍ التحميل" as default_loader_text %}
+    <span class="hb-text">{{ loader_text|default:default_loader_text }}</span>
 </div>

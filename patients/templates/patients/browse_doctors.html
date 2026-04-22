@@ -1,7 +1,7 @@
 {% extends 'patients/base_dashboard.html' %}
 {% load i18n %}
 
-{% block title %}{% trans "تصفح الأطباء" %} {% if selected_specialty %} - {{ selected_specialty.name_ar }}{% endif %} | {{ block.super }}{% endblock %}
+{% block title %}{% trans "تصفح الأطباء" %}{% if selected_specialty %} - {% if IS_RTL %}{{ selected_specialty.name_ar }}{% else %}{{ selected_specialty.name }}{% endif %}{% endif %} | {{ block.super }}{% endblock %}
 
 {% block content %}
 <div class="max-w-5xl mx-auto space-y-6 animate-fade-in-up">
@@ -17,6 +17,7 @@
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{% trans "تصفح الأطباء" %}</h1>
                     <p class="text-gray-500 dark:text-gray-400 text-sm">{% trans "ابحث عن طبيب أو تصفح حسب التخصص" %}</p>
+
                 </div>
             </div>
             <a href="{% url 'patients:dashboard' %}"
@@ -35,7 +36,7 @@
                         <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
                     </div>
                     <input type="text" name="q" value="{{ search_query }}"
-                        placeholder="{% trans 'ابحث باسم الطبيب أو العيادة...' %}"
+                        placeholder="{% trans "ابحث باسم الطبيب أو العيادة..." %}"
                         class="w-full pe-12 ps-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-sm">
                 </div>
                 <div class="sm:w-56">
@@ -45,7 +46,7 @@
                         <option value="">{% trans "كل التخصصات" %}</option>
                         {% for spec in all_specialties %}
                         <option value="{{ spec.id }}" {% if selected_specialty and selected_specialty.id == spec.id %}selected{% endif %}>
-                            {{ spec.name_ar }}
+                            {% if IS_RTL %}{{ spec.name_ar }}{% else %}{{ spec.name }}{% endif %}
                         </option>
                         {% endfor %}
                     </select>
@@ -76,7 +77,7 @@
             {% if selected_specialty %}
             <span class="inline-flex items-center gap-1.5 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 px-3 py-1 rounded-full text-xs font-medium">
                 <i class="fa-solid fa-stethoscope text-[10px]"></i>
-                {{ selected_specialty.name_ar }}
+                {% if IS_RTL %}{{ selected_specialty.name_ar }}{% else %}{{ selected_specialty.name }}{% endif %}
                 <a href="{% url 'patients:browse_doctors' %}{% if search_query %}?q={{ search_query }}{% endif %}"
                    class="ms-1 hover:text-primary-900 dark:hover:text-primary-100">
                     <i class="fa-solid fa-xmark"></i>
@@ -86,6 +87,7 @@
             <a href="{% url 'patients:browse_doctors' %}"
                class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
                 {% trans "مسح الكل" %}
+
             </a>
         </div>
         <span class="text-xs text-gray-500 dark:text-gray-400">
@@ -141,12 +143,14 @@
                                 <span class="text-xs text-gray-500 dark:text-gray-400">
                                     <i class="fa-solid fa-briefcase-medical ms-1"></i>
                                     {{ doc.profile.years_of_experience }} {% trans "سنوات خبرة" %}
+
                                 </span>
                                 {% endif %}
                                 {% if doc.appointment_type_count %}
                                 <span class="text-xs text-gray-400 dark:text-gray-500">·</span>
                                 <span class="text-xs text-gray-500 dark:text-gray-400">
                                     {{ doc.appointment_type_count }} {% trans "خدمة" %}
+
                                 </span>
                                 {% endif %}
                             </div>
@@ -159,12 +163,12 @@
                         {% if doc.primary_specialty %}
                         <span class="inline-flex items-center gap-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 px-2.5 py-1 rounded-full text-xs font-semibold">
                             <i class="fa-solid fa-star text-[10px]"></i>
-                            {{ doc.primary_specialty.name_ar }}
+                            {% if IS_RTL %}{{ doc.primary_specialty.name_ar }}{% else %}{{ doc.primary_specialty.name }}{% endif %}
                         </span>
                         {% endif %}
                         {% for spec in doc.secondary_specialties %}
                         <span class="bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-gray-300 px-2.5 py-1 rounded-full text-xs font-medium">
-                            {{ spec.name_ar }}
+                            {% if IS_RTL %}{{ spec.name_ar }}{% else %}{{ spec.name }}{% endif %}
                         </span>
                         {% endfor %}
                         {% if doc.has_intake_form %}
@@ -188,6 +192,7 @@
                            class="block w-full text-center bg-secondary-500 hover:bg-secondary-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition-all shadow-sm hover:shadow-md">
                             <i class="fa-solid fa-calendar-check ms-1"></i>
                             {% trans "احجز موعد" %}
+
                         </a>
 
                         <!-- Secondary Actions -->
@@ -196,11 +201,13 @@
                                class="flex-1 text-center bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/40 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
                                 <i class="fa-regular fa-calendar ms-1"></i>
                                 {% trans "المواعيد المتاحة" %}
+
                             </a>
                             <a href="{% url 'doctors:doctor_appointment_types' doc.user.id %}?clinic_id={{ clinic_data.clinic.id }}"
                                class="flex-1 text-center bg-gray-100 dark:bg-slate-600/50 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
                                 <i class="fa-solid fa-list-check ms-1"></i>
                                 {% trans "أنواع الخدمات" %}
+
                             </a>
                         </div>
                     </div>
@@ -224,7 +231,8 @@
         {% if search_query and selected_specialty %}
             <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">{% trans "لا توجد نتائج" %}</h3>
             <p class="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-5">
-                {% blocktrans with q=search_query spec=selected_specialty.name_ar %}لم يتم العثور على أطباء تطابق بحثك "<span class="font-semibold text-gray-700 dark:text-gray-200">{{ q }}</span>" في تخصص "<span class="font-semibold text-gray-700 dark:text-gray-200">{{ spec }}</span>".{% endblocktrans %}
+                {% if IS_RTL %}{% blocktrans with q=search_query spec=selected_specialty.name_ar %}لم يتم العثور على أطباء تطابق بحثك "{{ q }}" في تخصص "{{ spec }}".{% endblocktrans %}
+                {% else %}{% blocktrans with q=search_query spec=selected_specialty.name %}لم يتم العثور على أطباء تطابق بحثك "{{ q }}" في تخصص "{{ spec }}".{% endblocktrans %}{% endif %}
             </p>
             <div class="flex items-center justify-center gap-3 flex-wrap">
                 <a href="{% url 'patients:browse_doctors' %}?q={{ search_query }}"
@@ -249,7 +257,8 @@
         {% elif selected_specialty %}
             <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">{% trans "لا يوجد أطباء في هذا التخصص" %}</h3>
             <p class="text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-5">
-                {% blocktrans with spec=selected_specialty.name_ar %}لم يتم العثور على أطباء في تخصص "<span class="font-semibold text-gray-700 dark:text-gray-200">{{ spec }}</span>".{% endblocktrans %}
+                {% if IS_RTL %}{% blocktrans with spec=selected_specialty.name_ar %}لم يتم العثور على أطباء في تخصص "{{ spec }}".{% endblocktrans %}
+                {% else %}{% blocktrans with spec=selected_specialty.name %}لم يتم العثور على أطباء في تخصص "{{ spec }}".{% endblocktrans %}{% endif %}
             </p>
             <a href="{% url 'patients:browse_doctors' %}"
                class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors">

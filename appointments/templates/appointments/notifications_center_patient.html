@@ -1,6 +1,7 @@
 {% extends 'patients/base_dashboard.html' %}
+{% load i18n %}
 
-{% block title %}مركز الإشعارات | {{ block.super }}{% endblock %}
+{% block title %}{% trans "مركز الإشعارات" %} | {{ block.super }}{% endblock %}
 
 {% block content %}
 <div class="max-w-3xl mx-auto space-y-6 animate-fade-in-up">
@@ -10,13 +11,17 @@
         <div>
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <i class="fa-regular fa-bell text-primary-500"></i>
-                مركز الإشعارات
+                {% trans "مركز الإشعارات" %}
             </h1>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 {% if unread_count > 0 %}
+                {% if IS_RTL %}
                 لديك <span class="font-bold text-primary-600 dark:text-primary-400">{{ unread_count }}</span> إشعار غير مقروء
                 {% else %}
-                كل إشعاراتك مقروءة
+                You have <span class="font-bold text-primary-600 dark:text-primary-400">{{ unread_count }}</span> unread notification{{ unread_count|pluralize }}
+                {% endif %}
+                {% else %}
+                {% trans "كل إشعاراتك مقروءة" %}
                 {% endif %}
             </p>
         </div>
@@ -30,7 +35,7 @@
                        dark:bg-primary-900/20 dark:text-primary-300 dark:hover:bg-primary-900/40
                        border border-primary-200 dark:border-primary-700 transition-colors">
                 <i class="fa-solid fa-check-double text-xs"></i>
-                تحديد الكل كمقروء
+                {% trans "تحديد الكل كمقروء" %}
             </button>
         </form>
         {% endif %}
@@ -83,15 +88,45 @@
                 <div class="flex items-start justify-between gap-2 flex-wrap">
                     <p class="font-bold text-gray-900 dark:text-white text-sm leading-snug
                                {% if not notif.is_read %}text-primary-900 dark:text-primary-100{% endif %}">
-                        {{ notif.title }}
+                        {% if notif.notification_type == 'APPOINTMENT_BOOKED' %}
+                        {% trans "تم تأكيد موعدك" %}
+                        {% elif notif.notification_type == 'APPOINTMENT_CANCELLED' %}
+                        {% trans "تم إلغاء موعدك" %}
+                        {% elif notif.notification_type == 'APPOINTMENT_RESCHEDULED' %}
+                        {% trans "تم تعديل موعدك" %}
+                        {% elif notif.notification_type == 'APPOINTMENT_EDITED' %}
+                        {% trans "تم تعديل تفاصيل موعدك" %}
+                        {% elif notif.notification_type == 'APPOINTMENT_REMINDER' %}
+                        {% trans "تذكير بموعدك" %}
+                        {% else %}
+                        {% trans "تحديث الموعد" %}
+                        {% endif %}
                     </p>
                     <span class="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap flex-shrink-0">
-                        {{ notif.created_at|timesince }} مضت
+                        {% blocktrans with when=notif.created_at|timesince %}{{ when }} مضت{% endblocktrans %}
                     </span>
                 </div>
 
                 <p class="text-sm text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">
+                    {% if notif.appointment %}
+                    {% with apt=notif.appointment %}
+                    {% if notif.notification_type == 'APPOINTMENT_BOOKED' %}
+                    {% blocktrans with doctor=apt.doctor.name date=apt.appointment_date time=apt.appointment_time|time:"H:i" clinic=apt.clinic.name %}تم تأكيد موعدك مع د. {{ doctor }} بتاريخ {{ date }} الساعة {{ time }} في {{ clinic }}.{% endblocktrans %}
+                    {% elif notif.notification_type == 'APPOINTMENT_CANCELLED' %}
+                    {% blocktrans with doctor=apt.doctor.name date=apt.appointment_date time=apt.appointment_time|time:"H:i" clinic=apt.clinic.name %}تم إلغاء موعدك مع د. {{ doctor }} بتاريخ {{ date }} الساعة {{ time }} في {{ clinic }}.{% endblocktrans %}
+                    {% elif notif.notification_type == 'APPOINTMENT_RESCHEDULED' %}
+                    {% blocktrans with doctor=apt.doctor.name date=apt.appointment_date time=apt.appointment_time|time:"H:i" clinic=apt.clinic.name %}تم تعديل موعدك مع د. {{ doctor }} إلى {{ date }} الساعة {{ time }} في {{ clinic }}.{% endblocktrans %}
+                    {% elif notif.notification_type == 'APPOINTMENT_EDITED' %}
+                    {% blocktrans with doctor=apt.doctor.name date=apt.appointment_date time=apt.appointment_time|time:"H:i" clinic=apt.clinic.name %}تم تعديل تفاصيل موعدك مع د. {{ doctor }} بتاريخ {{ date }} الساعة {{ time }} في {{ clinic }}.{% endblocktrans %}
+                    {% elif notif.notification_type == 'APPOINTMENT_REMINDER' %}
+                    {% blocktrans with doctor=apt.doctor.name date=apt.appointment_date time=apt.appointment_time|time:"H:i" clinic=apt.clinic.name %}تذكير: لديك موعد مع د. {{ doctor }} بتاريخ {{ date }} الساعة {{ time }} في {{ clinic }}.{% endblocktrans %}
+                    {% else %}
+                    {% blocktrans with doctor=apt.doctor.name date=apt.appointment_date time=apt.appointment_time|time:"H:i" clinic=apt.clinic.name %}تم تحديث حالة موعدك مع د. {{ doctor }} بتاريخ {{ date }} الساعة {{ time }} في {{ clinic }}.{% endblocktrans %}
+                    {% endif %}
+                    {% endwith %}
+                    {% else %}
                     {{ notif.message }}
+                    {% endif %}
                 </p>
 
                 <!-- Footer: link + mark-read -->
@@ -99,8 +134,8 @@
                     {% if notif.target_url %}
                     <a href="{{ notif.target_url }}"
                        class="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-600 dark:text-primary-400 hover:underline">
-                        <i class="fa-solid fa-arrow-left text-[10px]"></i>
-                        عرض الموعد
+                        <i class="fa-solid fa-arrow-{% if IS_RTL %}left{% else %}right{% endif %} text-[10px]"></i>
+                        {% trans "عرض الموعد" %}
                     </a>
                     {% endif %}
 
@@ -112,13 +147,13 @@
                             class="inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700
                                    dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
                             <i class="fa-regular fa-circle-check text-xs"></i>
-                            تحديد كمقروء
+                            {% trans "تحديد كمقروء" %}
                         </button>
                     </form>
                     {% else %}
                     <span class="inline-flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
                         <i class="fa-solid fa-check text-[10px]"></i>
-                        مقروء
+                        {% trans "مقروء" %}
                     </span>
                     {% endif %}
                 </div>
@@ -133,8 +168,8 @@
         <div class="w-16 h-16 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center mx-auto mb-4">
             <i class="fa-regular fa-bell-slash text-gray-400 dark:text-gray-500 text-2xl"></i>
         </div>
-        <h3 class="text-lg font-bold text-gray-700 dark:text-gray-300 mb-1">لا توجد إشعارات بعد</h3>
-        <p class="text-sm text-gray-500 dark:text-gray-400">ستظهر هنا إشعارات مواعيدك عند وجودها.</p>
+        <h3 class="text-lg font-bold text-gray-700 dark:text-gray-300 mb-1">{% trans "لا توجد إشعارات بعد" %}</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400">{% trans "ستظهر هنا إشعارات مواعيدك عند وجودها." %}</p>
     </div>
     {% endif %}
 

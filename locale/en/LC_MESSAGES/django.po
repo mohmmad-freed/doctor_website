@@ -1371,6 +1371,9 @@ msgstr "No recent activity"
 msgid "عرض الكل"
 msgstr "View All"
 
+msgid "العيادات"
+msgstr "Clinics"
+
 # ── Create appointment wizard ──────────────────────────────────────────────────
 msgid "تسجيل موعد"
 msgstr "Schedule Appointment"
@@ -1486,6 +1489,30 @@ msgstr "No results for \"%(q)s\""
 msgid "مرحباً، %(name)s 👋"
 msgstr "Welcome, %(name)s 👋"
 
+msgid "مرحباً بك في لوحة التحكم الخاصة بك. ماذا تريد أن تفعل اليوم؟"
+msgstr "Welcome to your dashboard. What would you like to do today?"
+
+msgid "تصفح الأطباء"
+msgstr "Browse Doctors"
+
+msgid "ابحث عن طبيب واطلع على مواعيده المتاحة وأنواع الخدمات."
+msgstr "Search for a doctor and view their available appointments and service types."
+
+msgid "استعراض"
+msgstr "Browse"
+
+msgid "تابع مواعيدك القادمة والسابقة وحالتها."
+msgstr "Track your upcoming and past appointments and their status."
+
+msgid "عرض المواعيد"
+msgstr "View Appointments"
+
+msgid "عدّل بياناتك الشخصية ومعلوماتك الطبية."
+msgstr "Edit your personal details and medical information."
+
+msgid "آخر الإشعارات"
+msgstr "Recent Notifications"
+
 msgid "إحجز موعد"
 msgstr "Book Appointment"
 
@@ -1550,6 +1577,17 @@ msgstr "Add Now"
 
 msgid "تغيير البريد الإلكتروني"
 msgstr "Change Email"
+
+# ── Account model help texts ──────────────────────────────────────────────────
+msgid "رقم الهوية الوطنية الموثق فقط. الطلبات المعلقة محفوظة في سجل المطالبات."
+msgstr "Verified national ID only. Pending claims are saved in the identity claims log."
+
+# ── Heartbeat loader ──────────────────────────────────────────────────────────
+msgid "جارٍ التحميل"
+msgstr "Loading..."
+
+msgid "جارٍ حفظ التعديلات"
+msgstr "Saving changes..."
 
 # ── Patient portal — edit profile ─────────────────────────────────────────────
 msgid "تعديل الملف الشخصي"
@@ -1626,6 +1664,27 @@ msgstr "Edits Remaining: %(remaining)s"
 msgid "هل أنت متأكد أنك تريد إلغاء هذا الموعد؟"
 msgstr "Are you sure you want to cancel this appointment?"
 
+msgid "تابع مواعيدك القادمة والسابقة وحالتها"
+msgstr "Track your upcoming and past appointments and their status"
+
+msgid "حجز موعد جديد"
+msgstr "Book New Appointment"
+
+msgid "المواعيد السابقة"
+msgstr "Past Appointments"
+
+msgid "عرض المزيد من المواعيد القادمة"
+msgstr "Show More Upcoming Appointments"
+
+msgid "ابدأ بحجز موعد مع طبيبك المفضّل الآن"
+msgstr "Start by booking an appointment with your preferred doctor now"
+
+msgid "عرض المزيد من المواعيد السابقة"
+msgstr "Show More Past Appointments"
+
+msgid "لا توجد مواعيد سابقة بعد"
+msgstr "No past appointments yet"
+
 # ── Patient portal — browse doctors & clinics ────────────────────────────────
 msgid "%(count)s طبيب"
 msgstr "%(count)s doctor(s)"
@@ -1638,6 +1697,177 @@ msgstr "No clinics match your search"
 
 msgid "لا يوجد أطباء يطابقون بحثك"
 msgstr "No doctors match your search"
+
+msgid "ابحث عن طبيب أو تصفح حسب التخصص"
+msgstr "Search for a doctor or browse by specialty"
+
+msgid "ابحث باسم الطبيب أو العيادة..."
+msgstr "Search by doctor or clinic name..."
+
+msgid "كل التخصصات"
+msgstr "All Specialties"
+
+msgid "مسح الكل"
+msgstr "Clear All"
+
+msgid "سنوات خبرة"
+msgstr "yrs experience"
+
+msgid "خدمة"
+msgstr "service(s)"
+
+msgid "نموذج استقبال"
+msgstr "Intake Form"
+
+msgid "احجز موعد"
+msgstr "Book Appointment"
+
+msgid "المواعيد المتاحة"
+msgstr "Available Slots"
+
+msgid "أنواع الخدمات"
+msgstr "Service Types"
+
+msgid "لا توجد نتائج"
+msgstr "No Results"
+
+msgid "إزالة فلتر التخصص"
+msgstr "Remove Specialty Filter"
+
+msgid "عرض جميع الأطباء"
+msgstr "View All Doctors"
+
+msgid "جرّب البحث باسم مختلف أو اختر تخصصاً من القائمة."
+msgstr "Try a different name or select a specialty from the list."
+
+msgid "لا يوجد أطباء في هذا التخصص"
+msgstr "No Doctors in This Specialty"
+
+msgid "لا يوجد أطباء حالياً"
+msgstr "No Doctors Available"
+
+msgid "لم يتم تسجيل أي أطباء في المنصة بعد. تحقق لاحقاً."
+msgstr "No doctors have been registered on the platform yet. Check back later."
+
+msgid "لم يتم العثور على أطباء تطابق بحثك \"%(q)s\" في تخصص \"%(spec)s\"."
+msgstr "No doctors found matching \"%(q)s\" in the \"%(spec)s\" specialty."
+
+msgid "لا توجد نتائج لـ \"%(q)s\""
+msgstr "No results for \"%(q)s\""
+
+msgid "لم يتم العثور على أطباء في تخصص \"%(spec)s\"."
+msgstr "No doctors found in the \"%(spec)s\" specialty."
+
+# ── Patient portal — clinics list ─────────────────────────────────────────────
+msgid "العيادات الطبية"
+msgstr "Medical Clinics"
+
+msgid "ابحث عن العيادة المناسبة واحجز موعداً"
+msgstr "Find the right clinic and book an appointment"
+
+msgid "ابحث باسم العيادة، العنوان، أو التخصص..."
+msgstr "Search by clinic name, address, or specialty..."
+
+msgid "كل المدن"
+msgstr "All Cities"
+
+msgid "أطباء العيادة"
+msgstr "Clinic Doctors"
+
+msgid "لا توجد عيادات"
+msgstr "No Clinics Found"
+
+msgid "إزالة فلتر المدينة"
+msgstr "Remove City Filter"
+
+msgid "عرض جميع العيادات"
+msgstr "View All Clinics"
+
+msgid "جرّب البحث باسم أو عنوان مختلف أو اختر مدينة من القائمة."
+msgstr "Try a different name or address, or choose a city from the list."
+
+msgid "لا يوجد عيادات في هذه المدينة"
+msgstr "No Clinics in This City"
+
+msgid "لا توجد عيادات حالياً"
+msgstr "No Clinics Available"
+
+msgid "لم يتم تسجيل أي عيادات في المنصة بعد. تحقق لاحقاً."
+msgstr "No clinics have been registered on the platform yet. Check back later."
+
+msgid "لم يتم العثور على عيادات تطابق بحثك \"<span class=\"font-semibold text-gray-700 dark:text-gray-200\">%(q)s</span>\" في مدينة \"<span class=\"font-semibold text-gray-700 dark:text-gray-200\">%(city)s</span>\"."
+msgstr "No clinics found matching \"<span class=\"font-semibold text-gray-700 dark:text-gray-200\">%(q)s</span>\" in \"<span class=\"font-semibold text-gray-700 dark:text-gray-200\">%(city)s</span>\"."
+
+msgid "لم يتم العثور على عيادات مسجلة في مدينة \"<span class=\"font-semibold text-gray-700 dark:text-gray-200\">%(city)s</span>\"."
+msgstr "No registered clinics found in \"<span class=\"font-semibold text-gray-700 dark:text-gray-200\">%(city)s</span>\"."
+
+# ── Notification titles & messages (patient portal) ───────────────────────────
+msgid "تم تأكيد موعدك"
+msgstr "Your appointment has been confirmed"
+
+msgid "تم إلغاء موعدك"
+msgstr "Your appointment has been cancelled"
+
+msgid "تم تعديل موعدك"
+msgstr "Your appointment has been rescheduled"
+
+msgid "تذكير بموعدك"
+msgstr "Appointment Reminder"
+
+msgid "تم تأكيد موعدك مع د. %(doctor)s بتاريخ %(date)s الساعة %(time)s في %(clinic)s."
+msgstr "Your appointment with Dr. %(doctor)s on %(date)s at %(time)s in %(clinic)s has been confirmed."
+
+msgid "تم إلغاء موعدك مع د. %(doctor)s بتاريخ %(date)s الساعة %(time)s في %(clinic)s."
+msgstr "Your appointment with Dr. %(doctor)s on %(date)s at %(time)s in %(clinic)s has been cancelled."
+
+msgid "تم تعديل موعدك مع د. %(doctor)s إلى %(date)s الساعة %(time)s في %(clinic)s."
+msgstr "Your appointment with Dr. %(doctor)s has been rescheduled to %(date)s at %(time)s in %(clinic)s."
+
+msgid "تذكير: لديك موعد مع د. %(doctor)s بتاريخ %(date)s الساعة %(time)s في %(clinic)s."
+msgstr "Reminder: You have an appointment with Dr. %(doctor)s on %(date)s at %(time)s in %(clinic)s."
+
+msgid "تم تعديل تفاصيل موعدك"
+msgstr "Appointment Details Updated"
+
+msgid "تحديث الموعد"
+msgstr "Appointment Update"
+
+msgid "تم تعديل تفاصيل موعدك مع د. %(doctor)s بتاريخ %(date)s الساعة %(time)s في %(clinic)s."
+msgstr "The details of your appointment with Dr. %(doctor)s on %(date)s at %(time)s in %(clinic)s have been updated."
+
+msgid "تم تحديث حالة موعدك مع د. %(doctor)s بتاريخ %(date)s الساعة %(time)s في %(clinic)s."
+msgstr "Your appointment status with Dr. %(doctor)s on %(date)s at %(time)s in %(clinic)s has been updated."
+
+# ── Patient portal — notification center ─────────────────────────────────────
+msgid "تم تحديد جميع الإشعارات كمقروءة."
+msgstr "All notifications marked as read."
+
+msgid "مركز الإشعارات"
+msgstr "Notification Center"
+
+msgid "كل إشعاراتك مقروءة"
+msgstr "All your notifications are read"
+
+msgid "تحديد الكل كمقروء"
+msgstr "Mark all as read"
+
+msgid "عرض الموعد"
+msgstr "View Appointment"
+
+msgid "تحديد كمقروء"
+msgstr "Mark as read"
+
+msgid "مقروء"
+msgstr "Read"
+
+msgid "لا توجد إشعارات بعد"
+msgstr "No notifications yet"
+
+msgid "ستظهر هنا إشعارات مواعيدك عند وجودها."
+msgstr "Your appointment notifications will appear here."
+
+msgid "%(when)s مضت"
+msgstr "%(when)s ago"
 
 # ── Patient portal — intake form ──────────────────────────────────────────────
 msgid "(اختياري)"
@@ -1672,3 +1902,82 @@ msgstr "%(max)s MB per file"
 
 msgid "لا يوجد نموذج استقبال لنوع الموعد المحدد."
 msgstr "No intake form for the selected appointment type."
+
+# ── Patient portal — booking page ────────────────────────────────────────────
+msgid "-- اختر طبيباً --"
+msgstr "-- Select a Doctor --"
+
+msgid "اختر طبيباً أولاً لعرض أنواع المواعيد."
+msgstr "Select a doctor first to view appointment types."
+
+msgid "اختر التاريخ"
+msgstr "Select Date"
+
+msgid "اختر الوقت"
+msgstr "Select Time"
+
+msgid "اختر التاريخ لعرض المواعيد المتاحة."
+msgstr "Select a date to view available slots."
+
+msgid "معلومات إضافية"
+msgstr "Additional Information"
+
+msgid "الحد الأقصى 1000 حرف"
+msgstr "Maximum 1000 characters"
+
+msgid "لا توجد أنواع مواعيد متاحة لهذا الطبيب."
+msgstr "No appointment types available for this doctor."
+
+msgid "جميع المواعيد محجوزة في هذا اليوم. يرجى اختيار تاريخ آخر."
+msgstr "All slots are booked for this day. Please select another date."
+
+msgid "لا توجد مواعيد متاحة في هذا اليوم."
+msgstr "No available slots on this day."
+
+msgid "اختر طبيباً ونوع الموعد لعرض النموذج."
+msgstr "Select a doctor and appointment type to load the form."
+
+msgid "اضغط لاختيار ملف"
+msgstr "Click to select a file"
+
+msgid "الصيغ المسموحة:"
+msgstr "Allowed formats:"
+
+msgid "الحد الأقصى: %(max_mb)s ميغابايت"
+msgstr "Maximum: %(max_mb)s MB"
+
+msgid "تم حجز موعدك بنجاح!"
+msgstr "Your appointment has been booked successfully!"
+
+msgid "رقم الحجز:"
+msgstr "Booking Number:"
+
+msgid "العيادة"
+msgstr "Clinic"
+
+msgid "إجابات نموذج ما قبل الزيارة"
+msgstr "Pre-Visit Form Answers"
+
+msgid "المرفقات"
+msgstr "Attachments"
+
+msgid "ملفات مؤرخة"
+msgstr "Dated Files"
+
+msgid "%(count)s ملف"
+msgstr "%(count)s file(s)"
+
+msgid "صيغة غير مسموحة"
+msgstr "Unsupported format"
+
+msgid "صيغة غير مدعومة"
+msgstr "Unsupported format"
+
+msgid "حجم الملف كبير جداً"
+msgstr "File too large"
+
+msgid "هذا الحقل مطلوب. يرجى اختيار ملف."
+msgstr "This field is required. Please select a file."
+
+msgid "حذف المجموعة"
+msgstr "Delete Group"

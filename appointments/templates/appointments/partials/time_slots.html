@@ -1,7 +1,8 @@
+{% load i18n %}
 {% if error %}
 <div class="p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
     <p class="text-red-600 dark:text-red-400 text-sm">
-        <i class="fa-solid fa-circle-exclamation ml-1"></i>
+        <i class="fa-solid fa-circle-exclamation {% if IS_RTL %}ml-1{% else %}mr-1{% endif %}"></i>
         {{ error }}
     </p>
 </div>
@@ -10,8 +11,12 @@
 <div class="space-y-3">
     {% if available_slots %}
     <p class="text-sm text-gray-500 dark:text-gray-400">
-        <i class="fa-solid fa-circle-check text-secondary-500 ml-1"></i>
-        {{ available_slots|length }} موعد متاح يوم {{ target_date_ar }}
+        <i class="fa-solid fa-circle-check text-secondary-500 {% if IS_RTL %}ml-1{% else %}mr-1{% endif %}"></i>
+        {% if IS_RTL %}
+            {{ available_slots|length }} موعد متاح يوم {{ target_date_ar }}
+        {% else %}
+            {{ available_slots|length }} slot(s) available on {{ target_date|date:"l, d M Y" }}
+        {% endif %}
     </p>
     {% endif %}
 
@@ -34,13 +39,13 @@
     {% if not available_slots %}
     <div class="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
         <p class="text-amber-600 dark:text-amber-400 text-sm">
-            <i class="fa-solid fa-triangle-exclamation ml-1"></i>
-            جميع المواعيد محجوزة في هذا اليوم. يرجى اختيار تاريخ آخر.
+            <i class="fa-solid fa-triangle-exclamation {% if IS_RTL %}ml-1{% else %}mr-1{% endif %}"></i>
+            {% trans "جميع المواعيد محجوزة في هذا اليوم. يرجى اختيار تاريخ آخر." %}
         </p>
     </div>
     {% endif %}
 </div>
 
 {% else %}
-<p class="text-gray-400 dark:text-gray-500 text-sm">لا توجد مواعيد متاحة في هذا اليوم.</p>
+<p class="text-gray-400 dark:text-gray-500 text-sm">{% trans "لا توجد مواعيد متاحة في هذا اليوم." %}</p>
 {% endif %}

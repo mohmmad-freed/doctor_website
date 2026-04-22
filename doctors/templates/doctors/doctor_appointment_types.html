@@ -1,6 +1,7 @@
 {% extends 'patients/base_dashboard.html' %}
+{% load i18n %}
 
-{% block title %}أنواع مواعيد د. {{ doctor.name }} | {{ block.super }}{% endblock %}
+{% block title %}{% if IS_RTL %}أنواع مواعيد د. {{ doctor.name }}{% else %}Dr. {{ doctor.name }}'s Appointment Types{% endif %} | {{ block.super }}{% endblock %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto space-y-6 animate-fade-in-up">
@@ -18,13 +19,13 @@
     <!-- Header -->
     <div class="glass-card p-6 relative overflow-hidden">
         <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-secondary-500 to-secondary-600"></div>
-        <div class="flex flex-col items-center text-center gap-4 sm:flex-row sm:items-start sm:text-right sm:justify-between">
-            <div class="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+        <div class="flex flex-col items-center text-center gap-4 sm:flex-row sm:items-center sm:text-start sm:justify-between">
+            <div class="flex flex-col sm:flex-row items-center sm:items-center gap-4">
                 <div class="w-16 h-16 rounded-full bg-secondary-100 dark:bg-secondary-900/40 flex items-center justify-center flex-shrink-0">
                     <i class="fa-solid fa-user-doctor text-secondary-600 dark:text-secondary-400 text-2xl"></i>
                 </div>
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">د. {{ doctor.name }}</h1>
+                <div class="text-center sm:text-start">
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{% trans "د." %} {{ doctor.name }}</h1>
                     <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">{% if IS_RTL %}أنواع المواعيد المتاحة{% else %}Available Appointment Types{% endif %}</p>
                 </div>
             </div>
@@ -49,7 +50,7 @@
                     <div class="w-10 h-10 rounded-xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center group-hover:bg-primary-100 dark:group-hover:bg-primary-900/50 transition-colors">
                         <i class="fa-solid fa-stethoscope text-primary-500"></i>
                     </div>
-                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ type.name }}</h3>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ type.display_name }}</h3>
                 </div>
             </div>
 
@@ -74,7 +75,7 @@
 
                 <!-- Book Link -->
                 <a href="{% url 'doctors:doctor_availability' doctor.id %}?clinic_id={{ clinic_id }}&appointment_type_id={{ type.id }}"
-                   class="mr-auto inline-flex items-center gap-1.5 text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 opacity-0 group-hover:opacity-100 transition-all">
+                   class="{% if IS_RTL %}mr-auto{% else %}ml-auto{% endif %} inline-flex items-center gap-1.5 text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 opacity-0 group-hover:opacity-100 transition-all">
                     <span>{% if IS_RTL %}احجز الآن{% else %}Book Now{% endif %}</span>
                     <i class="fa-solid {% if IS_RTL %}fa-arrow-left{% else %}fa-arrow-right{% endif %} text-xs"></i>
                 </a>

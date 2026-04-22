@@ -1,6 +1,7 @@
 {% extends 'patients/base_dashboard.html' %}
+{% load i18n %}
 
-{% block title %}حجز موعد - {{ clinic.name }} | {{ block.super }}{% endblock %}
+{% block title %}{% if IS_RTL %}حجز موعد - {{ clinic.name }}{% else %}Book Appointment - {{ clinic.name }}{% endif %} | {{ block.super }}{% endblock %}
 
 {% block content %}
 <div class="max-w-3xl mx-auto space-y-6 animate-fade-in-up">
@@ -11,16 +12,16 @@
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-4">
                 <div class="w-12 h-12 rounded-xl bg-secondary-50 dark:bg-secondary-900/30 flex items-center justify-center">
-                    <i class="fa-regular fa-calendar-plus text-secondary-500 text-xl"></i>
+                    <i class="fa-solid fa-calendar-plus text-secondary-500 text-xl"></i>
                 </div>
                 <div>
-                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">حجز موعد جديد</h1>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{% trans "حجز موعد جديد" %}</h1>
                     <p class="text-gray-500 dark:text-gray-400 text-sm">{{ clinic.name }}</p>
                 </div>
             </div>
             <a href="{% url 'patients:browse_doctors' %}"
                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                <i class="fa-solid fa-arrow-right text-lg"></i>
+                <i class="fa-solid fa-arrow-{% if IS_RTL %}right{% else %}left{% endif %} text-lg"></i>
             </a>
         </div>
     </div>
@@ -33,7 +34,7 @@
         <div class="glass-card p-6">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                 <span class="w-7 h-7 rounded-full bg-primary-500 text-white text-sm flex items-center justify-center font-bold">1</span>
-                اختر الطبيب
+                {% trans "اختر الطبيب" %}
             </h2>
             <select name="doctor_id" id="doctorSelect"
                     class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
@@ -42,10 +43,10 @@
                     hx-trigger="change"
                     hx-include="[name='doctor_id']"
                     required>
-                <option value="">-- اختر طبيباً --</option>
+                <option value="">{% trans "-- اختر طبيباً --" %}</option>
                 {% for doctor in doctors %}
                 <option value="{{ doctor.id }}" {% if selected_doctor and selected_doctor.id == doctor.id %}selected{% endif %}>
-                    د. {{ doctor.name }}
+                    {% trans "د." %} {{ doctor.name }}
                 </option>
                 {% endfor %}
             </select>
@@ -55,13 +56,13 @@
         <div class="glass-card p-6">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                 <span class="w-7 h-7 rounded-full bg-primary-500 text-white text-sm flex items-center justify-center font-bold">2</span>
-                نوع الموعد
+                {% trans "نوع الموعد" %}
             </h2>
             <div id="appointmentTypesContainer">
                 {% if appointment_types %}
                     {% include 'appointments/partials/appointment_types.html' %}
                 {% else %}
-                    <p class="text-gray-400 dark:text-gray-500 text-sm">اختر طبيباً أولاً لعرض أنواع المواعيد.</p>
+                    <p class="text-gray-400 dark:text-gray-500 text-sm">{% trans "اختر طبيباً أولاً لعرض أنواع المواعيد." %}</p>
                 {% endif %}
             </div>
         </div>
@@ -70,7 +71,7 @@
         <div class="glass-card p-6">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                 <span class="w-7 h-7 rounded-full bg-primary-500 text-white text-sm flex items-center justify-center font-bold">3</span>
-                اختر التاريخ
+                {% trans "اختر التاريخ" %}
             </h2>
             <input type="date" name="appointment_date" id="dateInput"
                    min="{{ today }}"
@@ -86,10 +87,10 @@
         <div class="glass-card p-6">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                 <span class="w-7 h-7 rounded-full bg-primary-500 text-white text-sm flex items-center justify-center font-bold">4</span>
-                اختر الوقت
+                {% trans "اختر الوقت" %}
             </h2>
             <div id="slotsContainer">
-                <p class="text-gray-400 dark:text-gray-500 text-sm">اختر التاريخ لعرض المواعيد المتاحة.</p>
+                <p class="text-gray-400 dark:text-gray-500 text-sm">{% trans "اختر التاريخ لعرض المواعيد المتاحة." %}</p>
             </div>
             <input type="hidden" name="appointment_time" id="selectedTime" required>
         </div>
@@ -98,16 +99,17 @@
         <div class="glass-card p-6">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                 <span class="w-7 h-7 rounded-full bg-primary-500 text-white text-sm flex items-center justify-center font-bold">5</span>
-                معلومات إضافية
+                {% trans "معلومات إضافية" %}
             </h2>
             <div id="intakeFormContainer">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                        وصف الحالة الطبية <span class="text-gray-400 text-xs font-normal">(اختياري)</span>
+                        {% trans "وصف الحالة الطبية" %} <span class="text-gray-400 text-xs font-normal">{% trans "(اختياري)" %}</span>
                     </label>
-                    <textarea name="reason" rows="3" maxlength="1000" placeholder="صف حالتك الطبية أو سبب زيارتك باختصار..."
+                    <textarea name="reason" rows="3" maxlength="1000"
+                              placeholder="{% trans 'صف حالتك الطبية أو سبب زيارتك باختصار...' %}"
                               class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors resize-none text-sm"></textarea>
-                    <p class="text-xs text-gray-400 mt-1">الحد الأقصى 1000 حرف</p>
+                    <p class="text-xs text-gray-400 mt-1">{% trans "الحد الأقصى 1000 حرف" %}</p>
                 </div>
             </div>
         </div>
@@ -117,8 +119,8 @@
             <button type="submit" id="submitBtn"
                     class="w-full bg-secondary-500 hover:bg-secondary-600 text-white px-6 py-4 rounded-lg font-bold text-lg shadow-md transition-all hover:shadow-lg focus:ring-4 focus:ring-secondary-100 disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled>
-                <i class="fa-solid fa-check ml-2"></i>
-                تأكيد الحجز
+                <i class="fa-solid fa-check {% if IS_RTL %}ml-2{% else %}mr-2{% endif %}"></i>
+                {% trans "تأكيد الحجز" %}
             </button>
         </div>
     </form>
@@ -129,6 +131,14 @@
 {% block scripts %}
 <script src="https://unpkg.com/htmx.org@1.9.12"></script>
 <script>
+    // Translation strings rendered server-side
+    var _BOOK_TRANS = {
+        invalidFormat: "{% trans 'صيغة غير مسموحة' %}",
+        allowed: "{% trans 'الصيغ المسموحة:' %}",
+        fileTooLarge: "{% trans 'حجم الملف كبير جداً' %}",
+        fieldRequired: "{% trans 'هذا الحقل مطلوب. يرجى اختيار ملف.' %}"
+    };
+
     function checkFormReady() {
         const doctor = document.getElementById('doctorSelect').value;
         const type = document.querySelector('input[name="appointment_type_id"]:checked');
@@ -172,7 +182,6 @@
             }
             if (e.target.matches('input[name="appointment_type_id"]')) {
                 document.getElementById('selectedTime').value = '';
-                // Reload intake form when appointment type changes (may have different form)
                 loadIntakeForm();
             }
             if (e.target.id === 'dateInput') {
@@ -226,12 +235,12 @@
         if (allowed.length > 0) {
             var ext = file.name.includes('.') ? file.name.split('.').pop().toLowerCase() : '';
             if (allowed.indexOf(ext) === -1) {
-                errors.push('صيغة غير مسموحة (.' + ext + '). المسموح: ' + allowed.join(', '));
+                errors.push(_BOOK_TRANS.invalidFormat + ' (.' + ext + '). ' + _BOOK_TRANS.allowed + ' ' + allowed.join(', '));
             }
         }
         if (maxMb && file.size > maxMb * 1024 * 1024) {
             var actualMb = (file.size / (1024 * 1024)).toFixed(1);
-            errors.push('حجم الملف (' + actualMb + ' MB) يتجاوز الحد (' + maxMb + ' MB)');
+            errors.push(_BOOK_TRANS.fileTooLarge + ' (' + actualMb + ' MB > ' + maxMb + ' MB)');
         }
 
         infoDiv.classList.remove('hidden');
@@ -257,7 +266,6 @@
         document.querySelectorAll('.file-upload-container').forEach(function(container) {
             var qId = container.dataset.questionId;
             var questionDiv = document.getElementById('question-' + qId);
-            // Skip hidden (conditional) questions
             if (questionDiv && questionDiv.style.display === 'none') return;
 
             var input = container.querySelector('input[type="file"]');
@@ -281,7 +289,7 @@
                     var errDiv = infoDiv.querySelector('.file-error');
                     var errMsg = infoDiv.querySelector('.error-msg');
                     if (errDiv && errMsg) {
-                        errMsg.textContent = 'هذا الحقل مطلوب. يرجى اختيار ملف.';
+                        errMsg.textContent = _BOOK_TRANS.fieldRequired;
                         errDiv.classList.remove('hidden');
                     }
                 }

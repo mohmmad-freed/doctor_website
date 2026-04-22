@@ -5,6 +5,7 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.conf import settings
+from django.utils.translation import gettext_lazy as _
 from django.db.models import Q
 
 from core.validators.file_validators import (
@@ -101,7 +102,7 @@ class CustomUser(AbstractUser):
         null=True,
         blank=True,
         db_index=True,
-        help_text="رقم الهوية الوطنية الموثق فقط. الطلبات المعلقة محفوظة في سجل المطالبات.",
+        help_text=_("رقم الهوية الوطنية الموثق فقط. الطلبات المعلقة محفوظة في سجل المطالبات."),
     )
     city = models.ForeignKey("City", on_delete=models.SET_NULL, null=True, blank=True)
 

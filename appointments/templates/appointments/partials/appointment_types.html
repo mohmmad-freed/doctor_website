@@ -1,3 +1,4 @@
+{% load i18n %}
 {% if appointment_types %}
 <div class="space-y-3">
     {% for type in appointment_types %}
@@ -14,7 +15,7 @@
                 <span class="text-secondary-600 dark:text-secondary-400 font-bold">₪{{ type.price }}</span>
             </div>
             <div class="flex items-center gap-3 mt-1 text-sm text-gray-500 dark:text-gray-400">
-                <span><i class="fa-regular fa-clock ml-1"></i>{{ type.duration_minutes }} دقيقة</span>
+                <span><i class="fa-regular fa-clock {% if IS_RTL %}ml-1{% else %}mr-1{% endif %}"></i>{{ type.duration_minutes }} {% trans "دقيقة" %}</span>
                 {% if type.description %}
                 <span>· {{ type.description }}</span>
                 {% endif %}
@@ -24,5 +25,5 @@
     {% endfor %}
 </div>
 {% else %}
-<p class="text-gray-400 dark:text-gray-500 text-sm">لا توجد أنواع مواعيد متاحة لهذا الطبيب.</p>
+<p class="text-gray-400 dark:text-gray-500 text-sm">{% trans "لا توجد أنواع مواعيد متاحة لهذا الطبيب." %}</p>
 {% endif %}

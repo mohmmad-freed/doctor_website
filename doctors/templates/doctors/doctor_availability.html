@@ -1,4 +1,5 @@
 {% extends 'patients/base_dashboard.html' %}
+{% load i18n %}
 
 {% block title %}{% if IS_RTL %}مواعيد د. {{ doctor.name }}{% else %}Dr. {{ doctor.name }}'s Schedule{% endif %} | {{ block.super }}{% endblock %}
 
@@ -18,13 +19,13 @@
     <!-- Doctor Header -->
     <div class="glass-card p-6 relative overflow-hidden">
         <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary-500 to-primary-700"></div>
-        <div class="flex flex-col items-center text-center gap-4 sm:flex-row sm:items-start sm:text-right sm:justify-between">
-            <div class="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+        <div class="flex flex-col items-center text-center gap-4 sm:flex-row sm:items-center sm:text-start sm:justify-between">
+            <div class="flex flex-col sm:flex-row items-center sm:items-center gap-4">
                 <div class="w-16 h-16 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center flex-shrink-0">
                     <span class="text-2xl font-bold text-primary-600 dark:text-primary-400">{{ doctor.name|slice:":1" }}</span>
                 </div>
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">د. {{ doctor.name }}</h1>
+                <div class="text-center sm:text-start">
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{% trans "د." %} {{ doctor.name }}</h1>
                     <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">{% if IS_RTL %}جدول المواعيد المتاحة{% else %}Available Schedule{% endif %}</p>
                 </div>
             </div>

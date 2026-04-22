@@ -19,6 +19,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.contrib import messages
+from django.utils.translation import gettext_lazy as _
 
 from appointments.models import AppointmentNotification
 
@@ -147,7 +148,7 @@ def mark_all_notifications_read(request):
     updated = qs.update(is_read=True)
 
     if updated:
-        messages.success(request, "تم تحديد جميع الإشعارات كمقروءة.")
+        messages.success(request, _("تم تحديد جميع الإشعارات كمقروءة."))
         
     next_url = request.POST.get("next") or request.META.get("HTTP_REFERER", "")
     if next_url:
