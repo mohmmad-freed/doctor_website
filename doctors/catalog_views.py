@@ -276,7 +276,12 @@ def drug_product_create(request):
                 generic_name=generic_name,
                 commercial_name=commercial_name,
             )
-            messages.success(request, f"تمت إضافة الدواء «{generic_name}» بنجاح.")
+            _lang = (request.user.preferred_language or "ar")
+            messages.success(
+                request,
+                f"Drug «{generic_name}» has been added successfully." if _lang == "en"
+                else f"تمت إضافة الدواء «{generic_name}» بنجاح.",
+            )
             return redirect(f"{reverse('doctors:order_catalog')}?tab=drugs&clinic_id={clinic.id}")
 
     # Pre-select family from GET param
@@ -344,7 +349,12 @@ def drug_product_delete(request, product_id):
     clinic_id = product.clinic_id
     name = product.generic_name
     product.delete()
-    messages.success(request, f"تم حذف الدواء «{name}».")
+    _lang = (request.user.preferred_language or "ar")
+    messages.success(
+        request,
+        f"Drug «{name}» has been deleted." if _lang == "en"
+        else f"تم حذف الدواء «{name}».",
+    )
     return redirect(f"{reverse('doctors:order_catalog')}?tab=drugs&clinic_id={clinic_id}")
 
 
