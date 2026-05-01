@@ -38,6 +38,7 @@ from clinics.services import create_clinic_for_main_doctor
 from doctors.models import Specialty
 from patients.models import PatientProfile
 from patients.services import ensure_patient_profile
+from .middleware import get_default_language_for_role
 from accounts.services.identity_claim_service import assign_national_id
 
 User = get_user_model()
@@ -147,7 +148,11 @@ def login_view(request):
 
             if user is not None:
                 login(request, user)
-                messages.success(request, f"أهلاً بعودتك، {user.name}!")
+                _lang = user.preferred_language or get_default_language_for_role(getattr(user, "role", "PATIENT"))
+                messages.success(
+                    request,
+                    f"Welcome back, {user.name}!" if _lang == "en" else f"أهلاً بعودتك، {user.name}!",
+                )
                 next_url = request.GET.get("next")
                 return handle_pending_invitation_redirect(request, default_url=next_url)
             else:
@@ -859,7 +864,11 @@ def register_clinic_verify_email(request):
             del request.session["clinic_reg"]
 
             login(request, user, backend="accounts.backends.PhoneNumberAuthBackend")
-            messages.success(request, f"مرحباً {user.name}! تم إنشاء عيادتك بنجاح.")
+            _lang = user.preferred_language or get_default_language_for_role(getattr(user, "role", "PATIENT"))
+            messages.success(
+                request,
+                f"Welcome, {user.name}! Your clinic has been created successfully." if _lang == "en" else f"مرحباً {user.name}! تم إنشاء عيادتك بنجاح.",
+            )
             return handle_pending_invitation_redirect(request, default_url="clinics:my_clinics")
 
         except ClinicActivationCode.DoesNotExist:
@@ -882,15 +891,20 @@ def register_clinic_verify_email(request):
 
 def logout_view(request):
     """Handle user logout"""
-    user_name = request.user.name if request.user.is_authenticated else None
+    user_name = None
+    _lang = "ar"
+    if request.user.is_authenticated:
+        user_name = request.user.name
+        _lang = request.user.preferred_language or get_default_language_for_role(getattr(request.user, "role", "PATIENT"))
     logout(request)
 
     if user_name:
         messages.info(
-            request, f"إلى اللقاء، {user_name}! تم تسجيل خروجك بنجاح."
+            request,
+            f"Goodbye, {user_name}! You have been logged out successfully." if _lang == "en" else f"إلى اللقاء، {user_name}! تم تسجيل خروجك بنجاح.",
         )
     else:
-        messages.info(request, "تم تسجيل خروجك بنجاح.")
+        messages.info(request, "You have been logged out." if _lang == "en" else "تم تسجيل خروجك بنجاح.")
 
     return redirect("accounts:login")
 
