@@ -1,0 +1,1600 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="scroll-smooth">
+
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>كتالوج الطلبات | بوابة الطبيب</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cairo:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: {
+                            50:  '#eef2ff',
+                            100: '#e0e7ff',
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#1e1b4b',
+                        },
+                        accent: {
+                            50:  '#f0fdfa',
+                            100: '#ccfbf1',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style type="text/tailwindcss">
+        /* Alpine x-cloak: hide elements until Alpine initialises them */
+        [x-cloak] { display: none !important; }
+
+        @layer utilities {
+            .scrollbar-none::-webkit-scrollbar { display: none; }
+            .scrollbar-none { scrollbar-width: none; }
+            .glass-card {
+                @apply bg-white border border-gray-100 shadow-sm rounded-2xl;
+            }
+            .dark .glass-card {
+                @apply bg-slate-800 border-slate-700;
+            }
+            .animate-fade-in-up {
+                animation: fadeInUp 0.4s ease-out forwards;
+            }
+            .dr-badge {
+                @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold;
+            }
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        body { font-family: 'Inter', sans-serif; }
+
+        /* ── Sidebar nav item ─────────────────────── */
+        .sidebar-link {
+            display: flex; align-items: center; gap: 10px;
+            padding: 9px 14px; border-radius: 10px;
+            font-size: 0.875rem; font-weight: 600;
+            color: #64748b;
+            transition: all 0.18s ease;
+            position: relative; text-decoration: none;
+        }
+        .dark .sidebar-link { color: #94a3b8; }
+        .sidebar-link:hover {
+            background: #f1f5f9; color: #4f46e5;
+        }
+        .dark .sidebar-link:hover {
+            background: rgba(99,102,241,0.08); color: #818cf8;
+        }
+        .sidebar-link.active {
+            background: #eef2ff; color: #4f46e5; font-weight: 700;
+        }
+        .dark .sidebar-link.active {
+            background: rgba(99,102,241,0.12); color: #818cf8;
+        }
+        .sidebar-link.active::before {
+            content: '';
+            position: absolute; inset-inline-start: 0; top: 20%; bottom: 20%;
+            width: 3px; border-start-end-radius: 3px; border-end-end-radius: 3px;
+            background: #4f46e5;
+        }
+        .dark .sidebar-link.active::before { background: #818cf8; }
+
+        /* ── Theme toggle ──────────────────────────── */
+        .theme-toggle {
+            position: relative; width: 44px; height: 22px;
+            background: linear-gradient(to bottom, #4FABD9 0%, #76D1F6 100%);
+            border-radius: 999px; border: 2.5px solid #F0F0F0;
+            cursor: pointer; overflow: hidden;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            transition: all 0.5s cubic-bezier(0.25,0.46,0.45,0.94);
+            flex-shrink: 0;
+        }
+        .theme-toggle.is-dark {
+            background: linear-gradient(to bottom, #1B2944 0%, #2D4367 100%);
+            border-color: #33425E;
+        }
+        .toggle-circle {
+            position: absolute; top: 2px; left: 2px;
+            width: 13px; height: 13px;
+            background: #FFD54F; border-radius: 50%;
+            transition: transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94), background 0.5s;
+            z-index: 10;
+        }
+        .theme-toggle.is-dark .toggle-circle {
+            transform: translateX(21px); background: #E0E0E0;
+        }
+        .star { position: absolute; background: white; border-radius: 50%; opacity: 0; transition: opacity 0.3s; }
+        .theme-toggle.is-dark .star { opacity: 1; }
+        .star-1 { width: 2px; height: 2px; top: 4px; left: 20px; }
+        .star-2 { width: 2px; height: 2px; top: 8px; left: 16px; }
+        .toggle-clouds { position: absolute; bottom: -2px; left: 0; width: 100%; height: 100%; transition: transform 0.5s; }
+        .theme-toggle.is-dark .toggle-clouds { transform: translateY(20px); }
+        .cloud { position: absolute; background: white; border-radius: 50%; }
+        .cloud-1 { width: 10px; height: 10px; bottom: 2px; left: 4px; }
+        .cloud-2 { width: 14px; height: 14px; bottom: -4px; right: 4px; }
+
+        /* ── Mobile glass nav ─────────────────────── */
+        .mobile-nav-glass {
+            position: fixed; bottom: 20px; left: 50%;
+            transform: translateX(-50%);
+            width: 92%; max-width: 420px; height: 64px;
+            background: rgba(255,255,255,0.8);
+            border: 1px solid rgba(255,255,255,0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 32px;
+            display: flex; justify-content: space-around; align-items: center;
+            padding: 0 8px;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+            z-index: 50;
+        }
+        .dark .mobile-nav-glass {
+            background: rgba(30,41,59,0.82);
+            border-color: rgba(255,255,255,0.08);
+        }
+        .mob-item {
+            position: relative;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            gap: 2px; text-decoration: none;
+            color: #64748b; min-width: 52px; height: 48px;
+            border-radius: 20px;
+            transition: all 0.3s cubic-bezier(0.68,-0.55,0.265,1.55);
+        }
+        .dark .mob-item { color: #94a3b8; }
+        .mob-item i { font-size: 18px; transition: all 0.25s; }
+        .mob-item span { font-size: 10px; font-weight: 600; opacity: 0; max-height: 0; overflow: hidden; transition: all 0.25s; }
+        .mob-item.active {
+            color: #ffffff !important;
+            background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+            box-shadow: 0 6px 16px rgba(99,102,241,0.35);
+            padding: 0 14px;
+        }
+        .mob-item.active i { margin-bottom: 1px; }
+        .mob-item.active span { opacity: 1; max-height: 20px; }
+        .mob-badge {
+            position: absolute; top: 4px; right: 4px;
+            min-width: 16px; height: 16px;
+            background: #ef4444; color: #fff; font-size: 9px; font-weight: 800;
+            border-radius: 999px; display: flex; align-items: center; justify-content: center;
+            padding: 0 3px; border: 1.5px solid white;
+        }
+        .dark .mob-badge { border-color: rgba(30,41,59,0.9); }
+
+        /* ── Sidebar nav scrollbar hide ──────────────── */
+        #sidebar nav::-webkit-scrollbar { display: none; }
+        #sidebar nav { scrollbar-width: none; }
+
+        /* ── Multi-Patient Workspace sidebar items ─── */
+        .mpw-item {
+            display: flex; align-items: center; gap: 6px;
+            padding: 5px 6px 5px 10px; border-radius: 8px;
+            font-size: 0.78rem; font-weight: 500;
+            color: #64748b; cursor: pointer;
+            transition: background 0.12s, color 0.12s;
+            position: relative; text-decoration: none;
+        }
+        .dark .mpw-item { color: #94a3b8; }
+        .mpw-item:hover { background: #f1f5f9; }
+        .dark .mpw-item:hover { background: rgba(255,255,255,0.04); }
+        .mpw-item.mpw-active { background: #eef2ff; }
+        .dark .mpw-item.mpw-active { background: rgba(99,102,241,0.1); }
+        .mpw-item.mpw-active::before {
+            content: ''; position: absolute;
+            inset-inline-start: 0; top: 20%; bottom: 20%;
+            width: 3px; border-start-end-radius: 3px; border-end-end-radius: 3px;
+            background: #4f46e5;
+        }
+        .dark .mpw-item.mpw-active::before { background: #818cf8; }
+        .mpw-avatar {
+            width: 22px; height: 22px; border-radius: 50%;
+            background: linear-gradient(135deg, #818cf8, #4f46e5);
+            color: #fff; font-size: 10px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .mpw-close-btn {
+            margin-inline-start: auto; flex-shrink: 0;
+            width: 18px; height: 18px; border-radius: 50%;
+            border: none; background: transparent;
+            color: #94a3b8; font-size: 9px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: background 0.1s, color 0.1s;
+            opacity: 0; padding: 0;
+        }
+        .mpw-item:hover .mpw-close-btn { opacity: 1; }
+        .mpw-close-btn:hover { background: #fee2e2; color: #ef4444; }
+        .dark .mpw-close-btn:hover { background: rgba(239,68,68,0.15); color: #fca5a5; }
+        #mpw-open-patients {
+            overflow-y: auto; max-height: 192px;
+            scrollbar-width: thin;
+            scrollbar-color: #e2e8f0 transparent;
+        }
+        .dark #mpw-open-patients { scrollbar-color: #334155 transparent; }
+        #mpw-open-patients::-webkit-scrollbar { width: 4px; }
+        #mpw-open-patients::-webkit-scrollbar-track { background: transparent; }
+        #mpw-open-patients::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 2px; }
+        .dark #mpw-open-patients::-webkit-scrollbar-thumb { background: #334155; }
+        .mpw-name {
+            font-size: 0.76rem; font-weight: 600;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            line-height: 1.3; color: #374151;
+        }
+        .dark .mpw-name { color: #e2e8f0; }
+        .mpw-name.mpw-active-text { color: #4f46e5; }
+        .dark .mpw-name.mpw-active-text { color: #818cf8; }
+        .mpw-phone {
+            font-size: 0.68rem; font-family: monospace;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            opacity: 0.55; line-height: 1.2;
+        }
+
+        /* ── User popup menu ───────────────────────── */
+        #sidebarUserMenu .dr-dropdown {
+            display: none;
+            position: absolute; bottom: calc(100% + 8px); left: 0; right: 0;
+            background: white;
+            border: 1px solid #e5e7eb; border-radius: 14px;
+            box-shadow: 0 -8px 28px rgba(0,0,0,0.12); z-index: 200; overflow: hidden;
+        }
+        .dark #sidebarUserMenu .dr-dropdown {
+            background: #1e293b; border-color: #334155;
+        }
+        #sidebarUserMenu.open .dr-dropdown { display: block; }
+    </style>
+
+    <style>
+        /* Font switching */
+        [dir="rtl"] body { font-family: 'Cairo', 'Inter', sans-serif; }
+        [dir="ltr"] body { font-family: 'Inter', 'Cairo', sans-serif; }
+        /* Language toggle button */
+        .lang-toggle-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            padding: 3px 9px; height: 30px;
+            background: transparent;
+            border: 1.5px solid #e2e8f0; border-radius: 7px;
+            font-size: 0.78rem; font-weight: 700; color: #64748b;
+            cursor: pointer; transition: border-color 0.15s, color 0.15s;
+            font-family: inherit; white-space: nowrap;
+        }
+        .lang-toggle-btn:hover { border-color: #4f46e5; color: #4f46e5; }
+        .dark .lang-toggle-btn { border-color: #334155; color: #94a3b8; }
+        .dark .lang-toggle-btn:hover { border-color: #818cf8; color: #818cf8; }
+    </style>
+
+    <!-- Dark-mode pre-script (no FOUC) -->
+    <script>
+        const _t = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        if (_t === 'dark') document.documentElement.classList.add('dark');
+    </script>
+
+    <link rel="stylesheet" href="/static/accounts/css/loader.css">
+    
+<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<style>
+  .ws-input, .ws-select {
+    width: 100%; padding: .5rem .75rem; font-size: .875rem;
+    border: 1px solid #d1d5db; border-radius: .5rem;
+    background: #fff; color: #111827; outline: none;
+    transition: border-color .15s, box-shadow .15s; font-family: inherit;
+  }
+  .ws-input:focus, .ws-select:focus {
+    border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.12);
+  }
+  .dark .ws-input, .dark .ws-select {
+    background: #0f172a; border-color: #334155; color: #f1f5f9;
+  }
+  .sec-icon {
+    width: 1.75rem; height: 1.75rem; border-radius: .5rem;
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .edit-strip { border-left: 3px solid #f59e0b; background: rgba(254,243,199,.5); }
+  .dark .edit-strip { background: rgba(120,53,15,.12); }
+</style>
+
+</head>
+
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 antialiased">
+
+    <!-- Page transition bar -->
+    <div class="page-transition-bar" id="ptBar"><div class="page-transition-bar-fill"></div></div>
+    <div class="page-transition-skeleton skel-layout-dashboard" id="ptSkeleton">
+        <div class="skel-nav"></div>
+        <div class="skel-container">
+            <div class="skel-grid-3 mb-8">
+                <div class="skel-card skel-shape"></div>
+                <div class="skel-card skel-shape"></div>
+                <div class="skel-card skel-shape"></div>
+            </div>
+            <div class="skel-table skel-shape"></div>
+        </div>
+    </div>
+
+    <!-- ═══════════════ SIDEBAR ═══════════════ -->
+    <aside id="sidebar"
+           class="hidden md:flex fixed inset-y-0 start-0 w-64 flex-col
+                  bg-white dark:bg-slate-900
+                  border-e border-gray-200 dark:border-slate-700
+                  z-40">
+
+            <!-- Logo -->
+            <div class="flex items-center gap-2.5 h-16 px-5 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white text-sm flex-shrink-0">
+                    <i class="fa-solid fa-stethoscope"></i>
+                </div>
+                <div class="flex flex-col leading-tight min-w-0">
+                    <span class="font-bold text-base text-gray-900 dark:text-white tracking-tight">MedPortal</span>
+                    <span class="text-[10px] font-semibold text-primary-600 dark:text-primary-400 uppercase tracking-wider">بوابة الأطباء</span>
+                </div>
+            </div>
+
+            <!-- Nav links (scrollable) -->
+            <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
+
+                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500 px-3 pt-1 pb-2">المهام الرئيسية</p>
+
+                <a href="/doctors/"
+                   class="sidebar-link ">
+                    <i class="fa-solid fa-house-medical w-4 text-center flex-shrink-0"></i>
+                    لوحة التحكم
+                </a>
+                <a href="/doctors/appointments/"
+                   class="sidebar-link ">
+                    <i class="fa-regular fa-calendar-check w-4 text-center flex-shrink-0"></i>
+                    المواعيد
+                </a>
+                <!-- My Patients + Multi-Patient Workspace open tabs -->
+                <div id="mpw-patients-section">
+                    <a href="/doctors/patients/"
+                       class="sidebar-link "
+                       id="mpw-patients-link">
+                        <i class="fa-solid fa-users w-4 text-center flex-shrink-0"></i>
+                        مرضاي
+                        <span id="mpw-count-badge"
+                              class="ms-auto min-w-[20px] h-5 bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 text-[10px] font-bold rounded-full items-center justify-center px-1"
+                              style="display:none;"></span>
+                    </a>
+                    <!-- Open patient workspace items (populated by JS from localStorage) -->
+                    <div id="mpw-open-patients" class="mt-0.5 space-y-0.5 px-1"></div>
+                </div>
+
+                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500 px-3 pt-4 pb-2">الإعداد</p>
+
+                <a href="/doctors/my-schedule/"
+                   class="sidebar-link ">
+                    <i class="fa-solid fa-calendar-week w-4 text-center flex-shrink-0"></i>
+                    جدولي
+                </a>
+                <a href="/doctors/my-appointment-types/"
+                   class="sidebar-link ">
+                    <i class="fa-solid fa-list-check w-4 text-center flex-shrink-0"></i>
+                    أنواع المواعيد
+                </a>
+                <a href="/doctors/order-catalog/"
+                   class="sidebar-link active">
+                    <i class="fa-solid fa-book-medical w-4 text-center flex-shrink-0"></i>
+                    كتالوج الطلبات
+                </a>
+                <a href="/doctors/clinical-note-templates/"
+                   class="sidebar-link ">
+                    <i class="fa-solid fa-note-medical w-4 text-center flex-shrink-0"></i>
+                    قوالب الملاحظات
+                </a>
+
+                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500 px-3 pt-4 pb-2">الحساب</p>
+
+                <a href="/doctors/profile/"
+                   class="sidebar-link ">
+                    <i class="fa-solid fa-user-doctor w-4 text-center flex-shrink-0"></i>
+                    ملفي
+                </a>
+                <a href="/doctors/verification/status/"
+                   class="sidebar-link ">
+                    <i class="fa-solid fa-shield-halved w-4 text-center flex-shrink-0"></i>
+                    التحقق
+                </a>
+                <a href="/doctors/invites/"
+                   class="sidebar-link relative ">
+                    <i class="fa-regular fa-envelope w-4 text-center flex-shrink-0"></i>
+                    الدعوات
+                    
+                </a>
+                <a href="/appointments/notifications/doctor/"
+                   class="sidebar-link relative ">
+                    <i class="fa-regular fa-bell w-4 text-center flex-shrink-0"></i>
+                    الإشعارات
+                    
+                </a>
+
+            </nav>
+
+            <!-- User section (bottom) -->
+            <div class="flex-shrink-0 border-t border-gray-100 dark:border-slate-700 p-3 relative" id="sidebarUserMenu">
+
+                <button onclick="document.getElementById('sidebarUserMenu').classList.toggle('open')"
+                        class="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl
+                               hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-start group">
+                    <div class="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center text-primary-600 dark:text-primary-300 font-bold text-sm flex-shrink-0">
+                        M
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-bold text-gray-900 dark:text-white truncate leading-tight">Mohammad Alqadi</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 truncate text-right" dir="ltr">0594073157</p>
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <form method="post" action="/set-language/" style="display:inline;" onclick="event.stopPropagation()">
+                          <input type="hidden" name="csrfmiddlewaretoken" value="a3cKEyV7Y8doqPoibxWQqqxarKD4gULxCnDXyEjYCtBl3ZytoLAHIO9g6xQcHxdf">
+                          <input type="hidden" name="next" value="/doctors/order-catalog/?tab=drugs">
+                          
+                          <input type="hidden" name="language" value="en">
+                          <button type="submit" class="lang-toggle-btn" style="height:26px;padding:2px 8px;font-size:0.72rem;border-radius:6px;gap:4px;"><i class="fa-solid fa-globe" style="font-size:0.65rem;"></i> عر</button>
+                          
+                        </form>
+                        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle Dark Mode" onclick="event.stopPropagation()">
+                            <span class="toggle-background">
+                                <span class="star star-1"></span>
+                                <span class="star star-2"></span>
+                            </span>
+                            <span class="toggle-circle"></span>
+                            <span class="toggle-clouds">
+                                <span class="cloud cloud-1"></span>
+                                <span class="cloud cloud-2"></span>
+                            </span>
+                        </button>
+                    </div>
+                </button>
+
+                <!-- User popup (opens upward) -->
+                <div class="dr-dropdown">
+                    
+                    <div class="px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mt-1">تبديل الدور</div>
+                    <a href="/doctors/" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-bold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20">
+                        <i class="fa-solid fa-stethoscope w-4 text-center text-primary-500"></i>
+                        طبيب
+                        <i class="fa-solid fa-check ms-auto text-primary-500" style="font-size:0.75rem;"></i>
+                    </a>
+                    
+                    <a href="/patients/" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                        <i class="fa-solid fa-user-injured w-4 text-center text-gray-400"></i>
+                        مريض
+                    </a>
+                    
+                    
+                    <a href="/clinics/" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                        <i class="fa-solid fa-hospital-user w-4 text-center text-gray-400"></i>
+                        صاحب عيادة
+                    </a>
+                    
+                    
+                    <div class="h-px bg-gray-100 dark:bg-slate-700"></div>
+                    
+                    <a href="/logout/" class="flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                        <i class="fa-solid fa-right-from-bracket w-4 text-center"></i>
+                        خروج
+                    </a>
+                </div>
+            </div>
+        </aside>
+
+    <!-- ═══════════════ PAGE CONTENT ═══════════════ -->
+    <div class="md:ms-64">
+
+            <!-- Mobile top bar -->
+            <header class="md:hidden sticky top-0 z-30 h-14 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-gray-200 dark:border-slate-700 flex items-center justify-between px-4">
+                <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white text-xs">
+                        <i class="fa-solid fa-stethoscope"></i>
+                    </div>
+                    <span class="font-bold text-gray-900 dark:text-white">MedPortal</span>
+                </div>
+                <div class="flex items-center gap-2.5">
+                    <a href="/appointments/notifications/doctor/"
+                       class="relative inline-flex items-center justify-center w-9 h-9 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
+                        <i class="fa-regular fa-bell text-lg"></i>
+                        
+                    </a>
+                    <button class="theme-toggle" id="theme-toggle-mobile" aria-label="Toggle Dark Mode">
+                        <span class="toggle-background">
+                            <span class="star star-1"></span>
+                            <span class="star star-2"></span>
+                        </span>
+                        <span class="toggle-circle"></span>
+                        <span class="toggle-clouds">
+                            <span class="cloud cloud-1"></span>
+                            <span class="cloud cloud-2"></span>
+                        </span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Main -->
+            <main class="px-4 sm:px-6 lg:px-8 pt-6 pb-32 md:pb-6 min-h-screen">
+
+                <!-- Messages -->
+                
+
+                
+<div x-data="{
+  tab: 'drugs',
+  showAddFamily: false,
+  showAddDrug: false,
+  showAddLab: false,
+  showAddRadiology: false,
+  showAddMicrobiology: false,
+  showAddProcedure: false,
+  editingFamilyId: null,
+  editingDrugId: null,
+  editingItemId: null,
+  drugFamilyFilter: '',
+}" x-cloak class="max-w-5xl mx-auto">
+
+  <!-- ── Page header ───────────────────────────────────── -->
+  <div class="mb-6 flex items-start justify-between gap-4 flex-wrap">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">كتالوج الطلبات</h1>
+      <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">
+        إدارة كتالوج عيادتك — الأدوية وفحوصات المختبر والأشعة وغيرها.
+        
+      </p>
+    </div>
+    
+  </div>
+
+  <!-- ── Tab bar ───────────────────────────────────────── -->
+  <div class="flex gap-0 mb-6 border-b border-gray-200 dark:border-slate-700 overflow-x-auto scrollbar-none">
+
+    
+
+    <button @click="tab='drugs'; showAddFamily=false; showAddDrug=false; editingFamilyId=null; editingDrugId=null"
+            :class="tab==='drugs' ? 'border-primary-500 text-primary-600 dark:text-primary-400 font-bold' : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'"
+            class="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+      <i class="fa-solid fa-pills opacity-75 text-[13px]"></i> الأدوية
+      <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[11px] px-1 font-semibold transition-colors"
+            :class="tab==='drugs' ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400'">
+        2
+      </span>
+    </button>
+
+    <button @click="tab='lab'; showAddLab=false; editingItemId=null"
+            :class="tab==='lab' ? 'border-primary-500 text-primary-600 dark:text-primary-400 font-bold' : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'"
+            class="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+      <i class="fa-solid fa-flask opacity-75 text-[13px]"></i> المختبر
+      <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[11px] px-1 font-semibold transition-colors"
+            :class="tab==='lab' ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400'">
+        0
+      </span>
+    </button>
+
+    <button @click="tab='radiology'; showAddRadiology=false; editingItemId=null"
+            :class="tab==='radiology' ? 'border-primary-500 text-primary-600 dark:text-primary-400 font-bold' : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'"
+            class="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+      <i class="fa-solid fa-x-ray opacity-75 text-[13px]"></i> الأشعة
+      <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[11px] px-1 font-semibold transition-colors"
+            :class="tab==='radiology' ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400'">
+        0
+      </span>
+    </button>
+
+    <button @click="tab='microbiology'; showAddMicrobiology=false; editingItemId=null"
+            :class="tab==='microbiology' ? 'border-primary-500 text-primary-600 dark:text-primary-400 font-bold' : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'"
+            class="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+      <i class="fa-solid fa-microscope opacity-75 text-[13px]"></i> علم الأحياء الدقيقة
+      <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[11px] px-1 font-semibold transition-colors"
+            :class="tab==='microbiology' ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400'">
+        0
+      </span>
+    </button>
+
+    <button @click="tab='procedure'; showAddProcedure=false; editingItemId=null"
+            :class="tab==='procedure' ? 'border-primary-500 text-primary-600 dark:text-primary-400 font-bold' : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'"
+            class="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
+      <i class="fa-solid fa-stethoscope opacity-75 text-[13px]"></i> الإجراءات
+      <span class="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[11px] px-1 font-semibold transition-colors"
+            :class="tab==='procedure' ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400'">
+        0
+      </span>
+    </button>
+
+    
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+       DRUGS TAB
+  ════════════════════════════════════════════════════ -->
+  <div x-show="tab === 'drugs'"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0 translate-y-1"
+       x-transition:enter-end="opacity-100 translate-y-0">
+
+    <!-- Drug Families ───────────────────────────────── -->
+    <div class="glass-card overflow-hidden mb-5">
+
+      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50/70 dark:bg-slate-700/40">
+        <div class="flex items-center gap-2.5">
+          <span class="sec-icon bg-purple-100 dark:bg-purple-900/30">
+            <i class="fa-solid fa-layer-group text-purple-600 dark:text-purple-400 text-xs"></i>
+          </span>
+          <div>
+            <p class="text-sm font-bold text-gray-800 dark:text-white leading-tight">عائلات الأدوية</p>
+            <p class="text-[11px] text-gray-400 dark:text-slate-500">2 مجموعة</p>
+          </div>
+        </div>
+        
+        <button @click="showAddFamily = !showAddFamily; if(showAddFamily) $nextTick(() => $refs.newFamilyName && $refs.newFamilyName.focus())"
+                :class="showAddFamily ? 'bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-slate-200' : 'bg-primary-600 hover:bg-primary-700 active:scale-95 text-white shadow-sm'"
+                class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
+          <i class="fa-solid" :class="showAddFamily ? 'fa-xmark' : 'fa-plus'"></i>
+          <span x-text="showAddFamily ? 'إلغاء' : 'إضافة عائلة'"></span>
+        </button>
+        
+      </div>
+
+      
+      <div x-show="showAddFamily"
+           x-transition:enter="transition ease-out duration-200"
+           x-transition:enter-start="opacity-0 -translate-y-2"
+           x-transition:enter-end="opacity-100 translate-y-0"
+           x-transition:leave="transition ease-in duration-150"
+           x-transition:leave-start="opacity-100 translate-y-0"
+           x-transition:leave-end="opacity-0 -translate-y-2"
+           class="border-b border-primary-100 dark:border-primary-900/40 bg-primary-50/60 dark:bg-primary-900/10 px-5 py-4">
+        <form method="post" action="/doctors/order-catalog/families/create/">
+          <input type="hidden" name="csrfmiddlewaretoken" value="a3cKEyV7Y8doqPoibxWQqqxarKD4gULxCnDXyEjYCtBl3ZytoLAHIO9g6xQcHxdf">
+          <input type="hidden" name="clinic_id" value="1">
+          <div class="flex gap-3 flex-wrap sm:flex-nowrap items-end">
+            <div class="flex-1 min-w-0">
+              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">الاسم <span class="text-red-500">*</span></label>
+              <input type="text" name="name" x-ref="newFamilyName" required
+                     placeholder="مثال: مضادات حيوية، حاصرات بيتا"
+                     class="ws-input">
+            </div>
+            <div class="flex-1 min-w-0">
+              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">الوصف <span class="font-normal text-gray-400">(اختياري)</span></label>
+              <input type="text" name="description" placeholder="وصف مختصر" class="ws-input">
+            </div>
+            <button type="submit"
+                    class="flex-shrink-0 inline-flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm whitespace-nowrap">
+              <i class="fa-solid fa-plus text-xs"></i> إضافة عائلة
+            </button>
+          </div>
+        </form>
+      </div>
+      
+
+      
+      <div class="divide-y divide-gray-100 dark:divide-slate-700/60">
+        
+        <div class="animate-fade-in-up" style="animation-delay: 00ms;">
+          <!-- Normal row -->
+          <div x-show="editingFamilyId !== 1"
+               class="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50/60 dark:hover:bg-slate-700/20 transition-colors group">
+            <div class="flex-1 min-w-0">
+              <span class="text-sm font-semibold text-gray-800 dark:text-gray-100">macrolides</span>
+              
+              <span class="text-xs text-gray-400 dark:text-slate-500 ml-2">inhibit protein synthesis of the 50s subunit</span>
+              
+            </div>
+            <span class="dr-badge bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 mr-1 flex-shrink-0">
+              <i class="fa-solid fa-pills text-[10px]"></i> 1
+            </span>
+            
+            <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+              <button @click="editingFamilyId = 1" title="تعديل"
+                      class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
+                <i class="fa-solid fa-pen text-xs"></i>
+              </button>
+              <form method="post" action="/doctors/order-catalog/families/1/delete/"
+                    onsubmit="return confirm('حذف «macrolides»؟\nستصبح الأدوية غير مصنفة.')">
+                <input type="hidden" name="csrfmiddlewaretoken" value="a3cKEyV7Y8doqPoibxWQqqxarKD4gULxCnDXyEjYCtBl3ZytoLAHIO9g6xQcHxdf">
+                <button type="submit" title="حذف"
+                        class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                  <i class="fa-solid fa-trash text-xs"></i>
+                </button>
+              </form>
+            </div>
+            
+          </div>
+
+          <!-- Inline edit -->
+          
+          <div x-show="editingFamilyId === 1"
+               x-transition:enter="transition ease-out duration-150"
+               x-transition:enter-start="opacity-0"
+               x-transition:enter-end="opacity-100"
+               class="edit-strip px-5 py-4">
+            <form method="post" action="/doctors/order-catalog/families/1/edit/">
+              <input type="hidden" name="csrfmiddlewaretoken" value="a3cKEyV7Y8doqPoibxWQqqxarKD4gULxCnDXyEjYCtBl3ZytoLAHIO9g6xQcHxdf">
+              <p class="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-3">
+                <i class="fa-solid fa-pen me-1.5"></i>تعديل: macrolides
+              </p>
+              <div class="flex gap-3 flex-wrap sm:flex-nowrap items-end">
+                <div class="flex-1 min-w-0">
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">الاسم *</label>
+                  <input type="text" name="name" value="macrolides" required class="ws-input">
+                </div>
+                <div class="flex-1 min-w-0">
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">الوصف</label>
+                  <input type="text" name="description" value="inhibit protein synthesis of the 50s subunit" placeholder="اختياري" class="ws-input">
+                </div>
+                <div class="flex gap-2 flex-shrink-0">
+                  <button type="submit"
+                          class="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm">
+                    <i class="fa-solid fa-floppy-disk text-xs"></i> حفظ
+                  </button>
+                  <button type="button" @click="editingFamilyId = null"
+                          class="inline-flex items-center text-sm font-medium text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                    إلغاء
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+          
+        </div>
+        
+        <div class="animate-fade-in-up" style="animation-delay: 10ms;">
+          <!-- Normal row -->
+          <div x-show="editingFamilyId !== 2"
+               class="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50/60 dark:hover:bg-slate-700/20 transition-colors group">
+            <div class="flex-1 min-w-0">
+              <span class="text-sm font-semibold text-gray-800 dark:text-gray-100">penicillins</span>
+              
+              <span class="text-xs text-gray-400 dark:text-slate-500 ml-2">inhibit cell wall synthesis</span>
+              
+            </div>
+            <span class="dr-badge bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 mr-1 flex-shrink-0">
+              <i class="fa-solid fa-pills text-[10px]"></i> 0
+            </span>
+            
+            <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+              <button @click="editingFamilyId = 2" title="تعديل"
+                      class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
+                <i class="fa-solid fa-pen text-xs"></i>
+              </button>
+              <form method="post" action="/doctors/order-catalog/families/2/delete/"
+                    onsubmit="return confirm('حذف «penicillins»؟\nستصبح الأدوية غير مصنفة.')">
+                <input type="hidden" name="csrfmiddlewaretoken" value="a3cKEyV7Y8doqPoibxWQqqxarKD4gULxCnDXyEjYCtBl3ZytoLAHIO9g6xQcHxdf">
+                <button type="submit" title="حذف"
+                        class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                  <i class="fa-solid fa-trash text-xs"></i>
+                </button>
+              </form>
+            </div>
+            
+          </div>
+
+          <!-- Inline edit -->
+          
+          <div x-show="editingFamilyId === 2"
+               x-transition:enter="transition ease-out duration-150"
+               x-transition:enter-start="opacity-0"
+               x-transition:enter-end="opacity-100"
+               class="edit-strip px-5 py-4">
+            <form method="post" action="/doctors/order-catalog/families/2/edit/">
+              <input type="hidden" name="csrfmiddlewaretoken" value="a3cKEyV7Y8doqPoibxWQqqxarKD4gULxCnDXyEjYCtBl3ZytoLAHIO9g6xQcHxdf">
+              <p class="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-3">
+                <i class="fa-solid fa-pen me-1.5"></i>تعديل: penicillins
+              </p>
+              <div class="flex gap-3 flex-wrap sm:flex-nowrap items-end">
+                <div class="flex-1 min-w-0">
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">الاسم *</label>
+                  <input type="text" name="name" value="penicillins" required class="ws-input">
+                </div>
+                <div class="flex-1 min-w-0">
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">الوصف</label>
+                  <input type="text" name="description" value="inhibit cell wall synthesis" placeholder="اختياري" class="ws-input">
+                </div>
+                <div class="flex gap-2 flex-shrink-0">
+                  <button type="submit"
+                          class="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm">
+                    <i class="fa-solid fa-floppy-disk text-xs"></i> حفظ
+                  </button>
+                  <button type="button" @click="editingFamilyId = null"
+                          class="inline-flex items-center text-sm font-medium text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                    إلغاء
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+          
+        </div>
+        
+      </div>
+      
+    </div><!-- /families -->
+
+    <!-- Drug Products ───────────────────────────────── -->
+    <div class="glass-card overflow-hidden">
+
+      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50/70 dark:bg-slate-700/40 flex-wrap gap-2">
+        <div class="flex items-center gap-2.5">
+          <span class="sec-icon bg-blue-100 dark:bg-blue-900/30">
+            <i class="fa-solid fa-pills text-blue-600 dark:text-blue-400 text-xs"></i>
+          </span>
+          <div>
+            <p class="text-sm font-bold text-gray-800 dark:text-white leading-tight">منتجات الأدوية</p>
+            <p class="text-[11px] text-gray-400 dark:text-slate-500">2 منتج</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <select x-model="drugFamilyFilter"
+                  class="text-xs bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg px-2.5 py-1.5 text-gray-600 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-primary-400">
+            <option value="">جميع العائلات</option>
+            
+            <option value="1">macrolides</option>
+            
+            <option value="2">penicillins</option>
+            
+          </select>
+          
+          <button @click="showAddDrug = !showAddDrug; if(showAddDrug) $nextTick(() => $refs.newDrugName && $refs.newDrugName.focus())"
+                  :class="showAddDrug ? 'bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-slate-200' : 'bg-primary-600 hover:bg-primary-700 active:scale-95 text-white shadow-sm'"
+                  class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
+            <i class="fa-solid" :class="showAddDrug ? 'fa-xmark' : 'fa-plus'"></i>
+            <span x-text="showAddDrug ? 'إلغاء' : 'إضافة دواء'"></span>
+          </button>
+          
+        </div>
+      </div>
+
+      
+      <div x-show="showAddDrug"
+           x-transition:enter="transition ease-out duration-200"
+           x-transition:enter-start="opacity-0 -translate-y-2"
+           x-transition:enter-end="opacity-100 translate-y-0"
+           x-transition:leave="transition ease-in duration-150"
+           x-transition:leave-start="opacity-100 translate-y-0"
+           x-transition:leave-end="opacity-0 -translate-y-2"
+           class="border-b border-primary-100 dark:border-primary-900/40 bg-primary-50/60 dark:bg-primary-900/10 px-5 py-5">
+        <form method="post" action="/doctors/order-catalog/drugs/create/">
+          <input type="hidden" name="csrfmiddlewaretoken" value="a3cKEyV7Y8doqPoibxWQqqxarKD4gULxCnDXyEjYCtBl3ZytoLAHIO9g6xQcHxdf">
+          <input type="hidden" name="clinic_id" value="1">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">الاسم الجنيسي <span class="text-red-500">*</span></label>
+              <input type="text" name="generic_name" x-ref="newDrugName" required placeholder="مثال: أموكسيسيلين" class="ws-input">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">الاسم التجاري <span class="text-red-500">*</span></label>
+              <input type="text" name="commercial_name" required placeholder="مثال: أموكسيل، أوجمنتين" class="ws-input">
+            </div>
+          </div>
+          <div class="mb-4">
+            <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">العائلة</label>
+            <select name="family_id" class="ws-select text-sm">
+              <option value="">— لا شيء —</option>
+              <option value="1">macrolides</option><option value="2">penicillins</option>
+            </select>
+          </div>
+          <div class="flex gap-2">
+            <button type="submit"
+                    class="inline-flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm">
+              <i class="fa-solid fa-plus text-xs"></i> إضافة دواء
+            </button>
+            <button type="button" @click="showAddDrug = false"
+                    class="inline-flex items-center text-sm font-medium text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+              إلغاء
+            </button>
+          </div>
+        </form>
+      </div>
+      
+
+      
+      <div class="divide-y divide-gray-100 dark:divide-slate-700/60">
+        
+        <div>
+          <!-- Normal row -->
+          <div x-show="editingDrugId !== 2 && (drugFamilyFilter === '' || drugFamilyFilter === '')"
+               class="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50/60 dark:hover:bg-slate-700/20 transition-colors group">
+            <div class="flex-shrink-0">
+              <button type="button"
+        id="fav-star-2"
+        hx-post="/doctors/favourite-drug/toggle/"
+        hx-vals='{"drug_id": "2"}'
+        hx-headers='{"X-CSRFToken": "a3cKEyV7Y8doqPoibxWQqqxarKD4gULxCnDXyEjYCtBl3ZytoLAHIO9g6xQcHxdf"}'
+        hx-swap="outerHTML"
+        @click.stop
+        aria-pressed="false"
+        title="إضافة إلى المفضلة"
+        aria-label="إضافة إلى المفضلة"
+        class="favourite-star-btn p-1.5 rounded hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors flex-shrink-0">
+  
+    <i class="fa-regular fa-star text-gray-300 dark:text-slate-500 hover:text-amber-400 text-sm"></i>
+  
+</button>
+
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-baseline gap-2 flex-wrap">
+                <span class="text-sm font-semibold text-gray-800 dark:text-gray-100">Drug A</span>
+                
+                <span class="text-xs text-gray-500 dark:text-slate-400">Drug A</span>
+                
+              </div>
+              
+            </div>
+            
+            <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+              <button @click="editingDrugId = 2" title="تعديل"
+                      class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
+                <i class="fa-solid fa-pen text-xs"></i>
+              </button>
+              <form method="post" action="/doctors/order-catalog/drugs/2/delete/"
+                    onsubmit="return confirm('حذف «Drug A»؟')">
+                <input type="hidden" name="csrfmiddlewaretoken" value="a3cKEyV7Y8doqPoibxWQqqxarKD4gULxCnDXyEjYCtBl3ZytoLAHIO9g6xQcHxdf">
+                <button type="submit" title="حذف"
+                        class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                  <i class="fa-solid fa-trash text-xs"></i>
+                </button>
+              </form>
+            </div>
+            
+          </div>
+
+          <!-- Inline edit -->
+          
+          <div x-show="editingDrugId === 2"
+               x-transition:enter="transition ease-out duration-150"
+               x-transition:enter-start="opacity-0"
+               x-transition:enter-end="opacity-100"
+               class="edit-strip px-5 py-4">
+            <form method="post" action="/doctors/order-catalog/drugs/2/edit/">
+              <input type="hidden" name="csrfmiddlewaretoken" value="a3cKEyV7Y8doqPoibxWQqqxarKD4gULxCnDXyEjYCtBl3ZytoLAHIO9g6xQcHxdf">
+              <p class="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-3">
+                <i class="fa-solid fa-pen me-1.5"></i>تعديل: Drug A
+              </p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">الاسم الجنيسي *</label>
+                  <input type="text" name="generic_name" value="Drug A" required class="ws-input">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">الاسم التجاري <span class="text-red-500">*</span></label>
+                  <input type="text" name="commercial_name" value="Drug A" required class="ws-input">
+                </div>
+              </div>
+              <div class="mb-4">
+                <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">العائلة</label>
+                <select name="family_id" class="ws-select text-sm">
+                  <option value="">— لا شيء —</option>
+                  
+                  <option value="1" >macrolides</option>
+                  
+                  <option value="2" >penicillins</option>
+                  
+                </select>
+              </div>
+              <div class="flex gap-2">
+                <button type="submit"
+                        class="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm">
+                  <i class="fa-solid fa-floppy-disk text-xs"></i> حفظ
+                </button>
+                <button type="button" @click="editingDrugId = null"
+                        class="inline-flex items-center text-sm font-medium text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                  إلغاء
+                </button>
+              </div>
+            </form>
+          </div>
+          
+        </div>
+        
+        <div>
+          <!-- Normal row -->
+          <div x-show="editingDrugId !== 1 && (drugFamilyFilter === '' || drugFamilyFilter === '1')"
+               class="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50/60 dark:hover:bg-slate-700/20 transition-colors group">
+            <div class="flex-shrink-0">
+              <button type="button"
+        id="fav-star-1"
+        hx-post="/doctors/favourite-drug/toggle/"
+        hx-vals='{"drug_id": "1"}'
+        hx-headers='{"X-CSRFToken": "a3cKEyV7Y8doqPoibxWQqqxarKD4gULxCnDXyEjYCtBl3ZytoLAHIO9g6xQcHxdf"}'
+        hx-swap="outerHTML"
+        @click.stop
+        aria-pressed="false"
+        title="إضافة إلى المفضلة"
+        aria-label="إضافة إلى المفضلة"
+        class="favourite-star-btn p-1.5 rounded hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors flex-shrink-0">
+  
+    <i class="fa-regular fa-star text-gray-300 dark:text-slate-500 hover:text-amber-400 text-sm"></i>
+  
+</button>
+
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-baseline gap-2 flex-wrap">
+                <span class="text-sm font-semibold text-gray-800 dark:text-gray-100">erythomycin</span>
+                
+                <span class="text-xs text-gray-500 dark:text-slate-400">Erythrocin</span>
+                
+              </div>
+              
+              <div class="mt-0.5">
+                <span class="dr-badge bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300">macrolides</span>
+              </div>
+              
+            </div>
+            
+            <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+              <button @click="editingDrugId = 1" title="تعديل"
+                      class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
+                <i class="fa-solid fa-pen text-xs"></i>
+              </button>
+              <form method="post" action="/doctors/order-catalog/drugs/1/delete/"
+                    onsubmit="return confirm('حذف «erythomycin»؟')">
+                <input type="hidden" name="csrfmiddlewaretoken" value="a3cKEyV7Y8doqPoibxWQqqxarKD4gULxCnDXyEjYCtBl3ZytoLAHIO9g6xQcHxdf">
+                <button type="submit" title="حذف"
+                        class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                  <i class="fa-solid fa-trash text-xs"></i>
+                </button>
+              </form>
+            </div>
+            
+          </div>
+
+          <!-- Inline edit -->
+          
+          <div x-show="editingDrugId === 1"
+               x-transition:enter="transition ease-out duration-150"
+               x-transition:enter-start="opacity-0"
+               x-transition:enter-end="opacity-100"
+               class="edit-strip px-5 py-4">
+            <form method="post" action="/doctors/order-catalog/drugs/1/edit/">
+              <input type="hidden" name="csrfmiddlewaretoken" value="a3cKEyV7Y8doqPoibxWQqqxarKD4gULxCnDXyEjYCtBl3ZytoLAHIO9g6xQcHxdf">
+              <p class="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-3">
+                <i class="fa-solid fa-pen me-1.5"></i>تعديل: erythomycin
+              </p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">الاسم الجنيسي *</label>
+                  <input type="text" name="generic_name" value="erythomycin" required class="ws-input">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">الاسم التجاري <span class="text-red-500">*</span></label>
+                  <input type="text" name="commercial_name" value="Erythrocin" required class="ws-input">
+                </div>
+              </div>
+              <div class="mb-4">
+                <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">العائلة</label>
+                <select name="family_id" class="ws-select text-sm">
+                  <option value="">— لا شيء —</option>
+                  
+                  <option value="1" selected>macrolides</option>
+                  
+                  <option value="2" >penicillins</option>
+                  
+                </select>
+              </div>
+              <div class="flex gap-2">
+                <button type="submit"
+                        class="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm">
+                  <i class="fa-solid fa-floppy-disk text-xs"></i> حفظ
+                </button>
+                <button type="button" @click="editingDrugId = null"
+                        class="inline-flex items-center text-sm font-medium text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                  إلغاء
+                </button>
+              </div>
+            </form>
+          </div>
+          
+        </div>
+        
+      </div>
+      
+    </div><!-- /products -->
+  </div><!-- /drugs tab -->
+
+
+  <!-- ════════════════════════════════════════════════════
+       LAB TAB
+  ════════════════════════════════════════════════════ -->
+  <div x-show="tab === 'lab'"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0 translate-y-1"
+       x-transition:enter-end="opacity-100 translate-y-0">
+    <div class="glass-card overflow-hidden">
+
+      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50/70 dark:bg-slate-700/40">
+        <div class="flex items-center gap-2.5">
+          <span class="sec-icon bg-purple-100 dark:bg-purple-900/30">
+            <i class="fa-solid fa-flask text-purple-600 dark:text-purple-400 text-xs"></i>
+          </span>
+          <div>
+            <p class="text-sm font-bold text-gray-800 dark:text-white leading-tight">فحوصات المختبر</p>
+            <p class="text-[11px] text-gray-400 dark:text-slate-500">0 فحص</p>
+          </div>
+        </div>
+        
+        <button @click="showAddLab = !showAddLab; if(showAddLab) $nextTick(() => $refs.newLabName && $refs.newLabName.focus())"
+                :class="showAddLab ? 'bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-slate-200' : 'bg-primary-600 hover:bg-primary-700 active:scale-95 text-white shadow-sm'"
+                class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
+          <i class="fa-solid" :class="showAddLab ? 'fa-xmark' : 'fa-plus'"></i>
+          <span x-text="showAddLab ? 'إلغاء' : 'إضافة فحص'"></span>
+        </button>
+        
+      </div>
+
+      
+      <div x-show="showAddLab"
+           x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
+           x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2"
+           class="border-b border-primary-100 dark:border-primary-900/40 bg-primary-50/60 dark:bg-primary-900/10 px-5 py-4">
+        <form method="post" action="/doctors/order-catalog/items/create/">
+          <input type="hidden" name="csrfmiddlewaretoken" value="a3cKEyV7Y8doqPoibxWQqqxarKD4gULxCnDXyEjYCtBl3ZytoLAHIO9g6xQcHxdf">
+          <input type="hidden" name="clinic_id" value="1">
+          <input type="hidden" name="category" value="LAB">
+          <div class="flex gap-3 items-end flex-wrap sm:flex-nowrap">
+            <div class="flex-1 min-w-0">
+              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">اسم الفحص <span class="text-red-500">*</span></label>
+              <input type="text" name="name" x-ref="newLabName" required
+                     placeholder="مثال: صورة دم كاملة، دهون الدم"
+                     class="ws-input">
+            </div>
+            <button type="submit"
+                    class="flex-shrink-0 inline-flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm whitespace-nowrap">
+              <i class="fa-solid fa-plus text-xs"></i> إضافة فحص
+            </button>
+          </div>
+        </form>
+      </div>
+      
+
+      
+      <div class="px-5 py-10 text-center">
+        <div class="w-14 h-14 rounded-2xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center mx-auto mb-3">
+          <i class="fa-solid fa-flask text-purple-300 dark:text-purple-600 text-xl"></i>
+        </div>
+        <p class="text-sm font-medium text-gray-600 dark:text-slate-300">لا توجد فحوصات مختبرية بعد.</p>
+        <p class="text-xs text-gray-400 dark:text-slate-500 mt-1">أضف فحوصات مثل صورة دم كاملة، دهون الدم، وظائف الكبد...</p>
+      </div>
+      
+    </div>
+  </div><!-- /lab tab -->
+
+
+  <!-- ════════════════════════════════════════════════════
+       RADIOLOGY TAB
+  ════════════════════════════════════════════════════ -->
+  <div x-show="tab === 'radiology'"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0 translate-y-1"
+       x-transition:enter-end="opacity-100 translate-y-0">
+    <div class="glass-card overflow-hidden">
+
+      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50/70 dark:bg-slate-700/40">
+        <div class="flex items-center gap-2.5">
+          <span class="sec-icon bg-indigo-100 dark:bg-indigo-900/30">
+            <i class="fa-solid fa-x-ray text-indigo-600 dark:text-indigo-400 text-xs"></i>
+          </span>
+          <div>
+            <p class="text-sm font-bold text-gray-800 dark:text-white leading-tight">فحوصات الأشعة</p>
+            <p class="text-[11px] text-gray-400 dark:text-slate-500">0 فحص</p>
+          </div>
+        </div>
+        
+        <button @click="showAddRadiology = !showAddRadiology; if(showAddRadiology) $nextTick(() => $refs.newRadiologyName && $refs.newRadiologyName.focus())"
+                :class="showAddRadiology ? 'bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-slate-200' : 'bg-primary-600 hover:bg-primary-700 active:scale-95 text-white shadow-sm'"
+                class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
+          <i class="fa-solid" :class="showAddRadiology ? 'fa-xmark' : 'fa-plus'"></i>
+          <span x-text="showAddRadiology ? 'إلغاء' : 'إضافة فحص'"></span>
+        </button>
+        
+      </div>
+
+      
+      <div x-show="showAddRadiology"
+           x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
+           x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2"
+           class="border-b border-primary-100 dark:border-primary-900/40 bg-primary-50/60 dark:bg-primary-900/10 px-5 py-4">
+        <form method="post" action="/doctors/order-catalog/items/create/">
+          <input type="hidden" name="csrfmiddlewaretoken" value="a3cKEyV7Y8doqPoibxWQqqxarKD4gULxCnDXyEjYCtBl3ZytoLAHIO9g6xQcHxdf">
+          <input type="hidden" name="clinic_id" value="1">
+          <input type="hidden" name="category" value="RADIOLOGY">
+          <div class="flex gap-3 items-end flex-wrap sm:flex-nowrap">
+            <div class="flex-1 min-w-0">
+              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">اسم الفحص <span class="text-red-500">*</span></label>
+              <input type="text" name="name" x-ref="newRadiologyName" required
+                     placeholder="مثال: أشعة صدر، CT بطن"
+                     class="ws-input">
+            </div>
+            <button type="submit"
+                    class="flex-shrink-0 inline-flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm whitespace-nowrap">
+              <i class="fa-solid fa-plus text-xs"></i> إضافة فحص
+            </button>
+          </div>
+        </form>
+      </div>
+      
+
+      
+      <div class="px-5 py-10 text-center">
+        <div class="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center mx-auto mb-3">
+          <i class="fa-solid fa-x-ray text-indigo-300 dark:text-indigo-600 text-xl"></i>
+        </div>
+        <p class="text-sm font-medium text-gray-600 dark:text-slate-300">لا توجد فحوصات أشعة بعد.</p>
+        <p class="text-xs text-gray-400 dark:text-slate-500 mt-1">أضف فحوصات مثل الأشعة السينية، CT، MRI...</p>
+      </div>
+      
+    </div>
+  </div><!-- /radiology tab -->
+
+
+  <!-- ════════════════════════════════════════════════════
+       MICROBIOLOGY TAB
+  ════════════════════════════════════════════════════ -->
+  <div x-show="tab === 'microbiology'"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0 translate-y-1"
+       x-transition:enter-end="opacity-100 translate-y-0">
+    <div class="glass-card overflow-hidden">
+
+      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50/70 dark:bg-slate-700/40">
+        <div class="flex items-center gap-2.5">
+          <span class="sec-icon bg-teal-100 dark:bg-teal-900/30">
+            <i class="fa-solid fa-microscope text-teal-600 dark:text-teal-400 text-xs"></i>
+          </span>
+          <div>
+            <p class="text-sm font-bold text-gray-800 dark:text-white leading-tight">علم الأحياء الدقيقة</p>
+            <p class="text-[11px] text-gray-400 dark:text-slate-500">0 فحص</p>
+          </div>
+        </div>
+        
+        <button @click="showAddMicrobiology = !showAddMicrobiology; if(showAddMicrobiology) $nextTick(() => $refs.newMicroName && $refs.newMicroName.focus())"
+                :class="showAddMicrobiology ? 'bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-slate-200' : 'bg-primary-600 hover:bg-primary-700 active:scale-95 text-white shadow-sm'"
+                class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
+          <i class="fa-solid" :class="showAddMicrobiology ? 'fa-xmark' : 'fa-plus'"></i>
+          <span x-text="showAddMicrobiology ? 'إلغاء' : 'إضافة فحص'"></span>
+        </button>
+        
+      </div>
+
+      
+      <div x-show="showAddMicrobiology"
+           x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
+           x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2"
+           class="border-b border-primary-100 dark:border-primary-900/40 bg-primary-50/60 dark:bg-primary-900/10 px-5 py-4">
+        <form method="post" action="/doctors/order-catalog/items/create/">
+          <input type="hidden" name="csrfmiddlewaretoken" value="a3cKEyV7Y8doqPoibxWQqqxarKD4gULxCnDXyEjYCtBl3ZytoLAHIO9g6xQcHxdf">
+          <input type="hidden" name="clinic_id" value="1">
+          <input type="hidden" name="category" value="MICROBIOLOGY">
+          <div class="flex gap-3 items-end flex-wrap sm:flex-nowrap">
+            <div class="flex-1 min-w-0">
+              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">اسم الفحص <span class="text-red-500">*</span></label>
+              <input type="text" name="name" x-ref="newMicroName" required
+                     placeholder="مثال: زراعة دم، زراعة بول"
+                     class="ws-input">
+            </div>
+            <button type="submit"
+                    class="flex-shrink-0 inline-flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm whitespace-nowrap">
+              <i class="fa-solid fa-plus text-xs"></i> إضافة فحص
+            </button>
+          </div>
+        </form>
+      </div>
+      
+
+      
+      <div class="px-5 py-10 text-center">
+        <div class="w-14 h-14 rounded-2xl bg-teal-50 dark:bg-teal-900/20 flex items-center justify-center mx-auto mb-3">
+          <i class="fa-solid fa-microscope text-teal-300 dark:text-teal-600 text-xl"></i>
+        </div>
+        <p class="text-sm font-medium text-gray-600 dark:text-slate-300">لا توجد فحوصات أحياء دقيقة بعد.</p>
+        <p class="text-xs text-gray-400 dark:text-slate-500 mt-1">أضف زراعات وفحوصات الحساسية وغيرها.</p>
+      </div>
+      
+    </div>
+  </div><!-- /microbiology tab -->
+
+
+  <!-- ════════════════════════════════════════════════════
+       PROCEDURES TAB
+  ════════════════════════════════════════════════════ -->
+  <div x-show="tab === 'procedure'"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0 translate-y-1"
+       x-transition:enter-end="opacity-100 translate-y-0">
+    <div class="glass-card overflow-hidden">
+
+      <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50/70 dark:bg-slate-700/40">
+        <div class="flex items-center gap-2.5">
+          <span class="sec-icon bg-orange-100 dark:bg-orange-900/30">
+            <i class="fa-solid fa-stethoscope text-orange-600 dark:text-orange-400 text-xs"></i>
+          </span>
+          <div>
+            <p class="text-sm font-bold text-gray-800 dark:text-white leading-tight">الإجراءات</p>
+            <p class="text-[11px] text-gray-400 dark:text-slate-500">0 إجراء</p>
+          </div>
+        </div>
+        
+        <button @click="showAddProcedure = !showAddProcedure; if(showAddProcedure) $nextTick(() => $refs.newProcName && $refs.newProcName.focus())"
+                :class="showAddProcedure ? 'bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-slate-200' : 'bg-primary-600 hover:bg-primary-700 active:scale-95 text-white shadow-sm'"
+                class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
+          <i class="fa-solid" :class="showAddProcedure ? 'fa-xmark' : 'fa-plus'"></i>
+          <span x-text="showAddProcedure ? 'إلغاء' : 'إضافة إجراء'"></span>
+        </button>
+        
+      </div>
+
+      
+      <div x-show="showAddProcedure"
+           x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
+           x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2"
+           class="border-b border-primary-100 dark:border-primary-900/40 bg-primary-50/60 dark:bg-primary-900/10 px-5 py-4">
+        <form method="post" action="/doctors/order-catalog/items/create/">
+          <input type="hidden" name="csrfmiddlewaretoken" value="a3cKEyV7Y8doqPoibxWQqqxarKD4gULxCnDXyEjYCtBl3ZytoLAHIO9g6xQcHxdf">
+          <input type="hidden" name="clinic_id" value="1">
+          <input type="hidden" name="category" value="PROCEDURE">
+          <div class="flex gap-3 items-end flex-wrap sm:flex-nowrap">
+            <div class="flex-1 min-w-0">
+              <label class="block text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">اسم الإجراء <span class="text-red-500">*</span></label>
+              <input type="text" name="name" x-ref="newProcName" required
+                     placeholder="مثال: تخطيط قلب، تضميد جرح، خياطة"
+                     class="ws-input">
+            </div>
+            <button type="submit"
+                    class="flex-shrink-0 inline-flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all shadow-sm whitespace-nowrap">
+              <i class="fa-solid fa-plus text-xs"></i> إضافة إجراء
+            </button>
+          </div>
+        </form>
+      </div>
+      
+
+      
+      <div class="px-5 py-10 text-center">
+        <div class="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center mx-auto mb-3">
+          <i class="fa-solid fa-stethoscope text-orange-300 dark:text-orange-600 text-xl"></i>
+        </div>
+        <p class="text-sm font-medium text-gray-600 dark:text-slate-300">لا توجد إجراءات بعد.</p>
+        <p class="text-xs text-gray-400 dark:text-slate-500 mt-1">أضف إجراءات مثل تخطيط القلب، تضميد الجرح، الخياطة...</p>
+      </div>
+      
+    </div>
+  </div><!-- /procedure tab -->
+
+</div><!-- /Alpine root -->
+
+            </main>
+
+            <!-- Footer -->
+            <footer class="hidden md:block bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 py-4">
+                <div class="px-8 text-sm text-gray-400 dark:text-gray-500">
+                    &copy; 2026 MedPortal &mdash; Doctor Portal
+                </div>
+        </footer>
+    </div><!-- /md:ml-64 -->
+
+    <!-- ═══════════════ MOBILE NAV ═══════════════ -->
+    <nav class="mobile-nav-glass md:hidden">
+        <a href="/doctors/" class="mob-item ">
+            <i class="fa-solid fa-house-medical"></i>
+            <span>لوحة التحكم</span>
+        </a>
+        <a href="/doctors/appointments/" class="mob-item ">
+            <i class="fa-regular fa-calendar-check"></i>
+            <span>المواعيد</span>
+        </a>
+        <a href="/doctors/patients/" class="mob-item ">
+            <i class="fa-solid fa-users"></i>
+            <span>مرضاي</span>
+        </a>
+        <a href="/doctors/my-schedule/" class="mob-item ">
+            <i class="fa-solid fa-calendar-week"></i>
+            <span>جدولي</span>
+        </a>
+        <a href="/doctors/invites/" class="mob-item " style="position:relative;">
+            <i class="fa-regular fa-envelope"></i>
+            <span>الدعوات</span>
+            
+        </a>
+        <a href="/appointments/notifications/doctor/" class="mob-item " style="position:relative;">
+            <i class="fa-regular fa-bell"></i>
+            <span>الإشعارات</span>
+            
+        </a>
+    </nav>
+
+    <!-- ═══════════════ SCRIPTS ═══════════════ -->
+    <script>
+        // Theme toggle (sidebar desktop)
+        document.addEventListener('DOMContentLoaded', () => {
+            const isDark = document.documentElement.classList.contains('dark');
+
+            ['theme-toggle', 'theme-toggle-mobile'].forEach(id => {
+                const btn = document.getElementById(id);
+                if (!btn) return;
+                if (isDark) btn.classList.add('is-dark');
+                btn.addEventListener('click', () => {
+                    const dark = document.documentElement.classList.toggle('dark');
+                    localStorage.setItem('theme', dark ? 'dark' : 'light');
+                    document.querySelectorAll('.theme-toggle').forEach(b => b.classList.toggle('is-dark', dark));
+                });
+            });
+        });
+
+        // Close sidebar user menu on outside click
+        document.addEventListener('click', function(e) {
+            const menu = document.getElementById('sidebarUserMenu');
+            if (menu && !menu.contains(e.target)) menu.classList.remove('open');
+        });
+
+        // Page transition
+        (function() {
+            const bar = document.getElementById('ptBar');
+            const skel = document.getElementById('ptSkeleton');
+            if (!bar || !skel) return;
+            document.addEventListener('click', function(e) {
+                const link = e.target.closest('a');
+                if (!link || e.defaultPrevented || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+                const href = link.getAttribute('href');
+                if (!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('mailto:') || link.target === '_blank' || link.hasAttribute('download')) return;
+                try {
+                    const t = new URL(link.href, location.origin);
+                    const c = new URL(location.href);
+                    if (t.pathname === c.pathname && t.search === c.search && t.hash) return;
+                } catch(e) {}
+                bar.classList.add('active');
+                skel.classList.add('active');
+            });
+            window.addEventListener('pageshow', () => { bar.classList.remove('active'); skel.classList.remove('active'); });
+            window.addEventListener('load', () => { setTimeout(() => { bar.classList.remove('active'); skel.classList.remove('active'); }, 100); });
+        })();
+    </script>
+
+    <!-- ═══════════════ MULTI-PATIENT WORKSPACE (MPW) ═══════════════ -->
+    <script>
+    (function () {
+        'use strict';
+
+        var MPW_KEY = 'mpw_open_patients';
+        var MPW_PATIENTS_URL = "/doctors/patients/";
+
+        // ── Storage helpers ────────────────────────────────────────────
+        window.mpwGetAll = function () {
+            try { return JSON.parse(localStorage.getItem(MPW_KEY) || '[]'); } catch (e) { return []; }
+        };
+
+        window.mpwSaveAll = function (list) {
+            localStorage.setItem(MPW_KEY, JSON.stringify(list));
+            window.dispatchEvent(new CustomEvent('mpw-updated'));
+        };
+
+        window.mpwRegister = function (patient) {
+            var list = mpwGetAll();
+            var idx = list.findIndex(function (p) { return p.id === patient.id; });
+            if (idx >= 0) {
+                // Preserve name/phone even on refresh; update activeTab
+                list[idx] = Object.assign({}, list[idx], patient);
+            } else {
+                list.push(patient);
+            }
+            mpwSaveAll(list);
+        };
+
+        window.mpwUpdateTab = function (patientId, tabId) {
+            var list = mpwGetAll();
+            var p = list.find(function (x) { return x.id === patientId; });
+            if (p) { p.activeTab = tabId; mpwSaveAll(list); }
+        };
+
+        window.mpwClose = function (patientId) {
+            mpwSaveAll(mpwGetAll().filter(function (p) { return p.id !== patientId; }));
+        };
+
+        // ── HTML escape utility ────────────────────────────────────────
+        function esc(str) {
+            return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        // ── Render open patients list in sidebar ───────────────────────
+        window.mpwRender = function () {
+            var container = document.getElementById('mpw-open-patients');
+            var badge = document.getElementById('mpw-count-badge');
+            if (!container) return;
+
+            var patients = mpwGetAll();
+            var currentId = window.CURRENT_PATIENT_ID || null;
+
+            // Update badge
+            if (badge) {
+                if (patients.length > 0) {
+                    badge.style.display = 'flex';
+                    badge.textContent = patients.length;
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+
+            if (patients.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = patients.map(function (p) {
+                var isActive = p.id === currentId;
+                var wsUrl = MPW_PATIENTS_URL + p.id + '/?tab=' + (p.activeTab || 'overview');
+                var initial = (p.name || '?')[0].toUpperCase();
+                var activeClass = isActive ? ' mpw-active' : '';
+                var activeTextClass = isActive ? ' mpw-active-text' : '';
+                return '<div class="mpw-item' + activeClass + '" data-pid="' + p.id + '">' +
+                    '<div class="mpw-avatar">' + esc(initial) + '</div>' +
+                    '<a href="' + esc(wsUrl) + '" class="flex-1 min-w-0" style="text-decoration:none;overflow:hidden;">' +
+                        '<p class="mpw-name' + activeTextClass + '">' + esc(p.name) + '</p>' +
+                        '<p class="mpw-phone">' + esc(p.phone || '') + '</p>' +
+                    '</a>' +
+                    '<button class="mpw-close-btn" onclick="mpwHandleClose(' + p.id + ', event)" title="Close workspace" type="button">' +
+                        '<i class="fa-solid fa-xmark"></i>' +
+                    '</button>' +
+                '</div>';
+            }).join('');
+        };
+
+        // ── Close button handler ───────────────────────────────────────
+        window.mpwHandleClose = function (patientId, event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            var wasActive = (patientId === window.CURRENT_PATIENT_ID);
+
+            // Warn about unsaved changes only for the currently open workspace
+            if (wasActive && window.wsFormDirty) {
+                if (!confirm('You have unsaved changes. Close this patient workspace?')) return;
+            }
+
+            mpwClose(patientId);
+            mpwRender();
+
+            if (wasActive) {
+                // Navigate to next open patient or back to patients list
+                var remaining = mpwGetAll();
+                if (remaining.length > 0) {
+                    var next = remaining[remaining.length - 1];
+                    window.location.href = MPW_PATIENTS_URL + next.id + '/?tab=' + (next.activeTab || 'overview');
+                } else {
+                    window.location.href = MPW_PATIENTS_URL;
+                }
+            }
+        };
+
+        // ── Init ───────────────────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', function () {
+            mpwRender();
+        });
+
+        // Re-render when another tab/page updates the list
+        window.addEventListener('storage', function (e) {
+            if (e.key === MPW_KEY) mpwRender();
+        });
+
+        // Re-render after any mpwSaveAll() call on this page
+        window.addEventListener('mpw-updated', function () {
+            mpwRender();
+        });
+
+    })();
+    </script>
+
+    
+</body>
+</html>

@@ -1,9 +1,9 @@
 {% if drugs %}
 <ul class="divide-y divide-gray-100 dark:divide-slate-700/60 max-h-56 overflow-y-auto">
   {% for drug in drugs %}
-  <li>
+  <li class="flex items-stretch gap-1 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors group">
     <button type="button"
-            class="w-full text-left px-3 py-2.5 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors flex items-start gap-2 group"
+            class="flex-1 text-left px-3 py-2.5 flex items-start gap-2 min-w-0"
             @click="pickDrug('{{ drug.generic_name|escapejs }}', '{{ drug.commercial_name|escapejs }}', catalogMode)">
       <i class="fa-solid fa-pills text-xs text-primary-400 mt-0.5 flex-shrink-0"></i>
       <div class="flex-1 min-w-0">
@@ -24,6 +24,9 @@
         </p>
       </div>
     </button>
+    <div class="flex items-center pr-2">
+      {% include "doctors/partials/favourite_star.html" with drug=drug is_fav=drug.is_favourite %}
+    </div>
   </li>
   {% endfor %}
 </ul>

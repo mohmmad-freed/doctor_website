@@ -1,6 +1,7 @@
 from django.contrib import admin
 from .models import (
     DoctorAvailability,
+    DoctorFavouriteDrug,
     DoctorIntakeFormTemplate,
     DoctorIntakeQuestion,
     DoctorIntakeRule,
@@ -114,6 +115,15 @@ class DoctorIntakeRuleAdmin(admin.ModelAdmin):
     list_display = ["__str__", "operator", "action"]
     list_filter = ["operator", "action"]
     raw_id_fields = ["source_question", "target_question"]
+
+
+@admin.register(DoctorFavouriteDrug)
+class DoctorFavouriteDrugAdmin(admin.ModelAdmin):
+    list_display = ["user", "drug_product", "created_at"]
+    list_filter = ["drug_product__clinic", "created_at"]
+    search_fields = ["user__name", "user__phone", "drug_product__generic_name", "drug_product__commercial_name"]
+    raw_id_fields = ["user", "drug_product"]
+    ordering = ["-created_at"]
 
 
 # ─── Doctor Verification Admin (Dual-Layer) ──────────────────────────────

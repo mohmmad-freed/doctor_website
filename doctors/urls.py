@@ -120,6 +120,8 @@ urlpatterns = [
     path("order-catalog/items/create/", catalog_views.catalog_item_create, name="catalog_item_create"),
     path("order-catalog/items/<int:item_id>/edit/", catalog_views.catalog_item_edit, name="catalog_item_edit"),
     path("order-catalog/items/<int:item_id>/delete/", catalog_views.catalog_item_delete, name="catalog_item_delete"),
+    # --- Favourite drug toggle (HTMX, doctor-scoped) ---
+    path("favourite-drug/toggle/", catalog_views.toggle_favourite_drug, name="favourite_drug_toggle"),
     # --- Order Catalog HTMX search (patient workspace) ---
     path("patients/<int:patient_id>/catalog/drugs/", views.htmx_catalog_drug_search, name="htmx_catalog_drug_search"),
     path("patients/<int:patient_id>/catalog/items/", views.htmx_catalog_nondrug_search, name="htmx_catalog_nondrug_search"),

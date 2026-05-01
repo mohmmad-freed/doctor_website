@@ -1,0 +1,17 @@
+<button type="button"
+        id="fav-star-{{ drug.id }}"
+        hx-post="{% url 'doctors:favourite_drug_toggle' %}"
+        hx-vals='{"drug_id": "{{ drug.id }}"}'
+        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+        hx-target="this"
+        hx-swap="outerHTML"
+        aria-pressed="{% if is_fav %}true{% else %}false{% endif %}"
+        title="{% if is_fav %}{% if IS_RTL %}إزالة من المفضلة{% else %}Remove from favourites{% endif %}{% else %}{% if IS_RTL %}إضافة إلى المفضلة{% else %}Add to favourites{% endif %}{% endif %}"
+        aria-label="{% if is_fav %}{% if IS_RTL %}إزالة من المفضلة{% else %}Remove from favourites{% endif %}{% else %}{% if IS_RTL %}إضافة إلى المفضلة{% else %}Add to favourites{% endif %}{% endif %}"
+        class="favourite-star-btn p-1.5 rounded hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors flex-shrink-0">
+  {% if is_fav %}
+    <i class="fa-solid fa-star text-amber-400 dark:text-amber-300 text-sm"></i>
+  {% else %}
+    <i class="fa-regular fa-star text-gray-300 dark:text-slate-500 hover:text-amber-400 text-sm"></i>
+  {% endif %}
+</button>

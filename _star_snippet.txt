@@ -1,0 +1,14 @@
+<button type="button"
+        id="fav-star-2"
+        hx-post="/doctors/favourite-drug/toggle/"
+        hx-vals='{"drug_id": "2"}'
+        hx-headers='{"X-CSRFToken": "cHh5iUfRO2ZRoxhJAUhRDp6pcRaYuir6ms7UhCUHL0eMyKcbISPfliG3eYRU8FXH"}'
+        hx-swap="outerHTML"
+        aria-pressed="false"
+        title="إضافة إلى المفضلة"
+        aria-label="إضافة إلى المفضلة"
+        class="favourite-star-btn p-1.5 rounded hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors flex-shrink-0">
+  
+    <i class="fa-regular fa-star text-gray-300 dark:text-slate-500 hover:text-amber-400 text-sm"></i>
+  
+</button>

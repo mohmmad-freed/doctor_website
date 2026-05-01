@@ -1,10 +1,13 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.urls import reverse
-from django.db.models import Count
+from django.db.models import Count, Case, When, IntegerField
+from django.http import HttpResponseForbidden, HttpResponseBadRequest
 
 from clinics.models import Clinic, ClinicStaff, DrugFamily, DrugProduct, OrderCatalogItem
+from .models import DoctorFavouriteDrug
 
 
 # -----------------------------------------------------------------------
@@ -72,7 +75,22 @@ def order_catalog(request):
         active_tab = "drugs"
 
     drug_families = list(DrugFamily.objects.filter(clinic=clinic).annotate(product_count=Count("products")))
-    drug_products = list(DrugProduct.objects.filter(clinic=clinic).select_related("family").order_by("generic_name"))
+
+    fav_ids = set(
+        DoctorFavouriteDrug.objects
+        .filter(user=request.user, drug_product__clinic=clinic)
+        .values_list("drug_product_id", flat=True)
+    )
+    fav_rank = Case(When(id__in=fav_ids, then=0), default=1, output_field=IntegerField())
+    drug_products = list(
+        DrugProduct.objects.filter(clinic=clinic)
+        .select_related("family")
+        .annotate(_fav_rank=fav_rank)
+        .order_by("_fav_rank", "generic_name")
+    )
+    for dp in drug_products:
+        dp.is_favourite = dp.id in fav_ids
+
     lab_items = list(OrderCatalogItem.objects.filter(clinic=clinic, category=OrderCatalogItem.Category.LAB))
     radiology_items = list(OrderCatalogItem.objects.filter(clinic=clinic, category=OrderCatalogItem.Category.RADIOLOGY))
     microbiology_items = list(OrderCatalogItem.objects.filter(clinic=clinic, category=OrderCatalogItem.Category.MICROBIOLOGY))
@@ -88,7 +106,42 @@ def order_catalog(request):
         "radiology_items": radiology_items,
         "microbiology_items": microbiology_items,
         "procedure_items": procedure_items,
+        "fav_ids": fav_ids,
         "can_edit": True,
+    })
+
+
+# -----------------------------------------------------------------------
+# Favourite Drug Toggle (HTMX)
+# -----------------------------------------------------------------------
+
+@login_required
+@require_POST
+def toggle_favourite_drug(request):
+    """HTMX endpoint: toggle a drug as favourite for the logged-in doctor."""
+    denied = _doctor_required(request)
+    if denied:
+        return HttpResponseForbidden()
+
+    try:
+        drug_id = int(request.POST.get("drug_id", 0))
+    except (ValueError, TypeError):
+        return HttpResponseBadRequest("invalid drug_id")
+    if not drug_id:
+        return HttpResponseBadRequest("missing drug_id")
+
+    clinic_ids = list(_get_doctor_clinics(request.user).values_list("id", flat=True))
+    drug = get_object_or_404(DrugProduct, id=drug_id, clinic_id__in=clinic_ids)
+
+    obj, created = DoctorFavouriteDrug.objects.get_or_create(
+        user=request.user, drug_product=drug,
+    )
+    if not created:
+        obj.delete()
+    is_fav = created
+
+    return render(request, "doctors/partials/favourite_star.html", {
+        "drug": drug, "is_fav": is_fav,
     })
 
 

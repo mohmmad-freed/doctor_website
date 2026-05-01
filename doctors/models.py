@@ -640,3 +640,40 @@ class DoctorClinicalNoteSettings(models.Model):
     def __str__(self):
         tpl = self.active_template.name if self.active_template else "System Default"
         return f"{self.doctor.name} → {tpl}"
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Doctor Favourite Drugs
+# ──────────────────────────────────────────────────────────────────────────────
+
+class DoctorFavouriteDrug(models.Model):
+    """A doctor's per-clinic favourite drug. Surfaces drugs to the top of pickers."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="favourite_drugs",
+    )
+    drug_product = models.ForeignKey(
+        "clinics.DrugProduct",
+        on_delete=models.CASCADE,
+        related_name="favourited_by",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Doctor Favourite Drug"
+        verbose_name_plural = "Doctor Favourite Drugs"
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "drug_product"],
+                name="unique_doctor_favourite_drug",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["user", "drug_product"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user.name} ★ {self.drug_product.generic_name}"

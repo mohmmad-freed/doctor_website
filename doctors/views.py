@@ -2124,7 +2124,9 @@ def htmx_catalog_drug_search(request, patient_id):
     if not clinic_id:
         return render(request, "doctors/partials/catalog_drug_results.html", {"drugs": []})
 
-    from django.db.models import Q
+    from django.db.models import Q, Case, When, IntegerField
+    from doctors.models import DoctorFavouriteDrug
+
     mode = request.GET.get("mode", "generic")
     qs = DrugProduct.objects.filter(clinic_id=clinic_id, is_active=True).select_related("family")
 
@@ -2136,14 +2138,26 @@ def htmx_catalog_drug_search(request, patient_id):
     if q:
         qs = qs.filter(Q(generic_name__icontains=q) | Q(commercial_name__icontains=q))
 
+    fav_ids = set(
+        DoctorFavouriteDrug.objects
+        .filter(user=request.user, drug_product__clinic_id=clinic_id)
+        .values_list("drug_product_id", flat=True)
+    )
+    fav_rank = Case(When(id__in=fav_ids, then=0), default=1, output_field=IntegerField())
+    qs = qs.annotate(_fav_rank=fav_rank)
+
     if mode == "commercial":
-        drugs = list(qs.order_by("commercial_name", "generic_name")[:60])
+        drugs = list(qs.order_by("_fav_rank", "commercial_name", "generic_name")[:60])
     else:
-        drugs = list(qs.order_by("generic_name")[:60])
+        drugs = list(qs.order_by("_fav_rank", "generic_name")[:60])
+
+    for d in drugs:
+        d.is_favourite = d.id in fav_ids
 
     return render(request, "doctors/partials/catalog_drug_results.html", {
         "drugs": drugs,
         "mode": mode,
+        "fav_ids": fav_ids,
     })
 
 
