@@ -132,11 +132,11 @@
 {% block content %}
 <div dir="{{ DIR }}" class="max-w-3xl mx-auto py-2 pb-24">
 
-  {# ── Back link ── #}
-  <a href="{% url 'secretary:patient_list' %}"
+  {# ── Back link — dynamic (returns to previous page) ── #}
+  <a href="{% url 'secretary:patient_list' %}" data-back
      class="inline-flex items-center gap-2 text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 transition-colors mb-4">
     <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %}"></i>
-    {% trans "قائمة المرضى" %}
+    {% trans "رجوع" %}
   </a>
 
   {# ── Page Header ── #}

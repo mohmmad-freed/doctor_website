@@ -1434,12 +1434,12 @@ def update_appointment_status(request, appointment_id):
     from appointments.services.booking_service import BookingError
 
     appointment = get_object_or_404(Appointment, id=appointment_id, clinic=staff.clinic)
-    new_status = request.POST.get("status", "").strip()
+    new_status = (request.POST.get("new_status") or request.POST.get("status") or "").strip()
     cancellation_reason = request.POST.get("cancellation_reason", "").strip()
 
     error = None
     if not new_status:
-        error = "لم يتم تحديد الحالة الجديدة."
+        error = _("لم يتم تحديد الحالة الجديدة.")
     else:
         try:
             appointment = transition_appointment_status(
@@ -1449,6 +1449,18 @@ def update_appointment_status(request, appointment_id):
             error = e.message
         except Exception as e:
             error = str(e)
+
+    # Non-HTMX submissions (e.g. the "remove from queue" modal form) get a
+    # redirect back to where the secretary was, with a flash message.
+    if request.headers.get("HX-Request") != "true":
+        if error:
+            messages.error(request, error)
+        else:
+            messages.success(request, _("تم تحديث حالة الموعد بنجاح."))
+        next_url = request.POST.get("next") or request.META.get("HTTP_REFERER")
+        if next_url and next_url.startswith("/"):
+            return redirect(next_url)
+        return redirect("secretary:waiting_room")
 
     valid_transitions = get_valid_transitions(appointment.status)
     terminal_statuses = ["CANCELLED", "NO_SHOW", "COMPLETED"]
@@ -2001,10 +2013,21 @@ def create_new_patient(request):
                 )
                 return redirect("secretary:patient_detail", patient_id=existing_user.id)
             else:
-                # Offer to register existing user into clinic
+                # Existing user (may already hold DOCTOR/MAIN_DOCTOR/SECRETARY roles
+                # — preserve them and just append PATIENT). Do NOT strip any role.
+                existing_roles = list(existing_user.roles or [])
+                if "PATIENT" not in existing_roles:
+                    existing_roles.append("PATIENT")
+                    existing_user.roles = existing_roles
+                    existing_user.save(update_fields=["roles"])
+
+                from patients.services import ensure_patient_profile
+                ensure_patient_profile(existing_user)
+
                 messages.info(
                     request,
-                    f"يوجد حساب بهذا الرقم ({existing_user.name}). تم تسجيله في عيادتك."
+                    _("يوجد حساب بهذا الرقم (%(name)s). تم تسجيله في عيادتك.")
+                    % {"name": existing_user.name}
                 )
                 # Register existing patient into clinic
                 file_number = _generate_file_number(clinic)
@@ -2264,7 +2287,6 @@ def create_appointment(request):
             time_str = request.POST.get("appointment_time", "").strip()
             reason = request.POST.get("reason", "").strip()
             notes_text = request.POST.get("notes", "").strip()
-            is_walkin = request.POST.get("is_walkin") == "1"
 
             if not all([doctor_id, type_id, date_str, time_str]):
                 messages.error(request, _("يرجى ملء جميع الحقول المطلوبة."))
@@ -2295,10 +2317,6 @@ def create_appointment(request):
                 messages.error(request, _("يرجى اختيار مريض أو إدخال رقم هاتف صحيح."))
                 return redirect("secretary:create_appointment")
 
-            initial_status = (
-                Appointment.Status.CHECKED_IN if is_walkin else Appointment.Status.CONFIRMED
-            )
-
             appointment = secretary_book_appointment(
                 patient=patient,
                 doctor_id=doctor_id,
@@ -2308,14 +2326,11 @@ def create_appointment(request):
                 appointment_time=appt_time,
                 reason=reason,
                 notes=notes_text,
-                status=initial_status,
+                status=Appointment.Status.CONFIRMED,
                 created_by=request.user,
             )
 
-            if is_walkin:
-                messages.success(request, _("تم تسجيل وصول %(name)s (حضور مباشر) بنجاح.") % {"name": patient.name})
-            else:
-                messages.success(request, _("تم حجز موعد %(name)s بنجاح.") % {"name": patient.name})
+            messages.success(request, _("تم حجز موعد %(name)s بنجاح.") % {"name": patient.name})
             return redirect("secretary:appointment_detail", appointment_id=appointment.id)
 
         except (BookingError, SlotUnavailableError) as e:
@@ -2335,6 +2350,89 @@ def create_appointment(request):
         "prefill_time": prefill_time,
         "prefill_patient_id": prefill_patient_id,
         "steps": [(_("المريض"), 1), (_("الموعد"), 2), (_("التأكيد"), 3)],
+    })
+
+
+@login_required
+def register_walk_in(request):
+    """
+    Secretary registers a walk-in patient: today/now, status CHECKED_IN,
+    is_walk_in=True. Patient is added to the waiting-room queue immediately.
+    """
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden(_("هذه الصفحة متاحة للسكرتارية فقط."))
+
+    clinic = staff.clinic
+    from clinics.models import ClinicStaff as CS
+    doctors_qs = (
+        CS.objects.filter(clinic=clinic, role="DOCTOR", is_active=True)
+        .select_related("user")
+        .order_by("user__name")
+    )
+    doctor_users = [s.user for s in doctors_qs]
+    valid_doctor_ids = {u.id for u in doctor_users}
+
+    if request.method == "POST":
+        from secretary.services import register_walk_in as svc_register_walk_in
+        from appointments.services.booking_service import BookingError, SlotUnavailableError
+
+        try:
+            patient_id = request.POST.get("patient_id", "").strip()
+            doctor_id = int(request.POST.get("doctor_id") or 0)
+            type_id = int(request.POST.get("appointment_type_id") or 0)
+            reason = request.POST.get("reason", "").strip()
+            notes_text = request.POST.get("notes", "").strip()
+            override_same_day = request.POST.get("override_same_day_conflict") == "1"
+
+            if not patient_id:
+                messages.error(request, _("يرجى اختيار المريض."))
+                return redirect("secretary:register_walk_in")
+            if not doctor_id or doctor_id not in valid_doctor_ids:
+                messages.error(request, _("يرجى اختيار طبيب من العيادة."))
+                return redirect("secretary:register_walk_in")
+            if not type_id:
+                messages.error(request, _("يرجى اختيار نوع الموعد."))
+                return redirect("secretary:register_walk_in")
+
+            try:
+                patient = User.objects.get(id=patient_id)
+            except User.DoesNotExist:
+                messages.error(request, _("المريض المحدد غير موجود."))
+                return redirect("secretary:register_walk_in")
+
+            from patients.services import ensure_patient_profile
+            ensure_patient_profile(patient)
+
+            svc_register_walk_in(
+                patient=patient,
+                doctor_id=doctor_id,
+                clinic_id=clinic.id,
+                appointment_type_id=type_id,
+                created_by=request.user,
+                reason=reason,
+                notes=notes_text,
+                override_same_day_conflict=override_same_day,
+            )
+
+            messages.success(
+                request,
+                _("تم تسجيل وصول %(name)s (حضور مباشر) — أُضيف إلى طابور الانتظار.")
+                % {"name": patient.name},
+            )
+            return redirect("secretary:waiting_room")
+
+        except (BookingError, SlotUnavailableError) as e:
+            messages.error(request, e.message)
+        except Exception as e:
+            messages.error(request, _("حدث خطأ: %(error)s") % {"error": e})
+
+    appointment_types = AppointmentType.objects.filter(clinic=clinic, is_active=True)
+
+    return render(request, "secretary/appointments/walk_in.html", {
+        "clinic": clinic,
+        "doctor_users": doctor_users,
+        "appointment_types": appointment_types,
     })
 
 
@@ -2460,6 +2558,9 @@ def cancel_appointment(request, appointment_id):
     if not staff:
         return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
+    is_htmx = request.headers.get("HX-Request") == "true"
+    htmx_target_patient_id = request.POST.get("walkin_patient_id", "").strip()
+
     if request.method == "POST":
         from secretary.services import transition_appointment_status
         from appointments.services.booking_service import BookingError
@@ -2472,16 +2573,60 @@ def cancel_appointment(request, appointment_id):
                 cancellation_reason=reason,
                 actor=request.user,
             )
-            messages.success(request, _("تم إلغاء الموعد بنجاح."))
+            if not is_htmx:
+                messages.success(request, _("تم إلغاء الموعد بنجاح."))
         except BookingError as e:
+            if is_htmx:
+                return HttpResponse(e.message, status=400)
             messages.error(request, e.message)
         except Exception as e:
+            if is_htmx:
+                return HttpResponse(str(e), status=500)
             messages.error(request, _("حدث خطأ أثناء الإلغاء: %(error)s") % {"error": e})
+
+    if is_htmx and htmx_target_patient_id:
+        # Re-render the walk-in patient appointments partial so the list refreshes
+        return _render_walkin_patient_appointments(request, staff, htmx_target_patient_id)
 
     next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or ""
     if next_url.startswith("/"):
         return redirect(next_url)
     return redirect("secretary:appointments")
+
+
+def _render_walkin_patient_appointments(request, staff, patient_id):
+    """Helper: render the walk-in future-appointments partial for a given patient."""
+    from secretary.services import get_patient_future_appointments
+
+    try:
+        patient = User.objects.get(id=patient_id)
+    except (User.DoesNotExist, ValueError):
+        return HttpResponse("")
+
+    future_appts = list(get_patient_future_appointments(patient=patient, clinic=staff.clinic))
+    today = date.today()
+    today_appts = [a for a in future_appts if a.appointment_date == today]
+    later_appts = [a for a in future_appts if a.appointment_date > today]
+
+    return render(request, "secretary/htmx/walkin_patient_appointments.html", {
+        "patient": patient,
+        "today_appts": today_appts,
+        "later_appts": later_appts,
+        "has_today_conflict": bool(today_appts),
+    })
+
+
+@login_required
+def patient_walkin_appointments_htmx(request):
+    """HTMX endpoint: list a patient's future appointments for the walk-in flow."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+
+    patient_id = request.GET.get("patient_id", "").strip()
+    if not patient_id:
+        return HttpResponse("")
+    return _render_walkin_patient_appointments(request, staff, patient_id)
 
 
 # ============================================

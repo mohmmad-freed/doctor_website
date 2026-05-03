@@ -10,6 +10,7 @@ from datetime import date as date_cls
 
 from django.db import transaction
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 from appointments.models import Appointment, AppointmentType
 from appointments.services.booking_service import BookingError, SlotUnavailableError
@@ -118,6 +119,7 @@ def secretary_book_appointment(
     notes: str = "",
     status: str = Appointment.Status.CONFIRMED,
     created_by,
+    is_walk_in: bool = False,
 ) -> "Appointment":
     """
     Create an appointment on behalf of a patient, from the secretary's interface.
@@ -128,23 +130,9 @@ def secretary_book_appointment(
     - Allows CHECKED_IN as initial status (walk-in registrations).
     - Sets created_by to the secretary user.
 
-    Args:
-        patient:               The patient User instance.
-        doctor_id:             Doctor's user PK.
-        clinic_id:             Clinic PK.
-        appointment_type_id:   AppointmentType PK.
-        appointment_date:      date object.
-        appointment_time:      time object.
-        reason:                Optional reason for visit.
-        notes:                 Optional internal notes.
-        status:                Initial status (default CONFIRMED, can be CHECKED_IN).
-        created_by:            The secretary User who created this.
-
-    Returns:
-        The created Appointment.
-
-    Raises:
-        BookingError / SlotUnavailableError on validation or conflict.
+    Walk-ins (is_walk_in=True) skip the slot-conflict check entirely and don't
+    block other appointments on the same slot — they live in the waiting queue,
+    not on the booked-slot grid.
     """
     from clinics.models import Clinic, ClinicStaff
 
@@ -174,6 +162,10 @@ def secretary_book_appointment(
     if not is_staff and not is_owner:
         raise BookingError("الطبيب المحدد غير نشط في هذه العيادة.")
 
+    # 4b. Doctor cannot be booked as their own patient
+    if patient.id == doctor_id:
+        raise BookingError(_("لا يمكن حجز موعد للطبيب مع نفسه. الرجاء اختيار طبيب آخر."))
+
     # 5. Appointment type
     try:
         appt_type = AppointmentType.objects.get(
@@ -183,26 +175,30 @@ def secretary_book_appointment(
         raise BookingError("نوع الموعد المحدد غير موجود أو غير مفعّل في هذه العيادة.")
 
     # 6. Slot conflict check with row-level lock
+    # Walk-ins are excluded from both sides: they don't reserve a slot, and an
+    # existing walk-in shouldn't block a real booking (or another walk-in).
     with transaction.atomic():
-        conflict = (
-            Appointment.objects.select_for_update()
-            .filter(
-                doctor_id=doctor_id,
-                appointment_date=appointment_date,
-                appointment_time=appointment_time,
-                status__in=[
-                    Appointment.Status.PENDING,
-                    Appointment.Status.CONFIRMED,
-                    Appointment.Status.CHECKED_IN,
-                    Appointment.Status.IN_PROGRESS,
-                ],
+        if not is_walk_in:
+            conflict = (
+                Appointment.objects.select_for_update()
+                .filter(
+                    doctor_id=doctor_id,
+                    appointment_date=appointment_date,
+                    appointment_time=appointment_time,
+                    status__in=[
+                        Appointment.Status.PENDING,
+                        Appointment.Status.CONFIRMED,
+                        Appointment.Status.CHECKED_IN,
+                        Appointment.Status.IN_PROGRESS,
+                    ],
+                    is_walk_in=False,
+                )
+                .exists()
             )
-            .exists()
-        )
-        if conflict:
-            raise SlotUnavailableError(
-                "هذا الوقت محجوز بالفعل لدى هذا الطبيب. يرجى اختيار وقت آخر."
-            )
+            if conflict:
+                raise SlotUnavailableError(
+                    "هذا الوقت محجوز بالفعل لدى هذا الطبيب. يرجى اختيار وقت آخر."
+                )
 
         appointment = Appointment.objects.create(
             patient=patient,
@@ -215,6 +211,113 @@ def secretary_book_appointment(
             reason=reason,
             notes=notes,
             created_by=created_by,
+            is_walk_in=is_walk_in,
         )
 
     return appointment
+
+
+def register_walk_in(
+    *,
+    patient,
+    doctor_id: int,
+    clinic_id: int,
+    appointment_type_id: int,
+    created_by,
+    reason: str = "",
+    notes: str = "",
+    override_same_day_conflict: bool = False,
+) -> "Appointment":
+    """
+    Register a walk-in patient: appointment for today/now, status CHECKED_IN,
+    is_walk_in=True. Patient is added to the waiting-room queue immediately.
+
+    Guards:
+    - Hard block if the patient is already actively in today's walk-in queue.
+    - Block (overridable) if the patient has an active booked appointment today.
+      Future-day bookings never block — they're informational.
+    """
+    today = date_cls.today()
+
+    # Hard block: patient already in walk-in queue today
+    already_in_queue = Appointment.objects.filter(
+        clinic_id=clinic_id,
+        patient=patient,
+        is_walk_in=True,
+        appointment_date=today,
+        status__in=[
+            Appointment.Status.CHECKED_IN,
+            Appointment.Status.IN_PROGRESS,
+        ],
+    ).exists()
+    if already_in_queue:
+        raise BookingError(
+            _("هذا المريض موجود بالفعل في طابور الانتظار كحضور مباشر.")
+        )
+
+    # Soft block: patient has a booked (non-walk-in) appointment today
+    if not override_same_day_conflict:
+        has_today_booked = Appointment.objects.filter(
+            clinic_id=clinic_id,
+            patient=patient,
+            appointment_date=today,
+            is_walk_in=False,
+            status__in=[
+                Appointment.Status.PENDING,
+                Appointment.Status.CONFIRMED,
+                Appointment.Status.CHECKED_IN,
+                Appointment.Status.IN_PROGRESS,
+            ],
+        ).exists()
+        if has_today_booked:
+            raise BookingError(
+                _(
+                    "لهذا المريض موعد محجوز اليوم. يرجى إلغاؤه أو تأكيد التسجيل "
+                    "كحضور مباشر إضافي."
+                )
+            )
+
+    now_local = timezone.localtime()
+    now_time = now_local.time().replace(second=0, microsecond=0)
+
+    appointment = secretary_book_appointment(
+        patient=patient,
+        doctor_id=doctor_id,
+        clinic_id=clinic_id,
+        appointment_type_id=appointment_type_id,
+        appointment_date=today,
+        appointment_time=now_time,
+        reason=reason,
+        notes=notes,
+        status=Appointment.Status.CHECKED_IN,
+        created_by=created_by,
+        is_walk_in=True,
+    )
+
+    if appointment.checked_in_at is None:
+        appointment.checked_in_at = timezone.now()
+        appointment.save(update_fields=["checked_in_at", "updated_at"])
+
+    return appointment
+
+
+def get_patient_future_appointments(*, patient, clinic):
+    """
+    Return active future appointments (today and beyond) for this patient at
+    this clinic. Used by the walk-in registration flow to surface conflicts
+    and let the secretary cancel any of them.
+    """
+    today = date_cls.today()
+    return (
+        Appointment.objects.filter(
+            clinic=clinic,
+            patient=patient,
+            appointment_date__gte=today,
+            status__in=[
+                Appointment.Status.PENDING,
+                Appointment.Status.CONFIRMED,
+            ],
+        )
+        .select_related("doctor", "appointment_type")
+        .order_by("appointment_date", "appointment_time")
+    )

@@ -9,10 +9,10 @@
   {# ── Header ── #}
   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 print:hidden">
     <div class="flex items-center gap-4">
-      <a href="{% url 'secretary:reports_index' %}"
-         aria-label="العودة إلى التقارير"
+      <a href="{% url 'secretary:reports_index' %}" data-back
+         aria-label="{% trans 'رجوع' %}"
          class="p-2 rounded-xl text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-        <i class="fa-solid fa-arrow-right"></i>
+        <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %}"></i>
       </a>
       <div>
         <h1 class="text-xl font-bold text-gray-900 dark:text-white">{% trans "تقرير الغياب والإلغاء" %}</h1>

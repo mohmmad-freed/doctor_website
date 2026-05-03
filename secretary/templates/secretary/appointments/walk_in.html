@@ -1,0 +1,283 @@
+{% extends "secretary/base_secretary.html" %}
+{% load i18n %}
+{% block title %}{% trans "تسجيل حضور مباشر" %}{% endblock %}
+
+{% block extra_css %}
+<style>
+  #patient-search-results .result-row:hover { background: #fef3c7; cursor: pointer; }
+  .dark #patient-search-results .result-row:hover { background: rgba(245,158,11,0.1); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+
+  {# ── Header ── #}
+  <div class="flex items-center gap-3">
+    <div class="w-11 h-11 rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400 flex-shrink-0">
+      <i class="fa-solid fa-person-walking-arrow-right text-lg"></i>
+    </div>
+    <div class="flex-1 min-w-0">
+      <h1 class="text-xl font-bold text-gray-900 dark:text-white">{% trans "تسجيل حضور مباشر" %}</h1>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+        {% trans "للمريض الذي وصل للعيادة بدون حجز مسبق — سيُضاف فوراً إلى طابور الانتظار." %}
+      </p>
+    </div>
+  </div>
+
+  {# ── Now indicator ── #}
+  <div class="flex items-center gap-3 p-4 rounded-2xl border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-900/10">
+    <i class="fa-solid fa-clock text-amber-600 dark:text-amber-400"></i>
+    <div class="flex-1">
+      <div class="text-xs text-amber-700/70 dark:text-amber-300/70 font-semibold uppercase tracking-wide">{% trans "وقت التسجيل" %}</div>
+      <div class="text-sm font-bold text-gray-900 dark:text-gray-100">
+        {% trans "الآن" %} — <span id="live-date"></span> · <span class="font-mono" id="live-time"></span>
+      </div>
+    </div>
+  </div>
+
+  {# ── Form ── #}
+  <form method="post" id="walkin-form" class="space-y-5">
+    {% csrf_token %}
+    <input type="hidden" name="patient_id" id="hidden-patient-id" value="">
+
+    {# ── Patient ── #}
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-5 space-y-4">
+      <h2 class="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+        <i class="fa-solid fa-user me-1.5"></i> {% trans "المريض" %}
+      </h2>
+
+      {# Selected patient card (shown after selection) #}
+      <div id="selected-patient-card" class="hidden p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-full bg-amber-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0" id="selected-patient-initial">أ</div>
+          <div class="flex-1 min-w-0">
+            <p class="font-bold text-gray-800 dark:text-gray-100 text-sm" id="selected-patient-name"></p>
+            <p class="text-xs text-gray-500 dark:text-gray-400" id="selected-patient-phone" dir="ltr"></p>
+          </div>
+          <button type="button" onclick="clearPatient()"
+                  class="text-xs text-red-500 hover:text-red-700 font-semibold">{% trans "تغيير" %}</button>
+        </div>
+      </div>
+
+      {# Search input #}
+      <div id="patient-search-section">
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
+          {% trans "بحث عن مريض" %} <span class="text-red-500">*</span>
+        </label>
+        <input type="text" id="patient-search-input" placeholder="{% trans 'ابحث بالاسم أو رقم الهاتف...' %}"
+               autocomplete="off"
+               class="w-full text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500 transition"
+               hx-get="{% url 'secretary:patient_search' %}"
+               hx-trigger="keyup changed delay:350ms"
+               hx-target="#patient-search-results"
+               name="q">
+        <div id="patient-search-results" class="mt-2 rounded-xl border border-gray-200 dark:border-slate-600 overflow-hidden"></div>
+        <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
+          {% trans "المريض غير موجود في النظام؟" %}
+          <a href="{% url 'secretary:create_new_patient' %}" target="_blank" class="text-amber-600 dark:text-amber-400 hover:underline font-semibold">
+            {% trans "سجّل مريضاً جديداً" %}
+          </a>
+        </p>
+      </div>
+    </div>
+
+    {# ── Patient's existing future appointments (loaded via HTMX after selection) ── #}
+    <div id="walkin-future-appts" class="empty:hidden"></div>
+
+    {# ── Doctor + Type ── #}
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-5 space-y-4">
+      <h2 class="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+        <i class="fa-solid fa-stethoscope me-1.5"></i> {% trans "تفاصيل الزيارة" %}
+      </h2>
+
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
+          {% trans "الطبيب" %} <span class="text-red-500">*</span>
+        </label>
+        <select name="doctor_id" id="doctor-select" required
+                hx-get="{% url 'secretary:doctor_types_htmx' %}"
+                hx-trigger="change"
+                hx-target="#appt-type-container"
+                hx-include="[name='doctor_id']"
+                hx-swap="innerHTML"
+                class="w-full text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500 transition">
+          <option value="">— {% trans "اختر الطبيب" %} —</option>
+          {% for doc in doctor_users %}
+          <option value="{{ doc.id }}">{{ doc.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
+          {% trans "نوع الموعد" %} <span class="text-red-500">*</span>
+        </label>
+        <div id="appt-type-container">
+          <select name="appointment_type_id" required
+                  class="w-full text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500 transition">
+            <option value="">— {% trans "اختر الطبيب أولاً" %} —</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    {# ── Optional notes ── #}
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-5 space-y-4">
+      <h2 class="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+        <i class="fa-solid fa-clipboard me-1.5"></i> {% trans "ملاحظات (اختياري)" %}
+      </h2>
+
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">{% trans "سبب الزيارة" %}</label>
+        <textarea name="reason" rows="2" placeholder="{% trans 'سبب الزيارة...' %}"
+                  class="w-full text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500 transition resize-none"></textarea>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">{% trans "ملاحظات داخلية" %}</label>
+        <textarea name="notes" rows="2" placeholder="{% trans 'ملاحظات للطاقم...' %}"
+                  class="w-full text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500 transition resize-none"></textarea>
+      </div>
+    </div>
+
+    {# ── Actions ── #}
+    <div class="flex items-center justify-between gap-3">
+      <a href="{% url 'secretary:waiting_room' %}" data-back
+         class="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-300 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+        {% trans "إلغاء" %}
+      </a>
+      <button type="submit" id="walkin-submit" disabled
+              class="px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-95 text-white text-sm font-bold transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+        <i class="fa-solid fa-person-walking-arrow-right me-1.5"></i> {% trans "تسجيل الحضور وإضافته للطابور" %}
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var selectedPatient = null;
+var WALKIN_FUTURE_URL = "{% url 'secretary:walkin_patient_appointments_htmx' %}";
+
+function syncDoctorPatientGuard() {
+  // Disable the doctor <option> whose value matches the selected patient id
+  var patientId = document.getElementById('hidden-patient-id').value;
+  var sel = document.getElementById('doctor-select');
+  if (!sel) return;
+  Array.prototype.forEach.call(sel.options, function(opt) {
+    if (!opt.value) return;
+    if (patientId && opt.value === patientId) {
+      opt.disabled = true;
+      if (sel.value === opt.value) sel.value = '';
+    } else {
+      opt.disabled = false;
+    }
+  });
+}
+
+function refreshSubmitState() {
+  var hasPatient = !!document.getElementById('hidden-patient-id').value;
+  var hasDoctor = !!document.getElementById('doctor-select').value;
+  var typeSel = document.querySelector('#appt-type-container select');
+  var hasType = !!(typeSel && typeSel.value);
+
+  // Same-day conflict gating: if the future-appts panel signals a today conflict
+  // and the override checkbox is unchecked, keep submit disabled.
+  var inner = document.getElementById('walkin-future-appts-inner');
+  var hasTodayConflict = inner && inner.getAttribute('data-has-today-conflict') === '1';
+  var override = document.getElementById('override-same-day-checkbox');
+  var overrideChecked = override && override.checked;
+  var conflictBlocks = hasTodayConflict && !overrideChecked;
+
+  document.getElementById('walkin-submit').disabled =
+    !(hasPatient && hasDoctor && hasType) || conflictBlocks;
+}
+
+function loadPatientFutureAppts(patientId) {
+  var container = document.getElementById('walkin-future-appts');
+  if (!container) return;
+  if (!patientId) {
+    container.innerHTML = '';
+    refreshSubmitState();
+    return;
+  }
+  htmx.ajax('GET', WALKIN_FUTURE_URL + '?patient_id=' + encodeURIComponent(patientId), {
+    target: '#walkin-future-appts',
+    swap: 'innerHTML'
+  });
+}
+
+function selectPatient(id, name, phone) {
+  selectedPatient = {id: id, name: name, phone: phone};
+  document.getElementById('hidden-patient-id').value = id;
+  document.getElementById('selected-patient-name').textContent = name;
+  document.getElementById('selected-patient-phone').textContent = phone;
+  document.getElementById('selected-patient-initial').textContent = (name || '?').charAt(0);
+  document.getElementById('selected-patient-card').classList.remove('hidden');
+  document.getElementById('patient-search-section').classList.add('hidden');
+  syncDoctorPatientGuard();
+  loadPatientFutureAppts(id);
+  refreshSubmitState();
+}
+
+function clearPatient() {
+  selectedPatient = null;
+  document.getElementById('hidden-patient-id').value = '';
+  document.getElementById('selected-patient-card').classList.add('hidden');
+  document.getElementById('patient-search-section').classList.remove('hidden');
+  var input = document.getElementById('patient-search-input');
+  input.value = '';
+  document.getElementById('patient-search-results').innerHTML = '';
+  document.getElementById('walkin-future-appts').innerHTML = '';
+  syncDoctorPatientGuard();
+  input.focus();
+  refreshSubmitState();
+}
+
+document.addEventListener('htmx:afterSwap', function(e) {
+  if (e.target.id === 'patient-search-results') {
+    e.target.querySelectorAll('[data-patient-id]').forEach(function(row) {
+      row.removeAttribute('hx-get');
+      row.removeAttribute('hx-target');
+      row.removeAttribute('hx-swap');
+      row.removeAttribute('hx-indicator');
+      htmx.process(row);
+      row.addEventListener('click', function(ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        selectPatient(this.dataset.patientId, this.dataset.patientName, this.dataset.patientPhone);
+      });
+    });
+  }
+  if (e.target.id === 'appt-type-container') {
+    var sel = e.target.querySelector('select');
+    if (sel) sel.addEventListener('change', refreshSubmitState);
+    refreshSubmitState();
+  }
+  if (e.target.id === 'walkin-future-appts') {
+    var override = document.getElementById('override-same-day-checkbox');
+    if (override) override.addEventListener('change', refreshSubmitState);
+    refreshSubmitState();
+  }
+});
+
+document.getElementById('doctor-select').addEventListener('change', refreshSubmitState);
+
+(function liveClock() {
+  var lang = document.documentElement.lang || 'ar';
+  var locale = lang.startsWith('ar') ? 'ar-PS' : 'en-GB';
+  function tick() {
+    var now = new Date();
+    document.getElementById('live-date').textContent = now.toLocaleDateString(locale, {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+    document.getElementById('live-time').textContent = now.toLocaleTimeString(locale, {
+      hour: '2-digit', minute: '2-digit', hour12: false
+    });
+  }
+  tick();
+  setInterval(tick, 30000);
+})();
+</script>
+{% endblock %}

@@ -30,12 +30,21 @@
   #calendar-wrap .fc-col-header-cell { background: #f8fafc; font-size: 0.78rem; font-weight: 700; color: #64748b; }
   .dark #calendar-wrap .fc-col-header-cell { background: #1e293b; color: #94a3b8; }
   #calendar-wrap .fc-timegrid-slot { font-size: 0.72rem; }
-  #calendar-wrap .fc-event {
+  #calendar-wrap .fc-event,
+  #calendar-wrap .fc-timegrid-event,
+  #calendar-wrap .fc-daygrid-event {
     border-radius: 6px !important; font-size: 0.75rem !important;
     font-weight: 600 !important; border: none !important;
     cursor: pointer !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
   }
-  #calendar-wrap .fc-daygrid-event { border-radius: 6px !important; }
+  /* Ensure short-duration events still have enough vertical room
+     so the single-line text isn't cropped or visually overflowing. */
+  #calendar-wrap .fc-timegrid-event,
+  #calendar-wrap .fc-timegrid-event-harness {
+    min-height: 26px !important;
+  }
   #calendar-wrap .fc-day-today { background: rgba(168,85,247,0.04) !important; }
   .dark #calendar-wrap .fc-day-today { background: rgba(168,85,247,0.08) !important; }
   #calendar-wrap .fc-scrollgrid { border-radius: 12px !important; overflow: hidden; }
@@ -43,6 +52,44 @@
   .dark #calendar-wrap .fc-theme-standard td, .dark #calendar-wrap .fc-theme-standard th { border-color: #1e293b; }
   .dark #calendar-wrap .fc-timegrid-axis,
   .dark #calendar-wrap .fc-timegrid-slot-label { color: #64748b; }
+
+  /* Breathing room so text never touches the event edge.
+     FullCalendar sets .fc-event-main to padding:1px on timegrid events — override it. */
+  #calendar-wrap .fc-event .fc-event-main,
+  #calendar-wrap .fc-timegrid-event .fc-event-main,
+  #calendar-wrap .fc-daygrid-event .fc-event-main {
+    padding: 4px 10px !important;
+    box-sizing: border-box !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    overflow: hidden !important;
+    line-height: 1.25 !important;
+    color: #fff !important;
+  }
+  #calendar-wrap .fc-event-inner {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    text-overflow: ellipsis !important;
+    line-height: 1.25 !important;
+  }
+
+  /* Minimum column width — when events overlap FullCalendar shrinks each one;
+     this guarantees each day column stays readable and the grid scrolls
+     horizontally instead of squishing events to unreadable widths. */
+  #calendar-wrap .fc-timegrid-col,
+  #calendar-wrap .fc-col-header-cell {
+    min-width: 120px;
+  }
+
+  /* Allow the time-grid body to scroll sideways when columns overflow */
+  #calendar-wrap .fc-scroller-liquid-absolute,
+  #calendar-wrap .fc-scroller {
+    overflow-x: auto !important;
+  }
 
   /* Event tooltip */
   #event-tooltip {
@@ -235,8 +282,8 @@ document.addEventListener('DOMContentLoaded', function() {
       var time = arg.event.start ?
         arg.event.start.toLocaleTimeString(currentLang, {hour:'2-digit',minute:'2-digit',hour12:false}) : '';
       return {
-        html: '<div class="fc-event-inner p-0.5 overflow-hidden">' +
-              '<span class="font-bold">' + time + '</span> ' +
+        html: '<div class="fc-event-inner">' +
+              '<span style="font-weight:700">' + time + '</span> ' +
               arg.event.extendedProps.patient +
               '</div>'
       };

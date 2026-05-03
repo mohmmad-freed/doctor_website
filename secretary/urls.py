@@ -10,6 +10,7 @@ urlpatterns = [
     # --- Appointment Management ---
     path('appointments/', views.appointments_list, name='appointments'),
     path('appointments/create/', views.create_appointment, name='create_appointment'),
+    path('appointments/walk-in/', views.register_walk_in, name='register_walk_in'),
     path('appointments/<int:appointment_id>/', views.appointment_detail, name='appointment_detail'),
     path('appointments/<int:appointment_id>/edit/', views.edit_appointment, name='edit_appointment'),
     path('appointments/<int:appointment_id>/cancel/', views.cancel_appointment, name='cancel_appointment'),
@@ -66,4 +67,5 @@ urlpatterns = [
     path('htmx/time-slots/', views.get_time_slots_htmx, name='time_slots_htmx'),
     path('htmx/doctor-types/', views.get_doctor_types_htmx, name='doctor_types_htmx'),
     path('htmx/doctor-working-days/', views.doctor_working_days_json, name='doctor_working_days_json'),
+    path('htmx/walkin-patient-appointments/', views.patient_walkin_appointments_htmx, name='walkin_patient_appointments_htmx'),
 ]

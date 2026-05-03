@@ -6,11 +6,11 @@
 {% block content %}
 <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-  {# ── Back link ── #}
-  <a href="{% url 'secretary:patient_list' %}"
+  {# ── Back link — dynamic (returns to previous page) ── #}
+  <a href="{% url 'secretary:patient_list' %}" data-back
      class="inline-flex items-center gap-2 text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 transition-colors">
     <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %}"></i>
-    {% trans "قائمة المرضى" %}
+    {% trans "رجوع" %}
   </a>
 
   {# ── Header ── #}

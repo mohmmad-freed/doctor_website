@@ -26,6 +26,12 @@
         </select>
       </form>
 
+      <a href="{% url 'secretary:register_walk_in' %}"
+         class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold shadow transition-colors"
+         title="{% trans 'تسجيل مريض وصل بدون حجز مسبق' %}">
+        <i class="fa-solid fa-person-walking-arrow-right"></i> {% trans "إضافة حضور مباشر" %}
+      </a>
+
       <a href="{% url 'secretary:checkin_search' %}"
          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold shadow transition-colors">
         <i class="fa-solid fa-user-check"></i> {% trans "تسجيل وصول" %}
@@ -136,4 +142,6 @@
   </div>{# end grid #}
 
 </div>
+
+{% include "secretary/waiting_room/_remove_modal.html" %}
 {% endblock %}

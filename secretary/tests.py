@@ -487,3 +487,454 @@ class SecretaryAppointmentCRUDTests(SecretaryTestBase):
         self.client.get(reverse("secretary:cancel_appointment", args=[appt.id]))
         appt.refresh_from_db()
         self.assertEqual(appt.status, Appointment.Status.CONFIRMED)
+
+
+# ════════════════════════════════════════════════════════════════════
+#  Walk-In Registration
+# ════════════════════════════════════════════════════════════════════
+
+class WalkInRegistrationTests(SecretaryTestBase):
+    """
+    Walk-in flow: today/now, status CHECKED_IN, is_walk_in=True, immediately
+    in the waiting-room queue. Walk-ins must not block (or be blocked by)
+    booked appointments on the same slot.
+    """
+
+    def setUp(self):
+        super().setUp()
+        # Ensure doctor_a has availability for *today*'s weekday so
+        # any same-day booking we test is plausible (not strictly required
+        # by secretary_book_appointment, but mirrors realistic usage).
+        DoctorAvailability.objects.get_or_create(
+            doctor=self.doctor_a, clinic=self.clinic_a,
+            day_of_week=date.today().weekday(),
+            defaults={"start_time": time(0, 0), "end_time": time(23, 59)},
+        )
+
+    # ── Service: register_walk_in ─────────────────────────────────────
+
+    def test_register_walk_in_creates_checked_in_appointment_for_today(self):
+        from secretary.services import register_walk_in
+        appt = register_walk_in(
+            patient=self.patient_a,
+            doctor_id=self.doctor_a.id,
+            clinic_id=self.clinic_a.id,
+            appointment_type_id=self.appt_type_a.id,
+            created_by=self.secretary_a,
+        )
+        self.assertTrue(appt.is_walk_in)
+        self.assertEqual(appt.status, Appointment.Status.CHECKED_IN)
+        self.assertEqual(appt.appointment_date, date.today())
+        self.assertIsNotNone(appt.checked_in_at)
+        self.assertEqual(appt.created_by, self.secretary_a)
+
+    # ── Slot-conflict isolation ───────────────────────────────────────
+
+    def test_walk_in_does_not_block_booked_appointment_at_same_slot(self):
+        """A walk-in already in the queue must not prevent booking the same minute."""
+        from secretary.services import register_walk_in, secretary_book_appointment
+        register_walk_in(
+            patient=self.patient_a,
+            doctor_id=self.doctor_a.id,
+            clinic_id=self.clinic_a.id,
+            appointment_type_id=self.appt_type_a.id,
+            created_by=self.secretary_a,
+        )
+        now_t = timezone.localtime().time().replace(second=0, microsecond=0)
+        # Booking a regular appointment at the exact same slot should succeed.
+        booked = secretary_book_appointment(
+            patient=self.patient_a,
+            doctor_id=self.doctor_a.id,
+            clinic_id=self.clinic_a.id,
+            appointment_type_id=self.appt_type_a.id,
+            appointment_date=date.today(),
+            appointment_time=now_t,
+            created_by=self.secretary_a,
+        )
+        self.assertEqual(booked.status, Appointment.Status.CONFIRMED)
+        self.assertFalse(booked.is_walk_in)
+
+    def test_two_walk_ins_at_same_minute_both_succeed(self):
+        """Walk-ins don't reserve a slot, so two walk-ins for the same doctor
+        at the same minute must both be created."""
+        from secretary.services import register_walk_in
+        a = register_walk_in(
+            patient=self.patient_a, doctor_id=self.doctor_a.id,
+            clinic_id=self.clinic_a.id, appointment_type_id=self.appt_type_a.id,
+            created_by=self.secretary_a,
+        )
+        # second patient
+        patient_2 = User.objects.create_user(
+            phone="0591100099", password="pass1234",
+            name="Patient Two", role="PATIENT", roles=["PATIENT"],
+        )
+        b = register_walk_in(
+            patient=patient_2, doctor_id=self.doctor_a.id,
+            clinic_id=self.clinic_a.id, appointment_type_id=self.appt_type_a.id,
+            created_by=self.secretary_a,
+        )
+        self.assertNotEqual(a.id, b.id)
+        self.assertTrue(a.is_walk_in and b.is_walk_in)
+
+    def test_booked_appointment_blocks_other_booked_appointment(self):
+        """Sanity: the conflict check still works for non-walk-in bookings."""
+        from secretary.services import secretary_book_appointment
+        from appointments.services.booking_service import SlotUnavailableError
+        secretary_book_appointment(
+            patient=self.patient_a,
+            doctor_id=self.doctor_a.id,
+            clinic_id=self.clinic_a.id,
+            appointment_type_id=self.appt_type_a.id,
+            appointment_date=self.next_monday,
+            appointment_time=time(10, 0),
+            created_by=self.secretary_a,
+        )
+        with self.assertRaises(SlotUnavailableError):
+            secretary_book_appointment(
+                patient=self.patient_a,
+                doctor_id=self.doctor_a.id,
+                clinic_id=self.clinic_a.id,
+                appointment_type_id=self.appt_type_a.id,
+                appointment_date=self.next_monday,
+                appointment_time=time(10, 0),
+                created_by=self.secretary_a,
+            )
+
+    # ── View: register_walk_in ────────────────────────────────────────
+
+    def test_walk_in_view_get_renders_template(self):
+        self.client.force_login(self.secretary_a)
+        resp = self.client.get(reverse("secretary:register_walk_in"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, "secretary/appointments/walk_in.html")
+
+    def test_walk_in_view_post_creates_walk_in_and_redirects_to_waiting_room(self):
+        self.client.force_login(self.secretary_a)
+        resp = self.client.post(
+            reverse("secretary:register_walk_in"),
+            {
+                "patient_id": str(self.patient_a.id),
+                "doctor_id": str(self.doctor_a.id),
+                "appointment_type_id": str(self.appt_type_a.id),
+                "reason": "Cough",
+                "notes": "",
+            },
+        )
+        self.assertRedirects(
+            resp, reverse("secretary:waiting_room"),
+            fetch_redirect_response=False,
+        )
+        appt = Appointment.objects.filter(
+            clinic=self.clinic_a, patient=self.patient_a, is_walk_in=True
+        ).first()
+        self.assertIsNotNone(appt)
+        self.assertEqual(appt.status, Appointment.Status.CHECKED_IN)
+        self.assertEqual(appt.appointment_date, date.today())
+
+    def test_walk_in_view_rejects_doctor_from_different_clinic(self):
+        self.client.force_login(self.secretary_a)
+        resp = self.client.post(
+            reverse("secretary:register_walk_in"),
+            {
+                "patient_id": str(self.patient_a.id),
+                "doctor_id": str(self.doctor_b.id),  # foreign clinic
+                "appointment_type_id": str(self.appt_type_a.id),
+            },
+        )
+        self.assertRedirects(
+            resp, reverse("secretary:register_walk_in"),
+            fetch_redirect_response=False,
+        )
+        self.assertFalse(
+            Appointment.objects.filter(patient=self.patient_a, is_walk_in=True).exists()
+        )
+
+    def test_walk_in_view_blocks_non_secretary(self):
+        self.client.force_login(self.patient_a)
+        resp = self.client.get(reverse("secretary:register_walk_in"))
+        self.assertEqual(resp.status_code, 403)
+
+    def test_walk_in_appointment_appears_in_waiting_room_context(self):
+        from secretary.services import register_walk_in
+        register_walk_in(
+            patient=self.patient_a,
+            doctor_id=self.doctor_a.id,
+            clinic_id=self.clinic_a.id,
+            appointment_type_id=self.appt_type_a.id,
+            created_by=self.secretary_a,
+        )
+        self.client.force_login(self.secretary_a)
+        resp = self.client.get(reverse("secretary:waiting_room"))
+        self.assertEqual(resp.status_code, 200)
+        checkedin = resp.context["checkedin_list"]
+        self.assertEqual(len(checkedin), 1)
+        self.assertTrue(checkedin[0]["appt"].is_walk_in)
+
+
+# ════════════════════════════════════════════════════════════════════
+#  Walk-in conflicts & self-booking guard
+# ════════════════════════════════════════════════════════════════════
+
+class WalkInQueueDuplicateTests(SecretaryTestBase):
+    """Hard block: cannot register a walk-in for a patient already in queue."""
+
+    def test_second_walk_in_for_same_patient_is_blocked(self):
+        from secretary.services import register_walk_in
+        from appointments.services.booking_service import BookingError
+
+        register_walk_in(
+            patient=self.patient_a,
+            doctor_id=self.doctor_a.id,
+            clinic_id=self.clinic_a.id,
+            appointment_type_id=self.appt_type_a.id,
+            created_by=self.secretary_a,
+        )
+        with self.assertRaises(BookingError):
+            register_walk_in(
+                patient=self.patient_a,
+                doctor_id=self.doctor_a.id,
+                clinic_id=self.clinic_a.id,
+                appointment_type_id=self.appt_type_a.id,
+                created_by=self.secretary_a,
+            )
+
+    def test_walk_in_after_completed_walk_in_is_allowed(self):
+        from secretary.services import register_walk_in
+        first = register_walk_in(
+            patient=self.patient_a,
+            doctor_id=self.doctor_a.id,
+            clinic_id=self.clinic_a.id,
+            appointment_type_id=self.appt_type_a.id,
+            created_by=self.secretary_a,
+        )
+        first.status = Appointment.Status.COMPLETED
+        first.save(update_fields=["status"])
+
+        # Second one should now succeed (no active queue entry)
+        second = register_walk_in(
+            patient=self.patient_a,
+            doctor_id=self.doctor_a.id,
+            clinic_id=self.clinic_a.id,
+            appointment_type_id=self.appt_type_a.id,
+            created_by=self.secretary_a,
+        )
+        self.assertEqual(second.status, Appointment.Status.CHECKED_IN)
+
+
+class WalkInSameDayBookingTests(SecretaryTestBase):
+    """Same-day conflict: warn unless override flag passed."""
+
+    def test_walk_in_blocked_when_today_booking_exists(self):
+        from secretary.services import register_walk_in
+        from appointments.services.booking_service import BookingError
+
+        Appointment.objects.create(
+            patient=self.patient_a,
+            clinic=self.clinic_a,
+            doctor=self.doctor_a,
+            appointment_type=self.appt_type_a,
+            appointment_date=date.today(),
+            appointment_time=time(14, 0),
+            status=Appointment.Status.CONFIRMED,
+            created_by=self.secretary_a,
+        )
+        with self.assertRaises(BookingError):
+            register_walk_in(
+                patient=self.patient_a,
+                doctor_id=self.doctor_a.id,
+                clinic_id=self.clinic_a.id,
+                appointment_type_id=self.appt_type_a.id,
+                created_by=self.secretary_a,
+            )
+
+    def test_walk_in_allowed_with_override(self):
+        from secretary.services import register_walk_in
+
+        Appointment.objects.create(
+            patient=self.patient_a,
+            clinic=self.clinic_a,
+            doctor=self.doctor_a,
+            appointment_type=self.appt_type_a,
+            appointment_date=date.today(),
+            appointment_time=time(14, 0),
+            status=Appointment.Status.CONFIRMED,
+            created_by=self.secretary_a,
+        )
+        appt = register_walk_in(
+            patient=self.patient_a,
+            doctor_id=self.doctor_a.id,
+            clinic_id=self.clinic_a.id,
+            appointment_type_id=self.appt_type_a.id,
+            created_by=self.secretary_a,
+            override_same_day_conflict=True,
+        )
+        self.assertTrue(appt.is_walk_in)
+        self.assertEqual(appt.status, Appointment.Status.CHECKED_IN)
+
+    def test_walk_in_allowed_when_only_future_day_booking_exists(self):
+        from secretary.services import register_walk_in
+
+        Appointment.objects.create(
+            patient=self.patient_a,
+            clinic=self.clinic_a,
+            doctor=self.doctor_a,
+            appointment_type=self.appt_type_a,
+            appointment_date=date.today() + timedelta(days=3),
+            appointment_time=time(14, 0),
+            status=Appointment.Status.CONFIRMED,
+            created_by=self.secretary_a,
+        )
+        appt = register_walk_in(
+            patient=self.patient_a,
+            doctor_id=self.doctor_a.id,
+            clinic_id=self.clinic_a.id,
+            appointment_type_id=self.appt_type_a.id,
+            created_by=self.secretary_a,
+        )
+        self.assertTrue(appt.is_walk_in)
+
+    def test_cancelled_today_booking_does_not_block(self):
+        from secretary.services import register_walk_in
+
+        Appointment.objects.create(
+            patient=self.patient_a,
+            clinic=self.clinic_a,
+            doctor=self.doctor_a,
+            appointment_type=self.appt_type_a,
+            appointment_date=date.today(),
+            appointment_time=time(14, 0),
+            status=Appointment.Status.CANCELLED,
+            cancellation_reason="test",
+            created_by=self.secretary_a,
+        )
+        appt = register_walk_in(
+            patient=self.patient_a,
+            doctor_id=self.doctor_a.id,
+            clinic_id=self.clinic_a.id,
+            appointment_type_id=self.appt_type_a.id,
+            created_by=self.secretary_a,
+        )
+        self.assertEqual(appt.status, Appointment.Status.CHECKED_IN)
+
+
+class SelfBookingGuardTests(SecretaryTestBase):
+    """A doctor cannot be booked as their own patient (in any flow)."""
+
+    def setUp(self):
+        super().setUp()
+        # Give doctor_a the PATIENT role too — multi-role doctor/patient user
+        self.doctor_a.roles = ["DOCTOR", "PATIENT"]
+        self.doctor_a.save(update_fields=["roles"])
+
+    def test_regular_booking_blocks_self(self):
+        from secretary.services import secretary_book_appointment
+        from appointments.services.booking_service import BookingError
+
+        with self.assertRaises(BookingError):
+            secretary_book_appointment(
+                patient=self.doctor_a,
+                doctor_id=self.doctor_a.id,
+                clinic_id=self.clinic_a.id,
+                appointment_type_id=self.appt_type_a.id,
+                appointment_date=self.next_monday,
+                appointment_time=time(10, 0),
+                status=Appointment.Status.CONFIRMED,
+                created_by=self.secretary_a,
+            )
+
+    def test_walk_in_blocks_self(self):
+        from secretary.services import register_walk_in
+        from appointments.services.booking_service import BookingError
+
+        with self.assertRaises(BookingError):
+            register_walk_in(
+                patient=self.doctor_a,
+                doctor_id=self.doctor_a.id,
+                clinic_id=self.clinic_a.id,
+                appointment_type_id=self.appt_type_a.id,
+                created_by=self.secretary_a,
+            )
+
+    def test_doctor_on_doctor_booking_succeeds(self):
+        """doctor_a (as patient) booked with a different doctor in same clinic."""
+        from secretary.services import secretary_book_appointment
+
+        # Add a second doctor to clinic A
+        other_doctor = User.objects.create_user(
+            phone="0591100099", password="pass1234",
+            name="Dr. Other", role="DOCTOR", roles=["DOCTOR", "PATIENT"],
+        )
+        ClinicStaff.objects.create(
+            clinic=self.clinic_a, user=other_doctor,
+            role="DOCTOR", is_active=True,
+        )
+
+        appt = secretary_book_appointment(
+            patient=self.doctor_a,        # patient = doctor_a
+            doctor_id=other_doctor.id,    # doctor = different user
+            clinic_id=self.clinic_a.id,
+            appointment_type_id=self.appt_type_a.id,
+            appointment_date=self.next_monday,
+            appointment_time=time(11, 0),
+            status=Appointment.Status.CONFIRMED,
+            created_by=self.secretary_a,
+        )
+        self.assertEqual(appt.patient_id, self.doctor_a.id)
+        self.assertEqual(appt.doctor_id, other_doctor.id)
+
+
+class MultiRolePatientRegistrationTests(SecretaryTestBase):
+    """Registering an existing doctor as a patient must preserve all roles."""
+
+    def test_registering_doctor_from_other_clinic_as_patient_preserves_roles(self):
+        from patients.models import ClinicPatient, PatientProfile
+
+        # doctor_b is from clinic_b, has roles ["DOCTOR"], not yet a patient
+        self.client.force_login(self.secretary_a)
+        resp = self.client.post(reverse("secretary:create_new_patient"), {
+            "name": self.doctor_b.name,
+            "phone": self.doctor_b.phone,
+            "notes": "",
+        })
+        self.assertEqual(resp.status_code, 302)
+
+        self.doctor_b.refresh_from_db()
+        self.assertIn("DOCTOR", self.doctor_b.roles)
+        self.assertIn("PATIENT", self.doctor_b.roles)
+        self.assertTrue(
+            PatientProfile.objects.filter(user=self.doctor_b).exists(),
+            "PatientProfile must be ensured",
+        )
+        self.assertTrue(
+            ClinicPatient.objects.filter(
+                clinic=self.clinic_a, patient=self.doctor_b
+            ).exists(),
+            "ClinicPatient row must be created at this clinic",
+        )
+
+    def test_registering_doctor_from_same_clinic_as_patient_preserves_roles(self):
+        from patients.models import ClinicPatient, PatientProfile
+
+        self.client.force_login(self.secretary_a)
+        resp = self.client.post(reverse("secretary:create_new_patient"), {
+            "name": self.doctor_a.name,
+            "phone": self.doctor_a.phone,
+            "notes": "",
+        })
+        self.assertEqual(resp.status_code, 302)
+
+        self.doctor_a.refresh_from_db()
+        self.assertIn("DOCTOR", self.doctor_a.roles)
+        self.assertIn("PATIENT", self.doctor_a.roles)
+        self.assertTrue(PatientProfile.objects.filter(user=self.doctor_a).exists())
+        self.assertTrue(
+            ClinicPatient.objects.filter(
+                clinic=self.clinic_a, patient=self.doctor_a
+            ).exists()
+        )
+        # ClinicStaff DOCTOR membership untouched
+        self.assertTrue(
+            ClinicStaff.objects.filter(
+                clinic=self.clinic_a, user=self.doctor_a, role="DOCTOR", is_active=True
+            ).exists()
+        )

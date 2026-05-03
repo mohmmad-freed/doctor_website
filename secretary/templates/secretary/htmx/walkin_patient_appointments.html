@@ -1,0 +1,98 @@
+{% load i18n %}
+
+<div id="walkin-future-appts-inner"
+     data-has-today-conflict="{% if has_today_conflict %}1{% else %}0{% endif %}">
+
+  {% if today_appts %}
+  {# ── Today's appointments (warning) ── #}
+  <div class="rounded-2xl border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-900/20 p-4 space-y-3">
+    <div class="flex items-start gap-2">
+      <i class="fa-solid fa-triangle-exclamation text-amber-600 dark:text-amber-400 mt-0.5"></i>
+      <div class="flex-1">
+        <p class="text-sm font-bold text-amber-800 dark:text-amber-200">
+          {% trans "تنبيه: لهذا المريض موعد محجوز اليوم — التسجيل كحضور مباشر سيُنشئ موعداً ثانياً في نفس اليوم." %}
+        </p>
+      </div>
+    </div>
+
+    <div class="space-y-2">
+      {% for appt in today_appts %}
+      <div class="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-800/40">
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-semibold text-gray-800 dark:text-gray-100">
+            {{ appt.appointment_time|time:"H:i" }} —
+            {% if appt.doctor %}{{ appt.doctor.name }}{% else %}—{% endif %}
+          </div>
+          <div class="text-xs text-gray-500 dark:text-gray-400">
+            {{ appt.appointment_type.name }} · {{ appt.get_status_display }}
+          </div>
+        </div>
+        <form method="post" action="{% url 'secretary:cancel_appointment' appointment_id=appt.id %}"
+              hx-post="{% url 'secretary:cancel_appointment' appointment_id=appt.id %}"
+              hx-target="#walkin-future-appts"
+              hx-swap="innerHTML"
+              onsubmit="return confirm('{% trans "هل تريد إلغاء هذا الموعد؟" %}');">
+          {% csrf_token %}
+          <input type="hidden" name="walkin_patient_id" value="{{ patient.id }}">
+          <input type="hidden" name="cancellation_reason" value="{% trans 'إلغاء قبل تسجيل حضور مباشر' %}">
+          <button type="submit"
+                  class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 transition">
+            <i class="fa-solid fa-xmark me-1"></i>{% trans "إلغاء الموعد" %}
+          </button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+
+    <label class="flex items-start gap-2 p-3 rounded-xl bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-800/40 cursor-pointer">
+      <input type="checkbox"
+             id="override-same-day-checkbox"
+             name="override_same_day_conflict"
+             value="1"
+             form="walkin-form"
+             class="mt-0.5 w-4 h-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500">
+      <span class="text-xs text-gray-700 dark:text-gray-200 leading-relaxed">
+        {% trans "أؤكد رغبتي بتسجيل المريض كحضور مباشر بالإضافة إلى الموعد المحجوز" %}
+      </span>
+    </label>
+  </div>
+  {% endif %}
+
+  {% if later_appts %}
+  {# ── Future-day appointments (informational only) ── #}
+  <div class="rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 mt-3 space-y-3">
+    <h3 class="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+      <i class="fa-solid fa-calendar-days me-1.5"></i>{% trans "المواعيد القادمة" %}
+    </h3>
+    <div class="space-y-2">
+      {% for appt in later_appts %}
+      <div class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-slate-900/40 border border-gray-200 dark:border-slate-700">
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-semibold text-gray-800 dark:text-gray-100">
+            {{ appt.appointment_date|date:"Y-m-d" }} · {{ appt.appointment_time|time:"H:i" }}
+          </div>
+          <div class="text-xs text-gray-500 dark:text-gray-400">
+            {% if appt.doctor %}{{ appt.doctor.name }}{% else %}—{% endif %}
+            · {{ appt.appointment_type.name }} · {{ appt.get_status_display }}
+          </div>
+        </div>
+        <form method="post" action="{% url 'secretary:cancel_appointment' appointment_id=appt.id %}"
+              hx-post="{% url 'secretary:cancel_appointment' appointment_id=appt.id %}"
+              hx-target="#walkin-future-appts"
+              hx-swap="innerHTML"
+              onsubmit="return confirm('{% trans "هل تريد إلغاء هذا الموعد؟" %}');">
+          {% csrf_token %}
+          <input type="hidden" name="walkin_patient_id" value="{{ patient.id }}">
+          <input type="hidden" name="cancellation_reason" value="{% trans 'إلغاء من قِبل السكرتارية' %}">
+          <button type="submit"
+                  class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 transition">
+            <i class="fa-solid fa-xmark me-1"></i>{% trans "إلغاء الموعد" %}
+          </button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>

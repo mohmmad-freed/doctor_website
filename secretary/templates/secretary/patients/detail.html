@@ -8,10 +8,10 @@
 
   {# ── Back + header ── #}
   <div class="flex items-start gap-4">
-    <a href="{% url 'secretary:patient_list' %}"
-       aria-label="{% trans 'العودة إلى قائمة المرضى' %}"
+    <a href="{% url 'secretary:patient_list' %}" data-back
+       aria-label="{% trans 'رجوع' %}"
        class="mt-1 p-2 rounded-xl text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0">
-      <i class="fa-solid fa-arrow-right"></i>
+      <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %}"></i>
     </a>
     <div class="flex-1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div class="flex items-center gap-4">

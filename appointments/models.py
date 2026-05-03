@@ -167,6 +167,10 @@ class Appointment(models.Model):
         blank=True,
         help_text="Timestamp set automatically when the appointment status transitions to CHECKED_IN.",
     )
+    is_walk_in = models.BooleanField(
+        default=False,
+        help_text="True when the appointment was registered as a walk-in (no prior booking).",
+    )
     cancellation_reason = models.TextField(
         blank=True,
         default="",

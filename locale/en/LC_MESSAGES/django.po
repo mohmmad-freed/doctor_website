@@ -2120,3 +2120,121 @@ msgstr "Patient %(name)s is already registered in this clinic."
 
 msgid "تم تسجيل المريض %(name)s في عيادة %(clinic)s بنجاح."
 msgstr "Patient %(name)s has been registered in %(clinic)s successfully."
+
+# ── Walk-in registration flow ───────────────────────────────────────────────
+msgid "تسجيل حضور مباشر"
+msgstr "Register Walk-In"
+
+msgid "للمريض الذي وصل للعيادة بدون حجز مسبق — سيُضاف فوراً إلى طابور الانتظار."
+msgstr "For a patient who arrived without a prior booking — they will be added to the waiting queue immediately."
+
+msgid "وقت التسجيل"
+msgstr "Registration Time"
+
+msgid "الآن"
+msgstr "Now"
+
+msgid "المريض غير موجود في النظام؟"
+msgstr "Patient not found in the system?"
+
+msgid "تفاصيل الزيارة"
+msgstr "Visit Details"
+
+msgid "اختر الطبيب أولاً"
+msgstr "Select a doctor first"
+
+msgid "ملاحظات (اختياري)"
+msgstr "Notes (optional)"
+
+msgid "سبب الزيارة..."
+msgstr "Reason for visit..."
+
+msgid "ملاحظات للطاقم..."
+msgstr "Notes for staff..."
+
+msgid "تسجيل الحضور وإضافته للطابور"
+msgstr "Register Arrival and Add to Queue"
+
+msgid "يرجى اختيار المريض."
+msgstr "Please select the patient."
+
+msgid "يرجى اختيار طبيب من العيادة."
+msgstr "Please select a doctor from this clinic."
+
+msgid "يرجى اختيار نوع الموعد."
+msgstr "Please select an appointment type."
+
+msgid "المريض المحدد غير موجود."
+msgstr "The selected patient does not exist."
+
+msgid "تم تسجيل وصول %(name)s (حضور مباشر) — أُضيف إلى طابور الانتظار."
+msgstr "%(name)s has been checked in as a walk-in — added to the waiting queue."
+
+msgid "تسجيل مريض وصل بدون حجز مسبق"
+msgstr "Register a patient who arrived without a prior booking"
+
+msgid "إضافة حضور مباشر"
+msgstr "Add Walk-In"
+
+msgid "هذا المريض لم يحجز موعداً مسبقاً"
+msgstr "This patient did not book an appointment in advance"
+
+msgid "هل وصل المريض الآن بدون حجز؟"
+msgstr "Did the patient arrive now without a booking?"
+
+msgid "استخدم تدفق الحضور المباشر — يضيف المريض إلى طابور الانتظار فوراً."
+msgstr "Use the walk-in flow — it adds the patient to the waiting queue immediately."
+
+msgid "تسجيل حضور مباشر ←"
+msgstr "Register a walk-in →"
+
+# ── Waiting room queue: booked time + remove modal ─────────────────────────
+msgid "وقت الموعد المحجوز"
+msgstr "Booked appointment time"
+
+msgid "تم تحديث حالة الموعد بنجاح."
+msgstr "Appointment status updated successfully."
+
+msgid "لم يتم تحديد الحالة الجديدة."
+msgstr "The new status was not specified."
+
+msgid "مطلوب — اكتب سبب الإزالة..."
+msgstr "Required — write the reason for removal..."
+
+# ── Walk-in conflicts & self-booking guard ────────────────────────────────
+msgid "هذا المريض موجود بالفعل في طابور الانتظار كحضور مباشر."
+msgstr "This patient is already in the walk-in queue."
+
+msgid ""
+"لهذا المريض موعد محجوز اليوم. يرجى إلغاؤه أو تأكيد التسجيل كحضور مباشر "
+"إضافي."
+msgstr ""
+"This patient has a booked appointment today. Please cancel it, or confirm "
+"the additional walk-in registration."
+
+msgid "لا يمكن حجز موعد للطبيب مع نفسه. الرجاء اختيار طبيب آخر."
+msgstr "A doctor cannot be booked as their own patient. Please pick a different doctor."
+
+msgid "تنبيه: لهذا المريض موعد محجوز اليوم — التسجيل كحضور مباشر سيُنشئ موعداً ثانياً في نفس اليوم."
+msgstr "Warning: this patient has a booked appointment today — registering a walk-in will create a second appointment on the same day."
+
+msgid "أؤكد رغبتي بتسجيل المريض كحضور مباشر بالإضافة إلى الموعد المحجوز"
+msgstr "I confirm registering this patient as a walk-in in addition to the existing booked appointment"
+
+msgid "المواعيد القادمة"
+msgstr "Upcoming appointments"
+
+msgid "إلغاء الموعد"
+msgstr "Cancel appointment"
+
+msgid "هل تريد إلغاء هذا الموعد؟"
+msgstr "Do you want to cancel this appointment?"
+
+msgid "إلغاء قبل تسجيل حضور مباشر"
+msgstr "Cancelled before walk-in registration"
+
+msgid "إلغاء من قِبل السكرتارية"
+msgstr "Cancelled by the secretary"
+
+msgid "يوجد حساب بهذا الرقم (%(name)s). تم تسجيله في عيادتك."
+msgstr "An account with this phone number already exists (%(name)s). They have been registered in your clinic."
