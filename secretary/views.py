@@ -209,9 +209,9 @@ def checkin_appointment(request, appointment_id):
         appointment.status = Appointment.Status.CHECKED_IN
         appointment.checked_in_at = timezone.now()
         appointment.save(update_fields=["status", "checked_in_at", "updated_at"])
-        messages.success(request, f"تم تسجيل وصول {appointment.patient.name} بنجاح.")
+        messages.success(request, _("تم تسجيل وصول %(name)s بنجاح.") % {"name": appointment.patient.name})
     else:
-        messages.warning(request, "لا يمكن تسجيل الوصول إلا للمواعيد المؤكدة.")
+        messages.warning(request, _("لا يمكن تسجيل الوصول إلا للمواعيد المؤكدة."))
 
     next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or "secretary:dashboard"
     if next_url.startswith("/"):
@@ -241,6 +241,11 @@ def appointment_detail(request, appointment_id):
         Appointment.Status.CANCELLED,
         Appointment.Status.NO_SHOW,
     ]
+    status_steps = ["PENDING", "CONFIRMED", "CHECKED_IN", "IN_PROGRESS", "COMPLETED"]
+    try:
+        current_step_index = status_steps.index(appointment.status)
+    except ValueError:
+        current_step_index = 0
     return render(request, "secretary/appointment_detail.html", {
         "clinic": clinic,
         "appointment": appointment,
@@ -248,6 +253,8 @@ def appointment_detail(request, appointment_id):
         "clinic_patient": clinic_patient,
         "terminal_statuses": terminal_statuses,
         "valid_transitions": get_valid_transitions(appointment.status),
+        "status_steps": status_steps,
+        "current_step_index": current_step_index,
     })
 
 
@@ -500,9 +507,9 @@ def checkin_search(request):
             User.objects.filter(
                 Q(name__icontains=search)
                 | Q(phone__icontains=normalized)
-                | Q(clinic_patients__file_number__iexact=search, clinic_patients__clinic=clinic)
+                | Q(clinic_registrations__file_number__iexact=search, clinic_registrations__clinic=clinic)
             )
-            .filter(clinic_patients__clinic=clinic)
+            .filter(clinic_registrations__clinic=clinic)
             .distinct()
             .first()
         )
@@ -1254,16 +1261,18 @@ def block_doctor_time(request):
                             exc.save()
                             messages.success(
                                 request,
-                                f"تم حجب وقت الدكتور {doctor.name} "
-                                f"من {start_date_val.strftime('%Y/%m/%d')} "
-                                f"إلى {end_date_val.strftime('%Y/%m/%d')}."
+                                _("تم حجب وقت الدكتور %(name)s من %(start)s إلى %(end)s.") % {
+                                    "name": doctor.name,
+                                    "start": start_date_val.strftime("%Y/%m/%d"),
+                                    "end": end_date_val.strftime("%Y/%m/%d"),
+                                }
                             )
                             return redirect("secretary:doctor_schedule")
                         except DjangoValidationError as e:
                             msgs = e.messages if hasattr(e, 'messages') else [str(e)]
                             error = " — ".join(msgs)
         except (ValueError, TypeError):
-            error = "بيانات غير صالحة. يرجى التحقق من المدخلات."
+            error = _("بيانات غير صالحة. يرجى التحقق من المدخلات.")
 
     return render(request, "secretary/schedule/block.html", {
         "clinic": clinic,
@@ -1296,7 +1305,7 @@ def delete_doctor_block(request, exception_id):
     doctor_name = exc.doctor.name
     exc.is_active = False
     exc.save(update_fields=["is_active", "updated_at"])
-    messages.success(request, f"تم إلغاء حجب الوقت للدكتور {doctor_name}.")
+    messages.success(request, _("تم إلغاء حجب الوقت للدكتور %(name)s.") % {"name": doctor_name})
     next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or ""
     if next_url.startswith("/"):
         return redirect(next_url)
@@ -1365,10 +1374,10 @@ def settings_profile(request):
                 if email_changed and email:
                     # Route through accounts email-change OTP flow
                     request.session["pending_email_change"] = email
-                    messages.success(request, "تم حفظ الاسم والمدينة. أكمل تغيير البريد الإلكتروني بالتحقق.")
+                    messages.success(request, _("تم حفظ الاسم والمدينة. أكمل تغيير البريد الإلكتروني بالتحقق."))
                     return redirect("accounts:change_email_otp_request")
 
-                messages.success(request, "تم حفظ الملف الشخصي بنجاح.")
+                messages.success(request, _("تم حفظ الملف الشخصي بنجاح."))
                 return redirect("secretary:settings_profile")
 
         # ── Password change ──────────────────────────────────────────
@@ -1395,7 +1404,7 @@ def settings_profile(request):
                 # Re-authenticate so the session stays valid
                 from django.contrib.auth import update_session_auth_hash
                 update_session_auth_hash(request, user)
-                messages.success(request, "تم تغيير كلمة المرور بنجاح.")
+                messages.success(request, _("تم تغيير كلمة المرور بنجاح."))
                 return redirect("secretary:settings_profile")
 
     return render(request, "secretary/settings/profile.html", {
@@ -1442,10 +1451,19 @@ def update_appointment_status(request, appointment_id):
             error = str(e)
 
     valid_transitions = get_valid_transitions(appointment.status)
+    terminal_statuses = ["CANCELLED", "NO_SHOW", "COMPLETED"]
+    status_steps = ["PENDING", "CONFIRMED", "CHECKED_IN", "IN_PROGRESS", "COMPLETED"]
+    try:
+        current_step_index = status_steps.index(appointment.status)
+    except ValueError:
+        current_step_index = 0
     return render(request, "secretary/htmx/appointment_status_chip.html", {
         "appointment": appointment,
         "valid_transitions": valid_transitions,
         "error": error,
+        "terminal_statuses": terminal_statuses,
+        "status_steps": status_steps,
+        "current_step_index": current_step_index,
     })
 
 
@@ -1463,7 +1481,7 @@ def get_time_slots_htmx(request):
     from doctors.services import generate_slots_for_date
 
     doctor_id = request.GET.get("doctor_id", "")
-    date_str = request.GET.get("date", "")
+    date_str = request.GET.get("appointment_date", "")
     type_id = request.GET.get("appointment_type_id", "")
 
     slots = []
@@ -1520,6 +1538,37 @@ def get_doctor_types_htmx(request):
     return render(request, "secretary/htmx/doctor_types.html", {
         "appointment_types": types,
     })
+
+
+@login_required
+def doctor_working_days_json(request):
+    """
+    JSON endpoint: returns the weekdays (Python weekday: 0=Mon..6=Sun) on which
+    the selected doctor has at least one active availability block in this clinic.
+    """
+    staff = _require_secretary(request)
+    if not staff:
+        return JsonResponse({"error": "Forbidden"}, status=403)
+
+    from doctors.models import DoctorAvailability
+
+    doctor_id = request.GET.get("doctor_id", "")
+    working_days: list[int] = []
+    if doctor_id:
+        try:
+            working_days = sorted(
+                set(
+                    DoctorAvailability.objects.filter(
+                        doctor_id=int(doctor_id),
+                        clinic=staff.clinic,
+                        is_active=True,
+                    ).values_list("day_of_week", flat=True)
+                )
+            )
+        except (ValueError, TypeError):
+            working_days = []
+
+    return JsonResponse({"working_days": working_days})
 
 
 @login_required
@@ -1879,7 +1928,7 @@ def edit_patient(request, patient_id):
             clinic_patient.notes = notes
             clinic_patient.save(update_fields=["notes"])
 
-        messages.success(request, f"تم تحديث بيانات المريض {patient.name} بنجاح.")
+        messages.success(request, _("تم تحديث بيانات المريض %(name)s بنجاح.") % {"name": patient.name})
         return redirect("secretary:patient_detail", patient_id=patient.id)
 
     return render(request, "secretary/patients/edit.html", {
@@ -2192,12 +2241,9 @@ def create_appointment(request):
     clinic = staff.clinic
     from clinics.models import ClinicStaff as CS
     doctors_qs = CS.objects.filter(
-        clinic=clinic, role__in=["DOCTOR"], is_active=True
-    ).select_related("user")
-    if clinic.main_doctor:
-        doctor_users = [clinic.main_doctor] + [s.user for s in doctors_qs if s.user_id != clinic.main_doctor_id]
-    else:
-        doctor_users = [s.user for s in doctors_qs]
+        clinic=clinic, role="DOCTOR", is_active=True
+    ).select_related("user").order_by("user__name")
+    doctor_users = [s.user for s in doctors_qs]
 
     valid_doctor_ids = {u.id for u in doctor_users}
     # Pre-fill date/time from query params (when clicking a calendar slot)
@@ -2221,11 +2267,11 @@ def create_appointment(request):
             is_walkin = request.POST.get("is_walkin") == "1"
 
             if not all([doctor_id, type_id, date_str, time_str]):
-                messages.error(request, "يرجى ملء جميع الحقول المطلوبة.")
+                messages.error(request, _("يرجى ملء جميع الحقول المطلوبة."))
                 return redirect("secretary:create_appointment")
 
             if doctor_id not in valid_doctor_ids:
-                messages.error(request, "الطبيب المحدد لا ينتمي إلى هذه العيادة.")
+                messages.error(request, _("الطبيب المحدد لا ينتمي إلى هذه العيادة."))
                 return redirect("secretary:create_appointment")
 
             from datetime import datetime as dt_cls
@@ -2246,7 +2292,7 @@ def create_appointment(request):
                 except User.DoesNotExist:
                     pass
             if patient is None:
-                messages.error(request, "يرجى اختيار مريض أو إدخال رقم هاتف صحيح.")
+                messages.error(request, _("يرجى اختيار مريض أو إدخال رقم هاتف صحيح."))
                 return redirect("secretary:create_appointment")
 
             initial_status = (
@@ -2267,15 +2313,15 @@ def create_appointment(request):
             )
 
             if is_walkin:
-                messages.success(request, f"تم تسجيل وصول {patient.name} (حضور مباشر) بنجاح.")
+                messages.success(request, _("تم تسجيل وصول %(name)s (حضور مباشر) بنجاح.") % {"name": patient.name})
             else:
-                messages.success(request, f"تم حجز موعد {patient.name} بنجاح.")
+                messages.success(request, _("تم حجز موعد %(name)s بنجاح.") % {"name": patient.name})
             return redirect("secretary:appointment_detail", appointment_id=appointment.id)
 
         except (BookingError, SlotUnavailableError) as e:
             messages.error(request, e.message)
         except Exception as e:
-            messages.error(request, f"حدث خطأ: {e}")
+            messages.error(request, _("حدث خطأ: %(error)s") % {"error": e})
 
     appointment_types = AppointmentType.objects.filter(clinic=clinic, is_active=True)
     today_str = date.today().isoformat()
@@ -2311,7 +2357,7 @@ def edit_appointment(request, appointment_id):
         Appointment.Status.IN_PROGRESS,
     }
     if appointment.status in _NON_EDITABLE:
-        messages.error(request, "لا يمكن تعديل هذا الموعد في حالته الحالية.")
+        messages.error(request, _("لا يمكن تعديل هذا الموعد في حالته الحالية."))
         return redirect("secretary:appointments")
 
     from appointments.services.appointment_type_service import (
@@ -2333,7 +2379,7 @@ def edit_appointment(request, appointment_id):
             new_reason = request.POST.get("reason", "").strip()
 
             if not all([new_type_id, new_date_str, new_time_str]):
-                messages.error(request, "يرجى ملء جميع الحقول المطلوبة.")
+                messages.error(request, _("يرجى ملء جميع الحقول المطلوبة."))
                 return redirect("secretary:edit_appointment", appointment_id=appointment_id)
 
             from datetime import datetime as dt_cls
@@ -2342,14 +2388,14 @@ def edit_appointment(request, appointment_id):
 
             # S-06: Prevent rescheduling to a past date
             if new_date < date.today():
-                messages.error(request, "لا يمكن جدولة موعد في تاريخ ماضٍ.")
+                messages.error(request, _("لا يمكن جدولة موعد في تاريخ ماضٍ."))
                 return redirect("secretary:edit_appointment", appointment_id=appointment_id)
 
             # Validate type is enabled for this doctor (S-03 equivalent for edit)
             if appointment.doctor_id:
                 enabled_type_ids = {t.id for t in appointment_types}
                 if enabled_type_ids and new_type_id not in enabled_type_ids:
-                    messages.error(request, "نوع الموعد المحدد غير متاح لهذا الطبيب.")
+                    messages.error(request, _("نوع الموعد المحدد غير متاح لهذا الطبيب."))
                     return redirect("secretary:edit_appointment", appointment_id=appointment_id)
 
             new_type = get_object_or_404(AppointmentType, id=new_type_id, clinic=clinic, is_active=True)
@@ -2372,7 +2418,7 @@ def edit_appointment(request, appointment_id):
                     ],
                 ).exclude(pk=appointment.pk).exists()
                 if conflict:
-                    messages.error(request, "هذا الوقت محجوز بالفعل لدى هذا الطبيب. يرجى اختيار وقت آخر.")
+                    messages.error(request, _("هذا الوقت محجوز بالفعل لدى هذا الطبيب. يرجى اختيار وقت آخر."))
                     return redirect("secretary:edit_appointment", appointment_id=appointment_id)
 
             old_date = appointment.appointment_date
@@ -2395,10 +2441,10 @@ def edit_appointment(request, appointment_id):
                     lambda: notify_appointment_rescheduled_by_staff(appointment, old_date, old_time)
                 )
 
-            messages.success(request, "تم تحديث الموعد بنجاح.")
+            messages.success(request, _("تم تحديث الموعد بنجاح."))
             return redirect("secretary:appointments")
         except Exception as e:
-            messages.error(request, f"حدث خطأ: {e}")
+            messages.error(request, _("حدث خطأ: %(error)s") % {"error": e})
 
     return render(request, "secretary/edit_appointment.html", {
         "clinic": clinic,
@@ -2426,11 +2472,11 @@ def cancel_appointment(request, appointment_id):
                 cancellation_reason=reason,
                 actor=request.user,
             )
-            messages.success(request, "تم إلغاء الموعد بنجاح.")
+            messages.success(request, _("تم إلغاء الموعد بنجاح."))
         except BookingError as e:
             messages.error(request, e.message)
         except Exception as e:
-            messages.error(request, f"حدث خطأ أثناء الإلغاء: {e}")
+            messages.error(request, _("حدث خطأ أثناء الإلغاء: %(error)s") % {"error": e})
 
     next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or ""
     if next_url.startswith("/"):
@@ -2483,12 +2529,12 @@ def accept_invitation_view(request, invitation_id):
     if request.method == "POST":
         try:
             staff = accept_invitation(invitation, request.user)
-            messages.success(request, f"تم الانضمام بنجاح إلى عيادة {staff.clinic.name} بصفة سكرتير/ة.")
+            messages.success(request, _("تم الانضمام بنجاح إلى عيادة %(clinic)s بصفة سكرتير/ة.") % {"clinic": staff.clinic.name})
         except Exception as e:
             err_msg = str(e)
             if hasattr(e, 'messages'):
                 err_msg = " ".join(e.messages)
-            messages.error(request, f"خطأ: {err_msg}")
+            messages.error(request, _("خطأ: %(error)s") % {"error": err_msg})
 
     return redirect(reverse("secretary:secretary_invitations_inbox"))
 
@@ -2502,18 +2548,18 @@ def reject_invitation_view(request, invitation_id):
     normalized_phone = PhoneNumberAuthBackend.normalize_phone_number(request.user.phone)
     if normalized_phone != invitation.doctor_phone:
         return render(request, "secretary/invalid_invitation.html", {
-            "error": "لا تملك الصلاحية للوصول إلى هذه الدعوة."
+            "error": _("لا تملك الصلاحية للوصول إلى هذه الدعوة.")
         })
 
     if request.method == "POST":
         try:
             reject_invitation(invitation, request.user)
-            messages.success(request, "تم رفض الدعوة.")
+            messages.success(request, _("تم رفض الدعوة."))
         except Exception as e:
             err_msg = str(e)
             if hasattr(e, 'messages'):
                 err_msg = " ".join(e.messages)
-            messages.error(request, f"خطأ: {err_msg}")
+            messages.error(request, _("خطأ: %(error)s") % {"error": err_msg})
 
     return redirect(reverse("secretary:secretary_invitations_inbox"))
 
@@ -2551,7 +2597,7 @@ def guest_accept_invitation_view(request, token):
     request.session["pending_invitation_token"] = str(token)  # UUID must be str for JSON session
     request.session["pending_invitation_app"] = "secretary"
     
-    messages.info(request, "يرجى تسجيل الدخول أو إنشاء حساب جديد لقبول دعوة الانضمام للعيادة كـ سكرتير/ة.")
+    messages.info(request, _("يرجى تسجيل الدخول أو إنشاء حساب جديد لقبول دعوة الانضمام للعيادة كـ سكرتير/ة."))
     return redirect(reverse("accounts:login"))
 
 
@@ -2673,17 +2719,17 @@ def register_patient_submit(request):
     clinic = staff.clinic
     patient_id = request.POST.get("patient_id", "").strip()
     if not patient_id:
-        messages.error(request, "لم يتم تحديد مريض.")
+        messages.error(request, _("لم يتم تحديد مريض."))
         return redirect("secretary:register_patient")
 
     patient = get_object_or_404(User, id=patient_id)
 
     if not _is_patient_user(patient):
-        messages.error(request, "المستخدم المحدد ليس مريضاً.")
+        messages.error(request, _("المستخدم المحدد ليس مريضاً."))
         return redirect("secretary:register_patient")
 
     if ClinicPatient.objects.filter(clinic=clinic, patient=patient).exists():
-        messages.warning(request, f"المريض {patient.name} مسجل بالفعل في هذه العيادة.")
+        messages.warning(request, _("المريض %(name)s مسجل بالفعل في هذه العيادة.") % {"name": patient.name})
         return redirect("secretary:register_patient")
 
     # --- Fill gaps in PatientProfile (never overwrite non-blank existing values) ---
@@ -2723,5 +2769,5 @@ def register_patient_submit(request):
         notes=request.POST.get("notes", "").strip(),
     )
 
-    messages.success(request, f"تم تسجيل المريض {patient.name} في عيادة {clinic.name} بنجاح.")
+    messages.success(request, _("تم تسجيل المريض %(name)s في عيادة %(clinic)s بنجاح.") % {"name": patient.name, "clinic": clinic.name})
     return redirect("secretary:register_patient")

@@ -65,4 +65,5 @@ urlpatterns = [
     path('htmx/doctor-status/', views.doctor_status_htmx, name='doctor_status_htmx'),
     path('htmx/time-slots/', views.get_time_slots_htmx, name='time_slots_htmx'),
     path('htmx/doctor-types/', views.get_doctor_types_htmx, name='doctor_types_htmx'),
+    path('htmx/doctor-working-days/', views.doctor_working_days_json, name='doctor_working_days_json'),
 ]

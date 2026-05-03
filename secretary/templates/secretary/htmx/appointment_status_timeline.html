@@ -1,0 +1,36 @@
+{% load i18n %}
+{% if appointment.status not in terminal_statuses or appointment.status == 'COMPLETED' %}
+<div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm px-6 py-4">
+  <div class="relative">
+    <div class="absolute top-3 -translate-y-1/2 h-0.5 bg-gray-200 dark:bg-slate-600"
+         style="left: 10%; right: 10%;"></div>
+    {% if current_step_index > 0 %}
+    <div class="absolute top-3 -translate-y-1/2 h-0.5 bg-primary-600"
+         style="left: 10%; width: calc({{ current_step_index }} * 20%);"></div>
+    {% endif %}
+    <div class="relative flex items-start">
+      {% for step_status in status_steps %}
+      <div class="flex-1 flex flex-col items-center">
+        {% if forloop.counter0 < current_step_index %}
+        <div class="w-6 h-6 rounded-full bg-primary-600 flex items-center justify-center relative z-10">
+          <i class="fa-solid fa-check text-white text-[9px]"></i>
+        </div>
+        {% elif forloop.counter0 == current_step_index %}
+        <div class="w-6 h-6 rounded-full bg-primary-600 border-2 border-primary-600 flex items-center justify-center relative z-10">
+          <div class="w-2 h-2 rounded-full bg-white"></div>
+        </div>
+        {% else %}
+        <div class="w-6 h-6 rounded-full border-2 border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 relative z-10"></div>
+        {% endif %}
+        <span class="text-[10px] font-semibold mt-1 text-center
+          {% if forloop.counter0 == current_step_index %}text-primary-600 dark:text-primary-400
+          {% elif forloop.counter0 < current_step_index %}text-gray-700 dark:text-gray-300
+          {% else %}text-gray-400 dark:text-gray-500{% endif %}">
+          {% if step_status == 'PENDING' %}{% trans "انتظار" %}{% elif step_status == 'CONFIRMED' %}{% trans "مؤكد" %}{% elif step_status == 'CHECKED_IN' %}{% trans "وصل" %}{% elif step_status == 'IN_PROGRESS' %}{% trans "جارٍ" %}{% else %}{% trans "مكتمل" %}{% endif %}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}

@@ -7,15 +7,14 @@
 <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
   {# ── Header ── #}
-  <div class="flex items-center gap-4">
+  <div>
     <a href="{% url 'secretary:waiting_room' %}"
-       class="p-2 rounded-xl text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-      <i class="fa-solid fa-arrow-right"></i>
+       class="inline-flex items-center gap-2 text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 transition-colors mb-4">
+      <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %}"></i>
+      {% trans "غرفة الانتظار" %}
     </a>
-    <div>
-      <h1 class="text-xl font-bold text-gray-900 dark:text-white">{% trans "تسجيل الوصول" %}</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ today|date:"l، j F Y" }}</p>
-    </div>
+    <h1 class="text-xl font-bold text-gray-900 dark:text-white">{% trans "تسجيل الوصول" %}</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ today|date:"l، j F Y" }}</p>
   </div>
 
   {# ── Search box ── #}

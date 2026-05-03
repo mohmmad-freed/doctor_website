@@ -396,3 +396,52 @@ class AppointmentNotification(models.Model):
 
     def __str__(self):
         return f"[{self.notification_type}] \u2192 {self.patient.name} ({self.created_at:%Y-%m-%d})"
+
+    # \u2500\u2500 Localized display \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    # Notifications are stored in DB with Arabic text. These properties
+    # synthesize the title/message in the active UI language at render time
+    # so non-Arabic users see their localized text.
+
+    def _is_english(self):
+        from django.utils.translation import get_language
+        lang = (get_language() or "ar").split("-")[0]
+        return lang.startswith("en")
+
+    @property
+    def localized_title(self):
+        if not self._is_english():
+            return self.title
+        mapping = {
+            self.Type.APPOINTMENT_BOOKED: "Appointment Confirmed",
+            self.Type.APPOINTMENT_CANCELLED: "Appointment Cancelled",
+            self.Type.APPOINTMENT_RESCHEDULED: "Appointment Rescheduled",
+            self.Type.APPOINTMENT_REMINDER: "Appointment Reminder",
+            self.Type.APPOINTMENT_STATUS_CHANGED: "Appointment Updated",
+            self.Type.APPOINTMENT_EDITED: "Appointment Edited",
+        }
+        return mapping.get(self.notification_type, self.title)
+
+    @property
+    def localized_message(self):
+        if not self._is_english() or not self.appointment:
+            return self.message
+        appt = self.appointment
+        doctor = appt.doctor.name if appt.doctor_id else "the doctor"
+        clinic = appt.clinic.name if appt.clinic_id else ""
+        date_s = appt.appointment_date.strftime("%Y-%m-%d") if appt.appointment_date else ""
+        time_s = appt.appointment_time.strftime("%H:%M") if appt.appointment_time else ""
+        suffix = f" ({clinic})" if clinic else ""
+        type_ = self.notification_type
+        if type_ == self.Type.APPOINTMENT_BOOKED:
+            return f"Booked with {doctor} on {date_s} at {time_s}{suffix}."
+        if type_ == self.Type.APPOINTMENT_CANCELLED:
+            return f"Cancelled: {doctor} on {date_s} at {time_s}{suffix}."
+        if type_ == self.Type.APPOINTMENT_RESCHEDULED:
+            return f"Rescheduled to {date_s} at {time_s} with {doctor}{suffix}."
+        if type_ == self.Type.APPOINTMENT_REMINDER:
+            return f"Reminder: {doctor} on {date_s} at {time_s}{suffix}."
+        if type_ == self.Type.APPOINTMENT_STATUS_CHANGED:
+            return f"Status changed for {date_s} {time_s} with {doctor}{suffix}."
+        if type_ == self.Type.APPOINTMENT_EDITED:
+            return f"Updated: {doctor} on {date_s} at {time_s}{suffix}."
+        return self.message

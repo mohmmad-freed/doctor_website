@@ -16,7 +16,9 @@
       {% if ds.status == 'with_patient' and ds.in_progress_patient %}
       <p class="text-xs text-gray-400 dark:text-gray-500 truncate">{% trans "مع:" %} {{ ds.in_progress_patient.name }}</p>
       {% else %}
-      <p class="text-xs text-gray-400 dark:text-gray-500">{% blocktrans with count=ds.today_count %}{{ count }} موعد اليوم{% endblocktrans %}</p>
+      <p class="text-xs text-gray-400 dark:text-gray-500">
+        {% if IS_RTL %}{{ ds.today_count }} موعد اليوم{% else %}{{ ds.today_count }} appointment{{ ds.today_count|pluralize }} today{% endif %}
+      </p>
       {% endif %}
     </div>
     {# Status badge #}

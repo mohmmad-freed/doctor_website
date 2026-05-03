@@ -8,6 +8,7 @@ Generates bookable time slots based on:
 """
 
 from datetime import datetime, timedelta, date, time
+from django.utils import timezone
 
 from appointments.models import Appointment
 from .models import DoctorAvailability
@@ -92,6 +93,8 @@ def generate_slots_for_date(
     # 3. Generate slots from each availability block
     slots = []
     duration = timedelta(minutes=duration_minutes)
+    is_today = target_date == timezone.localdate()
+    now_time = timezone.localtime().time() if is_today else None
 
     for block in availability_blocks:
         current = datetime.combine(target_date, block.start_time)
@@ -101,8 +104,10 @@ def generate_slots_for_date(
             slot_start = current.time()
             slot_end = (current + duration).time()
 
-            # Check if this slot conflicts with any booked appointment
-            is_available = not _is_slot_booked(slot_start, slot_end, booked_ranges)
+            if is_today and slot_start <= now_time:
+                is_available = False
+            else:
+                is_available = not _is_slot_booked(slot_start, slot_end, booked_ranges)
 
             slots.append(
                 {

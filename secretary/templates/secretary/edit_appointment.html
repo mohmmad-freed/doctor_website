@@ -1,42 +1,43 @@
 {% extends "secretary/base_secretary.html" %}
-{% block title %}تعديل الموعد{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "تعديل الموعد" %}{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto py-2" dir="rtl">
+<div class="max-w-2xl mx-auto py-2" dir="{{ DIR }}">
+
+  {# ── Back link ── #}
+  <a href="{% url 'secretary:appointments' %}"
+     class="inline-flex items-center gap-2 text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 transition-colors mb-4">
+    <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %}"></i>
+    {% trans "قائمة المواعيد" %}
+  </a>
 
   {# ── Header ── #}
-  <div class="flex items-center justify-between mb-6">
-    <div>
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">تعديل الموعد</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ clinic.name }}</p>
-    </div>
-    <a href="{% url 'secretary:appointments' %}"
-       class="inline-flex items-center gap-2 text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 transition-colors">
-      <i class="fa-solid fa-arrow-right"></i>
-      قائمة المواعيد
-    </a>
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{% trans "تعديل الموعد" %}</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ clinic.name }}</p>
   </div>
 
   {# ── Current appointment info card ── #}
   <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-4">
     <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
       <i class="fa-solid fa-circle-info text-gray-400 text-sm"></i>
-      <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">معلومات الموعد الحالية</span>
+      <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">{% trans "معلومات الموعد الحالية" %}</span>
     </div>
     <div class="px-5 py-4">
       <dl class="grid grid-cols-3 gap-y-2 text-sm">
-        <dt class="text-gray-500 dark:text-gray-400 font-medium">المريض</dt>
+        <dt class="text-gray-500 dark:text-gray-400 font-medium">{% trans "المريض" %}</dt>
         <dd class="col-span-2 font-semibold text-gray-800 dark:text-gray-100">{{ appointment.patient.name }}</dd>
 
-        <dt class="text-gray-500 dark:text-gray-400 font-medium">الطبيب</dt>
+        <dt class="text-gray-500 dark:text-gray-400 font-medium">{% trans "الطبيب" %}</dt>
         <dd class="col-span-2 text-gray-700 dark:text-gray-200">{{ appointment.doctor.name|default:"—" }}</dd>
 
-        <dt class="text-gray-500 dark:text-gray-400 font-medium">الموعد الحالي</dt>
-        <dd class="col-span-2 text-gray-700 dark:text-gray-200 font-mono">
+        <dt class="text-gray-500 dark:text-gray-400 font-medium">{% trans "الموعد الحالي" %}</dt>
+        <dd class="col-span-2 text-gray-700 dark:text-gray-200 font-mono" dir="ltr">
           {{ appointment.appointment_date|date:"d/m/Y" }} — {{ appointment.appointment_time|time:"H:i" }}
         </dd>
 
-        <dt class="text-gray-500 dark:text-gray-400 font-medium">الحالة</dt>
+        <dt class="text-gray-500 dark:text-gray-400 font-medium">{% trans "الحالة" %}</dt>
         <dd class="col-span-2">
           <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold
             {% if appointment.status == 'CONFIRMED' %}bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300
@@ -53,7 +54,7 @@
   <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
     <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
       <i class="fa-solid fa-pen-to-square text-purple-500 text-sm"></i>
-      <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">تعديل تفاصيل الموعد</span>
+      <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">{% trans "تعديل تفاصيل الموعد" %}</span>
     </div>
     <div class="px-5 py-5">
       <form method="post" class="space-y-5">
@@ -62,22 +63,22 @@
         {# Appointment type #}
         <div>
           <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
-            نوع الموعد <span class="text-red-500">*</span>
+            {% trans "نوع الموعد" %} <span class="text-red-500">*</span>
           </label>
           <select name="appointment_type_id" required
                   class="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
-            <option value="">— اختر نوع الموعد —</option>
+            <option value="">{% trans "— اختر نوع الموعد —" %}</option>
             {% for at in appointment_types %}
             <option value="{{ at.id }}"
                     {% if appointment.appointment_type_id == at.id %}selected{% endif %}>
-              {{ at.display_name }} ({{ at.duration_minutes }} دقيقة — ₪{{ at.price }})
+              {{ at.display_name }} ({{ at.duration_minutes }} {% trans "دقيقة" %} — ₪{{ at.price }})
             </option>
             {% endfor %}
           </select>
           {% if appointment.doctor_id %}
           <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
             <i class="fa-solid fa-circle-info me-0.5"></i>
-            تظهر الأنواع المتاحة لهذا الطبيب في العيادة فقط.
+            {% trans "تظهر الأنواع المتاحة لهذا الطبيب في العيادة فقط." %}
           </p>
           {% endif %}
         </div>
@@ -86,7 +87,7 @@
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
-              التاريخ الجديد <span class="text-red-500">*</span>
+              {% trans "التاريخ الجديد" %} <span class="text-red-500">*</span>
             </label>
             <input type="date" name="appointment_date" required
                    value="{{ appointment.appointment_date|date:'Y-m-d' }}"
@@ -94,7 +95,7 @@
           </div>
           <div>
             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
-              الوقت الجديد <span class="text-red-500">*</span>
+              {% trans "الوقت الجديد" %} <span class="text-red-500">*</span>
             </label>
             <input type="time" name="appointment_time" required
                    value="{{ appointment.appointment_time|time:'H:i' }}"
@@ -105,7 +106,7 @@
         {# Reason #}
         <div>
           <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
-            سبب الزيارة <span class="text-xs font-normal text-gray-400">(اختياري)</span>
+            {% trans "سبب الزيارة" %} <span class="text-xs font-normal text-gray-400">({% trans "اختياري" %})</span>
           </label>
           <textarea name="reason" rows="3" maxlength="1000"
                     class="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none transition">{{ appointment.reason }}</textarea>
@@ -116,11 +117,11 @@
           <button type="submit"
                   class="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 active:scale-95 text-white font-semibold text-sm px-6 py-2.5 rounded-xl transition-all shadow-sm">
             <i class="fa-solid fa-floppy-disk text-xs"></i>
-            حفظ التغييرات
+            {% trans "حفظ التغييرات" %}
           </button>
           <a href="{% url 'secretary:appointments' %}"
              class="text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
-            إلغاء
+            {% trans "إلغاء" %}
           </a>
         </div>
 

@@ -20,24 +20,172 @@
   .dark .time-slot-btn:disabled { background: #1e293b; }
   #patient-search-results .result-row:hover { background: #faf5ff; cursor: pointer; }
   .dark #patient-search-results .result-row:hover { background: rgba(168,85,247,0.1); }
+
+  /* ── Inline date picker ──────────────────────────────────────────────── */
+  .cal-wrap {
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: white;
+    padding: 14px;
+  }
+  .dark .cal-wrap { background: #1e293b; border-color: #334155; }
+
+  .cal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .cal-title { font-size: 0.95rem; font-weight: 700; color: #111827; }
+  .dark .cal-title { color: #f1f5f9; }
+  .cal-nav-btn {
+    width: 30px; height: 30px; border-radius: 9px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid #e5e7eb; background: white; color: #4b5563;
+    cursor: pointer; transition: all 0.15s; font-size: 0.85rem;
+  }
+  .dark .cal-nav-btn { border-color: #334155; background: #0f172a; color: #cbd5e1; }
+  .cal-nav-btn:hover { border-color: #a855f7; color: #9333ea; background: #faf5ff; }
+  .dark .cal-nav-btn:hover { background: rgba(168,85,247,0.12); color: #c084fc; }
+  .cal-nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .cal-nav-btn:disabled:hover { border-color: #e5e7eb; color: #4b5563; background: white; }
+  .dark .cal-nav-btn:disabled:hover { border-color: #334155; background: #0f172a; color: #cbd5e1; }
+
+  .cal-today-btn {
+    font-size: 0.75rem; font-weight: 600; color: #9333ea;
+    padding: 4px 10px; border-radius: 8px; cursor: pointer;
+    background: transparent; border: 1px solid transparent;
+    transition: all 0.15s;
+  }
+  .cal-today-btn:hover { background: #faf5ff; border-color: #e9d5ff; }
+  .dark .cal-today-btn { color: #c084fc; }
+  .dark .cal-today-btn:hover { background: rgba(168,85,247,0.1); border-color: rgba(168,85,247,0.3); }
+
+  .cal-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .cal-dow {
+    text-align: center; font-size: 0.7rem; font-weight: 700;
+    color: #9ca3af; padding: 6px 0; text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .dark .cal-dow { color: #64748b; }
+
+  .cal-day {
+    aspect-ratio: 1 / 1;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem; font-weight: 500;
+    border-radius: 10px;
+    border: 1.5px solid transparent;
+    color: #374151; background: transparent;
+    cursor: pointer; transition: all 0.15s;
+    position: relative; user-select: none;
+  }
+  .dark .cal-day { color: #e2e8f0; }
+
+  .cal-day:hover:not(.is-disabled):not(.is-non-working):not(.is-other-month) {
+    border-color: #c084fc; background: #faf5ff; color: #7e22ce;
+  }
+  .dark .cal-day:hover:not(.is-disabled):not(.is-non-working):not(.is-other-month) {
+    border-color: #a855f7; background: rgba(168,85,247,0.12); color: #d8b4fe;
+  }
+
+  .cal-day.is-today:not(.is-selected) {
+    border-color: #a855f7; color: #9333ea; font-weight: 700;
+  }
+  .dark .cal-day.is-today:not(.is-selected) { color: #c084fc; }
+
+  .cal-day.is-selected {
+    background: #9333ea; color: white; border-color: #9333ea;
+    font-weight: 700;
+    box-shadow: 0 4px 10px -2px rgba(147, 51, 234, 0.45);
+  }
+
+  .cal-day.is-other-month {
+    color: #d1d5db; cursor: default;
+  }
+  .dark .cal-day.is-other-month { color: #475569; }
+
+  .cal-day.is-disabled {
+    color: #d1d5db; cursor: not-allowed;
+    text-decoration: line-through;
+    text-decoration-color: rgba(0,0,0,0.15);
+  }
+  .dark .cal-day.is-disabled {
+    color: #475569;
+    text-decoration-color: rgba(255,255,255,0.15);
+  }
+
+  .cal-day.is-non-working {
+    color: #cbd5e1; cursor: not-allowed; opacity: 0.55;
+    background: repeating-linear-gradient(
+      135deg,
+      transparent 0 4px,
+      rgba(148,163,184,0.18) 4px 5px
+    );
+  }
+  .dark .cal-day.is-non-working {
+    color: #475569;
+    background: repeating-linear-gradient(
+      135deg,
+      transparent 0 4px,
+      rgba(100,116,139,0.18) 4px 5px
+    );
+  }
+
+  .cal-legend {
+    display: flex; flex-wrap: wrap; gap: 12px;
+    margin-top: 12px; padding-top: 10px;
+    border-top: 1px dashed #e5e7eb;
+    font-size: 0.7rem; color: #6b7280;
+  }
+  .dark .cal-legend { border-top-color: #334155; color: #94a3b8; }
+  .cal-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+  .cal-legend-dot {
+    width: 10px; height: 10px; border-radius: 3px;
+    border: 1.5px solid transparent;
+    flex-shrink: 0;
+  }
+  .cal-legend-dot.dot-working { background: white; border-color: #c084fc; }
+  .dark .cal-legend-dot.dot-working { background: #1e293b; border-color: #a855f7; }
+  .cal-legend-dot.dot-non-working {
+    background: repeating-linear-gradient(135deg,#f1f5f9 0 3px,#e2e8f0 3px 4px);
+    border-color: #e2e8f0;
+  }
+  .dark .cal-legend-dot.dot-non-working {
+    background: repeating-linear-gradient(135deg,#0f172a 0 3px,#1e293b 3px 4px);
+    border-color: #334155;
+  }
+  .cal-legend-dot.dot-selected { background: #9333ea; border-color: #9333ea; }
+
+  .cal-selected-label {
+    margin-top: 10px;
+    font-size: 0.78rem; color: #6b7280;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .dark .cal-selected-label { color: #94a3b8; }
+  .cal-selected-label strong {
+    color: #9333ea; font-weight: 700;
+  }
+  .dark .cal-selected-label strong { color: #c084fc; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="max-w-2xl mx-auto space-y-5">
 
+  {# ── Back link ── #}
+  <a href="{% url 'secretary:appointments' %}"
+     class="inline-flex items-center gap-2 text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 transition-colors">
+    <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %}"></i>
+    {% trans "قائمة المواعيد" %}
+  </a>
+
   {# ── Header ── #}
-  <div class="flex items-center justify-between">
-    <div>
-      <h1 class="text-xl font-bold text-gray-900 dark:text-white">
-        {% if prefill_time %}{% trans "تسجيل موعد" %} — {{ prefill_time }}{% else %}{% trans "حجز موعد جديد" %}{% endif %}
-      </h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ clinic.name }}</p>
-    </div>
-    <a href="{% url 'secretary:appointments' %}"
-       class="inline-flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
-      <i class="fa-solid fa-arrow-right text-xs"></i> {% trans "العودة" %}
-    </a>
+  <div>
+    <h1 class="text-xl font-bold text-gray-900 dark:text-white">
+      {% if prefill_time %}{% trans "تسجيل موعد" %} — {{ prefill_time }}{% else %}{% trans "حجز موعد جديد" %}{% endif %}
+    </h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ clinic.name }}</p>
   </div>
 
   {# ── Step indicator ── #}
@@ -93,9 +241,8 @@
                  hx-get="{% url 'secretary:patient_search' %}"
                  hx-trigger="keyup changed delay:350ms"
                  hx-target="#patient-search-results"
-                 hx-include="[name='q_patient']"
-                 name="q_patient">
-          <div id="patient-search-results" class="mt-2 rounded-xl border border-gray-200 dark:border-slate-600 overflow-hidden hidden"></div>
+                 name="q">
+          <div id="patient-search-results" class="mt-2 rounded-xl border border-gray-200 dark:border-slate-600 overflow-hidden"></div>
           <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
             {% trans "المريض غير موجود؟" %}
             <a href="{% url 'secretary:create_new_patient' %}" target="_blank" class="text-primary-600 dark:text-primary-400 hover:underline">{% trans "سجّل مريضاً جديداً" %}</a>
@@ -107,7 +254,7 @@
         <button type="button" onclick="goToStep(2)" id="step1-next"
                 disabled
                 class="px-5 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-          {% trans "التالي" %} <i class="fa-solid fa-arrow-left text-xs me-1"></i>
+          {% trans "التالي" %} <i class="fa-solid {% if IS_RTL %}fa-arrow-left{% else %}fa-arrow-right{% endif %} text-xs me-1"></i>
         </button>
       </div>
     </div>
@@ -158,15 +305,74 @@
           <div id="type-meta" class="hidden mt-1.5 text-xs text-gray-400 dark:text-gray-500"></div>
         </div>
 
-        {# Date #}
+        {# Date — custom inline calendar #}
         <div>
           <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
             {% trans "تاريخ الموعد" %} <span class="text-red-500">*</span>
           </label>
-          <input type="date" name="appointment_date" id="appt-date-input" required
-                 min="{{ today_str }}"
-                 value="{{ prefill_date }}"
-                 class="w-full text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500 transition">
+
+          {# Hidden input keeps the YYYY-MM-DD value for form/HTMX submission #}
+          <input type="hidden" name="appointment_date" id="appt-date-input" value="{{ prefill_date }}" required>
+
+          <div class="cal-wrap" id="cal-widget" data-today="{{ today_str }}">
+            <div class="cal-header">
+              <button type="button" class="cal-nav-btn" id="cal-prev" aria-label="{% if IS_RTL %}الشهر السابق{% else %}Previous month{% endif %}">
+                <i class="fa-solid {% if IS_RTL %}fa-chevron-right{% else %}fa-chevron-left{% endif %}"></i>
+              </button>
+              <div class="cal-title" id="cal-title">—</div>
+              <div class="flex items-center gap-2">
+                <button type="button" class="cal-today-btn" id="cal-today">{% if IS_RTL %}اليوم{% else %}Today{% endif %}</button>
+                <button type="button" class="cal-nav-btn" id="cal-next" aria-label="{% if IS_RTL %}الشهر التالي{% else %}Next month{% endif %}">
+                  <i class="fa-solid {% if IS_RTL %}fa-chevron-left{% else %}fa-chevron-right{% endif %}"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="cal-grid" id="cal-dow-row">
+              {% if IS_RTL %}
+              <div class="cal-dow">أحد</div>
+              <div class="cal-dow">إثن</div>
+              <div class="cal-dow">ثلا</div>
+              <div class="cal-dow">أرب</div>
+              <div class="cal-dow">خمي</div>
+              <div class="cal-dow">جمع</div>
+              <div class="cal-dow">سبت</div>
+              {% else %}
+              <div class="cal-dow">Sun</div>
+              <div class="cal-dow">Mon</div>
+              <div class="cal-dow">Tue</div>
+              <div class="cal-dow">Wed</div>
+              <div class="cal-dow">Thu</div>
+              <div class="cal-dow">Fri</div>
+              <div class="cal-dow">Sat</div>
+              {% endif %}
+            </div>
+
+            <div class="cal-grid mt-1" id="cal-days"></div>
+
+            <div class="cal-legend">
+              <span class="cal-legend-item">
+                <span class="cal-legend-dot dot-working"></span>
+                {% if IS_RTL %}أيام العمل{% else %}Working days{% endif %}
+              </span>
+              <span class="cal-legend-item">
+                <span class="cal-legend-dot dot-non-working"></span>
+                {% if IS_RTL %}إجازة الطبيب{% else %}Doctor off{% endif %}
+              </span>
+              <span class="cal-legend-item">
+                <span class="cal-legend-dot dot-selected"></span>
+                {% if IS_RTL %}المختار{% else %}Selected{% endif %}
+              </span>
+            </div>
+
+            <div class="cal-selected-label" id="cal-selected-label">
+              <i class="fa-solid fa-calendar-day"></i>
+              <span id="cal-selected-text">{% if IS_RTL %}اختر تاريخاً{% else %}Pick a date{% endif %}</span>
+            </div>
+          </div>
+          <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500" id="cal-hint">
+            {% if IS_RTL %}اختر الطبيب أولاً لعرض أيام عمله.{% else %}Select a doctor first to see working days.{% endif %}
+          </p>
         </div>
 
         {# Time slots (HTMX) #}
@@ -194,12 +400,12 @@
       <div class="mt-6 flex items-center justify-between">
         <button type="button" onclick="goToStep(1)"
                 class="px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-300 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-          <i class="fa-solid fa-arrow-right text-xs me-1"></i> {% trans "السابق" %}
+          <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %} text-xs me-1"></i> {% trans "السابق" %}
         </button>
         <button type="button" onclick="goToStep(3)" id="step2-next"
                 disabled
                 class="px-5 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-          {% trans "التالي" %} <i class="fa-solid fa-arrow-left text-xs me-1"></i>
+          {% trans "التالي" %} <i class="fa-solid {% if IS_RTL %}fa-arrow-left{% else %}fa-arrow-right{% endif %} text-xs me-1"></i>
         </button>
       </div>
     </div>
@@ -256,7 +462,7 @@
       <div class="mt-6 flex items-center justify-between">
         <button type="button" onclick="goToStep(2)"
                 class="px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-300 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-          <i class="fa-solid fa-arrow-right text-xs me-1"></i> {% trans "السابق" %}
+          <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %} text-xs me-1"></i> {% trans "السابق" %}
         </button>
         <button type="submit"
                 class="px-6 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 active:scale-95 text-white text-sm font-bold transition-all shadow-sm">
@@ -284,12 +490,204 @@ var steps_config = [
 ];
 
 // Pre-fill from query params
-{% if prefill_date %}
-document.getElementById('appt-date-input').value = '{{ prefill_date }}';
-{% endif %}
 {% if prefill_patient_id %}
 // Will be set by HTMX patient search if needed
 {% endif %}
+
+// ── Inline calendar widget ───────────────────────────────────────────────────
+var CAL = (function() {
+  var dateInput = document.getElementById('appt-date-input');
+  var titleEl = document.getElementById('cal-title');
+  var daysEl = document.getElementById('cal-days');
+  var prevBtn = document.getElementById('cal-prev');
+  var nextBtn = document.getElementById('cal-next');
+  var todayBtn = document.getElementById('cal-today');
+  var hintEl = document.getElementById('cal-hint');
+  var selLabel = document.getElementById('cal-selected-text');
+
+  var todayStr = document.getElementById('cal-widget').dataset.today; // YYYY-MM-DD
+  var todayParts = todayStr.split('-').map(Number);
+  var today = new Date(todayParts[0], todayParts[1] - 1, todayParts[2]);
+  today.setHours(0, 0, 0, 0);
+
+  // Python weekday set: Mon=0..Sun=6. null = unknown (no doctor) → all days enabled.
+  var workingDays = null;
+
+  var viewYear = today.getFullYear();
+  var viewMonth = today.getMonth();
+  var selected = null;
+
+  // If prefill_date is set, parse it
+  var prefill = dateInput.value;
+  if (prefill) {
+    var p = prefill.split('-').map(Number);
+    if (p.length === 3 && !isNaN(p[0])) {
+      selected = new Date(p[0], p[1] - 1, p[2]);
+      viewYear = selected.getFullYear();
+      viewMonth = selected.getMonth();
+    }
+  }
+
+  {% if IS_RTL %}
+  var MONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  var FULL_DOW = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  var DOW_SEP = '، ';
+  {% else %}
+  var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var FULL_DOW = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var DOW_SEP = ', ';
+  {% endif %}
+
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  function fmt(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function sameDay(a, b) {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  }
+  // JS getDay(): Sun=0..Sat=6 → Python weekday (Mon=0..Sun=6)
+  function pyWeekday(d) { return (d.getDay() + 6) % 7; }
+
+  function isPast(d) {
+    var x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    return x.getTime() < today.getTime();
+  }
+
+  function setSelectedLabel() {
+    if (selected) {
+      var dowName = FULL_DOW[selected.getDay()];
+      selLabel.innerHTML = dowName + DOW_SEP + selected.getDate() + ' ' +
+        MONTHS[selected.getMonth()] + ' ' + selected.getFullYear() +
+        ' <strong>(' + fmt(selected) + ')</strong>';
+    } else {
+      selLabel.textContent = '{% if IS_RTL %}اختر تاريخاً{% else %}Pick a date{% endif %}';
+    }
+  }
+
+  function render() {
+    titleEl.textContent = MONTHS[viewMonth] + ' ' + viewYear;
+
+    // disable prev if previous month is fully in the past
+    var lastOfPrev = new Date(viewYear, viewMonth, 0);
+    prevBtn.disabled = lastOfPrev.getTime() < today.getTime();
+
+    // first day to render: start from Sunday before/on the 1st
+    var firstOfMonth = new Date(viewYear, viewMonth, 1);
+    var startOffset = firstOfMonth.getDay(); // Sun=0..Sat=6 — week starts on Sunday
+    var gridStart = new Date(viewYear, viewMonth, 1 - startOffset);
+
+    daysEl.innerHTML = '';
+    for (var i = 0; i < 42; i++) {
+      var d = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i);
+      var inMonth = d.getMonth() === viewMonth;
+      var past = isPast(d);
+      var dowPy = pyWeekday(d);
+      var nonWorking = workingDays !== null && workingDays.indexOf(dowPy) === -1;
+
+      var cell = document.createElement('div');
+      cell.className = 'cal-day';
+      cell.textContent = d.getDate();
+      cell.setAttribute('role', 'button');
+
+      if (!inMonth) {
+        cell.classList.add('is-other-month');
+      } else if (past) {
+        cell.classList.add('is-disabled');
+        cell.title = '{% if IS_RTL %}تاريخ ماضٍ{% else %}Past date{% endif %}';
+      } else if (nonWorking) {
+        cell.classList.add('is-non-working');
+        cell.title = '{% if IS_RTL %}الطبيب لا يعمل في هذا اليوم{% else %}Doctor does not work this day{% endif %}';
+      } else {
+        cell.dataset.date = fmt(d);
+        cell.tabIndex = 0;
+      }
+
+      if (sameDay(d, today) && !selected) cell.classList.add('is-today');
+      if (selected && sameDay(d, selected)) cell.classList.add('is-selected');
+
+      daysEl.appendChild(cell);
+    }
+  }
+
+  function pickDate(d) {
+    selected = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    viewYear = selected.getFullYear();
+    viewMonth = selected.getMonth();
+    dateInput.value = fmt(selected);
+    setSelectedLabel();
+    render();
+    // notify listeners (slot refresh)
+    dateInput.dispatchEvent(new Event('change', {bubbles: true}));
+  }
+
+  // ── Event wiring ──
+  daysEl.addEventListener('click', function(e) {
+    var cell = e.target.closest('.cal-day');
+    if (!cell || !cell.dataset.date) return;
+    var p = cell.dataset.date.split('-').map(Number);
+    pickDate(new Date(p[0], p[1] - 1, p[2]));
+  });
+
+  prevBtn.addEventListener('click', function() {
+    if (prevBtn.disabled) return;
+    if (viewMonth === 0) { viewMonth = 11; viewYear--; } else { viewMonth--; }
+    render();
+  });
+  nextBtn.addEventListener('click', function() {
+    if (viewMonth === 11) { viewMonth = 0; viewYear++; } else { viewMonth++; }
+    render();
+  });
+  todayBtn.addEventListener('click', function() {
+    pickDate(today);
+  });
+
+  function setWorkingDays(days) {
+    workingDays = days;
+    if (days === null) {
+      hintEl.textContent = '{% if IS_RTL %}اختر الطبيب أولاً لعرض أيام عمله.{% else %}Select a doctor first to see working days.{% endif %}';
+    } else if (days.length === 0) {
+      hintEl.textContent = '{% if IS_RTL %}هذا الطبيب لا يملك أيام عمل مسجلة في هذه العيادة.{% else %}This doctor has no working days set in this clinic.{% endif %}';
+    } else {
+      // Python weekday → day names: Mon=0..Sun=6
+      {% if IS_RTL %}
+      var DOW_PY = ['الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت','الأحد'];
+      var label = 'أيام عمل الطبيب: ';
+      {% else %}
+      var DOW_PY = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+      var label = 'Doctor works on: ';
+      {% endif %}
+      var names = days.map(function(d) { return DOW_PY[d]; });
+      hintEl.textContent = label + names.join(DOW_SEP);
+    }
+    // If currently selected date is now non-working, clear it
+    if (selected && days !== null && days.indexOf(pyWeekday(selected)) === -1) {
+      selected = null;
+      dateInput.value = '';
+      setSelectedLabel();
+      // also refresh slots (will clear)
+      dateInput.dispatchEvent(new Event('change', {bubbles: true}));
+    }
+    render();
+  }
+
+  // initial render
+  setSelectedLabel();
+  render();
+
+  return { setWorkingDays: setWorkingDays };
+})();
+
+// ── Fetch doctor's working days when doctor changes ──────────────────────────
+function fetchWorkingDays() {
+  var doctorId = document.getElementById('doctor-select').value;
+  if (!doctorId) {
+    CAL.setWorkingDays(null);
+    return;
+  }
+  var url = '{% url "secretary:doctor_working_days_json" %}?doctor_id=' + encodeURIComponent(doctorId);
+  fetch(url, {credentials: 'same-origin', headers: {'X-Requested-With': 'XMLHttpRequest'}})
+    .then(function(r) { return r.ok ? r.json() : {working_days: []}; })
+    .then(function(data) { CAL.setWorkingDays(data.working_days || []); })
+    .catch(function() { CAL.setWorkingDays([]); });
+}
 
 // ── Step navigation ──────────────────────────────────────────────────────────
 function goToStep(step) {
@@ -359,15 +757,19 @@ function clearPatient() {
   document.getElementById('selected-patient-card').classList.add('hidden');
   document.getElementById('patient-search-section').classList.remove('hidden');
   document.getElementById('step1-next').disabled = true;
+  var input = document.getElementById('patient-search-input');
+  input.value = '';
+  var results = document.getElementById('patient-search-results');
+  results.classList.remove('hidden');
+  results.innerHTML = '';
+  input.focus();
 }
 
 // Handle HTMX patient search result clicks
 document.addEventListener('htmx:afterSwap', function(e) {
   if (e.target.id === 'patient-search-results') {
     var results = document.getElementById('patient-search-results');
-    if (results.innerHTML.trim()) {
-      results.classList.remove('hidden');
-      results.querySelectorAll('[data-patient-id]').forEach(function(row) {
+    results.querySelectorAll('[data-patient-id]').forEach(function(row) {
         row.removeAttribute('hx-get');
         row.removeAttribute('hx-target');
         row.removeAttribute('hx-swap');
@@ -383,7 +785,6 @@ document.addEventListener('htmx:afterSwap', function(e) {
           );
         });
       });
-    }
   }
   if (e.target.id === 'appt-type-container') {
     var sel = e.target.querySelector('select');
@@ -411,8 +812,16 @@ function triggerSlotRefresh() {
   }
 }
 
-document.getElementById('doctor-select').addEventListener('change', triggerSlotRefresh);
+document.getElementById('doctor-select').addEventListener('change', function() {
+  fetchWorkingDays();
+  triggerSlotRefresh();
+});
 document.getElementById('appt-date-input').addEventListener('change', triggerSlotRefresh);
+
+// If a doctor was prefilled (rare path), prime the working-days fetch
+if (document.getElementById('doctor-select').value) {
+  fetchWorkingDays();
+}
 
 function showTypeMeta(sel) {
   if (!sel) return;

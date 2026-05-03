@@ -245,6 +245,24 @@ msgstr "Appointment Details"
 msgid "تعديل الموعد"
 msgstr "Edit Appointment"
 
+msgid "معلومات الموعد الحالية"
+msgstr "Current Appointment Info"
+
+msgid "الموعد الحالي"
+msgstr "Current Date & Time"
+
+msgid "تعديل تفاصيل الموعد"
+msgstr "Edit Appointment Details"
+
+msgid "تظهر الأنواع المتاحة لهذا الطبيب في العيادة فقط."
+msgstr "Only types available for this doctor in the clinic are shown."
+
+msgid "التاريخ الجديد"
+msgstr "New Date"
+
+msgid "الوقت الجديد"
+msgstr "New Time"
+
 msgid "إلغاء الموعد"
 msgstr "Cancel Appointment"
 
@@ -1471,6 +1489,33 @@ msgstr "Secretary Dashboard"
 msgid "العودة إلى قائمة المواعيد"
 msgstr "Back to Appointments"
 
+msgid "الهوية"
+msgstr "ID Number"
+
+msgid "المدة"
+msgstr "Duration"
+
+msgid "السعر"
+msgstr "Price"
+
+msgid "انتظار"
+msgstr "Pending"
+
+msgid "إعادة جدولة / تعديل"
+msgstr "Reschedule / Edit"
+
+msgid "تأكيد إلغاء الموعد"
+msgstr "Confirm Appointment Cancellation"
+
+msgid "وقت الوصول"
+msgstr "Arrival Time"
+
+msgid "دقيقة"
+msgstr "minutes"
+
+msgid "هل لم يحضر المريض؟"
+msgstr "Did the patient not show up?"
+
 # ── Time slots (blocktrans) ────────────────────────────────────────────────────
 msgid "المدة: %(dur)s دقيقة لكل موعد"
 msgstr "Duration: %(dur)s minutes per appointment"
@@ -1981,3 +2026,97 @@ msgstr "This field is required. Please select a file."
 
 msgid "حذف المجموعة"
 msgstr "Delete Group"
+
+# ── Secretary flash messages ──────────────────────────────────────────────────
+msgid "تم تسجيل وصول %(name)s بنجاح."
+msgstr "%(name)s has been checked in successfully."
+
+msgid "لا يمكن تسجيل الوصول إلا للمواعيد المؤكدة."
+msgstr "Check-in is only available for confirmed appointments."
+
+msgid "تم حجب وقت الدكتور %(name)s من %(start)s إلى %(end)s."
+msgstr "Dr. %(name)s's schedule has been blocked from %(start)s to %(end)s."
+
+msgid "بيانات غير صالحة. يرجى التحقق من المدخلات."
+msgstr "Invalid data. Please check your inputs."
+
+msgid "تم إلغاء حجب الوقت للدكتور %(name)s."
+msgstr "Time block for Dr. %(name)s has been removed."
+
+msgid "تم حفظ الاسم والمدينة. أكمل تغيير البريد الإلكتروني بالتحقق."
+msgstr "Name and city saved. Complete the email change by verifying."
+
+msgid "تم حفظ الملف الشخصي بنجاح."
+msgstr "Profile saved successfully."
+
+msgid "تم تغيير كلمة المرور بنجاح."
+msgstr "Password changed successfully."
+
+msgid "تم تحديث بيانات المريض %(name)s بنجاح."
+msgstr "Patient %(name)s's information has been updated successfully."
+
+msgid "يرجى ملء جميع الحقول المطلوبة."
+msgstr "Please fill in all required fields."
+
+msgid "الطبيب المحدد لا ينتمي إلى هذه العيادة."
+msgstr "The selected doctor does not belong to this clinic."
+
+msgid "يرجى اختيار مريض أو إدخال رقم هاتف صحيح."
+msgstr "Please select a patient or enter a valid phone number."
+
+msgid "تم تسجيل وصول %(name)s (حضور مباشر) بنجاح."
+msgstr "%(name)s has been checked in (walk-in) successfully."
+
+msgid "تم حجز موعد %(name)s بنجاح."
+msgstr "%(name)s's appointment has been booked successfully."
+
+msgid "حدث خطأ: %(error)s"
+msgstr "An error occurred: %(error)s"
+
+msgid "لا يمكن تعديل هذا الموعد في حالته الحالية."
+msgstr "This appointment cannot be edited in its current status."
+
+msgid "لا يمكن جدولة موعد في تاريخ ماضٍ."
+msgstr "Cannot schedule an appointment on a past date."
+
+msgid "نوع الموعد المحدد غير متاح لهذا الطبيب."
+msgstr "The selected appointment type is not available for this doctor."
+
+msgid "هذا الوقت محجوز بالفعل لدى هذا الطبيب. يرجى اختيار وقت آخر."
+msgstr "This time slot is already booked for this doctor. Please choose another time."
+
+msgid "تم تحديث الموعد بنجاح."
+msgstr "Appointment updated successfully."
+
+msgid "حدث خطأ أثناء الإلغاء: %(error)s"
+msgstr "An error occurred during cancellation: %(error)s"
+
+msgid "تم إلغاء الموعد بنجاح."
+msgstr "Appointment cancelled successfully."
+
+msgid "تم الانضمام بنجاح إلى عيادة %(clinic)s بصفة سكرتير/ة."
+msgstr "Successfully joined %(clinic)s as a secretary."
+
+msgid "خطأ: %(error)s"
+msgstr "Error: %(error)s"
+
+msgid "لا تملك الصلاحية للوصول إلى هذه الدعوة."
+msgstr "You do not have permission to access this invitation."
+
+msgid "تم رفض الدعوة."
+msgstr "Invitation declined."
+
+msgid "يرجى تسجيل الدخول أو إنشاء حساب جديد لقبول دعوة الانضمام للعيادة كـ سكرتير/ة."
+msgstr "Please log in or create a new account to accept the clinic invitation as a secretary."
+
+msgid "لم يتم تحديد مريض."
+msgstr "No patient was selected."
+
+msgid "المستخدم المحدد ليس مريضاً."
+msgstr "The selected user is not a patient."
+
+msgid "المريض %(name)s مسجل بالفعل في هذه العيادة."
+msgstr "Patient %(name)s is already registered in this clinic."
+
+msgid "تم تسجيل المريض %(name)s في عيادة %(clinic)s بنجاح."
+msgstr "Patient %(name)s has been registered in %(clinic)s successfully."
