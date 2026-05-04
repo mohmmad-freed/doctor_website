@@ -6,7 +6,7 @@
 <div class="max-w-3xl mx-auto space-y-5" dir="{{ DIR }}">
 
   {# Back link — goes back to wherever the secretary came from #}
-  <a href="{% url 'secretary:appointments' %}" data-back
+  <a href="{{ back_url }}"
      class="inline-flex items-center gap-2 text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 transition-colors">
     <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %}"></i>
     {% trans "رجوع" %}

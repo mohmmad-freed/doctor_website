@@ -1,106 +1,183 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" class="dark">
+<html lang="{{ display_lang }}" dir="{{ display_dir }}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="refresh" content="20">
-  <title>غرفة الانتظار — {{ clinic.name }}</title>
+  <meta http-equiv="refresh" content="20;url=?clinic_id={{ clinic.id }}&amp;lang={{ display_lang }}">
+  <title>{% if display_is_rtl %}غرفة الانتظار{% else %}Waiting Room{% endif %} — {{ clinic.name }}</title>
 
-  {# Tailwind CDN #}
+  <!-- No-FOUC: apply display_theme before paint; defaults to dark if unset -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('display_theme') || 'dark';
+        if (t === 'dark') document.documentElement.classList.add('dark');
+      } catch (e) { document.documentElement.classList.add('dark'); }
+    })();
+  </script>
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
       theme: {
         extend: {
-          fontFamily: { sans: ['Cairo', 'sans-serif'] },
-          animation: {
-            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-          }
+          fontFamily: { sans: ['Cairo', 'Inter', 'sans-serif'] },
+          animation: { 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite' }
         }
       }
     }
   </script>
-  {# Google Fonts — Cairo #}
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    body { font-family: 'Cairo', sans-serif; }
+    body { font-family: 'Cairo', 'Inter', sans-serif; }
+
+    /* ── Language button ── */
+    .lang-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 6px 14px; border-radius: 8px;
+      border: 1.5px solid #d1d5db;
+      color: #6b7280; font-size: 0.85rem; font-weight: 700;
+      text-decoration: none; font-family: inherit; white-space: nowrap;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .lang-btn:hover { border-color: #a855f7; color: #a855f7; }
+    .dark .lang-btn { border-color: #4b5563; color: #9ca3af; }
+    .dark .lang-btn:hover { border-color: #a855f7; color: #a855f7; }
+
+    /* ── Theme toggle (identical to base_secretary.html) ── */
+    .theme-toggle {
+      position: relative; width: 44px; height: 22px;
+      background: linear-gradient(to bottom, #4FABD9 0%, #76D1F6 100%);
+      border-radius: 999px; border: 2.5px solid #F0F0F0;
+      cursor: pointer; overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      transition: all 0.5s cubic-bezier(0.25,0.46,0.45,0.94);
+      flex-shrink: 0; display: block;
+    }
+    .theme-toggle.is-dark {
+      background: linear-gradient(to bottom, #1B2944 0%, #2D4367 100%);
+      border-color: #33425E;
+    }
+    .toggle-circle {
+      position: absolute; top: 2px; left: 2px;
+      width: 13px; height: 13px;
+      background: #FFD54F; border-radius: 50%;
+      transition: transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94), background 0.5s;
+      z-index: 10;
+    }
+    .theme-toggle.is-dark .toggle-circle { transform: translateX(21px); background: #E0E0E0; }
+    .toggle-clouds { position: absolute; bottom: -2px; left: 0; width: 100%; height: 100%; transition: transform 0.5s; }
+    .theme-toggle.is-dark .toggle-clouds { transform: translateY(20px); }
+    .cloud { position: absolute; background: white; border-radius: 50%; }
+    .cloud-1 { width: 10px; height: 10px; bottom: 2px; left: 4px; }
+    .cloud-2 { width: 14px; height: 14px; bottom: -4px; right: 4px; }
+    .star { position: absolute; background: white; border-radius: 50%; opacity: 0; transition: opacity 0.3s; }
+    .theme-toggle.is-dark .star { opacity: 1; }
+    .star-1 { width: 2px; height: 2px; top: 4px; left: 20px; }
+    .star-2 { width: 2px; height: 2px; top: 8px; left: 16px; }
+    .toggle-background { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
   </style>
 </head>
-<body class="bg-gray-950 text-white min-h-screen flex flex-col select-none">
+<body class="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white min-h-screen flex flex-col select-none">
 
-  {# ── Header ── #}
-  <header class="bg-gray-900 border-b border-gray-800 px-8 py-5 flex items-center justify-between flex-shrink-0">
+  <header class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-8 py-5 flex items-center justify-between flex-shrink-0">
     <div class="flex items-center gap-4">
       <div class="w-12 h-12 rounded-2xl bg-purple-600 flex items-center justify-center text-white text-xl font-bold">
         {{ clinic.name|slice:":1" }}
       </div>
       <div>
-        <h1 class="text-2xl font-bold text-white">{{ clinic.name }}</h1>
-        <p class="text-sm text-gray-400">غرفة الانتظار</p>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ clinic.name }}</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400">{% if display_is_rtl %}غرفة الانتظار{% else %}Waiting Room{% endif %}</p>
       </div>
     </div>
-    <div class="text-left rtl:text-right">
-      <div class="text-3xl font-bold text-white tabular-nums" id="clock">--:--</div>
-      <div class="text-sm text-gray-400">{{ today|date:"l، j F Y" }}</div>
+
+    <div class="flex items-center gap-4">
+      {% if display_is_rtl %}
+      <a href="?clinic_id={{ clinic.id }}&amp;lang=en" class="lang-btn">
+        <i class="fa-solid fa-globe" style="font-size:0.75rem;"></i> عر
+      </a>
+      {% else %}
+      <a href="?clinic_id={{ clinic.id }}&amp;lang=ar" class="lang-btn">
+        <i class="fa-solid fa-globe" style="font-size:0.75rem;"></i> EN
+      </a>
+      {% endif %}
+
+      <button class="theme-toggle" id="display-theme-toggle" aria-label="Toggle theme">
+        <span class="toggle-background">
+          <span class="star star-1"></span>
+          <span class="star star-2"></span>
+        </span>
+        <span class="toggle-circle"></span>
+        <span class="toggle-clouds">
+          <span class="cloud cloud-1"></span>
+          <span class="cloud cloud-2"></span>
+        </span>
+      </button>
+
+      <div class="text-start">
+        <div class="text-3xl font-bold text-gray-900 dark:text-white tabular-nums" id="clock">--:--</div>
+        {% if display_is_rtl %}
+        <div class="text-sm text-gray-500 dark:text-gray-400">{{ today|date:"l، j F Y" }}</div>
+        {% else %}
+        <div class="text-sm text-gray-500 dark:text-gray-400">{{ today|date:"l, N j, Y" }}</div>
+        {% endif %}
+      </div>
     </div>
   </header>
 
-  {# ── Main queue table ── #}
   <main class="flex-1 p-6 overflow-auto">
     {% if queue_entries %}
     <table class="w-full">
       <thead>
-        <tr class="text-gray-400 text-sm border-b border-gray-800">
-          <th class="pb-4 text-right font-semibold w-16">#</th>
-          <th class="pb-4 text-right font-semibold">المريض</th>
-          <th class="pb-4 text-right font-semibold">الطبيب</th>
-          <th class="pb-4 text-center font-semibold w-40">الحالة</th>
+        <tr class="text-gray-500 dark:text-gray-400 text-sm border-b border-gray-200 dark:border-gray-800">
+          <th class="pb-4 text-start font-semibold w-16">#</th>
+          <th class="pb-4 text-start font-semibold">{% if display_is_rtl %}المريض{% else %}Patient{% endif %}</th>
+          <th class="pb-4 text-start font-semibold">{% if display_is_rtl %}الطبيب{% else %}Doctor{% endif %}</th>
+          <th class="pb-4 text-center font-semibold w-40">{% if display_is_rtl %}الحالة{% else %}Status{% endif %}</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-gray-800">
+      <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
         {% for entry in queue_entries %}
-        <tr class="{% if entry.is_in_progress %}bg-emerald-950/50{% endif %}">
-          {# Queue number #}
-          <td class="py-5 text-right">
+        <tr class="{% if entry.is_in_progress %}bg-emerald-50 dark:bg-emerald-950/50{% endif %}">
+          <td class="py-5 text-start">
             <span class="inline-flex items-center justify-center w-10 h-10 rounded-2xl
-              {% if entry.is_in_progress %}bg-emerald-500 text-white{% else %}bg-gray-800 text-gray-300{% endif %}
+              {% if entry.is_in_progress %}bg-emerald-500 text-white{% else %}bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-300{% endif %}
               text-xl font-bold">
               {{ entry.queue_pos }}
             </span>
           </td>
-
-          {# Patient name (privacy-safe) #}
-          <td class="py-5 text-right">
-            <div class="text-2xl font-bold {% if entry.is_in_progress %}text-white{% else %}text-gray-200{% endif %}">
-              {{ entry.display_name }}
+          <td class="py-5 text-start">
+            <div class="text-2xl font-bold {% if entry.is_in_progress %}text-gray-900 dark:text-white{% else %}text-gray-800 dark:text-gray-200{% endif %}">
+              <span dir="auto">{{ entry.display_name }}</span>
             </div>
             {% if not entry.is_in_progress %}
-            <div class="text-sm text-gray-500 mt-0.5">
-              انتظر {{ entry.wait_minutes }} دقيقة
+            <div class="text-sm text-gray-400 dark:text-gray-500 mt-0.5">
+              {% if display_is_rtl %}انتظر {{ entry.wait_minutes }} دقيقة{% else %}{{ entry.wait_minutes }} min wait{% endif %}
             </div>
             {% endif %}
           </td>
-
-          {# Doctor #}
-          <td class="py-5 text-right">
-            <div class="text-xl font-semibold {% if entry.is_in_progress %}text-emerald-300{% else %}text-gray-300{% endif %}">
-              د. {{ entry.doctor_name }}
+          <td class="py-5 text-start">
+            <div class="text-xl font-semibold {% if entry.is_in_progress %}text-emerald-600 dark:text-emerald-300{% else %}text-gray-600 dark:text-gray-300{% endif %}">
+              {% if display_is_rtl %}
+              <bdi>د. <span dir="auto">{{ entry.doctor_name }}</span></bdi>
+              {% else %}
+              <bdi>Dr. <span dir="auto">{{ entry.doctor_name }}</span></bdi>
+              {% endif %}
             </div>
           </td>
-
-          {# Status badge #}
           <td class="py-5 text-center">
             {% if entry.is_in_progress %}
-            <span class="inline-flex items-center gap-2 px-5 py-2 rounded-2xl bg-emerald-500/20 border border-emerald-500 text-emerald-300 text-lg font-bold animate-pulse-slow">
-              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse inline-block"></span>
-              ادخل الآن
+            <span class="inline-flex items-center gap-2 px-5 py-2 rounded-2xl bg-emerald-500/20 border border-emerald-500 text-emerald-600 dark:text-emerald-300 text-lg font-bold animate-pulse-slow">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse inline-block"></span>
+              {% if display_is_rtl %}ادخل الآن{% else %}Enter Now{% endif %}
             </span>
             {% else %}
-            <span class="inline-flex items-center gap-2 px-5 py-2 rounded-2xl bg-blue-500/10 border border-blue-800 text-blue-300 text-lg font-semibold">
+            <span class="inline-flex items-center gap-2 px-5 py-2 rounded-2xl bg-blue-50 dark:bg-blue-500/10 border border-blue-300 dark:border-blue-800 text-blue-600 dark:text-blue-300 text-lg font-semibold">
               <span class="w-2.5 h-2.5 rounded-full bg-blue-400 inline-block"></span>
-              قيد الانتظار
+              {% if display_is_rtl %}قيد الانتظار{% else %}Waiting{% endif %}
             </span>
             {% endif %}
           </td>
@@ -109,29 +186,43 @@
       </tbody>
     </table>
     {% else %}
-    <div class="flex flex-col items-center justify-center h-64 gap-5 text-gray-600">
-      <i class="fa-solid fa-couch text-5xl opacity-30"></i>
-      <p class="text-2xl font-semibold">لا يوجد مرضى في الانتظار حالياً</p>
+    <div class="flex flex-col items-center justify-center h-64 gap-5 text-gray-300 dark:text-gray-600">
+      <i class="fa-solid fa-couch text-5xl opacity-40"></i>
+      <p class="text-2xl font-semibold">
+        {% if display_is_rtl %}لا يوجد مرضى في الانتظار حالياً{% else %}No patients currently waiting{% endif %}
+      </p>
     </div>
     {% endif %}
   </main>
 
-  {# ── Footer ── #}
-  <footer class="bg-gray-900 border-t border-gray-800 px-8 py-3 flex items-center justify-between text-sm text-gray-500 flex-shrink-0">
-    <span>يتحدث الشاشة تلقائياً كل 20 ثانية</span>
-    <span>{{ clinic.name }} — نظام العيادة</span>
+  <footer class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 px-8 py-3 flex items-center justify-between text-sm text-gray-400 dark:text-gray-500 flex-shrink-0">
+    <span>{% if display_is_rtl %}تتحدث الشاشة تلقائياً كل 20 ثانية{% else %}Auto-refreshes every 20 seconds{% endif %}</span>
+    <span>{{ clinic.name }} — {% if display_is_rtl %}نظام العيادة{% else %}Clinic System{% endif %}</span>
   </footer>
 
   <script>
     // Live clock
     function updateClock() {
-      const now = new Date();
-      const h = String(now.getHours()).padStart(2, '0');
-      const m = String(now.getMinutes()).padStart(2, '0');
+      var now = new Date();
+      var h = String(now.getHours()).padStart(2, '0');
+      var m = String(now.getMinutes()).padStart(2, '0');
       document.getElementById('clock').textContent = h + ':' + m;
     }
     updateClock();
     setInterval(updateClock, 1000);
+
+    // Theme toggle — uses 'display_theme' key, never touches the secretary's 'theme' key
+    document.addEventListener('DOMContentLoaded', function () {
+      var btn = document.getElementById('display-theme-toggle');
+      var isDark = document.documentElement.classList.contains('dark');
+      if (isDark) btn.classList.add('is-dark');
+
+      btn.addEventListener('click', function () {
+        var dark = document.documentElement.classList.toggle('dark');
+        try { localStorage.setItem('display_theme', dark ? 'dark' : 'light'); } catch (e) {}
+        btn.classList.toggle('is-dark', dark);
+      });
+    });
   </script>
 </body>
 </html>

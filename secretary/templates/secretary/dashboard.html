@@ -21,7 +21,7 @@
         </p>
       </div>
       <div class="flex items-center gap-2 flex-wrap flex-shrink-0">
-        <a href="{% url 'secretary:create_appointment' %}"
+        <a href="{% url 'secretary:create_appointment' %}?return_to=dashboard"
            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 active:scale-95 text-white text-sm font-semibold transition-all shadow-sm">
           <i class="fa-solid fa-calendar-plus text-xs"></i> {% trans "حجز موعد" %}
         </a>
@@ -243,7 +243,7 @@
             <p class="font-semibold text-gray-700 dark:text-gray-200">{% trans "لا توجد مواعيد لهذا اليوم" %}</p>
             <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{% trans "يمكنك حجز موعد جديد من الزر أعلاه" %}</p>
           </div>
-          <a href="{% url 'secretary:create_appointment' %}"
+          <a href="{% url 'secretary:create_appointment' %}?return_to=dashboard"
              class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold transition-colors mt-1">
             <i class="fa-solid fa-plus text-xs"></i> {% trans "حجز موعد" %}
           </a>

@@ -104,16 +104,17 @@ def generate_slots_for_date(
             slot_start = current.time()
             slot_end = (current + duration).time()
 
-            if is_today and slot_start <= now_time:
-                is_available = False
-            else:
-                is_available = not _is_slot_booked(slot_start, slot_end, booked_ranges)
+            is_past = is_today and slot_start <= now_time
+            is_booked = False if is_past else _is_slot_booked(slot_start, slot_end, booked_ranges)
+            is_available = not is_past and not is_booked
 
             slots.append(
                 {
                     "time": slot_start,
                     "end_time": slot_end,
                     "is_available": is_available,
+                    "is_past": is_past,
+                    "is_booked": is_booked,
                 }
             )
 

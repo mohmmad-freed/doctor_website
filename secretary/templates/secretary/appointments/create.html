@@ -16,8 +16,12 @@
   .time-slot-btn:hover:not(:disabled) { border-color: #a855f7; color: #9333ea; background: #faf5ff; }
   .dark .time-slot-btn:hover:not(:disabled) { border-color: #a855f7; background: rgba(168,85,247,0.1); }
   .time-slot-btn.selected { background: #a855f7; color: white; border-color: #a855f7; }
-  .time-slot-btn:disabled { opacity: 0.4; cursor: not-allowed; background: #f3f4f6; }
-  .dark .time-slot-btn:disabled { background: #1e293b; }
+  /* Past slot — time has already passed */
+  .time-slot-btn.is-past { opacity: 0.28; cursor: not-allowed; background: #f3f4f6; color: #9ca3af; border-color: #e5e7eb; }
+  .dark .time-slot-btn.is-past { background: #1e293b; color: #475569; border-color: #1e293b; }
+  /* Booked slot — a patient holds this time */
+  .time-slot-btn.is-booked { cursor: not-allowed; background: #fef3c7; border-color: #f59e0b; color: #92400e; opacity: 0.9; }
+  .dark .time-slot-btn.is-booked { background: rgba(245,158,11,0.12); border-color: #d97706; color: #fbbf24; }
   #patient-search-results .result-row:hover { background: #faf5ff; cursor: pointer; }
   .dark #patient-search-results .result-row:hover { background: rgba(168,85,247,0.1); }
 
@@ -209,6 +213,7 @@
     {% csrf_token %}
     <input type="hidden" name="patient_id" id="hidden-patient-id" value="{{ prefill_patient_id }}">
     <input type="hidden" name="appointment_time" id="hidden-time">
+    <input type="hidden" name="return_to" value="{{ return_to }}">
 
     {# ── Step 1: Patient ── #}
     <div class="step-card active bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-6" id="step-1">
@@ -280,7 +285,7 @@
                   class="w-full text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500 transition">
             <option value="">— {% trans "اختر الطبيب" %} —</option>
             {% for doc in doctor_users %}
-            <option value="{{ doc.id }}">{{ doc.name }}</option>
+            <option value="{{ doc.id }}" {% if prefill_doctor_id and doc.id == prefill_doctor_id %}selected{% endif %}>{{ doc.name }}</option>
             {% endfor %}
           </select>
         </div>
@@ -290,17 +295,33 @@
           <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
             {% trans "نوع الموعد" %} <span class="text-red-500">*</span>
           </label>
-          <div id="appt-type-container">
-            <select name="appointment_type_id" id="appt-type-select" required
-                    class="w-full text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500 transition">
-              <option value="">— {% trans "اختر نوع الموعد" %} —</option>
-              {% for at in appointment_types %}
-              <option value="{{ at.id }}" data-duration="{{ at.duration_minutes }}" data-price="{{ at.price }}">
-                {{ at.display_name }} — {{ at.duration_minutes }} {% trans "دقيقة" %}
-                {% if at.price %}(₪{{ at.price }}){% endif %}
-              </option>
-              {% endfor %}
-            </select>
+          <div class="relative" id="appt-type-wrapper">
+            <div id="appt-type-container">
+              <select name="appointment_type_id" id="appt-type-select" required
+                      {% if not prefill_doctor_id %}disabled{% endif %}
+                      class="w-full text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500 transition{% if not prefill_doctor_id %} opacity-50 cursor-not-allowed{% endif %}">
+                <option value="">— {% trans "اختر نوع الموعد" %} —</option>
+                {% for at in appointment_types %}
+                <option value="{{ at.id }}" data-duration="{{ at.duration_minutes }}" data-price="{{ at.price }}">
+                  {{ at.display_name }} — {{ at.duration_minutes }} {% trans "دقيقة" %}
+                  {% if at.price %}(₪{{ at.price }}){% endif %}
+                </option>
+                {% endfor %}
+              </select>
+              {% if not appointment_types and prefill_doctor_id %}
+              <p class="text-xs text-amber-600 dark:text-amber-400 mt-1.5 flex items-center gap-1">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                {% trans "لا توجد أنواع مواعيد مُفعَّلة لهذا الطبيب في هذه العيادة." %}
+              </p>
+              {% endif %}
+            </div>
+            {# Transparent overlay captures hover on the disabled select #}
+            <div id="appt-type-lock-overlay" class="absolute inset-0 z-10 cursor-not-allowed rounded-xl{% if prefill_doctor_id %} hidden{% endif %}"></div>
+            <div id="appt-type-lock-tip"
+                 class="hidden absolute bottom-full mb-2 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-lg bg-gray-800 dark:bg-slate-700 text-white text-xs font-medium whitespace-nowrap shadow-lg pointer-events-none z-20">
+              {% if IS_RTL %}اختر الطبيب أولاً{% else %}Select a doctor first{% endif %}
+              <div class="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-gray-800 dark:border-t-slate-700"></div>
+            </div>
           </div>
           <div id="type-meta" class="hidden mt-1.5 text-xs text-gray-400 dark:text-gray-500"></div>
         </div>
@@ -479,6 +500,22 @@ var steps_config = [
   {label: '{% trans "الموعد" %}'},
   {label: '{% trans "التأكيد" %}'},
 ];
+
+// ── Appointment-type lock helpers ─────────────────────────────────────────────
+function lockTypeSelect() {
+  var sel = document.querySelector('#appt-type-container select');
+  if (sel) { sel.disabled = true; sel.classList.add('opacity-50', 'cursor-not-allowed'); }
+  var overlay = document.getElementById('appt-type-lock-overlay');
+  if (overlay) overlay.classList.remove('hidden');
+}
+function unlockTypeSelect() {
+  var sel = document.querySelector('#appt-type-container select');
+  if (sel) { sel.disabled = false; sel.classList.remove('opacity-50', 'cursor-not-allowed'); }
+  var overlay = document.getElementById('appt-type-lock-overlay');
+  if (overlay) overlay.classList.add('hidden');
+  var tip = document.getElementById('appt-type-lock-tip');
+  if (tip) tip.classList.add('hidden');
+}
 
 // Pre-fill from query params
 {% if prefill_patient_id %}
@@ -801,6 +838,11 @@ document.addEventListener('htmx:afterSwap', function(e) {
   if (e.target.id === 'appt-type-container') {
     var sel = e.target.querySelector('select');
     if (sel) {
+      if (!document.getElementById('doctor-select').value) {
+        lockTypeSelect();
+      } else {
+        unlockTypeSelect();
+      }
       sel.addEventListener('change', triggerSlotRefresh);
       showTypeMeta(sel);
     }
@@ -830,9 +872,18 @@ document.getElementById('doctor-select').addEventListener('change', function() {
 });
 document.getElementById('appt-date-input').addEventListener('change', triggerSlotRefresh);
 
-// If a doctor was prefilled (rare path), prime the working-days fetch
+// If a doctor was prefilled from the schedule page, fire a change event so
+// HTMX reloads appointment types and working days are highlighted on the calendar.
+// Must run after DOMContentLoaded so HTMX has already processed hx-trigger attributes.
 if (document.getElementById('doctor-select').value) {
-  fetchWorkingDays();
+  unlockTypeSelect(); // remove the overlay immediately so it doesn't flash locked
+  fetchWorkingDays(); // calendar working-days can start fetching right away
+  document.addEventListener('DOMContentLoaded', function() {
+    var sel = document.getElementById('doctor-select');
+    if (sel && sel.value) {
+      sel.dispatchEvent(new Event('change', {bubbles: true}));
+    }
+  });
 }
 
 function showTypeMeta(sel) {
@@ -873,6 +924,16 @@ function attachSlotClicks() {
   {% endif %}
 }
 attachSlotClicks();
+
+// Wire overlay tooltip hover
+(function() {
+  var overlay = document.getElementById('appt-type-lock-overlay');
+  var tip = document.getElementById('appt-type-lock-tip');
+  if (overlay && tip) {
+    overlay.addEventListener('mouseenter', function() { tip.classList.remove('hidden'); });
+    overlay.addEventListener('mouseleave', function() { tip.classList.add('hidden'); });
+  }
+})();
 
 function updateSummary() {
   var patientName = selectedPatient ? selectedPatient.name :

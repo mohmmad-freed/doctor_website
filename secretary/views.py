@@ -1,6 +1,7 @@
 from datetime import date, datetime, timedelta
 
 from django.shortcuts import render, get_object_or_404, redirect
+from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
 from django.contrib import messages
@@ -246,6 +247,14 @@ def appointment_detail(request, appointment_id):
         current_step_index = status_steps.index(appointment.status)
     except ValueError:
         current_step_index = 0
+
+    _back_map = {
+        "schedule": reverse("secretary:doctor_schedule"),
+        "appointments": reverse("secretary:appointments"),
+        "dashboard": reverse("secretary:dashboard"),
+    }
+    back_url = _back_map.get(request.GET.get("return_to", ""), reverse("secretary:appointments"))
+
     return render(request, "secretary/appointment_detail.html", {
         "clinic": clinic,
         "appointment": appointment,
@@ -255,6 +264,7 @@ def appointment_detail(request, appointment_id):
         "valid_transitions": get_valid_transitions(appointment.status),
         "status_steps": status_steps,
         "current_step_index": current_step_index,
+        "back_url": back_url,
     })
 
 
@@ -383,7 +393,7 @@ def waiting_room_display(request):
         # Privacy: first name + initial of second word
         name_parts = appt.patient.name.strip().split()
         if len(name_parts) >= 2:
-            display_name = f"{name_parts[0]} {name_parts[1][0]}."
+            display_name = f"{name_parts[0]} {name_parts[1][0]}"
         else:
             display_name = name_parts[0] if name_parts else "—"
 
@@ -396,11 +406,21 @@ def waiting_room_display(request):
             "wait_minutes": wait_minutes,
         })
 
+    # Display-screen language is independent of the secretary's system language.
+    # Controlled by ?lang= param so the TV/kiosk can show Arabic/English without
+    # affecting whoever is logged in on the secretary workstation.
+    display_lang = request.GET.get("lang", "ar")
+    if display_lang not in ("ar", "en"):
+        display_lang = "ar"
+
     return render(request, "secretary/waiting_room/display.html", {
         "clinic": clinic,
         "queue_entries": queue_entries,
         "today": today,
         "now": now,
+        "display_lang": display_lang,
+        "display_is_rtl": display_lang == "ar",
+        "display_dir": "rtl" if display_lang == "ar" else "ltr",
     })
 
 
@@ -2269,10 +2289,17 @@ def create_appointment(request):
     doctor_users = [s.user for s in doctors_qs]
 
     valid_doctor_ids = {u.id for u in doctor_users}
-    # Pre-fill date/time from query params (when clicking a calendar slot)
+    # Pre-fill date/time/doctor from query params (when clicking from schedule page)
     prefill_date = request.GET.get("date", "")
     prefill_time = request.GET.get("time", "")
     prefill_patient_id = request.GET.get("patient_id", "")
+    return_to = request.GET.get("return_to", "")
+    try:
+        prefill_doctor_id = int(request.GET.get("doctor_id", "") or 0)
+        if prefill_doctor_id not in valid_doctor_ids:
+            prefill_doctor_id = 0
+    except (ValueError, TypeError):
+        prefill_doctor_id = 0
 
     if request.method == "POST":
         from secretary.services import secretary_book_appointment
@@ -2287,6 +2314,7 @@ def create_appointment(request):
             time_str = request.POST.get("appointment_time", "").strip()
             reason = request.POST.get("reason", "").strip()
             notes_text = request.POST.get("notes", "").strip()
+            post_return_to = request.POST.get("return_to", "").strip()
 
             if not all([doctor_id, type_id, date_str, time_str]):
                 messages.error(request, _("يرجى ملء جميع الحقول المطلوبة."))
@@ -2331,14 +2359,21 @@ def create_appointment(request):
             )
 
             messages.success(request, _("تم حجز موعد %(name)s بنجاح.") % {"name": patient.name})
-            return redirect("secretary:appointment_detail", appointment_id=appointment.id)
+            detail_url = reverse("secretary:appointment_detail", kwargs={"appointment_id": appointment.id})
+            if post_return_to:
+                detail_url += f"?return_to={post_return_to}"
+            return redirect(detail_url)
 
         except (BookingError, SlotUnavailableError) as e:
             messages.error(request, e.message)
         except Exception as e:
             messages.error(request, _("حدث خطأ: %(error)s") % {"error": e})
 
-    appointment_types = AppointmentType.objects.filter(clinic=clinic, is_active=True)
+    if prefill_doctor_id:
+        from appointments.services.appointment_type_service import get_appointment_types_for_doctor_in_clinic
+        appointment_types = get_appointment_types_for_doctor_in_clinic(prefill_doctor_id, clinic.id)
+    else:
+        appointment_types = AppointmentType.objects.filter(clinic=clinic, is_active=True)
     today_str = date.today().isoformat()
 
     return render(request, "secretary/appointments/create.html", {
@@ -2349,6 +2384,8 @@ def create_appointment(request):
         "prefill_date": prefill_date,
         "prefill_time": prefill_time,
         "prefill_patient_id": prefill_patient_id,
+        "prefill_doctor_id": prefill_doctor_id,
+        "return_to": return_to,
         "steps": [(_("المريض"), 1), (_("الموعد"), 2), (_("التأكيد"), 3)],
     })
 
