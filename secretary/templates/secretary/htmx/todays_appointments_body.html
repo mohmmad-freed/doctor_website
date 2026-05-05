@@ -1,0 +1,143 @@
+{% load i18n %}
+{% comment %}HTMX partial — today's appointments table body (filtered). Rendered by: secretary:todays_appointments_htmx and included from dashboard.html for the initial render. Target: #todays-appointments-body{% endcomment %}
+
+{# ── Filter pill counts (out-of-band swap so they stay accurate after HTMX reload) ── #}
+{% if is_htmx %}
+<span hx-swap-oob="innerHTML:#filter-count-all">{{ count_all }}</span>
+<span hx-swap-oob="innerHTML:#filter-count-confirmed">{{ count_confirmed }}</span>
+<span hx-swap-oob="innerHTML:#filter-count-available">{{ count_available }}</span>
+{% endif %}
+
+{% if rows %}
+<div class="overflow-x-auto dark-scrollbar">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide border-b border-gray-100 dark:border-slate-700">
+        <th class="px-5 py-3 text-right">{% trans "الوقت" %}</th>
+        <th class="px-5 py-3 text-right">{% trans "المريض" %}</th>
+        <th class="px-5 py-3 text-right hidden sm:table-cell">{% trans "الطبيب" %}</th>
+        <th class="px-5 py-3 text-right hidden md:table-cell">{% trans "نوع الموعد" %}</th>
+        <th class="px-5 py-3 text-right">{% trans "الحالة" %}</th>
+        <th class="px-5 py-3 text-left">{% trans "إجراءات" %}</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
+      {% for row in rows %}
+        {% if row.kind == "appointment" %}
+          {% with appt=row.appointment %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors">
+            <td class="px-5 py-3 font-mono font-semibold text-gray-800 dark:text-gray-100 whitespace-nowrap">
+              {{ appt.appointment_time|time:"H:i" }}
+            </td>
+            <td class="px-5 py-3 font-semibold text-gray-800 dark:text-gray-100 max-w-[160px]">
+              <span class="block truncate" title="{{ appt.patient.name }}">{{ appt.patient.name }}</span>
+            </td>
+            <td class="px-5 py-3 text-gray-600 dark:text-gray-300 hidden sm:table-cell max-w-[140px]">
+              <span class="block truncate">{{ appt.doctor.name|default:"—" }}</span>
+            </td>
+            <td class="px-5 py-3 text-gray-600 dark:text-gray-300 hidden md:table-cell max-w-[140px]">
+              <span class="block truncate">{{ appt.appointment_type.display_name|default:"—" }}</span>
+            </td>
+            <td class="px-5 py-3">
+              <span class="status-badge status-{{ appt.status|lower }}">{{ appt.get_status_display }}</span>
+            </td>
+            <td class="px-5 py-3">
+              {% if appt.status not in terminal_statuses %}
+              <div class="flex items-center gap-1.5">
+                {% if appt.status == 'CONFIRMED' %}
+                <form method="post" action="{% url 'secretary:checkin_appointment' appt.id %}">
+                  {% csrf_token %}
+                  <button type="submit"
+                          aria-label="{% trans 'تسجيل الوصول' %}"
+                          class="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors" title="{% trans 'تسجيل الوصول' %}">
+                    <i class="fa-solid fa-door-open text-xs"></i>
+                  </button>
+                </form>
+                {% endif %}
+                <a href="{% url 'secretary:appointment_detail' appt.id %}"
+                   aria-label="{% trans 'تفاصيل الموعد' %}"
+                   class="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors" title="{% trans 'تفاصيل' %}">
+                  <i class="fa-solid fa-eye text-xs"></i>
+                </a>
+                <a href="{% url 'secretary:edit_appointment' appt.id %}"
+                   aria-label="{% trans 'تعديل الموعد' %}"
+                   class="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors" title="{% trans 'تعديل' %}">
+                  <i class="fa-solid fa-pen-to-square text-xs"></i>
+                </a>
+                <form method="post" action="{% url 'secretary:cancel_appointment' appt.id %}">
+                  {% csrf_token %}
+                  <button type="submit"
+                          aria-label="{% trans 'إلغاء الموعد' %}"
+                          class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          title="{% trans 'إلغاء' %}"
+                          onclick="return confirm('{% trans "هل أنت متأكد من إلغاء هذا الموعد؟" %}')">
+                    <i class="fa-solid fa-xmark text-xs"></i>
+                  </button>
+                </form>
+              </div>
+              {% else %}
+              <a href="{% url 'secretary:appointment_detail' appt.id %}"
+                 class="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors" title="{% trans 'تفاصيل' %}">
+                <i class="fa-solid fa-eye text-xs"></i>
+              </a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endwith %}
+        {% else %}
+          {# ── Available slot row ── #}
+          <tr class="hover:bg-emerald-50/40 dark:hover:bg-emerald-900/10 transition-colors">
+            <td class="px-5 py-3 font-mono font-semibold text-gray-800 dark:text-gray-100 whitespace-nowrap">
+              {{ row.time|time:"H:i" }}
+            </td>
+            <td class="px-5 py-3 text-gray-400 dark:text-gray-500 italic max-w-[160px]">
+              <span class="inline-flex items-center gap-1.5">
+                <i class="fa-regular fa-calendar-plus text-emerald-500/70 text-xs"></i>
+                {% trans "فترة شاغرة" %}
+              </span>
+            </td>
+            <td class="px-5 py-3 text-gray-600 dark:text-gray-300 hidden sm:table-cell max-w-[140px]">
+              <span class="block truncate">{{ row.doctor.name|default:"—" }}</span>
+            </td>
+            <td class="px-5 py-3 text-gray-400 dark:text-gray-500 hidden md:table-cell max-w-[140px]">—</td>
+            <td class="px-5 py-3">
+              <span class="status-badge status-available">{% trans "متاح" %}</span>
+            </td>
+            <td class="px-5 py-3">
+              <a href="{% url 'secretary:create_appointment' %}?doctor_id={{ row.doctor.id }}&date={{ today|date:'Y-m-d' }}&time={{ row.time|time:'H:i' }}&return_to=dashboard"
+                 aria-label="{% trans 'حجز هذه الفترة' %}"
+                 class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors"
+                 title="{% trans 'حجز هذه الفترة' %}">
+                <i class="fa-solid fa-plus text-[10px]"></i>
+                {% trans "حجز" %}
+              </a>
+            </td>
+          </tr>
+        {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="flex flex-col items-center py-12 gap-3 text-center px-4">
+  <div class="w-14 h-14 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
+    <i class="fa-regular fa-calendar-xmark text-gray-400 dark:text-gray-500 text-xl"></i>
+  </div>
+  <div>
+    {% if current_filter == "confirmed" %}
+    <p class="font-semibold text-gray-700 dark:text-gray-200">{% trans "لا توجد مواعيد مؤكدة لهذا اليوم" %}</p>
+    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{% trans "ستظهر المواعيد المؤكدة هنا فور تأكيدها." %}</p>
+    {% elif current_filter == "available" %}
+    <p class="font-semibold text-gray-700 dark:text-gray-200">{% trans "لا توجد فترات متاحة لهذا اليوم" %}</p>
+    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{% trans "تحقق من جدول الأطباء أو من إعدادات أنواع المواعيد." %}</p>
+    {% else %}
+    <p class="font-semibold text-gray-700 dark:text-gray-200">{% trans "لا توجد مواعيد لهذا اليوم" %}</p>
+    <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{% trans "يمكنك حجز موعد جديد من الزر أعلاه" %}</p>
+    {% endif %}
+  </div>
+  <a href="{% url 'secretary:create_appointment' %}?return_to=dashboard"
+     class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold transition-colors mt-1">
+    <i class="fa-solid fa-plus text-xs"></i> {% trans "حجز موعد" %}
+  </a>
+</div>
+{% endif %}

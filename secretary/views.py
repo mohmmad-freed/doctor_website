@@ -5,7 +5,7 @@ from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
 from django.contrib import messages
-from django.db.models import Q, Sum
+from django.db.models import F, Q, Sum
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.utils import timezone
 from django.utils.translation import gettext as _
@@ -23,6 +23,98 @@ def _require_secretary(request):
     return ClinicStaff.objects.filter(
         user=request.user, role="SECRETARY", is_active=True
     ).select_related("clinic").first()
+
+
+def _today_filter_counts(clinic, all_rows=None):
+    """
+    Counts shown on the filter pills. Derived from the "all" row set so the numbers
+    stay consistent with what's actually rendered (e.g. slots that overlap a CANCELLED
+    appointment are suppressed in the All view, so they don't get double-counted).
+    Pass `all_rows` if already computed; otherwise this builds it.
+    """
+    if all_rows is None:
+        all_rows = _build_today_rows(clinic, "all")
+    confirmed = sum(
+        1 for r in all_rows
+        if r["kind"] == "appointment" and r["appointment"].status == Appointment.Status.CONFIRMED
+    )
+    available = sum(1 for r in all_rows if r["kind"] == "slot")
+    return {"all": len(all_rows), "confirmed": confirmed, "available": available}
+
+
+def _build_today_rows(clinic, filter_type):
+    """
+    Unified row list for the dashboard "Today's Appointments" table.
+
+    filter_type: "all" | "confirmed" | "available"
+    Returns list of dicts: {"kind": "appointment"|"slot", "time", "appointment", "doctor"}.
+
+    Note: walk-ins (is_walk_in=True, status=CHECKED_IN) don't reserve slots —
+    generate_slots_for_date only treats CONFIRMED/COMPLETED as blocking.
+    """
+    from doctors.services import generate_slots_for_date
+    from clinics.models import ClinicStaff
+
+    today = date.today()
+    rows = []
+
+    # ── Appointment rows ────────────────────────────────────────────
+    if filter_type in ("all", "confirmed"):
+        qs = (
+            Appointment.objects.filter(clinic=clinic, appointment_date=today)
+            .select_related("patient", "doctor", "appointment_type")
+            .order_by("appointment_time")
+        )
+        if filter_type == "confirmed":
+            qs = qs.filter(status=Appointment.Status.CONFIRMED)
+        for appt in qs:
+            rows.append({
+                "kind": "appointment",
+                "time": appt.appointment_time,
+                "appointment": appt,
+                "doctor": appt.doctor,
+            })
+
+    # ── Slot rows ──────────────────────────────────────────────────
+    if filter_type in ("all", "available"):
+        smallest = (
+            AppointmentType.objects.filter(clinic=clinic, is_active=True)
+            .order_by("duration_minutes")
+            .values_list("duration_minutes", flat=True)
+            .first()
+        )
+        if smallest:
+            doctor_staff = ClinicStaff.objects.filter(
+                clinic=clinic, role="DOCTOR", is_active=True
+            ).select_related("user")
+            booked_keys = {(r["doctor"].id, r["time"]) for r in rows if r["kind"] == "appointment"}
+            for staff in doctor_staff:
+                doctor = staff.user
+                slots = generate_slots_for_date(
+                    doctor_id=doctor.id,
+                    clinic_id=clinic.id,
+                    target_date=today,
+                    duration_minutes=smallest,
+                )
+                for slot in slots:
+                    if not slot["is_available"] or slot["is_past"]:
+                        continue
+                    if (doctor.id, slot["time"]) in booked_keys:
+                        continue  # defensive: don't duplicate a booked slot
+                    rows.append({
+                        "kind": "slot",
+                        "time": slot["time"],
+                        "appointment": None,
+                        "doctor": doctor,
+                    })
+
+    # Sort: by time ascending; appointments before slots at the same minute; then doctor name.
+    rows.sort(key=lambda r: (
+        r["time"],
+        0 if r["kind"] == "appointment" else 1,
+        (r["doctor"].name if r["doctor"] else "") or "",
+    ))
+    return rows
 
 
 def _get_doctor_statuses(clinic):
@@ -164,9 +256,24 @@ def dashboard(request):
         Appointment.Status.NO_SHOW,
     ]
 
+    current_filter = request.GET.get("filter", "all")
+    if current_filter not in ("all", "confirmed", "available"):
+        current_filter = "all"
+    if current_filter == "all":
+        rows = _build_today_rows(clinic, "all")
+        counts = _today_filter_counts(clinic, all_rows=rows)
+    else:
+        rows = _build_today_rows(clinic, current_filter)
+        counts = _today_filter_counts(clinic)
+
     return render(request, "secretary/dashboard.html", {
         "clinic": clinic,
         "todays_appointments": todays_appointments,
+        "rows": rows,
+        "current_filter": current_filter,
+        "count_all": counts["all"],
+        "count_confirmed": counts["confirmed"],
+        "count_available": counts["available"],
         "today": today,
         "stat_total": stat_total,
         "stat_pending": stat_pending,
@@ -197,6 +304,41 @@ def doctor_status_htmx(request):
 
 
 @login_required
+def todays_appointments_htmx(request):
+    """HTMX endpoint: returns the filtered today's-appointments table body partial."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden()
+
+    clinic = staff.clinic
+    current_filter = request.GET.get("filter", "all")
+    if current_filter not in ("all", "confirmed", "available"):
+        current_filter = "all"
+
+    if current_filter == "all":
+        rows = _build_today_rows(clinic, "all")
+        counts = _today_filter_counts(clinic, all_rows=rows)
+    else:
+        rows = _build_today_rows(clinic, current_filter)
+        counts = _today_filter_counts(clinic)
+    terminal_statuses = [
+        Appointment.Status.COMPLETED,
+        Appointment.Status.CANCELLED,
+        Appointment.Status.NO_SHOW,
+    ]
+    return render(request, "secretary/htmx/todays_appointments_body.html", {
+        "rows": rows,
+        "current_filter": current_filter,
+        "count_all": counts["all"],
+        "count_confirmed": counts["confirmed"],
+        "count_available": counts["available"],
+        "today": date.today(),
+        "terminal_statuses": terminal_statuses,
+        "is_htmx": True,
+    })
+
+
+@login_required
 @require_POST
 def checkin_appointment(request, appointment_id):
     """Mark a CONFIRMED appointment as CHECKED_IN and set checked_in_at timestamp."""
@@ -207,9 +349,11 @@ def checkin_appointment(request, appointment_id):
     appointment = get_object_or_404(Appointment, id=appointment_id, clinic=staff.clinic)
 
     if appointment.status == Appointment.Status.CONFIRMED:
+        from secretary.services import _next_queue_priority
         appointment.status = Appointment.Status.CHECKED_IN
         appointment.checked_in_at = timezone.now()
-        appointment.save(update_fields=["status", "checked_in_at", "updated_at"])
+        appointment.queue_priority = _next_queue_priority(staff.clinic.id, date.today())
+        appointment.save(update_fields=["status", "checked_in_at", "queue_priority", "updated_at"])
         messages.success(request, _("تم تسجيل وصول %(name)s بنجاح.") % {"name": appointment.patient.name})
     else:
         messages.warning(request, _("لا يمكن تسجيل الوصول إلا للمواعيد المؤكدة."))
@@ -302,7 +446,7 @@ def waiting_room(request):
             status=Appointment.Status.CHECKED_IN,
         )
         .select_related("patient", "doctor", "appointment_type")
-        .order_by("checked_in_at")
+        .order_by(F("queue_priority").asc(nulls_last=True), "checked_in_at")
     )
 
     if doctor_filter:
@@ -381,7 +525,7 @@ def waiting_room_display(request):
             status__in=[Appointment.Status.CHECKED_IN, Appointment.Status.IN_PROGRESS],
         )
         .select_related("patient", "doctor")
-        .order_by("checked_in_at")
+        .order_by(F("queue_priority").asc(nulls_last=True), "checked_in_at")
     )
 
     queue_entries = []
@@ -472,7 +616,7 @@ def waiting_room_checkedin_htmx(request):
             status=Appointment.Status.CHECKED_IN,
         )
         .select_related("patient", "doctor", "appointment_type")
-        .order_by("checked_in_at")
+        .order_by(F("queue_priority").asc(nulls_last=True), "checked_in_at")
     )
     if doctor_filter:
         qs = qs.filter(doctor_id=doctor_filter)
@@ -500,6 +644,44 @@ def waiting_room_checkedin_htmx(request):
         "checkedin_list": checkedin_list,
         "clinic": clinic,
     })
+
+
+@login_required
+def reorder_queue(request):
+    """POST — secretary drags to reorder the CHECKED_IN queue; persists new priorities."""
+    if request.method != "POST":
+        return HttpResponse(status=405)
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden()
+
+    import json
+    try:
+        data = json.loads(request.body)
+        order = [int(x) for x in data.get("order", [])]
+    except (ValueError, TypeError, json.JSONDecodeError):
+        return HttpResponse(status=400)
+
+    if not order:
+        return HttpResponse(status=200)
+
+    today = date.today()
+    clinic = staff.clinic
+
+    valid_ids = set(
+        Appointment.objects.filter(
+            clinic=clinic,
+            appointment_date=today,
+            status=Appointment.Status.CHECKED_IN,
+            id__in=order,
+        ).values_list("id", flat=True)
+    )
+
+    for priority, appt_id in enumerate(order, start=1):
+        if appt_id in valid_ids:
+            Appointment.objects.filter(id=appt_id).update(queue_priority=priority)
+
+    return HttpResponse(status=200)
 
 
 @login_required
@@ -1511,6 +1693,9 @@ def get_time_slots_htmx(request):
 
     from datetime import datetime as _dt
     from doctors.services import generate_slots_for_date
+    from appointments.services.appointment_type_service import (
+        get_slot_step_minutes_for_doctor,
+    )
 
     doctor_id = request.GET.get("doctor_id", "")
     date_str = request.GET.get("appointment_date", "")
@@ -1528,11 +1713,15 @@ def get_time_slots_htmx(request):
             ).first()
             if appt_type:
                 duration = appt_type.duration_minutes
+                step = get_slot_step_minutes_for_doctor(
+                    int(doctor_id), staff.clinic.id
+                )
                 slots = generate_slots_for_date(
                     doctor_id=int(doctor_id),
                     clinic_id=staff.clinic.id,
                     target_date=target_date,
                     duration_minutes=duration,
+                    slot_step_minutes=step,
                 )
             else:
                 error = "نوع الموعد غير موجود."

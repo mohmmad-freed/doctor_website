@@ -2,6 +2,9 @@ from django.core.exceptions import ValidationError
 from appointments.models import AppointmentType, DoctorClinicAppointmentType
 
 
+DEFAULT_SLOT_STEP_MINUTES = 15
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # CLINIC-LEVEL APPOINTMENT TYPE MANAGEMENT  (clinic owner)
 # ──────────────────────────────────────────────────────────────────────────────
@@ -123,6 +126,22 @@ def get_appointment_types_for_doctor_in_clinic(doctor_id, clinic_id):
     return AppointmentType.objects.filter(
         id__in=active_type_ids
     ).order_by("name")
+
+
+def get_slot_step_minutes_for_doctor(doctor_id, clinic_id) -> int:
+    """
+    Return the slot-grid step (in minutes) that the booking workflow should
+    use when rendering time slots for ``doctor`` in ``clinic``.
+
+    The step is the smallest ``duration_minutes`` among the doctor's enabled
+    appointment types in this clinic. Reuses the same fallback rule as
+    ``get_appointment_types_for_doctor_in_clinic`` (no per-doctor config →
+    all active clinic types). Falls back to ``DEFAULT_SLOT_STEP_MINUTES`` if
+    the doctor has no enabled types yet.
+    """
+    types = get_appointment_types_for_doctor_in_clinic(doctor_id, clinic_id)
+    durations = [t.duration_minutes for t in types if t.duration_minutes]
+    return min(durations) if durations else DEFAULT_SLOT_STEP_MINUTES
 
 
 def get_doctor_type_assignments(doctor_id, clinic_id):

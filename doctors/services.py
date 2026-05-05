@@ -19,6 +19,7 @@ def generate_slots_for_date(
     clinic_id: int,
     target_date: date,
     duration_minutes: int,
+    slot_step_minutes: int | None = None,
 ) -> list[dict]:
     """
     Generate time slots for a doctor on a specific date.
@@ -28,6 +29,11 @@ def generate_slots_for_date(
         clinic_id: The clinic ID (availability is per-clinic).
         target_date: The date to generate slots for.
         duration_minutes: Slot duration from AppointmentType.
+        slot_step_minutes: Spacing between consecutive slot starts.
+            If None, defaults to ``duration_minutes`` (legacy behavior).
+            Passing a smaller value (e.g. 15) emits a slot every step
+            while still requiring the full ``duration_minutes`` window
+            to fit within the doctor's availability block.
 
     Returns:
         List of dicts: [{"time": time, "end_time": time, "is_available": bool}, ...]
@@ -93,6 +99,7 @@ def generate_slots_for_date(
     # 3. Generate slots from each availability block
     slots = []
     duration = timedelta(minutes=duration_minutes)
+    step = timedelta(minutes=slot_step_minutes) if slot_step_minutes else duration
     is_today = target_date == timezone.localdate()
     now_time = timezone.localtime().time() if is_today else None
 
@@ -118,7 +125,7 @@ def generate_slots_for_date(
                 }
             )
 
-            current += duration
+            current += step
 
     return slots
 

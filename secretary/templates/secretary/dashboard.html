@@ -143,112 +143,66 @@
       {# ── Today's appointments table ── #}
       <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
 
-        <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/50">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/50">
           <div class="flex items-center gap-2">
             <i class="fa-solid fa-calendar-day text-primary-500 text-sm"></i>
             <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">{% trans "مواعيد اليوم" %}</span>
           </div>
-          <div class="flex items-center gap-2">
-            <span class="text-xs text-gray-400 dark:text-gray-500">{{ today|date:"d/m/Y" }}</span>
-            <a href="{% url 'secretary:appointments' %}"
-               class="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline">
-              {% trans "عرض الكل" %}
-            </a>
+
+          <div class="flex items-center gap-3 flex-wrap">
+            {# ── Filter pills (HTMX) ── #}
+            <div class="inline-flex rounded-xl bg-gray-100 dark:bg-slate-700/60 p-1 gap-0.5" role="tablist" aria-label="{% trans 'تصفية مواعيد اليوم' %}">
+              <button type="button" role="tab"
+                      aria-selected="{% if current_filter == 'all' %}true{% else %}false{% endif %}"
+                      class="filter-pill {% if current_filter == 'all' %}filter-pill-active{% endif %}"
+                      hx-get="{% url 'secretary:todays_appointments_htmx' %}?filter=all"
+                      hx-target="#todays-appointments-body"
+                      hx-swap="innerHTML"
+                      hx-push-url="{% url 'secretary:dashboard' %}?filter=all"
+                      onclick="document.querySelectorAll('.filter-pill').forEach(b=>b.classList.remove('filter-pill-active'));this.classList.add('filter-pill-active');document.querySelectorAll('.filter-pill').forEach(b=>b.setAttribute('aria-selected','false'));this.setAttribute('aria-selected','true');">
+                <i class="fa-solid fa-list text-[11px]"></i>
+                {% trans "الكل" %}
+                <span id="filter-count-all" class="filter-count">{{ count_all }}</span>
+              </button>
+              <button type="button" role="tab"
+                      aria-selected="{% if current_filter == 'confirmed' %}true{% else %}false{% endif %}"
+                      class="filter-pill {% if current_filter == 'confirmed' %}filter-pill-active{% endif %}"
+                      hx-get="{% url 'secretary:todays_appointments_htmx' %}?filter=confirmed"
+                      hx-target="#todays-appointments-body"
+                      hx-swap="innerHTML"
+                      hx-push-url="{% url 'secretary:dashboard' %}?filter=confirmed"
+                      onclick="document.querySelectorAll('.filter-pill').forEach(b=>b.classList.remove('filter-pill-active'));this.classList.add('filter-pill-active');document.querySelectorAll('.filter-pill').forEach(b=>b.setAttribute('aria-selected','false'));this.setAttribute('aria-selected','true');">
+                <i class="fa-solid fa-circle-check text-[11px]"></i>
+                {% trans "مؤكدة" %}
+                <span id="filter-count-confirmed" class="filter-count">{{ count_confirmed }}</span>
+              </button>
+              <button type="button" role="tab"
+                      aria-selected="{% if current_filter == 'available' %}true{% else %}false{% endif %}"
+                      class="filter-pill {% if current_filter == 'available' %}filter-pill-active{% endif %}"
+                      hx-get="{% url 'secretary:todays_appointments_htmx' %}?filter=available"
+                      hx-target="#todays-appointments-body"
+                      hx-swap="innerHTML"
+                      hx-push-url="{% url 'secretary:dashboard' %}?filter=available"
+                      onclick="document.querySelectorAll('.filter-pill').forEach(b=>b.classList.remove('filter-pill-active'));this.classList.add('filter-pill-active');document.querySelectorAll('.filter-pill').forEach(b=>b.setAttribute('aria-selected','false'));this.setAttribute('aria-selected','true');">
+                <i class="fa-regular fa-calendar-plus text-[11px]"></i>
+                {% trans "الفترات المتاحة" %}
+                <span id="filter-count-available" class="filter-count">{{ count_available }}</span>
+              </button>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-gray-400 dark:text-gray-500">{{ today|date:"d/m/Y" }}</span>
+              <a href="{% url 'secretary:appointments' %}"
+                 class="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline">
+                {% trans "عرض الكل" %}
+              </a>
+            </div>
           </div>
         </div>
 
-        {% if todays_appointments %}
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide border-b border-gray-100 dark:border-slate-700">
-                <th class="px-5 py-3 text-right">{% trans "الوقت" %}</th>
-                <th class="px-5 py-3 text-right">{% trans "المريض" %}</th>
-                <th class="px-5 py-3 text-right hidden sm:table-cell">{% trans "الطبيب" %}</th>
-                <th class="px-5 py-3 text-right hidden md:table-cell">{% trans "نوع الموعد" %}</th>
-                <th class="px-5 py-3 text-right">{% trans "الحالة" %}</th>
-                <th class="px-5 py-3 text-left">{% trans "إجراءات" %}</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
-              {% for appt in todays_appointments %}
-              <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors">
-                <td class="px-5 py-3 font-mono font-semibold text-gray-800 dark:text-gray-100 whitespace-nowrap">
-                  {{ appt.appointment_time|time:"H:i" }}
-                </td>
-                <td class="px-5 py-3 font-semibold text-gray-800 dark:text-gray-100 max-w-[160px]">
-                  <span class="block truncate" title="{{ appt.patient.name }}">{{ appt.patient.name }}</span>
-                </td>
-                <td class="px-5 py-3 text-gray-600 dark:text-gray-300 hidden sm:table-cell max-w-[140px]">
-                  <span class="block truncate">{{ appt.doctor.name|default:"—" }}</span>
-                </td>
-                <td class="px-5 py-3 text-gray-600 dark:text-gray-300 hidden md:table-cell max-w-[140px]">
-                  <span class="block truncate">{{ appt.appointment_type.display_name|default:"—" }}</span>
-                </td>
-                <td class="px-5 py-3">
-                  <span class="status-badge status-{{ appt.status|lower }}">{{ appt.get_status_display }}</span>
-                </td>
-                <td class="px-5 py-3">
-                  {% if appt.status not in terminal_statuses %}
-                  <div class="flex items-center gap-1.5">
-                    {% if appt.status == 'CONFIRMED' %}
-                    <form method="post" action="{% url 'secretary:checkin_appointment' appt.id %}">
-                      {% csrf_token %}
-                      <button type="submit"
-                              aria-label="{% trans 'تسجيل الوصول' %}"
-                              class="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors" title="{% trans 'تسجيل الوصول' %}">
-                        <i class="fa-solid fa-door-open text-xs"></i>
-                      </button>
-                    </form>
-                    {% endif %}
-                    <a href="{% url 'secretary:appointment_detail' appt.id %}"
-                       aria-label="{% trans 'تفاصيل الموعد' %}"
-                       class="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors" title="{% trans 'تفاصيل' %}">
-                      <i class="fa-solid fa-eye text-xs"></i>
-                    </a>
-                    <a href="{% url 'secretary:edit_appointment' appt.id %}"
-                       aria-label="{% trans 'تعديل الموعد' %}"
-                       class="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors" title="{% trans 'تعديل' %}">
-                      <i class="fa-solid fa-pen-to-square text-xs"></i>
-                    </a>
-                    <form method="post" action="{% url 'secretary:cancel_appointment' appt.id %}">
-                      {% csrf_token %}
-                      <button type="submit"
-                              aria-label="{% trans 'إلغاء الموعد' %}"
-                              class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                              title="{% trans 'إلغاء' %}"
-                              onclick="return confirm('{% trans "هل أنت متأكد من إلغاء هذا الموعد؟" %}')">
-                        <i class="fa-solid fa-xmark text-xs"></i>
-                      </button>
-                    </form>
-                  </div>
-                  {% else %}
-                  <a href="{% url 'secretary:appointment_detail' appt.id %}"
-                     class="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors" title="{% trans 'تفاصيل' %}">
-                    <i class="fa-solid fa-eye text-xs"></i>
-                  </a>
-                  {% endif %}
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+        <div id="todays-appointments-body">
+          {% include "secretary/htmx/todays_appointments_body.html" %}
         </div>
-        {% else %}
-        <div class="flex flex-col items-center py-12 gap-3 text-center px-4">
-          <div class="w-14 h-14 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
-            <i class="fa-regular fa-calendar-xmark text-gray-400 dark:text-gray-500 text-xl"></i>
-          </div>
-          <div>
-            <p class="font-semibold text-gray-700 dark:text-gray-200">{% trans "لا توجد مواعيد لهذا اليوم" %}</p>
-            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{% trans "يمكنك حجز موعد جديد من الزر أعلاه" %}</p>
-          </div>
-          <a href="{% url 'secretary:create_appointment' %}?return_to=dashboard"
-             class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold transition-colors mt-1">
-            <i class="fa-solid fa-plus text-xs"></i> {% trans "حجز موعد" %}
-          </a>
-        </div>
-        {% endif %}
 
       </div>
     </div>

@@ -167,6 +167,11 @@ class Appointment(models.Model):
         blank=True,
         help_text="Timestamp set automatically when the appointment status transitions to CHECKED_IN.",
     )
+    queue_priority = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Manual queue position (1 = first). Assigned on check-in, updated by secretary drag-reorder.",
+    )
     is_walk_in = models.BooleanField(
         default=False,
         help_text="True when the appointment was registered as a walk-in (no prior booking).",

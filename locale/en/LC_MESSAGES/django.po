@@ -2238,3 +2238,34 @@ msgstr "Cancelled by the secretary"
 
 msgid "يوجد حساب بهذا الرقم (%(name)s). تم تسجيله في عيادتك."
 msgstr "An account with this phone number already exists (%(name)s). They have been registered in your clinic."
+
+# ── Today's Appointments dashboard filters ──────────────────────────────────
+msgid "مؤكدة"
+msgstr "Confirmed"
+
+msgid "الفترات المتاحة"
+msgstr "Available Slots"
+
+msgid "تصفية مواعيد اليوم"
+msgstr "Filter today's appointments"
+
+msgid "فترة شاغرة"
+msgstr "Open slot"
+
+msgid "حجز"
+msgstr "Book"
+
+msgid "حجز هذه الفترة"
+msgstr "Book this slot"
+
+msgid "لا توجد مواعيد مؤكدة لهذا اليوم"
+msgstr "No confirmed appointments today"
+
+msgid "ستظهر المواعيد المؤكدة هنا فور تأكيدها."
+msgstr "Confirmed appointments will appear here once confirmed."
+
+msgid "لا توجد فترات متاحة لهذا اليوم"
+msgstr "No available slots today"
+
+msgid "تحقق من جدول الأطباء أو من إعدادات أنواع المواعيد."
+msgstr "Check the doctors' schedules or appointment type settings."

@@ -247,6 +247,7 @@ def load_available_slots(request, clinic_id):
     # Verify this appointment type is actually enabled for the selected doctor
     from appointments.services.appointment_type_service import (
         get_appointment_types_for_doctor_in_clinic,
+        get_slot_step_minutes_for_doctor,
     )
     enabled_types = get_appointment_types_for_doctor_in_clinic(
         doctor_id=int(doctor_id), clinic_id=clinic_id
@@ -261,9 +262,11 @@ def load_available_slots(request, clinic_id):
             {"slots": [], "error": "ط¸â€‍ط·آ§ ط¸ظ¹ط¸â€¦ط¸ئ’ط¸â€  ط·آ§ط¸â€‍ط·آ­ط·آ¬ط·آ² ط¸ظ¾ط¸ظ¹ ط·ع¾ط·آ§ط·آ±ط¸ظ¹ط·آ® ط·آ³ط·آ§ط·آ¨ط¸â€ڑ."},
         )
 
+    slot_step = get_slot_step_minutes_for_doctor(int(doctor_id), int(clinic_id))
     slots = generate_slots_for_date(
         doctor_id=int(doctor_id), clinic_id=int(clinic_id),
         target_date=target_date, duration_minutes=appointment_type.duration_minutes,
+        slot_step_minutes=slot_step,
     )
     available_slots = [s for s in slots if s["is_available"]]
 

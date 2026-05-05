@@ -12,8 +12,21 @@ from django.db import transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from django.db.models import Max
+
 from appointments.models import Appointment, AppointmentType
 from appointments.services.booking_service import BookingError, SlotUnavailableError
+
+
+def _next_queue_priority(clinic_id, today):
+    """Return the next queue_priority value to assign for a clinic's queue (max + 1, min 1)."""
+    result = Appointment.objects.filter(
+        clinic_id=clinic_id,
+        appointment_date=today,
+        status=Appointment.Status.CHECKED_IN,
+        queue_priority__isnull=False,
+    ).aggregate(mx=Max("queue_priority"))
+    return (result["mx"] or 0) + 1
 
 
 # ── Valid status transitions ──────────────────────────────────────────────────
@@ -296,7 +309,8 @@ def register_walk_in(
 
     if appointment.checked_in_at is None:
         appointment.checked_in_at = timezone.now()
-        appointment.save(update_fields=["checked_in_at", "updated_at"])
+        appointment.queue_priority = _next_queue_priority(clinic_id, today)
+        appointment.save(update_fields=["checked_in_at", "queue_priority", "updated_at"])
 
     return appointment
 

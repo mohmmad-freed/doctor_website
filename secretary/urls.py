@@ -27,6 +27,7 @@ urlpatterns = [
     path('waiting-room/checkin/', views.checkin_search, name='checkin_search'),
     path('htmx/waiting-room-confirmed/', views.waiting_room_confirmed_htmx, name='waiting_room_confirmed_htmx'),
     path('htmx/waiting-room-checkedin/', views.waiting_room_checkedin_htmx, name='waiting_room_checkedin_htmx'),
+    path('htmx/reorder-queue/', views.reorder_queue, name='reorder_queue'),
 
     # --- Patient Management ---
     path('patients/', views.patient_list, name='patient_list'),
@@ -64,6 +65,7 @@ urlpatterns = [
 
     # --- HTMX Endpoints ---
     path('htmx/doctor-status/', views.doctor_status_htmx, name='doctor_status_htmx'),
+    path('htmx/todays-appointments/', views.todays_appointments_htmx, name='todays_appointments_htmx'),
     path('htmx/time-slots/', views.get_time_slots_htmx, name='time_slots_htmx'),
     path('htmx/doctor-types/', views.get_doctor_types_htmx, name='doctor_types_htmx'),
     path('htmx/doctor-working-days/', views.doctor_working_days_json, name='doctor_working_days_json'),

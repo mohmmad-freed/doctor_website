@@ -324,6 +324,9 @@ def edit_appointment(appointment_id, patient, new_date, new_time, new_type_id=No
     """
     from doctors.services import generate_slots_for_date
     from appointments.models import AppointmentType
+    from appointments.services.appointment_type_service import (
+        get_slot_step_minutes_for_doctor,
+    )
 
     try:
         appointment = Appointment.objects.select_related(
@@ -382,9 +385,11 @@ def edit_appointment(appointment_id, patient, new_date, new_time, new_type_id=No
         raise ValueError("لم يتم تحديد نوع الموعد.")
 
     # Slot validation (pre-check)
+    slot_step = get_slot_step_minutes_for_doctor(doctor_id, clinic_id)
     slots = generate_slots_for_date(
         doctor_id=doctor_id, clinic_id=clinic_id,
         target_date=new_date, duration_minutes=appointment_type.duration_minutes,
+        slot_step_minutes=slot_step,
     )
     matching_slot = None
     for slot in slots:
@@ -416,6 +421,7 @@ def edit_appointment(appointment_id, patient, new_date, new_time, new_type_id=No
         slots_locked = generate_slots_for_date(
             doctor_id=doctor_id, clinic_id=clinic_id,
             target_date=new_date, duration_minutes=appointment_type.duration_minutes,
+            slot_step_minutes=slot_step,
         )
         slot_locked = None
         for s in slots_locked:

@@ -378,9 +378,15 @@ class SecretaryAppointmentCRUDTests(SecretaryTestBase):
             "appointment_time": "09:00",
             "reason": "Secretary booking",
         })
-        self.assertRedirects(resp, reverse("secretary:appointments"), fetch_redirect_response=False)
         appt = Appointment.objects.get(patient=self.patient_a, clinic=self.clinic_a)
         self.assertEqual(appt.created_by, self.secretary_a)
+        # After booking, the view redirects to the new appointment's detail page
+        # so the secretary gets immediate confirmation of what they just booked.
+        self.assertRedirects(
+            resp,
+            reverse("secretary:appointment_detail", kwargs={"appointment_id": appt.id}),
+            fetch_redirect_response=False,
+        )
 
     def test_create_unknown_phone_shows_error_no_appointment(self):
         self.client.force_login(self.secretary_a)
@@ -938,3 +944,141 @@ class MultiRolePatientRegistrationTests(SecretaryTestBase):
                 clinic=self.clinic_a, user=self.doctor_a, role="DOCTOR", is_active=True
             ).exists()
         )
+
+
+# ════════════════════════════════════════════════════════════════════
+#  7E — Today's Appointments Filter (dashboard pills)
+# ════════════════════════════════════════════════════════════════════
+
+class TodaysAppointmentsFilterTests(SecretaryTestBase):
+    """Filter pills on the secretary dashboard: All / Confirmed / Available Slots."""
+
+    def setUp(self):
+        super().setUp()
+        # Add availability for today's weekday so generate_slots_for_date returns slots.
+        # Set the window to start ~1 hour from now and end well after, so the slots
+        # we generate aren't all "is_past" regardless of the test wall clock.
+        now = timezone.localtime()
+        start_h = min(max(now.hour + 1, 8), 21)  # clamp into a sane range
+        DoctorAvailability.objects.create(
+            doctor=self.doctor_a, clinic=self.clinic_a,
+            day_of_week=date.today().weekday(),
+            start_time=time(start_h, 0),
+            end_time=time(min(start_h + 4, 23), 0),
+            is_active=True,
+        )
+        # Today appointments — one of each relevant status
+        self.appt_confirmed = Appointment.objects.create(
+            patient=self.patient_a, clinic=self.clinic_a, doctor=self.doctor_a,
+            appointment_type=self.appt_type_a, appointment_date=date.today(),
+            appointment_time=time(start_h, 0), status=Appointment.Status.CONFIRMED,
+            created_by=self.secretary_a,
+        )
+        self.appt_cancelled = Appointment.objects.create(
+            patient=self.patient_a, clinic=self.clinic_a, doctor=self.doctor_a,
+            appointment_type=self.appt_type_a, appointment_date=date.today(),
+            appointment_time=time(start_h, 30), status=Appointment.Status.CANCELLED,
+            created_by=self.secretary_a,
+        )
+        self.appt_completed = Appointment.objects.create(
+            patient=self.patient_a, clinic=self.clinic_a, doctor=self.doctor_a,
+            appointment_type=self.appt_type_a, appointment_date=date.today(),
+            appointment_time=time(start_h + 1, 0), status=Appointment.Status.COMPLETED,
+            created_by=self.secretary_a,
+        )
+
+    def _login_secretary(self):
+        self.client.force_login(self.secretary_a)
+
+    def test_dashboard_default_filter_is_all(self):
+        self._login_secretary()
+        resp = self.client.get(reverse("secretary:dashboard"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context["current_filter"], "all")
+
+    def test_filter_all_includes_appointments_of_every_status_and_slots(self):
+        self._login_secretary()
+        resp = self.client.get(reverse("secretary:dashboard") + "?filter=all")
+        rows = resp.context["rows"]
+        appt_ids = {r["appointment"].id for r in rows if r["kind"] == "appointment"}
+        self.assertIn(self.appt_confirmed.id, appt_ids)
+        self.assertIn(self.appt_cancelled.id, appt_ids)
+        self.assertIn(self.appt_completed.id, appt_ids)
+        # Slots should also be present (CANCELLED status doesn't reserve, so slot rows exist).
+        self.assertTrue(any(r["kind"] == "slot" for r in rows))
+
+    def test_filter_confirmed_excludes_other_statuses(self):
+        self._login_secretary()
+        resp = self.client.get(reverse("secretary:dashboard") + "?filter=confirmed")
+        rows = resp.context["rows"]
+        statuses = {r["appointment"].status for r in rows if r["kind"] == "appointment"}
+        self.assertEqual(statuses, {Appointment.Status.CONFIRMED})
+        # No slot rows when filtering to confirmed only.
+        self.assertFalse(any(r["kind"] == "slot" for r in rows))
+
+    def test_filter_available_excludes_appointments(self):
+        self._login_secretary()
+        resp = self.client.get(reverse("secretary:dashboard") + "?filter=available")
+        rows = resp.context["rows"]
+        # No appointment rows should be present.
+        self.assertFalse(any(r["kind"] == "appointment" for r in rows))
+        # All rows must be available slots.
+        self.assertTrue(all(r["kind"] == "slot" for r in rows))
+
+    def test_filter_available_excludes_booked_times(self):
+        """A CONFIRMED appointment's time must not appear as an available slot for the same doctor."""
+        self._login_secretary()
+        resp = self.client.get(reverse("secretary:dashboard") + "?filter=available")
+        rows = resp.context["rows"]
+        booked_key = (self.doctor_a.id, self.appt_confirmed.appointment_time)
+        slot_keys = {(r["doctor"].id, r["time"]) for r in rows}
+        self.assertNotIn(booked_key, slot_keys)
+
+    def test_invalid_filter_falls_back_to_all(self):
+        self._login_secretary()
+        resp = self.client.get(reverse("secretary:dashboard") + "?filter=garbage")
+        self.assertEqual(resp.context["current_filter"], "all")
+
+    def test_htmx_endpoint_returns_partial_for_secretary(self):
+        self._login_secretary()
+        resp = self.client.get(
+            reverse("secretary:todays_appointments_htmx") + "?filter=available",
+            HTTP_HX_REQUEST="true",
+        )
+        self.assertEqual(resp.status_code, 200)
+        # Partial template doesn't extend base — must not include the sidebar markup.
+        self.assertNotContains(resp, "secSidebarUserMenu")
+        # OOB count spans should appear on HTMX requests so pill counts stay in sync.
+        self.assertContains(resp, "filter-count-all")
+
+    def test_htmx_endpoint_forbidden_for_non_secretary(self):
+        self.client.force_login(self.patient_a)
+        resp = self.client.get(
+            reverse("secretary:todays_appointments_htmx"),
+            HTTP_HX_REQUEST="true",
+        )
+        self.assertEqual(resp.status_code, 403)
+
+    def test_tenant_isolation_other_clinic_appointments_not_in_rows(self):
+        """An appointment in clinic_b must not leak into secretary_a's filtered rows."""
+        other = Appointment.objects.create(
+            patient=self.patient_a, clinic=self.clinic_b, doctor=self.doctor_b,
+            appointment_type=self.appt_type_b, appointment_date=date.today(),
+            appointment_time=time(11, 0), status=Appointment.Status.CONFIRMED,
+            created_by=self.secretary_b,
+        )
+        self._login_secretary()
+        resp = self.client.get(reverse("secretary:dashboard") + "?filter=all")
+        rows = resp.context["rows"]
+        appt_ids = {r["appointment"].id for r in rows if r["kind"] == "appointment"}
+        self.assertNotIn(other.id, appt_ids)
+
+    def test_pill_counts_match_rendered_rows(self):
+        self._login_secretary()
+        resp = self.client.get(reverse("secretary:dashboard"))
+        # 3 appointments today + N slots; count_all == appointment count + count_available
+        self.assertEqual(
+            resp.context["count_all"],
+            3 + resp.context["count_available"],
+        )
+        self.assertEqual(resp.context["count_confirmed"], 1)

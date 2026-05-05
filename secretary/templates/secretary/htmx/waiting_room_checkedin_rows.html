@@ -2,9 +2,15 @@
 {# HTMX partial — Column B: CHECKED_IN today, ordered by checked_in_at (queue order) #}
 {% for entry in checkedin_list %}
 {% with appt=entry.appt %}
-<div class="px-5 py-4 transition-colors {{ entry.row_bg }} {% if appt.is_walk_in %}border-s-4 border-dashed border-amber-400 dark:border-amber-500{% endif %}"
-     id="checkedin-row-{{ appt.id }}">
+<div class="px-5 py-4 transition-colors {{ entry.row_bg }}"
+     id="checkedin-row-{{ appt.id }}"
+     data-appt-id="{{ appt.id }}">
   <div class="flex items-start justify-between gap-3">
+
+    {# Drag handle #}
+    <div class="drag-handle cursor-grab active:cursor-grabbing flex-shrink-0 self-center text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 px-0.5">
+      <i class="fa-solid fa-grip-vertical text-sm"></i>
+    </div>
 
     {# Queue number + wait time #}
     <div class="flex items-center gap-3 min-w-0 flex-1">

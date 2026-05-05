@@ -145,3 +145,57 @@
 
 {% include "secretary/waiting_room/_remove_modal.html" %}
 {% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
+<script>
+(function () {
+  const REORDER_URL = "{% url 'secretary:reorder_queue' %}";
+  const CSRF_COOKIE_NAME = "csrftoken";
+
+  function getCsrf() {
+    const match = document.cookie.match(new RegExp("(?:^|; )" + CSRF_COOKIE_NAME + "=([^;]*)"));
+    return match ? decodeURIComponent(match[1]) : "";
+  }
+
+  function postOrder(ids) {
+    fetch(REORDER_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCsrf(),
+      },
+      body: JSON.stringify({ order: ids }),
+    });
+  }
+
+  let _sortable = null;
+
+  function initSortable() {
+    const col = document.getElementById("checkedin-column");
+    if (!col) return;
+    if (_sortable) { _sortable.destroy(); _sortable = null; }
+    _sortable = Sortable.create(col, {
+      animation: 150,
+      handle: ".drag-handle",
+      draggable: "[data-appt-id]",
+      ghostClass: "opacity-40",
+      onEnd: function () {
+        const ids = Array.from(col.querySelectorAll("[data-appt-id]"))
+                        .map(el => el.dataset.apptId);
+        postOrder(ids);
+      },
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", initSortable);
+
+  // Reinitialize after every HTMX column refresh
+  document.addEventListener("htmx:afterSettle", function (evt) {
+    if (evt.detail.target && evt.detail.target.id === "checkedin-column") {
+      initSortable();
+    }
+  });
+})();
+</script>
+{% endblock %}

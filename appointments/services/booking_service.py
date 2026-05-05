@@ -214,11 +214,16 @@ def book_appointment(
         )
 
     # ── 4. Validate the slot is a legitimate generated slot ───────────
+    from appointments.services.appointment_type_service import (
+        get_slot_step_minutes_for_doctor,
+    )
+    slot_step = get_slot_step_minutes_for_doctor(doctor_id, clinic_id)
     slots = generate_slots_for_date(
         doctor_id=doctor_id,
         clinic_id=clinic_id,
         target_date=appointment_date,
         duration_minutes=appointment_type.duration_minutes,
+        slot_step_minutes=slot_step,
     )
 
     matching_slot = None
@@ -263,6 +268,7 @@ def book_appointment(
             clinic_id=clinic_id,
             target_date=appointment_date,
             duration_minutes=appointment_type.duration_minutes,
+            slot_step_minutes=slot_step,
         )
 
         slot_under_lock = None
