@@ -132,7 +132,7 @@
         </label>
         <select name="reason" id="reason-select" required
                 class="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400 transition"
-                onchange="document.getElementById('custom-reason-row').classList.toggle('hidden', this.value !== 'أخرى')">
+                onchange="document.getElementById('custom-reason-row').classList.toggle('hidden', this.value !== 'other')">
           <option value="">{% trans "— اختر السبب —" %}</option>
           {% for val, label in reason_choices %}
           <option value="{{ val }}" {% if post.reason == val %}selected{% endif %}>{{ label }}</option>
@@ -140,8 +140,8 @@
         </select>
       </div>
 
-      {# Custom reason (shown when "أخرى" selected) #}
-      <div id="custom-reason-row" class="{% if post.reason != 'أخرى' %}hidden{% endif %}">
+      {# Custom reason (shown when "other" selected) #}
+      <div id="custom-reason-row" class="{% if post.reason != 'other' %}hidden{% endif %}">
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
           {% trans "سبب آخر" %}
         </label>

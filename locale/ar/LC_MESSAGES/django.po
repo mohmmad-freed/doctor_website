@@ -498,3 +498,12 @@ msgstr ""
 
 msgid "يوجد حساب بهذا الرقم (%(name)s). تم تسجيله في عيادتك."
 msgstr ""
+
+msgid "مواعيد متزامنة"
+msgstr ""
+
+msgid "الإجمالي"
+msgstr ""
+
+msgid "الحالات"
+msgstr ""

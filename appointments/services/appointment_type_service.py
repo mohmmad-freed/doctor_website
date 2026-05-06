@@ -128,6 +128,21 @@ def get_appointment_types_for_doctor_in_clinic(doctor_id, clinic_id):
     ).order_by("name")
 
 
+def get_slot_step_minutes_for_clinic(clinic_id) -> int:
+    """
+    Return the smallest ``duration_minutes`` among all *active* appointment
+    types in the clinic, used as the bucket size when no specific doctor is
+    selected (e.g. the secretary's "All doctors" calendar view). Falls back to
+    ``DEFAULT_SLOT_STEP_MINUTES`` when the clinic has no active types yet.
+    """
+    durations = list(
+        AppointmentType.objects.filter(clinic_id=clinic_id, is_active=True)
+        .values_list("duration_minutes", flat=True)
+    )
+    valid = [d for d in durations if d]
+    return min(valid) if valid else DEFAULT_SLOT_STEP_MINUTES
+
+
 def get_slot_step_minutes_for_doctor(doctor_id, clinic_id) -> int:
     """
     Return the slot-grid step (in minutes) that the booking workflow should

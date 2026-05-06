@@ -28,8 +28,34 @@
     border-color: #9333ea !important;
   }
   #calendar-wrap .fc-col-header-cell { background: #f8fafc; font-size: 0.78rem; font-weight: 700; color: #64748b; }
-  .dark #calendar-wrap .fc-col-header-cell { background: #1e293b; color: #94a3b8; }
-  #calendar-wrap .fc-timegrid-slot { font-size: 0.72rem; }
+  /* Dark header: slate-900 against the slate-800 card body so the strip reads
+     as a distinct band; light theme keeps the existing #f8fafc tint. */
+  .dark #calendar-wrap .fc-col-header-cell { background: #0f172a; color: #94a3b8; }
+
+  /* Top-left (LTR) / top-right (RTL) corner cell — the empty time-axis header
+     used to show as plain white. Match it to the rest of the header row. */
+  #calendar-wrap thead .fc-timegrid-axis,
+  #calendar-wrap .fc-scrollgrid-section-header .fc-timegrid-axis {
+    background: #f8fafc;
+    border-color: #f1f5f9;
+  }
+  .dark #calendar-wrap thead .fc-timegrid-axis,
+  .dark #calendar-wrap .fc-scrollgrid-section-header .fc-timegrid-axis {
+    background: #0f172a;
+    border-color: #334155;
+  }
+
+  /* Today's column header — distinct from regular days but on-theme with the
+     secretary side's primary (violet) accent. Body tint stays subtler below. */
+  #calendar-wrap .fc-col-header-cell.fc-day-today {
+    background: #f3e8ff !important;
+    color: #7c3aed !important;
+  }
+  .dark #calendar-wrap .fc-col-header-cell.fc-day-today {
+    background: #3b2766 !important;
+    color: #d8b4fe !important;
+  }
+  #calendar-wrap .fc-timegrid-slot { font-size: 0.72rem; height: 36px !important; }
   #calendar-wrap .fc-event,
   #calendar-wrap .fc-timegrid-event,
   #calendar-wrap .fc-daygrid-event {
@@ -49,7 +75,8 @@
   .dark #calendar-wrap .fc-day-today { background: rgba(168,85,247,0.08) !important; }
   #calendar-wrap .fc-scrollgrid { border-radius: 12px !important; overflow: hidden; }
   #calendar-wrap .fc-theme-standard td, #calendar-wrap .fc-theme-standard th { border-color: #f1f5f9; }
-  .dark #calendar-wrap .fc-theme-standard td, .dark #calendar-wrap .fc-theme-standard th { border-color: #1e293b; }
+  /* Slate-700 borders so cell separators stay visible against slate-800 in dark. */
+  .dark #calendar-wrap .fc-theme-standard td, .dark #calendar-wrap .fc-theme-standard th { border-color: #334155; }
   .dark #calendar-wrap .fc-timegrid-axis,
   .dark #calendar-wrap .fc-timegrid-slot-label { color: #64748b; }
 
@@ -77,18 +104,95 @@
     line-height: 1.25 !important;
   }
 
-  /* Minimum column width — when events overlap FullCalendar shrinks each one;
-     this guarantees each day column stays readable and the grid scrolls
-     horizontally instead of squishing events to unreadable widths. */
+  /* Minimum column width — group cards collapse multi-doctor overlap into one
+     card so columns rarely need to shrink, but keep a soft floor for readability. */
   #calendar-wrap .fc-timegrid-col,
   #calendar-wrap .fc-col-header-cell {
-    min-width: 120px;
+    min-width: 90px;
   }
 
   /* Allow the time-grid body to scroll sideways when columns overflow */
   #calendar-wrap .fc-scroller-liquid-absolute,
   #calendar-wrap .fc-scroller {
     overflow-x: auto !important;
+  }
+
+  /* Match the secretary-side `.dark-scrollbar` look (thin, no arrow buttons,
+     theme-aware thumb) on every FullCalendar scroller. */
+  #calendar-wrap .fc-scroller,
+  #calendar-wrap .fc-scroller-liquid-absolute {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+  .dark #calendar-wrap .fc-scroller,
+  .dark #calendar-wrap .fc-scroller-liquid-absolute {
+    scrollbar-color: #475569 transparent;
+  }
+  #calendar-wrap .fc-scroller::-webkit-scrollbar,
+  #calendar-wrap .fc-scroller-liquid-absolute::-webkit-scrollbar {
+    width: 8px; height: 8px;
+  }
+  #calendar-wrap .fc-scroller::-webkit-scrollbar-track,
+  #calendar-wrap .fc-scroller-liquid-absolute::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  #calendar-wrap .fc-scroller::-webkit-scrollbar-thumb,
+  #calendar-wrap .fc-scroller-liquid-absolute::-webkit-scrollbar-thumb {
+    background: #cbd5e1; border-radius: 4px;
+    border: 2px solid transparent; background-clip: padding-box;
+  }
+  #calendar-wrap .fc-scroller::-webkit-scrollbar-thumb:hover,
+  #calendar-wrap .fc-scroller-liquid-absolute::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8; background-clip: padding-box;
+  }
+  .dark #calendar-wrap .fc-scroller::-webkit-scrollbar-thumb,
+  .dark #calendar-wrap .fc-scroller-liquid-absolute::-webkit-scrollbar-thumb {
+    background: #475569; background-clip: padding-box;
+  }
+  .dark #calendar-wrap .fc-scroller::-webkit-scrollbar-thumb:hover,
+  .dark #calendar-wrap .fc-scroller-liquid-absolute::-webkit-scrollbar-thumb:hover {
+    background: #64748b; background-clip: padding-box;
+  }
+  /* Drop the arrow buttons (top/bottom + left/right) and corner box on every
+     scrollable element inside #calendar-wrap. FullCalendar v6 wraps the
+     header and body in different scroller harnesses (`.fc-scroller-harness`,
+     `.fc-scroller-harness-liquid`, `.fc-scroller`, `.fc-scroller-liquid-absolute`),
+     so the wildcard form is the only reliable way to catch each one without
+     having to enumerate every internal class. */
+  #calendar-wrap *::-webkit-scrollbar-button,
+  #calendar-wrap *::-webkit-scrollbar-button:vertical:start,
+  #calendar-wrap *::-webkit-scrollbar-button:vertical:end,
+  #calendar-wrap *::-webkit-scrollbar-button:vertical:start:decrement,
+  #calendar-wrap *::-webkit-scrollbar-button:vertical:start:increment,
+  #calendar-wrap *::-webkit-scrollbar-button:vertical:end:decrement,
+  #calendar-wrap *::-webkit-scrollbar-button:vertical:end:increment,
+  #calendar-wrap *::-webkit-scrollbar-button:horizontal:start,
+  #calendar-wrap *::-webkit-scrollbar-button:horizontal:end {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    background: transparent !important;
+    -webkit-appearance: none !important;
+  }
+  #calendar-wrap .fc-scroller::-webkit-scrollbar-corner,
+  #calendar-wrap .fc-scroller-liquid-absolute::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  /* Keep the inner scrollgrid flush with the wrapper's rounded corners so the
+     bottom edge doesn't visibly clip against the card. */
+  #calendar-wrap .fc-view-harness {
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    overflow: hidden;
+  }
+
+  /* Side breathing room for events — pull the entire abs-positioned events
+     container in from both column edges, so events never kiss the border in
+     either LTR (English) or RTL (Arabic). Logical insets auto-flip with dir. */
+  #calendar-wrap .fc-timegrid-col-events {
+    inset-inline-end: 6px !important;
+    inset-inline-start: 2px !important;
   }
 
   /* Event tooltip */
@@ -99,6 +203,70 @@
     box-shadow: 0 8px 24px rgba(0,0,0,0.12); font-size: 0.8rem;
   }
   .dark #event-tooltip { background: #1e293b; border-color: #334155; color: #e2e8f0; }
+
+  /* Group card — replaces side-by-side overlap with a single card per
+     time tier. Stripes stack vertically and are sized by per-status count. */
+  .cal-group-card {
+    display: flex; flex-direction: column;
+    width: 100%; height: 100%;
+    border-radius: 6px; overflow: hidden;
+    color: #fff; min-height: 48px;
+  }
+  .cal-group-header {
+    padding: 2px 8px;
+    font-size: 0.72rem; font-weight: 700;
+    background: rgba(0,0,0,0.35);
+    white-space: nowrap; text-overflow: ellipsis; overflow: hidden;
+  }
+  .cal-group-stripes { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+  .cal-group-stripe {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 14px;
+    font-size: 0.78rem; font-weight: 800;
+    color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,0.3);
+    line-height: 1;
+  }
+  .cal-group-count { line-height: 1; }
+  /* Override default FC inner padding so the group card fills the slot exactly. */
+  #calendar-wrap .fc-event-group .fc-event-main { padding: 0 !important; }
+  #calendar-wrap .fc-event-group { background: transparent !important; }
+
+  /* Drill-down modal */
+  #group-modal { display: none; position: fixed; inset: 0; z-index: 1100; }
+  #group-modal.open { display: flex; align-items: center; justify-content: center; }
+  #group-modal .gm-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.5); }
+  #group-modal .gm-panel {
+    position: relative;
+    max-width: 480px; width: calc(100% - 2rem);
+    background: white; border-radius: 16px; padding: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    max-height: 80vh; overflow-y: auto;
+    direction: {{ DIR }};
+  }
+  .dark #group-modal .gm-panel { background: #1e293b; color: #e2e8f0; }
+  #group-modal .gm-close {
+    background: transparent; border: 0; cursor: pointer;
+    font-size: 1.5rem; line-height: 1; color: #6b7280;
+    padding: 4px 8px; border-radius: 8px;
+  }
+  #group-modal .gm-close:hover { background: #f3f4f6; color: #111827; }
+  .dark #group-modal .gm-close:hover { background: #334155; color: #e2e8f0; }
+  #gm-list { list-style: none; padding: 0; margin: 0; }
+  #gm-list li {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 10px 0;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .dark #gm-list li { border-bottom-color: #334155; }
+  #gm-list li:last-child { border-bottom: 0; }
+  #gm-list a {
+    flex: 1; min-width: 0;
+    color: inherit; text-decoration: none;
+  }
+  #gm-list a:hover .gm-patient { text-decoration: underline; }
+  #gm-list .gm-patient { font-weight: 700; }
+  #gm-list .gm-sub { font-size: 0.75rem; color: #6b7280; margin-top: 2px; }
+  .dark #gm-list .gm-sub { color: #94a3b8; }
 </style>
 {% endblock %}
 
@@ -168,6 +336,18 @@
   </a>
 </div>
 
+{# Group drill-down modal #}
+<div id="group-modal" aria-hidden="true">
+  <div class="gm-backdrop"></div>
+  <div class="gm-panel" role="dialog" aria-modal="true" aria-labelledby="gm-title">
+    <div class="flex items-center justify-between mb-3">
+      <h3 id="gm-title" class="font-bold text-lg text-gray-900 dark:text-white"></h3>
+      <button type="button" class="gm-close" aria-label="{% trans 'إغلاق' %}">×</button>
+    </div>
+    <ul id="gm-list"></ul>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -181,6 +361,9 @@ var isRTL = {{ IS_RTL|yesno:"true,false" }};
 var ttLabelStatus = '{% trans "الحالة" %}';
 var ttLabelDoctor = '{% trans "الطبيب" %}';
 var ttLabelType   = '{% trans "النوع" %}';
+var ttGroupAppts  = '{% trans "مواعيد متزامنة" %}';
+var ttGroupTotal  = '{% trans "الإجمالي" %}';
+var ttApptsWord   = '{% trans "موعد" %}';
 
 // FullCalendar button translations
 var fcButtonText = isRTL ? {
@@ -219,15 +402,14 @@ document.addEventListener('DOMContentLoaded', function() {
     },
     buttonText: fcButtonText,
     allDaySlot: false,
-    slotMinTime: '07:00:00',
-    slotMaxTime: '21:00:00',
-    slotDuration: '00:30:00',
+    slotMinTime: '{{ slot_min_time }}',
+    slotMaxTime: '{{ slot_max_time }}',
+    slotDuration: '00:15:00',
     slotLabelInterval: '01:00:00',
-    expandRows: true,
+    expandRows: false,
     nowIndicator: true,
     weekends: true,
-    height: 'auto',
-    contentHeight: 680,
+    height: 620,
     eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
     slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
 
@@ -241,21 +423,46 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(failureCb);
     },
 
-    // Click event → open detail page
+    // Mark group events so CSS can strip the default FC padding.
+    eventClassNames: function(arg) {
+      return arg.event.extendedProps.kind === 'group' ? ['fc-event-group'] : [];
+    },
+
+    // Click event → group opens modal, single navigates to detail page
     eventClick: function(info) {
       info.jsEvent.preventDefault();
+      var props = info.event.extendedProps;
+      if (props.kind === 'group') { openGroupModal(info.event); return; }
       if (info.event.url) window.location.href = info.event.url;
     },
 
-    // Hover tooltip
+    // Hover tooltip — group shows count breakdown, single shows patient/doctor/type
     eventMouseEnter: function(info) {
       var props = info.event.extendedProps;
       var tt = document.getElementById('event-tooltip');
-      document.getElementById('tt-title').textContent = info.event.title;
-      document.getElementById('tt-status').textContent = ttLabelStatus + ': ' + props.status_label;
-      document.getElementById('tt-doctor').textContent = props.doctor ? ttLabelDoctor + ': ' + props.doctor : '';
-      document.getElementById('tt-type').textContent = props.type ? ttLabelType + ': ' + props.type : '';
-      document.getElementById('tt-link').href = info.event.url || '#';
+      var ttTitle = document.getElementById('tt-title');
+      var ttStatus = document.getElementById('tt-status');
+      var ttDoctor = document.getElementById('tt-doctor');
+      var ttType = document.getElementById('tt-type');
+      var ttLink = document.getElementById('tt-link');
+
+      if (props.kind === 'group') {
+        ttTitle.textContent = ttGroupAppts + ' · ' + props.count;
+        var parts = (props.by_status || []).map(function(s) {
+          return s.count + ' ' + s.status_label;
+        });
+        ttStatus.textContent = parts.join(' · ');
+        ttDoctor.textContent = '';
+        ttType.textContent = '';
+        ttLink.style.display = 'none';
+      } else {
+        ttTitle.textContent = info.event.title;
+        ttStatus.textContent = ttLabelStatus + ': ' + (props.status_label || '');
+        ttDoctor.textContent = props.doctor ? ttLabelDoctor + ': ' + props.doctor : '';
+        ttType.textContent = props.type ? ttLabelType + ': ' + props.type : '';
+        ttLink.href = info.event.url || '#';
+        ttLink.style.display = '';
+      }
       tt.style.display = 'block';
       positionTooltip(info.jsEvent, tt);
     },
@@ -277,15 +484,33 @@ document.addEventListener('DOMContentLoaded', function() {
       window.location.href = url;
     },
 
-    // Styling
+    // Styling — group cards render horizontal stripes per status,
+    // single events keep the original "time + patient name" layout.
     eventContent: function(arg) {
-      var time = arg.event.start ?
-        arg.event.start.toLocaleTimeString(currentLang, {hour:'2-digit',minute:'2-digit',hour12:false}) : '';
-      return {
-        html: '<div class="fc-event-inner">' +
-              '<span style="font-weight:700">' + time + '</span> ' +
-              arg.event.extendedProps.patient +
-              '</div>'
+      var props = arg.event.extendedProps;
+      var time = arg.event.start
+        ? arg.event.start.toLocaleTimeString(currentLang, {hour:'2-digit',minute:'2-digit',hour12:false})
+        : '';
+      if (props.kind === 'group') {
+        var stripes = (props.by_status || []).map(function(s) {
+          return '<div class="cal-group-stripe" '
+               +      'style="background:' + s.color
+               +      ';flex:' + s.count + ' ' + s.count + ' 0;">'
+               +   '<span class="cal-group-count">' + s.count + '</span>'
+               + '</div>';
+        }).join('');
+        return { html:
+            '<div class="cal-group-card">'
+          +   '<div class="cal-group-header">' + time + ' · ' + props.count + '</div>'
+          +   '<div class="cal-group-stripes">' + stripes + '</div>'
+          + '</div>'
+        };
+      }
+      var label = props.time_label || time;
+      return { html:
+          '<div class="fc-event-inner">'
+        +   '<span style="font-weight:700">' + label + '</span> ' + (props.patient || '')
+        + '</div>'
       };
     },
   });
@@ -309,5 +534,69 @@ document.querySelectorAll('[name="cal-doctor"]').forEach(function(radio) {
     if (calendarInstance) calendarInstance.refetchEvents();
   });
 });
+
+// ── Group drill-down modal ──
+function openGroupModal(event) {
+  var props = event.extendedProps || {};
+  var modal = document.getElementById('group-modal');
+  if (!modal) return;
+  var time = event.start
+    ? event.start.toLocaleTimeString(currentLang, {hour:'2-digit',minute:'2-digit',hour12:false})
+    : '';
+  document.getElementById('gm-title').textContent =
+    time + ' · ' + (props.count || 0) + ' ' + ttApptsWord;
+  var list = document.getElementById('gm-list');
+  list.innerHTML = '';
+  (props.appointments || []).forEach(function(a) {
+    var li = document.createElement('li');
+    var anchor = document.createElement('a');
+    anchor.href = a.url;
+    anchor.innerHTML =
+        '<div class="gm-patient">' + escapeHtml(a.patient) + '</div>'
+      + '<div class="gm-sub">'
+      +   (a.doctor ? escapeHtml(a.doctor) : '')
+      +   (a.type   ? ' · ' + escapeHtml(a.type)   : '')
+      + '</div>';
+    var badge = document.createElement('span');
+    badge.className = 'status-badge status-' + (a.status || '').toLowerCase();
+    badge.textContent = a.status_label || '';
+    li.appendChild(anchor);
+    li.appendChild(badge);
+    list.appendChild(li);
+  });
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
+  // Hide any lingering hover tooltip.
+  var tt = document.getElementById('event-tooltip');
+  if (tt) tt.style.display = 'none';
+}
+
+function closeGroupModal() {
+  var modal = document.getElementById('group-modal');
+  if (!modal) return;
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
+}
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+(function() {
+  var modal = document.getElementById('group-modal');
+  if (modal) {
+    modal.addEventListener('click', function(e) {
+      if (e.target.classList.contains('gm-backdrop') || e.target.closest('.gm-close')) {
+        closeGroupModal();
+      }
+    });
+  }
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeGroupModal();
+  });
+})();
 </script>
 {% endblock %}

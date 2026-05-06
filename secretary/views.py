@@ -748,15 +748,45 @@ def calendar_view(request):
         return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     from clinics.models import ClinicStaff as CS
+    from django.db.models import Min, Max
     clinic = staff.clinic
     doctor_staff = CS.objects.filter(
         clinic=clinic, role__in=["DOCTOR"], is_active=True
     ).select_related("user")
     doctor_users = [s.user for s in doctor_staff]
 
+    # Calendar slot window — earliest open and latest close across the clinic's
+    # weekly working hours. Snaps to the hour (floor for min, ceil for max) so
+    # FullCalendar's hourly labels line up cleanly. Falls back to 07:00–21:00
+    # when no working hours are configured.
+    bounds = (
+        clinic.working_hours
+        .filter(is_closed=False)
+        .exclude(start_time__isnull=True)
+        .exclude(end_time__isnull=True)
+        .aggregate(min_start=Min("start_time"), max_end=Max("end_time"))
+    )
+    min_start = bounds.get("min_start")
+    max_end = bounds.get("max_end")
+    if min_start and max_end:
+        start_h = min_start.hour
+        close_h = max_end.hour + (1 if (max_end.minute or max_end.second) else 0)
+    else:
+        start_h = 7
+        close_h = 20
+
+    # FullCalendar labels slot *starts*, not the slotMaxTime boundary, so we
+    # extend by one hour past close to give the closing hour a visible label
+    # (and a small buffer so events ending right at close aren't clipped).
+    end_h = min(close_h + 1, 24)
+    slot_min_time = f"{start_h:02d}:00:00"
+    slot_max_time = f"{end_h:02d}:00:00"
+
     return render(request, "secretary/appointments/calendar.html", {
         "clinic": clinic,
         "doctor_users": doctor_users,
+        "slot_min_time": slot_min_time,
+        "slot_max_time": slot_max_time,
         "status_legend": [
             ("قيد الانتظار", "PENDING", "#d97706"),
             ("مؤكد", "CONFIRMED", "#10b981"),
@@ -1396,13 +1426,21 @@ def block_doctor_time(request):
     ).select_related("user")
     doctors = [s.user for s in doctor_staff]
 
+    _REASON_KEY_TO_AR = {
+        "annual_leave": "إجازة سنوية",
+        "sick_leave": "إجازة مرضية",
+        "conference": "مؤتمر / تدريب",
+        "meeting": "اجتماع",
+        "emergency": "غياب طارئ",
+        "other": "أخرى",
+    }
     REASON_CHOICES = [
-        ("إجازة سنوية", "إجازة سنوية"),
-        ("إجازة مرضية", "إجازة مرضية"),
-        ("مؤتمر / تدريب", "مؤتمر / تدريب"),
-        ("اجتماع", "اجتماع"),
-        ("غياب طارئ", "غياب طارئ"),
-        ("أخرى", "أخرى"),
+        ("annual_leave", _("إجازة سنوية")),
+        ("sick_leave", _("إجازة مرضية")),
+        ("conference", _("مؤتمر / تدريب")),
+        ("meeting", _("اجتماع")),
+        ("emergency", _("غياب طارئ")),
+        ("other", _("أخرى")),
     ]
 
     error = None
@@ -1416,7 +1454,7 @@ def block_doctor_time(request):
         reason = request.POST.get("reason", "").strip()
         custom_reason = request.POST.get("custom_reason", "").strip()
         force = request.POST.get("force_create") == "1"
-        final_reason = custom_reason if reason == "أخرى" and custom_reason else reason
+        final_reason = custom_reason if reason == "other" and custom_reason else _REASON_KEY_TO_AR.get(reason, reason)
 
         try:
             doctor_id = int(doctor_id_raw)
@@ -1797,13 +1835,25 @@ def appointments_json(request):
     """
     JSON feed for FullCalendar.
     GET params: start (ISO date), end (ISO date), doctor_id (optional)
-    Returns list of FullCalendar event objects.
+
+    Groups appointments into fixed-width buckets — bucket size = the shortest
+    active appointment-type duration in the clinic (or for the selected doctor
+    when filtered), falling back to ``DEFAULT_SLOT_STEP_MINUTES``. Each bucket
+    renders as a single event (kind="single") if it holds one appointment, or
+    a group summary card (kind="group") with a per-status count breakdown when
+    multiple appointments fall in the same window.
     """
     staff = _require_secretary(request)
     if not staff:
         return JsonResponse({"error": "Forbidden"}, status=403)
 
-    from datetime import datetime as _dt
+    import math
+    from datetime import datetime as _dt, timedelta
+    from collections import defaultdict
+    from appointments.services.appointment_type_service import (
+        get_slot_step_minutes_for_clinic,
+        get_slot_step_minutes_for_doctor,
+    )
 
     clinic = staff.clinic
     start_str = request.GET.get("start", "")
@@ -1828,48 +1878,136 @@ def appointments_json(request):
     if doctor_id:
         qs = qs.filter(doctor_id=doctor_id)
 
-    # Status → FullCalendar color
-    STATUS_COLORS = {
-        "PENDING":     "#d97706",  # amber
-        "CONFIRMED":   "#10b981",  # emerald
-        "CHECKED_IN":  "#3b82f6",  # blue
-        "IN_PROGRESS": "#8b5cf6",  # purple
-        "COMPLETED":   "#6b7280",  # gray
-        "CANCELLED":   "#ef4444",  # red
-        "NO_SHOW":     "#f59e0b",  # orange
-    }
+    # Bucket width = shortest active appointment-type duration. Per-doctor when
+    # the doctor filter is on (matches the booking-grid step the patient sees);
+    # otherwise clinic-wide minimum.
+    if doctor_id:
+        try:
+            bucket_minutes = get_slot_step_minutes_for_doctor(int(doctor_id), clinic.id)
+        except (TypeError, ValueError):
+            bucket_minutes = get_slot_step_minutes_for_clinic(clinic.id)
+    else:
+        bucket_minutes = get_slot_step_minutes_for_clinic(clinic.id)
+    bucket_minutes = max(bucket_minutes, 1)
 
-    events = []
+    # Bucket each appointment by the day + the bucket index inside that day.
+    # Both single and group events snap their start to the bucket boundary so
+    # the calendar reads as a fixed slot grid: a 21:13 booking lands on the
+    # 21:00 row, not between rows. The card label still shows the true booking
+    # time (e.g. "21:13"); only the row position is snapped. Long appointments
+    # span multiple slots — slot_count = ceil(duration / bucket_minutes).
+    buckets = defaultdict(list)
     for appt in qs:
+        start_dt = _dt.combine(appt.appointment_date, appt.appointment_time)
+        minutes_since_midnight = start_dt.hour * 60 + start_dt.minute
+        bucket_idx = minutes_since_midnight // bucket_minutes
+        bucket_start_minutes = bucket_idx * bucket_minutes
+        bucket_start = _dt.combine(appt.appointment_date, _dt.min.time()) + timedelta(
+            minutes=bucket_start_minutes
+        )
+        bucket_end = bucket_start + timedelta(minutes=bucket_minutes)
+
         duration = 30
         if appt.appointment_type and appt.appointment_type.duration_minutes:
             duration = appt.appointment_type.duration_minutes
-
-        from datetime import datetime as _dt2, timedelta
-        start_dt = _dt2.combine(appt.appointment_date, appt.appointment_time)
-        end_dt = start_dt + timedelta(minutes=duration)
-
-        title = appt.patient.name
-        if appt.doctor:
-            title += f" — {appt.doctor.name}"
-
-        events.append({
+        slot_count = max(1, math.ceil(duration / bucket_minutes))
+        slot_end = bucket_start + timedelta(minutes=slot_count * bucket_minutes)
+        payload = {
             "id": appt.id,
-            "title": title,
-            "start": start_dt.isoformat(),
-            "end": end_dt.isoformat(),
-            "color": STATUS_COLORS.get(appt.status, "#6b7280"),
+            "patient": appt.patient.name,
+            "doctor": appt.doctor.name if appt.doctor else "",
+            "type": appt.appointment_type.display_name if appt.appointment_type else "",
+            "status": appt.status,
+            "status_label": appt.get_status_display(),
             "url": f"/secretary/appointments/{appt.id}/",
-            "extendedProps": {
-                "status": appt.status,
-                "status_label": appt.get_status_display(),
-                "patient": appt.patient.name,
-                "doctor": appt.doctor.name if appt.doctor else "",
-                "type": appt.appointment_type.display_name if appt.appointment_type else "",
-            },
-        })
+            "time": appt.appointment_time.strftime("%H:%M"),
+            "time_label": appt.appointment_time.strftime("%H:%M"),
+            "duration_minutes": duration,
+        }
+        buckets[(appt.appointment_date, bucket_idx)].append(
+            {
+                "bucket_start": bucket_start,
+                "bucket_end": bucket_end,
+                "slot_end": slot_end,
+                "payload": payload,
+            }
+        )
+
+    events = []
+    for items in buckets.values():
+        if len(items) == 1:
+            it = items[0]
+            events.append(_single_event(it["payload"], it["bucket_start"], it["slot_end"]))
+        else:
+            bucket_start = items[0]["bucket_start"]
+            bucket_end = items[0]["bucket_end"]
+            events.append(
+                _group_event(
+                    [it["payload"] for it in items], bucket_start, bucket_end
+                )
+            )
 
     return JsonResponse(events, safe=False)
+
+
+# Status colors / labels used by both the calendar legend and the JSON feed.
+CALENDAR_STATUS_COLORS = {
+    "PENDING":     "#d97706",  # amber
+    "CONFIRMED":   "#10b981",  # emerald
+    "CHECKED_IN":  "#3b82f6",  # blue
+    "IN_PROGRESS": "#8b5cf6",  # purple
+    "COMPLETED":   "#6b7280",  # gray
+    "CANCELLED":   "#ef4444",  # red
+    "NO_SHOW":     "#f59e0b",  # orange
+}
+
+
+def _single_event(payload, start_dt, end_dt):
+    return {
+        "id": payload["id"],
+        "title": payload["patient"] + (f" — {payload['doctor']}" if payload["doctor"] else ""),
+        "start": start_dt.isoformat(),
+        "end": end_dt.isoformat(),
+        "color": CALENDAR_STATUS_COLORS.get(payload["status"], "#6b7280"),
+        "url": payload["url"],
+        "extendedProps": {
+            "kind": "single",
+            "status": payload["status"],
+            "status_label": payload["status_label"],
+            "patient": payload["patient"],
+            "doctor": payload["doctor"],
+            "type": payload["type"],
+            "time_label": payload["time_label"],
+        },
+    }
+
+
+def _group_event(active_payloads, t_start, t_end):
+    from collections import defaultdict
+    by_status_map = defaultdict(list)
+    for p in active_payloads:
+        by_status_map[p["status"]].append(p)
+    by_status = []
+    for status, items in by_status_map.items():
+        by_status.append({
+            "status": status,
+            "status_label": items[0]["status_label"],
+            "color": CALENDAR_STATUS_COLORS.get(status, "#6b7280"),
+            "count": len(items),
+        })
+    return {
+        "id": f"group-{t_start.isoformat()}-{len(active_payloads)}",
+        "start": t_start.isoformat(),
+        "end": t_end.isoformat(),
+        "color": "#475569",  # neutral fallback; stripes paint real colors
+        "display": "block",
+        "extendedProps": {
+            "kind": "group",
+            "count": len(active_payloads),
+            "by_status": by_status,
+            "appointments": active_payloads,
+        },
+    }
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

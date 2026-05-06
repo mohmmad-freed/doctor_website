@@ -1004,6 +1004,24 @@ msgstr "Absence Reason"
 msgid "— اختر السبب —"
 msgstr "— Select Reason —"
 
+msgid "إجازة سنوية"
+msgstr "Annual Leave"
+
+msgid "إجازة مرضية"
+msgstr "Sick Leave"
+
+msgid "مؤتمر / تدريب"
+msgstr "Conference / Training"
+
+msgid "اجتماع"
+msgstr "Meeting"
+
+msgid "غياب طارئ"
+msgstr "Emergency Absence"
+
+msgid "أخرى"
+msgstr "Other"
+
 msgid "سبب آخر"
 msgstr "Other Reason"
 
@@ -2269,3 +2287,12 @@ msgstr "No available slots today"
 
 msgid "تحقق من جدول الأطباء أو من إعدادات أنواع المواعيد."
 msgstr "Check the doctors' schedules or appointment type settings."
+
+msgid "مواعيد متزامنة"
+msgstr "Concurrent appointments"
+
+msgid "الإجمالي"
+msgstr "Total"
+
+msgid "الحالات"
+msgstr "Statuses"
