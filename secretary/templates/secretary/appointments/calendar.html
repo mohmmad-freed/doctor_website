@@ -151,6 +151,47 @@
       45deg, rgba(255,255,255,0.04) 0 6px, transparent 6px 12px
     ) !important;
   }
+
+  /* Past dates / times — solid faint shading + strikethrough on day numbers,
+     visually distinct from the diagonal-hatched "unavailable" style and
+     consistent with .cal-day.is-disabled in the booking workflow. */
+  #calendar-wrap .fc-daygrid-day.fc-day-past .fc-daygrid-day-frame,
+  #calendar-wrap .fc-timegrid-col.fc-day-past {
+    background: rgba(100,116,139,0.20) !important;
+    background-image: none !important;
+    cursor: not-allowed !important;
+  }
+  .dark #calendar-wrap .fc-daygrid-day.fc-day-past .fc-daygrid-day-frame,
+  .dark #calendar-wrap .fc-timegrid-col.fc-day-past {
+    background: rgba(71,85,105,0.22) !important;
+  }
+  #calendar-wrap .fc-daygrid-day.fc-day-past .fc-daygrid-day-number {
+    color: #94a3b8 !important;
+    text-decoration: line-through;
+    text-decoration-color: rgba(0,0,0,0.25);
+    opacity: 0.7;
+  }
+  .dark #calendar-wrap .fc-daygrid-day.fc-day-past .fc-daygrid-day-number {
+    color: #475569 !important;
+    text-decoration-color: rgba(255,255,255,0.18);
+  }
+  /* When a day is BOTH past and unavailable, the diagonal-hatched
+     "unavailable" style takes priority — skip the solid past shading
+     so the two styles don't stack and muddy each other. */
+  #calendar-wrap .fc-daygrid-day.fc-day-past.fc-day-unavailable .fc-daygrid-day-frame,
+  #calendar-wrap .fc-timegrid-col.fc-day-past.fc-day-unavailable {
+    background: transparent !important;
+  }
+  /* Today's elapsed hours in week/day view — same solid shading as past days. */
+  #calendar-wrap .fc-bg-past {
+    background: rgba(100,116,139,0.28) !important;
+    background-image: none !important;
+    cursor: not-allowed !important;
+    opacity: 1 !important;
+  }
+  .dark #calendar-wrap .fc-bg-past {
+    background: rgba(71,85,105,0.32) !important;
+  }
   #calendar-wrap .fc-scrollgrid { border-radius: 12px !important; overflow: hidden; }
   #calendar-wrap .fc-theme-standard td, #calendar-wrap .fc-theme-standard th { border-color: #f1f5f9; }
   /* Slate-700 borders so cell separators stay visible against slate-800 in dark. */
@@ -449,6 +490,34 @@ var calendarInstance = null;
 var currentLang = '{{ CURRENT_LANG }}';
 var isRTL = {{ IS_RTL|yesno:"true,false" }};
 
+// ── Persist calendar state across booking workflow ──
+var CAL_STATE_KEY = 'secretaryCalendarState';
+var validDoctorIds = new Set([{% for doc in doctor_users %}'{{ doc.id }}'{% if not forloop.last %},{% endif %}{% endfor %}]);
+var validViews = new Set(['timeGridDay', 'timeGridWeek', 'dayGridMonth']);
+
+var storedCalState = {};
+try {
+  var rawCalState = sessionStorage.getItem(CAL_STATE_KEY);
+  if (rawCalState) storedCalState = JSON.parse(rawCalState) || {};
+} catch (e) { storedCalState = {}; }
+
+if (storedCalState.doctorId && validDoctorIds.has(String(storedCalState.doctorId))) {
+  selectedDoctorId = String(storedCalState.doctorId);
+} else {
+  storedCalState.doctorId = '';
+}
+
+function saveCalState() {
+  if (!calendarInstance) return;
+  try {
+    sessionStorage.setItem(CAL_STATE_KEY, JSON.stringify({
+      view: calendarInstance.view.type,
+      date: calendarInstance.getDate().toISOString().slice(0,10),
+      doctorId: selectedDoctorId || ''
+    }));
+  } catch (e) {}
+}
+
 // Translated strings for JS tooltip
 var ttLabelStatus = '{% trans "الحالة" %}';
 var ttLabelDoctor = '{% trans "الطبيب" %}';
@@ -470,8 +539,9 @@ var fcButtonText = isRTL ? {
   day:   'Day',
 };
 
-// Determine initial date (today or from URL param)
-var initialDate = new Date().toISOString().slice(0,10);
+// Determine initial date and view (from stored calendar state, else defaults)
+var initialDate = storedCalState.date || new Date().toISOString().slice(0,10);
+var initialView = validViews.has(storedCalState.view) ? storedCalState.view : 'timeGridWeek';
 
 function buildEventsUrl() {
   var url = '{% url "secretary:appointments_json" %}?';
@@ -485,8 +555,9 @@ document.addEventListener('DOMContentLoaded', function() {
   calendarInstance = new FullCalendar.Calendar(calEl, {
     locale: currentLang,
     direction: isRTL ? 'rtl' : 'ltr',
-    initialView: 'timeGridWeek',
+    initialView: initialView,
     initialDate: initialDate,
+    datesSet: function() { saveCalState(); },
     headerToolbar: {
       right: 'prev,next today',
       center: 'title',
@@ -511,7 +582,35 @@ document.addEventListener('DOMContentLoaded', function() {
       url += 'start=' + info.startStr.slice(0,10) + '&end=' + info.endStr.slice(0,10);
       fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
         .then(function(r) { return r.json(); })
-        .then(successCb)
+        .then(function(events) {
+          // In timeGrid (day/week) views, shade today's elapsed hours so
+          // they read as past — distinct from unavailable hatching.
+          var view = calendarInstance ? calendarInstance.view.type : 'timeGridWeek';
+          if (view !== 'dayGridMonth' && Array.isArray(events)) {
+            var now = new Date();
+            var dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            // If "now" already sits inside an unavailable block (e.g. today
+            // is a non-working day), skip the past shading so the diagonal
+            // hatching is the sole indicator and the two styles don't stack.
+            var nowBlocked = events.some(function(ev) {
+              if (!ev || ev.display !== 'background') return false;
+              var k = ev.extendedProps && ev.extendedProps.kind;
+              if (k !== 'unavailable') return false;
+              var s = new Date(ev.start), e = new Date(ev.end);
+              return s <= now && e > now;
+            });
+            if (!nowBlocked) {
+              events.push({
+                start: dayStart.toISOString(),
+                end: now.toISOString(),
+                display: 'background',
+                classNames: ['fc-bg-past'],
+                extendedProps: { kind: 'past' }
+              });
+            }
+          }
+          successCb(events);
+        })
         .catch(failureCb);
     },
 
@@ -563,16 +662,29 @@ document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('event-tooltip').style.display = 'none';
     },
     eventDidMount: function(info) {
-      if (info.event.extendedProps.kind === 'unavailable') return;
+      var kind = info.event.extendedProps.kind;
+      if (kind === 'unavailable' || kind === 'past') return;
       info.el.addEventListener('mousemove', function(e) {
         positionTooltip(e, document.getElementById('event-tooltip'));
       });
     },
 
     // Click empty slot → open create form with date/time pre-filled,
-    // unless the slot falls inside a shaded (unavailable) range.
+    // unless the slot falls inside a shaded (unavailable) range or in the past.
     dateClick: function(info) {
       var clickStart = info.date;
+      var viewType = calendarInstance.view.type;
+      var isMonthView = viewType === 'dayGridMonth';
+      // Block past clicks: in month view, any day strictly before today;
+      // in day/week view, any time strictly before now.
+      var now = new Date();
+      if (isMonthView) {
+        var clickDay = new Date(clickStart.getFullYear(), clickStart.getMonth(), clickStart.getDate());
+        var todayDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        if (clickDay < todayDay) return;
+      } else if (clickStart < now) {
+        return;
+      }
       var blocked = calendarInstance.getEvents().some(function(ev) {
         var props = ev.extendedProps || {};
         if (props.kind === 'day_closed') {
@@ -584,9 +696,11 @@ document.addEventListener('DOMContentLoaded', function() {
       });
       if (blocked) return;
       var dateStr = info.dateStr.slice(0,10);
-      var timeStr = info.dateStr.length > 10 ? info.dateStr.slice(11,16) : '';
+      var timeStr = (!isMonthView && info.dateStr.length > 10) ? info.dateStr.slice(11,16) : '';
       var url = '{% url "secretary:create_appointment" %}?date=' + dateStr;
       if (timeStr) url += '&time=' + timeStr;
+      if (selectedDoctorId) url += '&doctor_id=' + selectedDoctorId;
+      url += '&return_to=calendar';
       window.location.href = url;
     },
 
@@ -607,7 +721,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // single events keep the original "time + patient name" layout.
     eventContent: function(arg) {
       var props = arg.event.extendedProps;
-      if (props.kind === 'unavailable') return { html: '' };
+      if (props.kind === 'unavailable' || props.kind === 'past') return { html: '' };
       var time = arg.event.start
         ? arg.event.start.toLocaleTimeString(currentLang, {hour:'2-digit',minute:'2-digit',hour12:false})
         : '';
@@ -647,10 +761,12 @@ function positionTooltip(e, tt) {
   tt.style.top = y + 'px';
 }
 
-// Doctor filter
+// Doctor filter — restore checked state from stored calendar state
 document.querySelectorAll('[name="cal-doctor"]').forEach(function(radio) {
+  radio.checked = (radio.value === selectedDoctorId);
   radio.addEventListener('change', function() {
     selectedDoctorId = this.value;
+    saveCalState();
     if (calendarInstance) calendarInstance.refetchEvents();
   });
 });
