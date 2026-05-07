@@ -6,14 +6,16 @@
 {% block content %}
 <div class="max-w-2xl mx-auto space-y-5">
 
+    {% url 'patients:my_appointments' as back_url %}
     {# ── Header ─────────────────────────────────────────────────────── #}
     <div class="glass-card p-5">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
+        <div class="flex items-center gap-3">
+            {% include 'accounts/_back_button.html' %}
+            <div class="flex items-center gap-3 flex-1 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center flex-shrink-0">
                     <i class="fa-solid fa-pen-to-square text-amber-500 text-lg"></i>
                 </div>
-                <div>
+                <div class="min-w-0">
                     <h1 class="text-xl font-bold text-gray-900 dark:text-white">{% trans "تعديل الموعد" %}</h1>
                     <p class="text-sm text-gray-500 dark:text-gray-400">
                         {% trans "التعديلات المتبقية:" %}
@@ -24,10 +26,6 @@
                     </p>
                 </div>
             </div>
-            <a href="{% url 'patients:my_appointments' %}"
-               class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %} text-lg"></i>
-            </a>
         </div>
     </div>
 

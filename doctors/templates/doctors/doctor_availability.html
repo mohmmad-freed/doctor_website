@@ -16,30 +16,33 @@
     </div>
     {% else %}
 
+    {% url 'patients:browse_doctors' as back_url %}
+    {% url 'appointments:book_appointment' clinic_id=clinic_id as book_base_url %}
+    {% if IS_RTL %}{% trans "احجز موعد" as book_label %}{% else %}{% trans "Book Appointment" as book_label %}{% endif %}
+
     <!-- Doctor Header -->
     <div class="glass-card p-6 relative overflow-hidden">
         <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary-500 to-primary-700"></div>
-        <div class="flex flex-col items-center text-center gap-4 sm:flex-row sm:items-center sm:text-start sm:justify-between">
-            <div class="flex flex-col sm:flex-row items-center sm:items-center gap-4">
-                <div class="w-16 h-16 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center flex-shrink-0">
-                    <span class="text-2xl font-bold text-primary-600 dark:text-primary-400">{{ doctor.name|slice:":1" }}</span>
+        <div class="flex items-start gap-4">
+            {% include 'accounts/_back_button.html' %}
+            <div class="flex-1 min-w-0 flex flex-col items-center text-center gap-4 sm:flex-row sm:items-center sm:text-start sm:justify-between">
+                <div class="flex flex-col sm:flex-row items-center sm:items-center gap-4">
+                    <div class="w-16 h-16 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center flex-shrink-0">
+                        <span class="text-2xl font-bold text-primary-600 dark:text-primary-400">{{ doctor.name|slice:":1" }}</span>
+                    </div>
+                    <div class="text-center sm:text-start">
+                        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{% trans "د." %} {{ doctor.name }}</h1>
+                        <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">{% if IS_RTL %}جدول المواعيد المتاحة{% else %}Available Schedule{% endif %}</p>
+                    </div>
                 </div>
-                <div class="text-center sm:text-start">
-                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{% trans "د." %} {{ doctor.name }}</h1>
-                    <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">{% if IS_RTL %}جدول المواعيد المتاحة{% else %}Available Schedule{% endif %}</p>
+                <div class="flex flex-col gap-2 w-full sm:w-auto mt-4 sm:mt-0">
+                    {% include 'accounts/_locked_book_button.html' with current_user_id=request.user.id doctor_id=doctor.id book_url=book_base_url|add:'?doctor_id='|add:doctor.id|stringformat:'s' label=book_label active_classes='inline-flex justify-center items-center text-sm font-bold text-white bg-secondary-500 hover:bg-secondary-600 px-6 py-3 rounded-xl transition-all shadow-sm hover:shadow-md w-full' disabled_classes='px-6 py-3 rounded-xl text-sm font-bold w-full' %}
+                    <a href="{% url 'doctors:doctor_appointment_types' doctor.id %}?clinic_id={{ clinic_id }}"
+                       class="inline-flex justify-center items-center gap-2 text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors bg-primary-50 dark:bg-primary-900/20 px-6 py-3 rounded-xl w-full">
+                        <i class="fa-solid fa-list-check"></i>
+                        {% if IS_RTL %}أنواع المواعيد{% else %}Appointment Types{% endif %}
+                    </a>
                 </div>
-            </div>
-            <div class="flex flex-col gap-2 w-full sm:w-auto mt-4 sm:mt-0">
-                <a href="{% url 'appointments:book_appointment' clinic_id=clinic_id %}?doctor_id={{ doctor.id }}"
-                   class="inline-flex justify-center items-center gap-2 text-sm font-bold text-white bg-secondary-500 hover:bg-secondary-600 px-6 py-3 rounded-xl transition-all shadow-sm hover:shadow-md w-full">
-                    <i class="fa-solid fa-calendar-check"></i>
-                    {% if IS_RTL %}احجز موعد{% else %}Book Appointment{% endif %}
-                </a>
-                <a href="{% url 'doctors:doctor_appointment_types' doctor.id %}?clinic_id={{ clinic_id }}"
-                   class="inline-flex justify-center items-center gap-2 text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors bg-primary-50 dark:bg-primary-900/20 px-6 py-3 rounded-xl w-full">
-                    <i class="fa-solid fa-list-check"></i>
-                    {% if IS_RTL %}أنواع المواعيد{% else %}Appointment Types{% endif %}
-                </a>
             </div>
         </div>
     </div>
@@ -152,7 +155,7 @@
                     {% if IS_RTL %}المواعيد المتاحة ليوم {{ target_date|date:"l، d M Y" }}{% else %}Available Slots for {{ target_date|date:"l, d M Y" }}{% endif %}
                 </h3>
                 {% if selected_type %}
-                <span class="text-xs bg-secondary-50 dark:bg-secondary-900/20 text-secondary-700 dark:text-secondary-300 px-3 py-1 rounded-full font-medium">
+                <span class="text-xs bg-secondary-50 dark:bg-teal-900/30 text-secondary-600 dark:text-teal-300 px-3 py-1 rounded-full font-medium">
                     {{ selected_type.display_name }} – {{ selected_type.duration_minutes }} {% if IS_RTL %}دقيقة{% else %}min{% endif %}
                 </span>
                 {% endif %}
@@ -187,11 +190,8 @@
 
             <!-- Book Now CTA -->
             <div class="mt-6 pt-5 border-t border-gray-100 dark:border-slate-700">
-                <a href="{% url 'appointments:book_appointment' clinic_id=clinic_id %}?doctor_id={{ doctor.id }}"
-                   class="block w-full text-center bg-secondary-500 hover:bg-secondary-600 text-white px-6 py-3.5 rounded-xl font-bold text-base shadow-md transition-all hover:shadow-lg">
-                    <i class="fa-solid fa-calendar-check ml-2"></i>
-                    {% if IS_RTL %}احجز موعدك الآن مع د. {{ doctor.name }}{% else %}Book Now with Dr. {{ doctor.name }}{% endif %}
-                </a>
+                {% if IS_RTL %}{% blocktrans asvar book_now_label with name=doctor.name %}احجز موعدك الآن مع د. {{ name }}{% endblocktrans %}{% else %}{% blocktrans asvar book_now_label with name=doctor.name %}Book Now with Dr. {{ name }}{% endblocktrans %}{% endif %}
+                {% include 'accounts/_locked_book_button.html' with current_user_id=request.user.id doctor_id=doctor.id book_url=book_base_url|add:'?doctor_id='|add:doctor.id|stringformat:'s' label=book_now_label active_classes='block w-full text-center bg-secondary-500 hover:bg-secondary-600 text-white px-6 py-3.5 rounded-xl font-bold text-base shadow-md transition-all hover:shadow-lg' disabled_classes='px-6 py-3.5 rounded-xl font-bold text-base' %}
             </div>
 
             {% else %}

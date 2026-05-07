@@ -507,3 +507,9 @@ msgstr ""
 
 msgid "الحالات"
 msgstr ""
+
+msgid "لا يمكنك حجز موعد مع نفسك"
+msgstr ""
+
+msgid "لا يمكنك حجز موعد مع نفسك."
+msgstr ""

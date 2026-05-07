@@ -1,0 +1,7 @@
+{% load i18n %}
+<a href="{{ back_url }}"
+   aria-label="{% trans 'رجوع' %}"
+   title="{% trans 'رجوع' %}"
+   class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors flex-shrink-0">
+    <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %} text-lg"></i>
+</a>

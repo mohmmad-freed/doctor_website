@@ -17,6 +17,7 @@ simultaneously.
 from datetime import date, datetime, timedelta, time
 
 from django.db import transaction
+from django.utils.translation import gettext_lazy as _
 
 from appointments.models import Appointment, AppointmentType
 from clinics.models import Clinic
@@ -96,6 +97,13 @@ def book_appointment(
         raise BookingError(
             "Only patients can book appointments.",
             code="not_a_patient",
+        )
+
+    # ── 0a. Cannot book an appointment with yourself ──────────────────
+    if patient.id == doctor_id:
+        raise BookingError(
+            _("لا يمكنك حجز موعد مع نفسك."),
+            code="cannot_book_self",
         )
 
     # ── 1. Basic date validation ──────────────────────────────────────

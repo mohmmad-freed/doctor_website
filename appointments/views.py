@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils.translation import gettext_lazy as _
 
 from appointments.models import Appointment, AppointmentAnswer, AppointmentAttachment, AppointmentType
 from appointments.services import (
@@ -78,12 +79,21 @@ def book_appointment_view(request, clinic_id):
         if staff.user not in doctors:
             doctors.append(staff.user)
 
+    # Exclude the current user — patients cannot book with themselves
+    doctors = [d for d in doctors if d.id != request.user.id]
+
     # Pre-selected doctor
     doctor_id = request.GET.get("doctor_id") or request.POST.get("doctor_id")
     selected_doctor = None
     appointment_types = []
 
     if doctor_id:
+        try:
+            if int(doctor_id) == request.user.id:
+                messages.error(request, _("لا يمكنك حجز موعد مع نفسك."))
+                return redirect("patients:browse_doctors")
+        except (TypeError, ValueError):
+            pass
         try:
             selected_doctor = User.objects.get(
                 id=doctor_id, role__in=["DOCTOR", "MAIN_DOCTOR"]

@@ -1785,6 +1785,12 @@ msgstr "Intake Form"
 msgid "احجز موعد"
 msgstr "Book Appointment"
 
+msgid "لا يمكنك حجز موعد مع نفسك"
+msgstr "You cannot book an appointment with yourself"
+
+msgid "لا يمكنك حجز موعد مع نفسك."
+msgstr "You cannot book an appointment with yourself."
+
 msgid "المواعيد المتاحة"
 msgstr "Available Slots"
 

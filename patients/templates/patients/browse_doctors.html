@@ -6,24 +6,22 @@
 {% block content %}
 <div class="max-w-5xl mx-auto space-y-6 animate-fade-in-up">
 
+    {% url 'patients:dashboard' as back_url %}
     <!-- Header -->
     <div class="glass-card p-6 relative overflow-hidden">
         <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary-500 to-primary-700"></div>
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-4">
-                <div class="w-12 h-12 rounded-xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center">
+        <div class="flex items-center gap-4">
+            {% include 'accounts/_back_button.html' %}
+            <div class="flex items-center gap-4 flex-1 min-w-0">
+                <div class="w-12 h-12 rounded-xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
                     <i class="fa-solid fa-user-doctor text-primary-500 text-xl"></i>
                 </div>
-                <div>
+                <div class="min-w-0">
                     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{% trans "تصفح الأطباء" %}</h1>
                     <p class="text-gray-500 dark:text-gray-400 text-sm">{% trans "ابحث عن طبيب أو تصفح حسب التخصص" %}</p>
 
                 </div>
             </div>
-            <a href="{% url 'patients:dashboard' %}"
-               class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %} text-lg"></i>
-            </a>
         </div>
     </div>
 
@@ -188,12 +186,9 @@
                     <!-- Action Buttons -->
                     <div class="space-y-2">
                         <!-- Book Appointment (Primary CTA) -->
-                        <a href="{% url 'appointments:book_appointment' clinic_id=clinic_data.clinic.id %}?doctor_id={{ doc.user.id }}"
-                           class="block w-full text-center bg-secondary-500 hover:bg-secondary-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition-all shadow-sm hover:shadow-md">
-                            <i class="fa-solid fa-calendar-check ms-1"></i>
-                            {% trans "احجز موعد" %}
-
-                        </a>
+                        {% url 'appointments:book_appointment' clinic_id=clinic_data.clinic.id as book_base_url %}
+                        {% trans "احجز موعد" as book_label %}
+                        {% include 'accounts/_locked_book_button.html' with current_user_id=request.user.id doctor_id=doc.user.id book_url=book_base_url|add:'?doctor_id='|add:doc.user.id|stringformat:'s' label=book_label active_classes='block w-full text-center bg-secondary-500 hover:bg-secondary-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition-all shadow-sm hover:shadow-md' disabled_classes='px-4 py-2.5 rounded-lg text-sm font-bold' %}
 
                         <!-- Secondary Actions -->
                         <div class="flex items-center gap-2">

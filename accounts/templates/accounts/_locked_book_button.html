@@ -1,0 +1,46 @@
+{% load i18n %}
+{% comment %}
+Renders a "Book appointment" CTA. If current_user_id == doctor_id, renders a greyed-out,
+disabled-looking button with a fixed-position tooltip (escapes overflow-hidden parents).
+Otherwise renders a normal <a> link to book_url.
+
+Required context (pass via {% include ... with %}):
+  current_user_id  — request.user.id
+  doctor_id        — id of the doctor being viewed
+  book_url         — URL the unlocked button links to
+  label            — translated button label (e.g. {% trans "احجز موعد" %})
+  active_classes   — Tailwind classes for the unlocked <a> button
+  disabled_classes — Tailwind classes for the disabled <span> (sizing/layout only)
+  icon_class       — FontAwesome icon class (default fa-calendar-check)
+{% endcomment %}
+{% if current_user_id == doctor_id %}
+{% trans "لا يمكنك حجز موعد مع نفسك" as self_tooltip %}
+<div class="inline-block w-full"
+     onmouseenter="(function(el){
+         var t=document.getElementById('lbb-tooltip');
+         if(!t){t=document.createElement('div');t.id='lbb-tooltip';t.style.cssText='position:fixed;z-index:9999;background:#111827;color:#fff;font-size:0.75rem;padding:6px 12px;border-radius:6px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.3);pointer-events:none;transition:opacity .15s;opacity:0;';document.body.appendChild(t);}
+         t.textContent='{{ self_tooltip|escapejs }}';
+         var r=el.getBoundingClientRect();
+         t.style.opacity='0';
+         t.style.display='block';
+         var tw=t.offsetWidth;
+         var left=r.left+r.width/2-tw/2;
+         if(left<8)left=8;
+         if(left+tw>window.innerWidth-8)left=window.innerWidth-8-tw;
+         t.style.left=left+'px';
+         t.style.top=(r.top-t.offsetHeight-8)+'px';
+         t.style.opacity='1';
+     })(this)"
+     onmouseleave="var t=document.getElementById('lbb-tooltip');if(t)t.style.opacity='0';">
+    <span aria-disabled="true"
+          title="{{ self_tooltip }}"
+          class="{{ disabled_classes }} bg-gray-200 dark:bg-slate-700 text-gray-400 dark:text-gray-500 cursor-not-allowed select-none inline-flex w-full items-center justify-center gap-2">
+        <i class="fa-solid fa-lock"></i>
+        {{ label }}
+    </span>
+</div>
+{% else %}
+<a href="{{ book_url }}" class="{{ active_classes }}">
+    <i class="fa-solid {{ icon_class|default:'fa-calendar-check' }} me-2"></i>{{ label }}
+</a>
+{% endif %}
