@@ -22,10 +22,57 @@
   }
   #calendar-wrap .fc-button:hover { background: #f9fafb !important; border-color: #a855f7 !important; color: #9333ea !important; }
   .dark #calendar-wrap .fc-button:hover { background: #334155 !important; }
-  #calendar-wrap .fc-button-active,
+
+  /* Active view button — two-class specificity beats single-class :hover */
+  #calendar-wrap .fc-button.fc-button-active,
+  #calendar-wrap .fc-button.fc-button-active:hover,
+  #calendar-wrap .fc-button.fc-button-active:focus {
+    background: #a855f7 !important;
+    color: #ffffff !important;
+    border-color: #7e22ce !important;
+    font-weight: 800 !important;
+    box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.35),
+                inset 0 -2px 0 rgba(0, 0, 0, 0.15) !important;
+  }
+  .dark #calendar-wrap .fc-button.fc-button-active,
+  .dark #calendar-wrap .fc-button.fc-button-active:hover,
+  .dark #calendar-wrap .fc-button.fc-button-active:focus {
+    background: #9333ea !important;
+    color: #ffffff !important;
+    border-color: #c084fc !important;
+    box-shadow: 0 0 0 2px rgba(192, 132, 252, 0.4),
+                inset 0 -2px 0 rgba(0, 0, 0, 0.25) !important;
+  }
+
+  /* Mouse-down flash on any button */
   #calendar-wrap .fc-button-primary:not(:disabled):active {
-    background: #a855f7 !important; color: white !important;
-    border-color: #9333ea !important;
+    background: #7e22ce !important;
+    color: #fff !important;
+    border-color: #6b21a8 !important;
+  }
+
+  /* View-switcher buttons (day/week/month) sit inside an .fc-button-group.
+     Render the group as a single rectangle with internal vertical dividers,
+     instead of three separately-bordered pills. */
+  #calendar-wrap .fc-button-group {
+    border: 1.5px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+    display: inline-flex;
+  }
+  .dark #calendar-wrap .fc-button-group {
+    border-color: #334155;
+  }
+  #calendar-wrap .fc-button-group .fc-button {
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+  #calendar-wrap .fc-button-group .fc-button + .fc-button {
+    border-inline-start: 1.5px solid #e5e7eb !important;
+  }
+  .dark #calendar-wrap .fc-button-group .fc-button + .fc-button {
+    border-inline-start-color: #334155 !important;
   }
   #calendar-wrap .fc-col-header-cell { background: #f8fafc; font-size: 0.78rem; font-weight: 700; color: #64748b; }
   /* Dark header: slate-900 against the slate-800 card body so the strip reads
@@ -73,6 +120,37 @@
   }
   #calendar-wrap .fc-day-today { background: rgba(168,85,247,0.04) !important; }
   .dark #calendar-wrap .fc-day-today { background: rgba(168,85,247,0.08) !important; }
+
+  /* Unavailable slots — visual parity with appointments/partials/time_slots.html */
+  #calendar-wrap .fc-bg-unavailable {
+    background: #f3f4f6 !important;
+    background-image: repeating-linear-gradient(
+      45deg, rgba(0,0,0,0.025) 0 6px, transparent 6px 12px
+    ) !important;
+    cursor: not-allowed !important;
+    opacity: 1 !important;
+  }
+  .dark #calendar-wrap .fc-bg-unavailable {
+    background: #1e293b !important;
+    background-image: repeating-linear-gradient(
+      45deg, rgba(255,255,255,0.04) 0 6px, transparent 6px 12px
+    ) !important;
+  }
+  /* Month-view full-day blocks: tint the day cell itself, with the same
+     diagonal hatching used for unavailable slots in week/day views. */
+  #calendar-wrap .fc-daygrid-day.fc-day-unavailable {
+    background: #f3f4f6 !important;
+    background-image: repeating-linear-gradient(
+      45deg, rgba(0,0,0,0.025) 0 6px, transparent 6px 12px
+    ) !important;
+    cursor: not-allowed !important;
+  }
+  .dark #calendar-wrap .fc-daygrid-day.fc-day-unavailable {
+    background: #1e293b !important;
+    background-image: repeating-linear-gradient(
+      45deg, rgba(255,255,255,0.04) 0 6px, transparent 6px 12px
+    ) !important;
+  }
   #calendar-wrap .fc-scrollgrid { border-radius: 12px !important; overflow: hidden; }
   #calendar-wrap .fc-theme-standard td, #calendar-wrap .fc-theme-standard th { border-color: #f1f5f9; }
   /* Slate-700 borders so cell separators stay visible against slate-800 in dark. */
@@ -177,6 +255,20 @@
   #calendar-wrap .fc-scroller::-webkit-scrollbar-corner,
   #calendar-wrap .fc-scroller-liquid-absolute::-webkit-scrollbar-corner {
     background: transparent;
+  }
+
+  /* The FullCalendar header row has its own .fc-scroller that mirrors the body
+     scroller for horizontal sync. It produces a small phantom scrollbar nub in
+     the top-right gutter (above the real body scrollbar). Hide it — the header
+     never needs to scroll on its own; horizontal scrolling lives on the body. */
+  #calendar-wrap .fc-scrollgrid-section-header .fc-scroller-harness,
+  #calendar-wrap .fc-scrollgrid-section-header .fc-scroller {
+    overflow: hidden !important;
+  }
+  #calendar-wrap .fc-scrollgrid-section-header .fc-scroller::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
   }
 
   /* Keep the inner scrollgrid flush with the wrapper's rounded corners so the
@@ -439,6 +531,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Hover tooltip — group shows count breakdown, single shows patient/doctor/type
     eventMouseEnter: function(info) {
       var props = info.event.extendedProps;
+      if (props.kind === 'unavailable' || info.event.display === 'background') return;
       var tt = document.getElementById('event-tooltip');
       var ttTitle = document.getElementById('tt-title');
       var ttStatus = document.getElementById('tt-status');
@@ -470,13 +563,26 @@ document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('event-tooltip').style.display = 'none';
     },
     eventDidMount: function(info) {
+      if (info.event.extendedProps.kind === 'unavailable') return;
       info.el.addEventListener('mousemove', function(e) {
         positionTooltip(e, document.getElementById('event-tooltip'));
       });
     },
 
-    // Click empty slot → open create form with date/time pre-filled
+    // Click empty slot → open create form with date/time pre-filled,
+    // unless the slot falls inside a shaded (unavailable) range.
     dateClick: function(info) {
+      var clickStart = info.date;
+      var blocked = calendarInstance.getEvents().some(function(ev) {
+        var props = ev.extendedProps || {};
+        if (props.kind === 'day_closed') {
+          return ev.start && ev.start.toDateString() === clickStart.toDateString();
+        }
+        return ev.display === 'background'
+            && props.kind === 'unavailable'
+            && ev.start <= clickStart && ev.end > clickStart;
+      });
+      if (blocked) return;
       var dateStr = info.dateStr.slice(0,10);
       var timeStr = info.dateStr.length > 10 ? info.dateStr.slice(11,16) : '';
       var url = '{% url "secretary:create_appointment" %}?date=' + dateStr;
@@ -484,10 +590,24 @@ document.addEventListener('DOMContentLoaded', function() {
       window.location.href = url;
     },
 
+    // Mark fully-closed days in Month view (clinic closed or no doctor working)
+    // so the cell itself reads as shaded. Backend emits an allDay marker event
+    // with kind === 'day_closed' for each such day; we just look it up here.
+    dayCellClassNames: function(arg) {
+      if (!calendarInstance) return [];
+      var dayStart = arg.date;
+      var fullyBlocked = calendarInstance.getEvents().some(function(ev) {
+        return ev.extendedProps && ev.extendedProps.kind === 'day_closed'
+            && ev.start && ev.start.toDateString() === dayStart.toDateString();
+      });
+      return fullyBlocked ? ['fc-day-unavailable'] : [];
+    },
+
     // Styling — group cards render horizontal stripes per status,
     // single events keep the original "time + patient name" layout.
     eventContent: function(arg) {
       var props = arg.event.extendedProps;
+      if (props.kind === 'unavailable') return { html: '' };
       var time = arg.event.start
         ? arg.event.start.toLocaleTimeString(currentLang, {hour:'2-digit',minute:'2-digit',hour12:false})
         : '';

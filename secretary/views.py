@@ -748,37 +748,14 @@ def calendar_view(request):
         return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     from clinics.models import ClinicStaff as CS
-    from django.db.models import Min, Max
     clinic = staff.clinic
     doctor_staff = CS.objects.filter(
         clinic=clinic, role__in=["DOCTOR"], is_active=True
     ).select_related("user")
     doctor_users = [s.user for s in doctor_staff]
 
-    # Calendar slot window — earliest open and latest close across the clinic's
-    # weekly working hours. Snaps to the hour (floor for min, ceil for max) so
-    # FullCalendar's hourly labels line up cleanly. Falls back to 07:00–21:00
-    # when no working hours are configured.
-    bounds = (
-        clinic.working_hours
-        .filter(is_closed=False)
-        .exclude(start_time__isnull=True)
-        .exclude(end_time__isnull=True)
-        .aggregate(min_start=Min("start_time"), max_end=Max("end_time"))
-    )
-    min_start = bounds.get("min_start")
-    max_end = bounds.get("max_end")
-    if min_start and max_end:
-        start_h = min_start.hour
-        close_h = max_end.hour + (1 if (max_end.minute or max_end.second) else 0)
-    else:
-        start_h = 7
-        close_h = 20
-
-    # FullCalendar labels slot *starts*, not the slotMaxTime boundary, so we
-    # extend by one hour past close to give the closing hour a visible label
-    # (and a small buffer so events ending right at close aren't clipped).
-    end_h = min(close_h + 1, 24)
+    # Calendar slot window — shared with appointments_json so shading aligns.
+    start_h, end_h = _clinic_slot_bounds(clinic)
     slot_min_time = f"{start_h:02d}:00:00"
     slot_max_time = f"{end_h:02d}:00:00"
 
@@ -1863,6 +1840,8 @@ def appointments_json(request):
     qs = Appointment.objects.filter(clinic=clinic).select_related(
         "patient", "doctor", "appointment_type"
     )
+    start_date = None
+    end_date = None
     if start_str:
         try:
             start_date = _dt.fromisoformat(start_str[:10]).date()
@@ -1947,7 +1926,118 @@ def appointments_json(request):
                 )
             )
 
+    if start_date and end_date:
+        events.extend(
+            _unavailable_events_for_range(clinic, doctor_id, start_date, end_date)
+        )
+
     return JsonResponse(events, safe=False)
+
+
+def _clinic_slot_bounds(clinic):
+    """Return (start_h, end_h_exclusive) — the calendar's visible envelope.
+    Earliest open and latest close across the clinic's weekly working hours,
+    snapped to the hour. Falls back to 07–21 when no working hours configured."""
+    from django.db.models import Min, Max
+    bounds = (
+        clinic.working_hours
+        .filter(is_closed=False)
+        .exclude(start_time__isnull=True)
+        .exclude(end_time__isnull=True)
+        .aggregate(min_start=Min("start_time"), max_end=Max("end_time"))
+    )
+    min_start = bounds.get("min_start")
+    max_end = bounds.get("max_end")
+    if min_start and max_end:
+        start_h = min_start.hour
+        close_h = max_end.hour + (1 if (max_end.minute or max_end.second) else 0)
+    else:
+        start_h, close_h = 7, 20
+    return start_h, min(close_h + 1, 24)
+
+
+def _bg_unavailable(d, start_h, bucket_min, i_start, i_end):
+    """Build a FullCalendar background event for an unavailable bucket range."""
+    from datetime import datetime as _dt, timedelta
+    base = _dt.combine(d, _dt.min.time()) + timedelta(hours=start_h)
+    return {
+        "start": (base + timedelta(minutes=i_start * bucket_min)).isoformat(),
+        "end":   (base + timedelta(minutes=i_end * bucket_min)).isoformat(),
+        "display": "background",
+        "classNames": ["fc-bg-unavailable"],
+        "groupId": "unavailable",
+        "extendedProps": {"kind": "unavailable"},
+    }
+
+
+def _unavailable_events_for_range(clinic, doctor_id, start_date, end_date):
+    """Compute background events for slots where the (filtered) doctor(s) don't work.
+
+    - doctor_id given → that doctor's non-working ranges.
+    - doctor_id empty → ranges where ALL active clinic doctors are unavailable
+      (intersection of unavailability == complement of union of working time).
+    """
+    from datetime import timedelta
+    from doctors.services import generate_slots_for_date
+    from clinics.models import ClinicStaff
+
+    BUCKET_MIN = 15
+    start_h, end_h = _clinic_slot_bounds(clinic)
+    envelope_buckets_per_day = ((end_h - start_h) * 60) // BUCKET_MIN
+    if envelope_buckets_per_day <= 0:
+        return []
+
+    if doctor_id:
+        try:
+            doc_ids = [int(doctor_id)]
+        except (TypeError, ValueError):
+            return []
+    else:
+        doc_ids = list(
+            ClinicStaff.objects
+            .filter(clinic=clinic, role="DOCTOR", is_active=True)
+            .values_list("user_id", flat=True)
+        )
+
+    events = []
+    d = start_date
+    while d < end_date:
+        # Bucket index → True if AT LEAST ONE doctor works it.
+        # For specific-doctor case the union over [doc_id] reduces to that doctor's set.
+        working_idxs = set()
+        if doc_ids:
+            for did in doc_ids:
+                slots = generate_slots_for_date(did, clinic.id, d, BUCKET_MIN, BUCKET_MIN)
+                for s in slots:
+                    minutes = s["time"].hour * 60 + s["time"].minute
+                    if minutes < start_h * 60 or minutes >= end_h * 60:
+                        continue
+                    idx = (minutes - start_h * 60) // BUCKET_MIN
+                    working_idxs.add(idx)
+        # Buckets NOT in working_idxs are unavailable. Coalesce contiguous runs.
+        run_start = None
+        for i in range(envelope_buckets_per_day):
+            blocked = i not in working_idxs
+            if blocked and run_start is None:
+                run_start = i
+            elif not blocked and run_start is not None:
+                events.append(_bg_unavailable(d, start_h, BUCKET_MIN, run_start, i))
+                run_start = None
+        if run_start is not None:
+            events.append(_bg_unavailable(d, start_h, BUCKET_MIN, run_start, envelope_buckets_per_day))
+        # Fully-closed day marker — used by Month view to shade the whole cell.
+        # Hidden in time-grid views; only consumed via getEvents() in JS.
+        if not working_idxs:
+            events.append({
+                "start": d.isoformat(),
+                "end": (d + timedelta(days=1)).isoformat(),
+                "allDay": True,
+                "display": "none",
+                "groupId": "unavailable",
+                "extendedProps": {"kind": "day_closed"},
+            })
+        d += timedelta(days=1)
+    return events
 
 
 # Status colors / labels used by both the calendar legend and the JSON feed.
