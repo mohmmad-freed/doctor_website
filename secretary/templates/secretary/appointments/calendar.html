@@ -495,11 +495,25 @@ var CAL_STATE_KEY = 'secretaryCalendarState';
 var validDoctorIds = new Set([{% for doc in doctor_users %}'{{ doc.id }}'{% if not forloop.last %},{% endif %}{% endfor %}]);
 var validViews = new Set(['timeGridDay', 'timeGridWeek', 'dayGridMonth']);
 
+var shouldRestore = new URLSearchParams(window.location.search).get('restore') === '1';
+
 var storedCalState = {};
-try {
-  var rawCalState = sessionStorage.getItem(CAL_STATE_KEY);
-  if (rawCalState) storedCalState = JSON.parse(rawCalState) || {};
-} catch (e) { storedCalState = {}; }
+if (shouldRestore) {
+  try {
+    var rawCalState = sessionStorage.getItem(CAL_STATE_KEY);
+    if (rawCalState) storedCalState = JSON.parse(rawCalState) || {};
+  } catch (e) { storedCalState = {}; }
+
+  // One-shot consumption: clear stored state and strip ?restore=1 from URL
+  try { sessionStorage.removeItem(CAL_STATE_KEY); } catch (e) {}
+  try {
+    var cleanUrl = window.location.pathname + window.location.hash;
+    window.history.replaceState({}, '', cleanUrl);
+  } catch (e) {}
+} else {
+  // Fresh visit (sidebar nav, direct URL, refresh) — discard any leftover state
+  try { sessionStorage.removeItem(CAL_STATE_KEY); } catch (e) {}
+}
 
 if (storedCalState.doctorId && validDoctorIds.has(String(storedCalState.doctorId))) {
   selectedDoctorId = String(storedCalState.doctorId);
@@ -510,9 +524,13 @@ if (storedCalState.doctorId && validDoctorIds.has(String(storedCalState.doctorId
 function saveCalState() {
   if (!calendarInstance) return;
   try {
+    var d = calendarInstance.getDate();
+    var localDateStr = d.getFullYear() + '-'
+      + String(d.getMonth() + 1).padStart(2, '0') + '-'
+      + String(d.getDate()).padStart(2, '0');
     sessionStorage.setItem(CAL_STATE_KEY, JSON.stringify({
       view: calendarInstance.view.type,
-      date: calendarInstance.getDate().toISOString().slice(0,10),
+      date: localDateStr,
       doctorId: selectedDoctorId || ''
     }));
   } catch (e) {}
@@ -701,6 +719,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (timeStr) url += '&time=' + timeStr;
       if (selectedDoctorId) url += '&doctor_id=' + selectedDoctorId;
       url += '&return_to=calendar';
+      saveCalState();
       window.location.href = url;
     },
 

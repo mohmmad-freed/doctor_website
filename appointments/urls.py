@@ -59,6 +59,16 @@ urlpatterns = [
         views.load_available_slots,
         name="htmx_slots",
     ),
+    path(
+        "htmx/doctor-working-days/",
+        views.doctor_working_days_json,
+        name="doctor_working_days_json",
+    ),
+    path(
+        "htmx/full-days/",
+        views.full_days_json,
+        name="full_days_json",
+    ),
 
     # --- API Endpoints ---
     path(

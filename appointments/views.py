@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 from django.contrib import messages
 from django.contrib.auth import get_user_model
@@ -328,6 +328,103 @@ def load_intake_form(request, clinic_id):
             "appointments/partials/intake_form.html",
             {"no_form": True},
         )
+
+
+@login_required
+def full_days_json(request):
+    """
+    JSON endpoint: returns YYYY-MM-DD strings for dates in the requested range
+    on which the doctor has no available slots for the given appointment type.
+    Drives the calendar widget's "Full" highlighting.
+
+    GET params: doctor_id, clinic_id, appointment_type_id, start, end.
+    Past dates and non-working days are skipped (already styled by the widget).
+    """
+    doctor_id = request.GET.get("doctor_id")
+    clinic_id = request.GET.get("clinic_id")
+    appt_type_id = request.GET.get("appointment_type_id")
+    start_str = request.GET.get("start")
+    end_str = request.GET.get("end")
+
+    if not all([doctor_id, clinic_id, appt_type_id, start_str, end_str]):
+        return JsonResponse({"full_days": []})
+
+    try:
+        doctor_id = int(doctor_id)
+        clinic_id = int(clinic_id)
+        appt_type_id = int(appt_type_id)
+        start = datetime.strptime(start_str, "%Y-%m-%d").date()
+        end = datetime.strptime(end_str, "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        return JsonResponse({"full_days": []})
+
+    if end < start or (end - start).days > 62:
+        return JsonResponse({"full_days": []})
+
+    try:
+        appt_type = AppointmentType.objects.get(
+            id=appt_type_id, clinic_id=clinic_id, is_active=True
+        )
+    except AppointmentType.DoesNotExist:
+        return JsonResponse({"full_days": []})
+
+    working_days = set(
+        DoctorAvailability.objects.filter(
+            doctor_id=doctor_id, clinic_id=clinic_id, is_active=True
+        ).values_list("day_of_week", flat=True)
+    )
+    if not working_days:
+        return JsonResponse({"full_days": []})
+
+    from appointments.services.appointment_type_service import (
+        get_slot_step_minutes_for_doctor,
+    )
+    slot_step = get_slot_step_minutes_for_doctor(doctor_id, clinic_id)
+
+    today = date.today()
+    full_days: list[str] = []
+    cur = start
+    while cur <= end:
+        if cur >= today and cur.weekday() in working_days:
+            slots = generate_slots_for_date(
+                doctor_id=doctor_id,
+                clinic_id=clinic_id,
+                target_date=cur,
+                duration_minutes=appt_type.duration_minutes,
+                slot_step_minutes=slot_step,
+            )
+            if slots and not any(s["is_available"] for s in slots):
+                full_days.append(cur.isoformat())
+        cur += timedelta(days=1)
+
+    return JsonResponse({"full_days": full_days})
+
+
+@login_required
+def doctor_working_days_json(request):
+    """
+    JSON endpoint: returns the weekdays (Python: 0=Mon..6=Sun) on which the
+    selected doctor has at least one active availability block at the given
+    clinic. Drives the calendar widget's non-working-day hatching on patient
+    booking and doctor availability pages.
+    """
+    doctor_id = request.GET.get("doctor_id", "")
+    clinic_id = request.GET.get("clinic_id", "")
+    working_days: list[int] = []
+    if doctor_id and clinic_id:
+        try:
+            working_days = sorted(
+                set(
+                    DoctorAvailability.objects.filter(
+                        doctor_id=int(doctor_id),
+                        clinic_id=int(clinic_id),
+                        is_active=True,
+                    ).values_list("day_of_week", flat=True)
+                )
+            )
+        except (ValueError, TypeError):
+            working_days = []
+    return JsonResponse({"working_days": working_days})
 
 
 @login_required

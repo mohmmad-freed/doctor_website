@@ -396,7 +396,7 @@ def appointment_detail(request, appointment_id):
         "schedule": reverse("secretary:doctor_schedule"),
         "appointments": reverse("secretary:appointments"),
         "dashboard": reverse("secretary:dashboard"),
-        "calendar": reverse("secretary:calendar"),
+        "calendar": reverse("secretary:calendar") + "?restore=1",
     }
     back_url = _back_map.get(request.GET.get("return_to", ""), reverse("secretary:appointments"))
 
