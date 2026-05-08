@@ -75,23 +75,35 @@ def _try_send_email(send_fn, *args, **kwargs):
 
 def notify_appointment_booked(appointment):
     """
-    Create in-app + email notification to patient when a booking is confirmed.
+    Create in-app + email notification to patient when a booking is created.
+
+    Differentiates between CONFIRMED and PENDING status in title/message.
 
     Safe to call from transaction.on_commit().
     """
     try:
+        from appointments.models import Appointment as _Appt
+
         patient = appointment.patient
         doctor_name = appointment.doctor.name if appointment.doctor else "الطبيب"
         date_str = appointment.appointment_date.strftime("%Y-%m-%d")
         time_str = appointment.appointment_time.strftime("%H:%M")
         clinic_name = appointment.clinic.name
 
-        title = "تم تأكيد موعدك"
-        message = (
-            f"تم تأكيد موعدك مع {doctor_name} "
-            f"بتاريخ {date_str} الساعة {time_str} "
-            f"في {clinic_name}."
-        )
+        if appointment.status == _Appt.Status.PENDING:
+            title = "تم استلام طلب الحجز"
+            message = (
+                f"تم استلام طلب حجز موعد مع {doctor_name} "
+                f"بتاريخ {date_str} الساعة {time_str} "
+                f"في {clinic_name}. الموعد قيد المراجعة من السكرتارية."
+            )
+        else:
+            title = "تم تأكيد موعدك"
+            message = (
+                f"تم تأكيد موعدك مع {doctor_name} "
+                f"بتاريخ {date_str} الساعة {time_str} "
+                f"في {clinic_name}."
+            )
 
         notification = _create_notification(
             patient=patient,
@@ -385,3 +397,142 @@ def notify_appointment_reminder(appointment):
 
     except Exception as exc:
         logger.error("[NOTIFICATION] notify_appointment_reminder failed: %r", exc)
+
+
+def notify_staff_appointment_booked(appointment):
+    """
+    Notify doctor + secretaries + clinic owner (in-app only) when a new
+    appointment is booked.
+
+    Title/message differentiate between PENDING (needs review) and CONFIRMED.
+
+    Safe to call from transaction.on_commit().
+    """
+    try:
+        from appointments.models import Appointment as _Appt
+        from clinics.models import ClinicStaff
+
+        patient_name = appointment.patient.name if appointment.patient else "مريض"
+        doctor_name = appointment.doctor.name if appointment.doctor else "الطبيب"
+        date_str = appointment.appointment_date.strftime("%Y-%m-%d")
+        time_str = appointment.appointment_time.strftime("%H:%M")
+        clinic_name = appointment.clinic.name
+
+        is_pending = appointment.status == _Appt.Status.PENDING
+        if is_pending:
+            title = "حجز جديد بانتظار المراجعة"
+            message = (
+                f"قام المريض {patient_name} بحجز موعد مع {doctor_name} "
+                f"بتاريخ {date_str} الساعة {time_str} في {clinic_name}. "
+                f"الحجز قيد الانتظار ويحتاج إلى تأكيد."
+            )
+        else:
+            title = "حجز موعد جديد"
+            message = (
+                f"تم حجز موعد جديد للمريض {patient_name} مع {doctor_name} "
+                f"بتاريخ {date_str} الساعة {time_str} في {clinic_name}."
+            )
+
+        recipients = []
+        if appointment.doctor_id:
+            recipients.append((appointment.doctor_id, AppointmentNotification.ContextRole.DOCTOR))
+        secretary_ids = ClinicStaff.objects.filter(
+            clinic=appointment.clinic, role="SECRETARY", is_active=True,
+        ).values_list("user_id", flat=True)
+        for s_id in secretary_ids:
+            recipients.append((s_id, AppointmentNotification.ContextRole.SECRETARY))
+
+        owner_id = appointment.clinic.main_doctor_id
+        if owner_id and owner_id != appointment.doctor_id:
+            recipients.append((owner_id, AppointmentNotification.ContextRole.CLINIC_OWNER))
+
+        for user_id, ctx_role in recipients:
+            try:
+                AppointmentNotification.objects.create(
+                    patient_id=user_id,
+                    appointment=appointment,
+                    context_role=ctx_role,
+                    notification_type=AppointmentNotification.Type.APPOINTMENT_BOOKED,
+                    title=title,
+                    message=message,
+                    is_delivered=True,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "[NOTIFICATION] Could not create staff-booked notification "
+                    "for user_id=%s appointment_id=%s: %r",
+                    user_id, appointment.id, exc,
+                )
+
+    except Exception as exc:
+        logger.error("[NOTIFICATION] notify_staff_appointment_booked failed: %r", exc)
+
+
+def notify_patient_status_changed(appointment, old_status, new_status, by_staff=None):
+    """
+    Notify the patient (in-app + email if email_verified) that staff changed
+    their appointment status — typically PENDING → CONFIRMED.
+
+    Caller is responsible for filtering to the transitions they want surfaced
+    (e.g. PENDING → CONFIRMED). Cancellations and reschedules have their own
+    dedicated notifiers.
+
+    Safe to call from transaction.on_commit().
+    """
+    try:
+        from appointments.models import Appointment as _Appt
+
+        patient = appointment.patient
+        doctor_name = appointment.doctor.name if appointment.doctor else "الطبيب"
+        date_str = appointment.appointment_date.strftime("%Y-%m-%d")
+        time_str = appointment.appointment_time.strftime("%H:%M")
+        clinic_name = appointment.clinic.name
+
+        if new_status == _Appt.Status.CONFIRMED:
+            title = "تم تأكيد موعدك"
+            message = (
+                f"تم تأكيد موعدك مع {doctor_name} "
+                f"بتاريخ {date_str} الساعة {time_str} "
+                f"في {clinic_name}."
+            )
+        else:
+            title = "تم تحديث حالة موعدك"
+            new_label = appointment.get_status_display() if hasattr(appointment, "get_status_display") else new_status
+            message = (
+                f"تم تحديث حالة موعدك مع {doctor_name} "
+                f"بتاريخ {date_str} الساعة {time_str} "
+                f"في {clinic_name} إلى: {new_label}."
+            )
+
+        notification = _create_notification(
+            patient=patient,
+            appointment=appointment,
+            notification_type=AppointmentNotification.Type.APPOINTMENT_STATUS_CHANGED,
+            title=title,
+            message=message,
+            cancelled_by_staff=by_staff,
+        )
+
+        if notification is None:
+            return
+
+        # Email (non-blocking) — reuse the booking-confirmation email template
+        # for PENDING → CONFIRMED so the patient sees the same details as a
+        # freshly-confirmed booking. For other transitions, only in-app is sent.
+        if (
+            old_status == _Appt.Status.PENDING
+            and new_status == _Appt.Status.CONFIRMED
+        ):
+            from accounts.email_utils import send_appointment_booking_email
+            email_sent = _try_send_email(
+                send_appointment_booking_email, patient, appointment
+            )
+            if email_sent:
+                try:
+                    notification.sent_via_email = True
+                    notification.save(update_fields=["sent_via_email"])
+                except Exception as exc:
+                    logger.warning("[NOTIFICATION] Could not update sent_via_email: %r", exc)
+
+    except Exception as exc:
+        logger.error("[NOTIFICATION] notify_patient_status_changed failed: %r", exc)

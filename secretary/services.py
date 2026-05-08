@@ -117,6 +117,28 @@ def transition_appointment_status(
         update_fields.append("cancellation_reason")
 
     appointment.save(update_fields=update_fields)
+
+    # Notify the patient that their appointment status changed.
+    # Cancellations are intentionally skipped here — callers handle them via
+    # the dedicated notify_appointment_cancelled_by_staff() which records
+    # cancelled_by_staff for audit. Likewise reschedules go through their
+    # own notifier. We only fire here for transitions the patient cares
+    # about that aren't already covered: PENDING → CONFIRMED is the
+    # primary case (secretary approves a pending booking).
+    notify_transitions = {
+        (Appointment.Status.PENDING, Appointment.Status.CONFIRMED),
+    }
+    if (current, new_status) in notify_transitions:
+        from appointments.services.appointment_notification_service import (
+            notify_patient_status_changed,
+        )
+        old_status = current  # captured before mutation
+        transaction.on_commit(
+            lambda: notify_patient_status_changed(
+                appointment, old_status, new_status
+            )
+        )
+
     return appointment
 
 
@@ -226,6 +248,16 @@ def secretary_book_appointment(
             created_by=created_by,
             is_walk_in=is_walk_in,
         )
+
+        # Notify other clinic staff after commit (skip walk-ins — those are
+        # already physically present and have their own queue UI).
+        if not is_walk_in:
+            from appointments.services.appointment_notification_service import (
+                notify_staff_appointment_booked,
+            )
+            transaction.on_commit(
+                lambda: notify_staff_appointment_booked(appointment)
+            )
 
     return appointment
 

@@ -1635,6 +1635,37 @@ def settings_profile(request):
     })
 
 
+@login_required
+def settings_clinic(request):
+    """Clinic-wide booking policy settings, editable by any active secretary."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+
+    clinic = staff.clinic
+    booking_settings = clinic.get_or_create_booking_settings()
+
+    if request.method == "POST":
+        auto_confirm = bool(request.POST.get("auto_confirm_patient_bookings"))
+        allow_multi = bool(request.POST.get("allow_multiple_bookings_same_day"))
+        # Same-day rule only makes sense when auto-confirm is on. If a patient
+        # has to wait for approval anyway, the same-day toggle has no effect.
+        if not auto_confirm:
+            allow_multi = False
+        booking_settings.auto_confirm_patient_bookings = auto_confirm
+        booking_settings.allow_multiple_bookings_same_day = allow_multi
+        booking_settings.updated_by = request.user
+        booking_settings.save()
+        messages.success(request, _("تم حفظ إعدادات الحجز."))
+        return redirect("secretary:settings_clinic")
+
+    return render(request, "secretary/settings/clinic.html", {
+        "clinic": clinic,
+        "staff": staff,
+        "booking_settings": booking_settings,
+    })
+
+
 # ── New appointment module views ──────────────────────────────────────────────
 
 @login_required

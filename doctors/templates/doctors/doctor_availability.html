@@ -41,7 +41,9 @@
                     </div>
                 </div>
                 <div class="flex flex-col gap-2 w-full sm:w-auto mt-4 sm:mt-0">
-                    {% include 'accounts/_locked_book_button.html' with current_user_id=request.user.id doctor_id=doctor.id book_url=book_base_url|add:'?doctor_id='|add:doctor.id|stringformat:'s' label=book_label active_classes='inline-flex justify-center items-center text-sm font-bold text-white bg-secondary-500 hover:bg-secondary-600 px-6 py-3 rounded-xl transition-all shadow-sm hover:shadow-md w-full' disabled_classes='px-6 py-3 rounded-xl text-sm font-bold w-full' %}
+                    {% with did=doctor.id|stringformat:'s' %}
+                    {% include 'accounts/_locked_book_button.html' with current_user_id=request.user.id doctor_id=doctor.id book_url=book_base_url|add:'?doctor_id='|add:did label=book_label active_classes='inline-flex justify-center items-center text-sm font-bold text-white bg-secondary-500 hover:bg-secondary-600 px-6 py-3 rounded-xl transition-all shadow-sm hover:shadow-md w-full' disabled_classes='px-6 py-3 rounded-xl text-sm font-bold w-full' %}
+                    {% endwith %}
                     <a href="{% url 'doctors:doctor_appointment_types' doctor.id %}?clinic_id={{ clinic_id }}"
                        class="inline-flex justify-center items-center gap-2 text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors bg-primary-50 dark:bg-primary-900/20 px-6 py-3 rounded-xl w-full">
                         <i class="fa-solid fa-list-check"></i>
@@ -258,7 +260,9 @@
             <!-- Book Now CTA -->
             <div class="mt-6 pt-5 border-t border-gray-100 dark:border-slate-700">
                 {% if IS_RTL %}{% blocktrans asvar book_now_label with name=doctor.name %}احجز موعدك الآن مع د. {{ name }}{% endblocktrans %}{% else %}{% blocktrans asvar book_now_label with name=doctor.name %}Book Now with Dr. {{ name }}{% endblocktrans %}{% endif %}
-                {% include 'accounts/_locked_book_button.html' with current_user_id=request.user.id doctor_id=doctor.id book_url=book_base_url|add:'?doctor_id='|add:doctor.id|stringformat:'s' label=book_now_label active_classes='block w-full text-center bg-secondary-500 hover:bg-secondary-600 text-white px-6 py-3.5 rounded-xl font-bold text-base shadow-md transition-all hover:shadow-lg' disabled_classes='px-6 py-3.5 rounded-xl font-bold text-base' %}
+                {% with did=doctor.id|stringformat:'s' %}
+                {% include 'accounts/_locked_book_button.html' with current_user_id=request.user.id doctor_id=doctor.id book_url=book_base_url|add:'?doctor_id='|add:did label=book_now_label active_classes='block w-full text-center bg-secondary-500 hover:bg-secondary-600 text-white px-6 py-3.5 rounded-xl font-bold text-base shadow-md transition-all hover:shadow-lg' disabled_classes='px-6 py-3.5 rounded-xl font-bold text-base' %}
+                {% endwith %}
             </div>
 
             {% else %}

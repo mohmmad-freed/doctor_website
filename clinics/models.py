@@ -39,6 +39,11 @@ class Clinic(models.Model):
     def __str__(self):
         return self.name
 
+    def get_or_create_booking_settings(self):
+        """Return this clinic's booking settings, creating defaults if absent."""
+        settings_obj, _ = ClinicBookingSettings.objects.get_or_create(clinic=self)
+        return settings_obj
+
     class Meta:
         ordering = ["-created_at"]
 
@@ -443,6 +448,40 @@ class ClinicVerification(models.Model):
     class Meta:
         verbose_name = "Clinic Verification"
         verbose_name_plural = "Clinic Verifications"
+
+
+class ClinicBookingSettings(models.Model):
+    """Per-clinic booking policy. Editable by any active secretary of the clinic."""
+
+    clinic = models.OneToOneField(
+        Clinic, on_delete=models.CASCADE, related_name="booking_settings"
+    )
+    auto_confirm_patient_bookings = models.BooleanField(
+        default=True,
+        help_text="If True, patient self-bookings are CONFIRMED immediately. "
+                  "If False, they land as PENDING and need secretary approval.",
+    )
+    allow_multiple_bookings_same_day = models.BooleanField(
+        default=False,
+        help_text="If False, a patient's 2nd same-day self-booking lands as PENDING "
+                  "regardless of the auto-confirm setting.",
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Clinic Booking Settings"
+        verbose_name_plural = "Clinic Booking Settings"
+
+    def __str__(self):
+        return f"Booking settings for {self.clinic.name}"
 
 
 class ClinicWorkingHours(models.Model):

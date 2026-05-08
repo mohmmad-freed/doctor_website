@@ -188,7 +188,9 @@
                         <!-- Book Appointment (Primary CTA) -->
                         {% url 'appointments:book_appointment' clinic_id=clinic_data.clinic.id as book_base_url %}
                         {% trans "احجز موعد" as book_label %}
-                        {% include 'accounts/_locked_book_button.html' with current_user_id=request.user.id doctor_id=doc.user.id book_url=book_base_url|add:'?doctor_id='|add:doc.user.id|stringformat:'s' label=book_label active_classes='block w-full text-center bg-secondary-500 hover:bg-secondary-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition-all shadow-sm hover:shadow-md' disabled_classes='px-4 py-2.5 rounded-lg text-sm font-bold' %}
+                        {% with did=doc.user.id|stringformat:'s' %}
+                        {% include 'accounts/_locked_book_button.html' with current_user_id=request.user.id doctor_id=doc.user.id book_url=book_base_url|add:'?doctor_id='|add:did label=book_label active_classes='block w-full text-center bg-secondary-500 hover:bg-secondary-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition-all shadow-sm hover:shadow-md' disabled_classes='px-4 py-2.5 rounded-lg text-sm font-bold' %}
+                        {% endwith %}
 
                         <!-- Secondary Actions -->
                         <div class="flex items-center gap-2">

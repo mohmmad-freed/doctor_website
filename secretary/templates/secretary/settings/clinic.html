@@ -1,0 +1,141 @@
+{% extends "secretary/base_secretary.html" %}
+{% load static i18n %}
+
+{% block title %}{% trans "إعدادات العيادة" %} — {{ clinic.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+  {# ── Header ── #}
+  <div>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{% trans "إعدادات العيادة" %}</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+      {% trans "إدارة سياسة حجز المواعيد للعيادة. تنطبق هذه الإعدادات على حجوزات المرضى من تطبيق المريض فقط." %}
+    </p>
+  </div>
+
+  {# ── Clinic Hero ── #}
+  <div class="relative overflow-hidden rounded-2xl shadow-sm bg-gradient-to-br from-primary-600 to-blue-800">
+    <div class="absolute inset-0 pointer-events-none">
+      <div class="absolute w-48 h-48 rounded-full bg-white/5 -top-16 -right-12"></div>
+      <div class="absolute w-24 h-24 rounded-full bg-white/5 bottom-0 left-8"></div>
+    </div>
+    <div class="relative z-10 px-6 py-5 flex items-center gap-5 flex-wrap">
+      <div class="w-16 h-16 rounded-2xl bg-white/20 border-2 border-white/30 flex items-center justify-center text-white text-2xl flex-shrink-0 shadow-lg">
+        <i class="fa-solid fa-hospital"></i>
+      </div>
+      <div class="flex-1 min-w-0">
+        <h2 class="text-xl font-bold text-white leading-tight truncate">{{ clinic.name }}</h2>
+        <p class="text-white/70 text-sm mt-0.5">{% trans "إعدادات الحجز للعيادة" %}</p>
+      </div>
+    </div>
+  </div>
+
+  {# ── Booking Policy Form ── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+      <h3 class="font-semibold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+        <i class="fa-solid fa-sliders text-primary-500"></i>
+        {% trans "سياسة حجز المواعيد" %}
+      </h3>
+    </div>
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="p-5 space-y-5">
+
+        {# Auto-confirm patient bookings #}
+        <label class="flex items-start gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-600 cursor-pointer transition">
+          <input type="checkbox"
+                 id="id_auto_confirm_patient_bookings"
+                 name="auto_confirm_patient_bookings"
+                 value="1"
+                 {% if booking_settings.auto_confirm_patient_bookings %}checked{% endif %}
+                 class="mt-1 w-5 h-5 accent-primary-600 cursor-pointer flex-shrink-0">
+          <div class="flex-1 min-w-0">
+            <div class="font-semibold text-gray-900 dark:text-white text-sm">
+              {% trans "تأكيد حجوزات المرضى تلقائياً" %}
+            </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+              {% trans "إذا كان مفعّلاً: تصبح حجوزات المرضى مؤكَّدة فور الحجز. إذا كان معطَّلاً: تصبح الحجوزات قيد الانتظار وتحتاج إلى موافقة السكرتارية قبل تأكيدها." %}
+            </p>
+          </div>
+        </label>
+
+        {# Allow multiple same-day bookings (depends on auto-confirm) #}
+        <label id="multi-booking-row"
+               class="flex items-start gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-600 cursor-pointer transition {% if not booking_settings.auto_confirm_patient_bookings %}opacity-50 cursor-not-allowed{% endif %}">
+          <input type="checkbox"
+                 id="id_allow_multiple_bookings_same_day"
+                 name="allow_multiple_bookings_same_day"
+                 value="1"
+                 {% if booking_settings.allow_multiple_bookings_same_day %}checked{% endif %}
+                 {% if not booking_settings.auto_confirm_patient_bookings %}disabled{% endif %}
+                 class="mt-1 w-5 h-5 accent-primary-600 cursor-pointer flex-shrink-0 disabled:cursor-not-allowed">
+          <div class="flex-1 min-w-0">
+            <div class="font-semibold text-gray-900 dark:text-white text-sm">
+              {% trans "السماح للمريض بأكثر من حجز في نفس اليوم" %}
+            </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+              {% trans "إذا كان معطَّلاً: عند محاولة المريض حجز موعد ثانٍ في نفس اليوم، يصبح الحجز قيد الانتظار حتى توافق السكرتارية، حتى لو كان التأكيد التلقائي مفعّلاً." %}
+            </p>
+            <p id="multi-booking-hint"
+               class="text-xs text-amber-600 dark:text-amber-400 mt-2 flex items-center gap-1.5 {% if booking_settings.auto_confirm_patient_bookings %}hidden{% endif %}">
+              <i class="fa-solid fa-circle-info text-[10px]"></i>
+              {% trans "متاح فقط عند تفعيل التأكيد التلقائي." %}
+            </p>
+          </div>
+        </label>
+
+        {# Note about scope #}
+        <div class="flex items-start gap-3 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/40">
+          <i class="fa-solid fa-circle-info text-blue-500 mt-0.5"></i>
+          <p class="text-xs text-blue-800 dark:text-blue-200 leading-relaxed">
+            {% trans "هذه الإعدادات تنطبق فقط على حجوزات المرضى من تطبيق المريض. الحجوزات التي تنشئها السكرتارية تكون مؤكَّدة دائماً." %}
+          </p>
+        </div>
+      </div>
+
+      <div class="px-5 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 flex flex-wrap items-center gap-3 justify-between">
+        <div class="text-xs text-gray-500 dark:text-gray-400">
+          {% if booking_settings.updated_by %}
+            {% trans "آخر تحديث:" %}
+            <span class="font-medium text-gray-700 dark:text-gray-300">{{ booking_settings.updated_by.name }}</span>
+            · {{ booking_settings.updated_at|date:"Y-m-d H:i" }}
+          {% endif %}
+        </div>
+        <button type="submit"
+                class="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold shadow-sm transition">
+          <i class="fa-solid fa-floppy-disk"></i>
+          {% trans "حفظ الإعدادات" %}
+        </button>
+      </div>
+    </form>
+  </div>
+
+</div>
+
+<script>
+  (function () {
+    var auto = document.getElementById('id_auto_confirm_patient_bookings');
+    var multi = document.getElementById('id_allow_multiple_bookings_same_day');
+    var row = document.getElementById('multi-booking-row');
+    var hint = document.getElementById('multi-booking-hint');
+    if (!auto || !multi || !row) return;
+
+    function sync() {
+      if (auto.checked) {
+        multi.disabled = false;
+        row.classList.remove('opacity-50', 'cursor-not-allowed');
+        if (hint) hint.classList.add('hidden');
+      } else {
+        multi.checked = false;
+        multi.disabled = true;
+        row.classList.add('opacity-50', 'cursor-not-allowed');
+        if (hint) hint.classList.remove('hidden');
+      }
+    }
+    auto.addEventListener('change', sync);
+  })();
+</script>
+{% endblock %}

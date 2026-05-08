@@ -2302,3 +2302,50 @@ msgstr "Total"
 
 msgid "الحالات"
 msgstr "Statuses"
+
+# ── Clinic booking settings (secretary) ─────────────────────────────────────
+msgid "إعدادات العيادة"
+msgstr "Clinic Settings"
+
+msgid "إدارة سياسة حجز المواعيد للعيادة. تنطبق هذه الإعدادات على حجوزات المرضى من تطبيق المريض فقط."
+msgstr "Manage the clinic's appointment booking policy. These settings only apply to bookings made by patients from the patient app."
+
+msgid "إعدادات الحجز للعيادة"
+msgstr "Clinic booking settings"
+
+msgid "سياسة حجز المواعيد"
+msgstr "Booking Policy"
+
+msgid "تأكيد حجوزات المرضى تلقائياً"
+msgstr "Auto-confirm patient bookings"
+
+msgid "إذا كان مفعّلاً: تصبح حجوزات المرضى مؤكَّدة فور الحجز. إذا كان معطَّلاً: تصبح الحجوزات قيد الانتظار وتحتاج إلى موافقة السكرتارية قبل تأكيدها."
+msgstr "When enabled, patient bookings are confirmed instantly. When disabled, bookings stay pending until a secretary approves them."
+
+msgid "السماح للمريض بأكثر من حجز في نفس اليوم"
+msgstr "Allow patients to book more than one appointment per day"
+
+msgid "إذا كان معطَّلاً: عند محاولة المريض حجز موعد ثانٍ في نفس اليوم، يصبح الحجز قيد الانتظار حتى توافق السكرتارية، حتى لو كان التأكيد التلقائي مفعّلاً."
+msgstr "When disabled, a patient's second same-day booking lands as pending until a secretary approves it, even when auto-confirm is on."
+
+msgid "هذه الإعدادات تنطبق فقط على حجوزات المرضى من تطبيق المريض. الحجوزات التي تنشئها السكرتارية تكون مؤكَّدة دائماً."
+msgstr "These settings only apply to patient self-bookings. Appointments created by secretaries are always confirmed."
+
+msgid "متاح فقط عند تفعيل التأكيد التلقائي."
+msgstr "Only available when auto-confirm is enabled."
+
+msgid "آخر تحديث:"
+msgstr "Last updated:"
+
+msgid "حفظ الإعدادات"
+msgstr "Save settings"
+
+msgid "تم حفظ إعدادات الحجز."
+msgstr "Booking settings saved."
+
+# ── Booking confirmation page (PENDING banner) ──────────────────────────────
+msgid "تم استلام طلب الحجز"
+msgstr "Booking request received"
+
+msgid "موعدك قيد المراجعة من السكرتارية وسيتم إعلامك عند تأكيده."
+msgstr "Your appointment is pending secretary review. You'll be notified once it's confirmed."

@@ -288,7 +288,34 @@ def book_appointment(
         if slot_under_lock is None or not slot_under_lock["is_available"]:
             raise SlotUnavailableError()
 
-        # ── 6. Create the appointment ─────────────────────────────────
+        # ── 6. Resolve booking status from clinic settings ────────────
+        booking_settings = clinic.get_or_create_booking_settings()
+        status = Appointment.Status.CONFIRMED
+
+        # Same-day rule (forces PENDING even if auto-confirm is ON)
+        if not booking_settings.allow_multiple_bookings_same_day:
+            has_same_day = Appointment.objects.filter(
+                patient=patient,
+                clinic=clinic,
+                appointment_date=appointment_date,
+                status__in=[
+                    Appointment.Status.PENDING,
+                    Appointment.Status.CONFIRMED,
+                    Appointment.Status.CHECKED_IN,
+                    Appointment.Status.IN_PROGRESS,
+                ],
+            ).exists()
+            if has_same_day:
+                status = Appointment.Status.PENDING
+
+        # Auto-confirm rule
+        if (
+            status == Appointment.Status.CONFIRMED
+            and not booking_settings.auto_confirm_patient_bookings
+        ):
+            status = Appointment.Status.PENDING
+
+        # ── 7. Create the appointment ─────────────────────────────────
         appointment = Appointment.objects.create(
             patient=patient,
             clinic=clinic,
@@ -296,15 +323,17 @@ def book_appointment(
             appointment_type=appointment_type,
             appointment_date=appointment_date,
             appointment_time=appointment_time,
-            status=Appointment.Status.CONFIRMED,
+            status=status,
             reason=reason,
             created_by=patient,
         )
 
-        # Notify patient after DB commit (in-app + email)
+        # Notify patient + clinic staff after DB commit (in-app + email)
         from appointments.services.appointment_notification_service import (
             notify_appointment_booked,
+            notify_staff_appointment_booked,
         )
         transaction.on_commit(lambda: notify_appointment_booked(appointment))
+        transaction.on_commit(lambda: notify_staff_appointment_booked(appointment))
 
     return appointment

@@ -3,7 +3,8 @@ from django.utils import timezone
 from django.utils.html import format_html
 from .models import (
     Clinic, ClinicStaff, ClinicActivationCode, ClinicSubscription,
-    ClinicVerification, InvitationAuditLog, ClinicHoliday, DoctorAvailabilityException,
+    ClinicVerification, ClinicBookingSettings, InvitationAuditLog,
+    ClinicHoliday, DoctorAvailabilityException,
     DrugFamily, DrugProduct, OrderCatalogItem,
 )
 
@@ -106,6 +107,17 @@ class ClinicVerificationAdmin(admin.ModelAdmin):
         ),
         ("Metadata", {"fields": ("created_at",)}),
     )
+
+
+@admin.register(ClinicBookingSettings)
+class ClinicBookingSettingsAdmin(admin.ModelAdmin):
+    list_display = [
+        "clinic", "auto_confirm_patient_bookings",
+        "allow_multiple_bookings_same_day", "updated_by", "updated_at",
+    ]
+    list_filter = ["auto_confirm_patient_bookings", "allow_multiple_bookings_same_day"]
+    search_fields = ["clinic__name"]
+    readonly_fields = ["created_at", "updated_at"]
 
 
 @admin.register(ClinicSubscription)

@@ -56,6 +56,7 @@ urlpatterns = [
 
     # --- Account ---
     path('profile/', views.settings_profile, name='settings_profile'),
+    path('settings/clinic/', views.settings_clinic, name='settings_clinic'),
 
     # --- Invitation Flow ---
     path('invites/', views.secretary_invitations_inbox, name='secretary_invitations_inbox'),
