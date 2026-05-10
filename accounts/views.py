@@ -118,6 +118,23 @@ def login_view(request):
     if request.user.is_authenticated:
         return redirect("accounts:home")
 
+    page_lang = getattr(request, "LANGUAGE_CODE", "ar")
+    invalid_credentials_msg = (
+        "Invalid phone number or password."
+        if page_lang == "en"
+        else "رقم الهاتف أو كلمة المرور غير صحيحة."
+    )
+    unverified_phone_msg = (
+        "Your phone number is not verified. Please contact support."
+        if page_lang == "en"
+        else "رقم هاتفك غير موثق. يرجى التواصل مع الدعم الفني."
+    )
+    correct_errors_msg = (
+        "Please correct the errors below."
+        if page_lang == "en"
+        else "يرجى تصحيح الأخطاء أدناه."
+    )
+
     if request.method == "POST":
         form = LoginForm(request.POST)
         if form.is_valid():
@@ -130,18 +147,15 @@ def login_view(request):
                 user_obj = User.objects.get(phone=normalized_phone)
 
                 if settings.ENFORCE_PHONE_VERIFICATION and not user_obj.is_verified:
-                    messages.error(
-                        request,
-                        "رقم هاتفك غير موثق. يرجى التواصل مع الدعم الفني.",
-                    )
+                    messages.error(request, unverified_phone_msg)
                     return render(request, "accounts/login.html", {"form": form})
 
                 if not user_obj.check_password(password):
-                    messages.error(request, "رقم الهاتف أو كلمة المرور غير صحيحة.")
+                    messages.error(request, invalid_credentials_msg)
                     return render(request, "accounts/login.html", {"form": form})
 
             except User.DoesNotExist:
-                messages.error(request, "رقم الهاتف أو كلمة المرور غير صحيحة.")
+                messages.error(request, invalid_credentials_msg)
                 return render(request, "accounts/login.html", {"form": form})
 
             user = authenticate(request, username=phone, password=password)
@@ -156,9 +170,9 @@ def login_view(request):
                 next_url = request.GET.get("next")
                 return handle_pending_invitation_redirect(request, default_url=next_url)
             else:
-                messages.error(request, "رقم الهاتف أو كلمة المرور غير صحيحة.")
+                messages.error(request, invalid_credentials_msg)
         else:
-            messages.error(request, "يرجى تصحيح الأخطاء أدناه.")
+            messages.error(request, correct_errors_msg)
     else:
         form = LoginForm()
 

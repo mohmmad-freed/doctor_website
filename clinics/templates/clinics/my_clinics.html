@@ -475,8 +475,8 @@
                         <span class="sub-exp">ينتهي {{ sub.expires_at|date:"d/m/Y" }}</span>
                     </div>
                     <div class="sub-track">
-                        <div class="sub-fill {% if sub.status == 'EXPIRED' %}fill-exp{% elif sub.status == 'SUSPENDED' %}fill-warn{% else %}fill-ok{% endif %}"
-                             style="width:{% if sub.status == 'ACTIVE' %}80{% elif sub.status == 'SUSPENDED' %}40{% else %}8{% endif %}%;">
+                        <div class="sub-fill {% if sub.effective_status == 'EXPIRED' %}fill-exp{% elif sub.effective_status == 'SUSPENDED' %}fill-warn{% else %}fill-ok{% endif %}"
+                             style="width:{% if sub.effective_status == 'ACTIVE' %}80{% elif sub.effective_status == 'SUSPENDED' %}40{% else %}8{% endif %}%;">
                         </div>
                     </div>
                 </div>

@@ -153,8 +153,11 @@ class ClinicSubscriptionAdmin(admin.ModelAdmin):
     @admin.display(description='Status', ordering='status')
     def status_badge(self, obj):
         colors = {'ACTIVE': 'green', 'EXPIRED': 'orange', 'SUSPENDED': 'red'}
-        color = colors.get(obj.status, 'gray')
-        return format_html('<b style="color:{};">{}</b>', color, obj.get_status_display())
+        color = colors.get(obj.effective_status, 'gray')
+        label = obj.get_status_display()
+        if obj.status == "ACTIVE" and obj.effective_status == "EXPIRED":
+            label += " (expired)"
+        return format_html('<b style="color:{};">{}</b>', color, label)
 
     @admin.display(boolean=True, description='Effectively Active')
     def is_effectively_active(self, obj):

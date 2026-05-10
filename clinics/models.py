@@ -294,6 +294,14 @@ class ClinicSubscription(models.Model):
         from django.utils import timezone
         return self.status == "ACTIVE" and self.expires_at > timezone.now()
 
+    @property
+    def effective_status(self) -> str:
+        """Display status; auto-degrades a stored ACTIVE to EXPIRED past expires_at."""
+        from django.utils import timezone
+        if self.status == "ACTIVE" and self.expires_at <= timezone.now():
+            return "EXPIRED"
+        return self.status
+
     def current_doctors_count(self) -> int:
         from clinics.models import ClinicStaff
         return ClinicStaff.objects.filter(

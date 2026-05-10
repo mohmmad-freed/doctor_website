@@ -943,7 +943,7 @@
         </div>
         <!-- Expiry -->
         <div class="metric-tile">
-            <div class="metric-icon {% if subscription.status == 'EXPIRED' %}mi-red{% elif subscription.status == 'SUSPENDED' %}mi-amber{% else %}mi-green{% endif %}">
+            <div class="metric-icon {% if subscription.effective_status == 'EXPIRED' %}mi-red{% elif subscription.effective_status == 'SUSPENDED' %}mi-amber{% else %}mi-green{% endif %}">
                 <i class="fa-solid fa-calendar-check"></i>
             </div>
             <div class="metric-body">
@@ -1283,9 +1283,9 @@
         <div class="p-card">
             <div class="p-card-head">
                 <h2 class="p-card-title"><i class="fa-solid fa-credit-card"></i> الاشتراك</h2>
-                {% if subscription.status == "ACTIVE" %}
+                {% if subscription.effective_status == "ACTIVE" %}
                     <span class="s-badge s-active">نشط</span>
-                {% elif subscription.status == "EXPIRED" %}
+                {% elif subscription.effective_status == "EXPIRED" %}
                     <span class="s-badge s-expired">منتهي</span>
                 {% else %}
                     <span class="s-badge s-suspended">موقوف</span>
