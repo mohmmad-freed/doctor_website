@@ -44,6 +44,7 @@ VALID_TRANSITIONS = {
     ],
     Appointment.Status.CHECKED_IN: [
         Appointment.Status.IN_PROGRESS,
+        Appointment.Status.CONFIRMED,
         Appointment.Status.CANCELLED,
         Appointment.Status.NO_SHOW,
     ],
@@ -111,6 +112,14 @@ def transition_appointment_status(
     if new_status == Appointment.Status.CHECKED_IN:
         appointment.checked_in_at = timezone.now()
         update_fields.append("checked_in_at")
+
+    if (
+        new_status == Appointment.Status.CONFIRMED
+        and current == Appointment.Status.CHECKED_IN
+    ):
+        appointment.checked_in_at = None
+        appointment.queue_priority = None
+        update_fields.extend(["checked_in_at", "queue_priority"])
 
     if new_status == Appointment.Status.CANCELLED:
         appointment.cancellation_reason = cancellation_reason.strip()

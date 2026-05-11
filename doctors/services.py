@@ -20,6 +20,7 @@ def generate_slots_for_date(
     target_date: date,
     duration_minutes: int,
     slot_step_minutes: int | None = None,
+    exclude_appointment_id: int | None = None,
 ) -> list[dict]:
     """
     Generate time slots for a doctor on a specific date.
@@ -34,6 +35,9 @@ def generate_slots_for_date(
             Passing a smaller value (e.g. 15) emits a slot every step
             while still requiring the full ``duration_minutes`` window
             to fit within the doctor's availability block.
+        exclude_appointment_id: Optional appointment id to exclude from the
+            booked check. Used when editing an appointment so that its own
+            current slot appears available rather than booked-by-itself.
 
     Returns:
         List of dicts: [{"time": time, "end_time": time, "is_available": bool}, ...]
@@ -83,6 +87,8 @@ def generate_slots_for_date(
         appointment_date=target_date,
         status__in=["CONFIRMED", "COMPLETED"],
     ).select_related("appointment_type")
+    if exclude_appointment_id is not None:
+        existing_appointments = existing_appointments.exclude(pk=exclude_appointment_id)
 
     # Build list of booked time ranges: [(start_time, end_time), ...]
     booked_ranges = []

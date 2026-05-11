@@ -345,6 +345,7 @@ def full_days_json(request):
     appt_type_id = request.GET.get("appointment_type_id")
     start_str = request.GET.get("start")
     end_str = request.GET.get("end")
+    exclude_appointment_id_raw = request.GET.get("exclude_appointment_id", "")
 
     if not all([doctor_id, clinic_id, appt_type_id, start_str, end_str]):
         return JsonResponse({"full_days": []})
@@ -357,6 +358,13 @@ def full_days_json(request):
         end = datetime.strptime(end_str, "%Y-%m-%d").date()
     except (TypeError, ValueError):
         return JsonResponse({"full_days": []})
+
+    exclude_appointment_id = None
+    if exclude_appointment_id_raw:
+        try:
+            exclude_appointment_id = int(exclude_appointment_id_raw)
+        except (TypeError, ValueError):
+            exclude_appointment_id = None
 
     if end < start or (end - start).days > 62:
         return JsonResponse({"full_days": []})
@@ -392,6 +400,7 @@ def full_days_json(request):
                 target_date=cur,
                 duration_minutes=appt_type.duration_minutes,
                 slot_step_minutes=slot_step,
+                exclude_appointment_id=exclude_appointment_id,
             )
             if slots and not any(s["is_available"] for s in slots):
                 full_days.append(cur.isoformat())

@@ -16,6 +16,7 @@ urlpatterns = [
     path('appointments/<int:appointment_id>/cancel/', views.cancel_appointment, name='cancel_appointment'),
     path('appointments/<int:appointment_id>/checkin/', views.checkin_appointment, name='checkin_appointment'),
     path('appointments/<int:appointment_id>/status/', views.update_appointment_status, name='update_appointment_status'),
+    path('appointments/<int:appointment_id>/remove-from-queue/', views.remove_from_queue, name='remove_from_queue'),
     path('calendar/', views.calendar_view, name='calendar'),
 
     # --- Calendar JSON feed (FullCalendar) ---

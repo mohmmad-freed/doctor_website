@@ -2349,3 +2349,55 @@ msgstr "Booking request received"
 
 msgid "موعدك قيد المراجعة من السكرتارية وسيتم إعلامك عند تأكيده."
 msgstr "Your appointment is pending secretary review. You'll be notified once it's confirmed."
+
+# ── Waiting room: remove-from-queue modal & search ──────────────────────────
+msgid "هل تريد إرجاع"
+msgstr "Do you want to return"
+
+msgid "إلى قائمة المواعيد المؤكدة؟"
+msgstr "to the confirmed appointments list?"
+
+msgid "هل تريد حذف حضور"
+msgstr "Do you want to delete the walk-in of"
+
+msgid "من السجلات؟ لا يمكن التراجع عن هذه العملية."
+msgstr "from the records? This action cannot be undone."
+
+msgid "تأكيد الإرجاع"
+msgstr "Confirm Return"
+
+msgid "تم إرجاع المريض إلى قائمة المواعيد المؤكدة."
+msgstr "Patient was returned to the confirmed appointments list."
+
+msgid "تم حذف الحضور المباشر من السجلات."
+msgstr "Walk-in deleted from the records."
+
+msgid "هذا الموعد لم يعد في طابور الانتظار."
+msgstr "This appointment is no longer in the waiting queue."
+
+msgid "ابحث بالاسم أو الجوال أو الوقت..."
+msgstr "Search by name, phone, or time..."
+
+msgid "اختر الطبيب ونوع الموعد والتاريخ لعرض الأوقات المتاحة."
+msgstr "Select doctor, appointment type, and date to view available times."
+
+msgid "لا توجد نتائج مطابقة."
+msgstr "No matching results."
+
+msgid "لا يوجد أطباء في هذه العيادة."
+msgstr "No doctors in this clinic."
+
+msgid "يرجى إكمال جميع الحقول المطلوبة (الطبيب، نوع الموعد، التاريخ، والوقت)."
+msgstr "Please complete all required fields (doctor, appointment type, date, and time)."
+
+msgid "لا يمكن حجز الموعد للطبيب مع نفسه كمريض."
+msgstr "A doctor cannot be booked with themselves as the patient."
+
+msgid "هذه الصفحة متاحة للسكرتارية فقط."
+msgstr "This page is available to secretaries only."
+
+msgid "نوع الموعد غير موجود."
+msgstr "Appointment type not found."
+
+msgid "تاريخ غير صالح."
+msgstr "Invalid date."

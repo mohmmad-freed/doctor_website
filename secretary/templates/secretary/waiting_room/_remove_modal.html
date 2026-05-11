@@ -1,57 +1,83 @@
 {% load i18n %}
-{# Remove-from-queue confirmation modal. Shown when a row's X button is clicked. #}
+{# Remove-from-queue modal: booked reverts CHECKED_IN→CONFIRMED, walk-in is deleted. #}
 <div id="remove-modal"
      class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm p-4">
   <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 w-full max-w-sm p-6 space-y-4">
     <h3 class="font-bold text-gray-900 dark:text-white">{% trans "إزالة من الطابور" %}</h3>
     <p class="text-sm text-gray-600 dark:text-gray-300">
-      {% trans "هل تريد إزالة" %} <strong id="remove-patient-name"></strong> {% trans "من طابور الانتظار؟" %}
+      <span data-mode-booked>
+        {% trans "هل تريد إرجاع" %} <strong id="remove-patient-name-booked"></strong> {% trans "إلى قائمة المواعيد المؤكدة؟" %}
+      </span>
+      <span data-mode-walkin class="hidden">
+        {% trans "هل تريد حذف حضور" %} <strong id="remove-patient-name-walkin"></strong> {% trans "من السجلات؟ لا يمكن التراجع عن هذه العملية." %}
+      </span>
     </p>
     <form method="post" id="remove-form" action="">
       {% csrf_token %}
-      <input type="hidden" name="new_status" value="CANCELLED">
       <input type="hidden" name="next" value="{{ request.get_full_path }}">
-      <div class="mb-4">
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">{% trans "سبب الإزالة" %}</label>
-        <textarea name="cancellation_reason" rows="2" required
-                  placeholder="{% trans 'مطلوب — اكتب سبب الإزالة...' %}"
-                  class="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-400 resize-none"></textarea>
-      </div>
       <div class="flex items-center justify-end gap-3">
         <button type="button" onclick="closeRemoveModal()"
                 class="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
           {% trans "إلغاء" %}
         </button>
-        <button type="submit"
-                class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors">
-          {% trans "تأكيد الإزالة" %}
-        </button>
+        <button type="submit" id="remove-confirm-btn"
+                data-label-booked="{% trans 'تأكيد الإرجاع' %}"
+                data-label-walkin="{% trans 'تأكيد الحذف' %}"
+                class="px-4 py-2 rounded-xl text-white text-sm font-semibold transition-colors">{% trans "تأكيد الإرجاع" %}</button>
       </div>
     </form>
   </div>
 </div>
 
 <script>
-  function openRemoveModal(apptId, patientName) {
-    document.getElementById('remove-patient-name').textContent = patientName;
-    document.getElementById('remove-form').action = '/secretary/appointments/' + apptId + '/status/';
+  (function () {
     var modal = document.getElementById('remove-modal');
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-  }
-  function closeRemoveModal() {
-    var modal = document.getElementById('remove-modal');
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
-  }
-  document.getElementById('remove-modal').addEventListener('click', function(e) {
-    if (e.target === this) closeRemoveModal();
-  });
-  // Event delegation: works for X buttons that are re-rendered by HTMX swaps.
-  document.body.addEventListener('click', function(e) {
-    var btn = e.target.closest('[data-remove-from-queue]');
-    if (!btn) return;
-    e.preventDefault();
-    openRemoveModal(btn.dataset.apptId, btn.dataset.patientName);
-  });
+    var form = document.getElementById('remove-form');
+    var confirmBtn = document.getElementById('remove-confirm-btn');
+
+    function setMode(isWalkIn, patientName) {
+      var bookedEls = modal.querySelectorAll('[data-mode-booked]');
+      var walkinEls = modal.querySelectorAll('[data-mode-walkin]');
+      bookedEls.forEach(function (el) { el.classList.toggle('hidden', isWalkIn); });
+      walkinEls.forEach(function (el) { el.classList.toggle('hidden', !isWalkIn); });
+      document.getElementById('remove-patient-name-booked').textContent = patientName;
+      document.getElementById('remove-patient-name-walkin').textContent = patientName;
+      confirmBtn.textContent = isWalkIn
+        ? confirmBtn.dataset.labelWalkin
+        : confirmBtn.dataset.labelBooked;
+      confirmBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'bg-red-600', 'hover:bg-red-700');
+      if (isWalkIn) {
+        confirmBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+      } else {
+        confirmBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+      }
+    }
+
+    window.openRemoveModal = function (apptId, patientName, isWalkIn) {
+      setMode(!!isWalkIn, patientName);
+      form.action = '/secretary/appointments/' + apptId + '/remove-from-queue/';
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    };
+    window.closeRemoveModal = function () {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    };
+
+    modal.addEventListener('click', function (e) {
+      if (e.target === this) closeRemoveModal();
+    });
+
+    // Event delegation: works for X buttons re-rendered by HTMX swaps.
+    document.body.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-remove-from-queue]');
+      if (!btn) return;
+      e.preventDefault();
+      openRemoveModal(
+        btn.dataset.apptId,
+        btn.dataset.patientName,
+        btn.dataset.isWalkIn === '1'
+      );
+    });
+  })();
 </script>

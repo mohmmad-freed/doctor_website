@@ -79,12 +79,13 @@
         </button>
       </form>
 
-      {# Cancel / remove from queue — handled by delegated listener in _remove_modal.html #}
+      {# Remove from queue — booked reverts to CONFIRMED; walk-in is deleted. Delegated listener in _remove_modal.html. #}
       <button type="button"
               title="{% trans 'إزالة من الطابور' %}"
               data-remove-from-queue
               data-appt-id="{{ appt.id }}"
               data-patient-name="{{ appt.patient.name }}"
+              data-is-walk-in="{{ appt.is_walk_in|yesno:'1,0' }}"
               class="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
         <i class="fa-solid fa-xmark text-sm"></i>
       </button>

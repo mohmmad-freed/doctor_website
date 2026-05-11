@@ -413,6 +413,35 @@ def appointment_detail(request, appointment_id):
     })
 
 
+def _filter_confirmed_by_query(qs, q: str):
+    """
+    Apply a free-text filter to the Column A (CONFIRMED) queryset.
+    Matches patient name (partial), patient phone, and appointment time.
+    Doctor is filtered separately via the doctor_id dropdown.
+    """
+    q = (q or "").strip()
+    if not q:
+        return qs
+
+    filt = (
+        Q(patient__name__icontains=q)
+        | Q(patient__phone__icontains=q)
+    )
+    digits = q.replace(":", "")
+    if digits.isdigit():
+        try:
+            if len(digits) <= 2:
+                filt |= Q(appointment_time__hour=int(digits))
+            else:
+                hh = int(digits[:2])
+                mm = int(digits[2:4].ljust(2, "0"))
+                filt |= Q(appointment_time__hour=hh, appointment_time__minute=mm)
+        except ValueError:
+            pass
+
+    return qs.filter(filt)
+
+
 # ── Stub views for unimplemented modules ─────────────────────────────────────
 
 @login_required
@@ -427,6 +456,7 @@ def waiting_room(request):
     today = date.today()
 
     doctor_filter = request.GET.get("doctor_id", "")
+    confirmed_q = request.GET.get("q", "")
 
     # Column A: CONFIRMED today (checked-in queue candidates)
     confirmed_qs = (
@@ -453,6 +483,8 @@ def waiting_room(request):
     if doctor_filter:
         confirmed_qs = confirmed_qs.filter(doctor_id=doctor_filter)
         checkedin_qs = checkedin_qs.filter(doctor_id=doctor_filter)
+
+    confirmed_qs = _filter_confirmed_by_query(confirmed_qs, confirmed_q)
 
     now = timezone.now()
     # Annotate wait time in minutes onto each checked-in appointment
@@ -495,6 +527,7 @@ def waiting_room(request):
         "checkedin_list": checkedin_list,
         "doctors": doctors,
         "doctor_filter": doctor_filter,
+        "confirmed_q": confirmed_q,
         "total_waiting": total_waiting,
         "avg_wait": avg_wait,
     })
@@ -579,6 +612,7 @@ def waiting_room_confirmed_htmx(request):
     clinic = staff.clinic
     today = date.today()
     doctor_filter = request.GET.get("doctor_id", "")
+    confirmed_q = request.GET.get("q", "")
 
     qs = (
         Appointment.objects.filter(
@@ -591,6 +625,7 @@ def waiting_room_confirmed_htmx(request):
     )
     if doctor_filter:
         qs = qs.filter(doctor_id=doctor_filter)
+    qs = _filter_confirmed_by_query(qs, confirmed_q)
 
     return render(request, "secretary/htmx/waiting_room_confirmed_rows.html", {
         "confirmed_list": list(qs),
@@ -1729,6 +1764,53 @@ def update_appointment_status(request, appointment_id):
 
 
 @login_required
+@require_POST
+def remove_from_queue(request, appointment_id):
+    """
+    Secretary "X" button on a CHECKED_IN row in the waiting room.
+
+      - Walk-in  → delete the appointment (no prior state to return to).
+      - Booked   → revert status to CONFIRMED so the original booking is preserved.
+    """
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden()
+
+    from secretary.services import transition_appointment_status
+    from appointments.services.booking_service import BookingError
+
+    appointment = get_object_or_404(Appointment, id=appointment_id, clinic=staff.clinic)
+    next_url = request.POST.get("next") or request.META.get("HTTP_REFERER")
+
+    def _redirect_back():
+        if next_url and next_url.startswith("/"):
+            return redirect(next_url)
+        return redirect("secretary:waiting_room")
+
+    if appointment.status != Appointment.Status.CHECKED_IN:
+        messages.info(request, _("هذا الموعد لم يعد في طابور الانتظار."))
+        return _redirect_back()
+
+    if appointment.is_walk_in:
+        appointment.delete()
+        messages.success(request, _("تم حذف الحضور المباشر من السجلات."))
+        return _redirect_back()
+
+    try:
+        transition_appointment_status(
+            appointment,
+            Appointment.Status.CONFIRMED,
+            actor=request.user,
+        )
+    except BookingError as e:
+        messages.error(request, e.message)
+        return _redirect_back()
+
+    messages.success(request, _("تم إرجاع المريض إلى قائمة المواعيد المؤكدة."))
+    return _redirect_back()
+
+
+@login_required
 def get_time_slots_htmx(request):
     """
     HTMX endpoint: return available time slots for a doctor on a date.
@@ -1747,6 +1829,13 @@ def get_time_slots_htmx(request):
     doctor_id = request.GET.get("doctor_id", "")
     date_str = request.GET.get("appointment_date", "")
     type_id = request.GET.get("appointment_type_id", "")
+    exclude_appointment_id_raw = request.GET.get("exclude_appointment_id", "")
+    exclude_appointment_id = None
+    if exclude_appointment_id_raw:
+        try:
+            exclude_appointment_id = int(exclude_appointment_id_raw)
+        except (TypeError, ValueError):
+            exclude_appointment_id = None
 
     slots = []
     error = None
@@ -1769,11 +1858,12 @@ def get_time_slots_htmx(request):
                     target_date=target_date,
                     duration_minutes=duration,
                     slot_step_minutes=step,
+                    exclude_appointment_id=exclude_appointment_id,
                 )
             else:
-                error = "نوع الموعد غير موجود."
+                error = _("نوع الموعد غير موجود.")
         except ValueError:
-            error = "تاريخ غير صالح."
+            error = _("تاريخ غير صالح.")
         except Exception as e:
             error = str(e)
 
@@ -2927,7 +3017,7 @@ def edit_appointment(request, appointment_id):
     """Secretary reschedules or updates an appointment."""
     staff = _require_secretary(request)
     if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+        return HttpResponseForbidden(_("هذه الصفحة متاحة للسكرتارية فقط."))
 
     clinic = staff.clinic
     appointment = get_object_or_404(Appointment, id=appointment_id, clinic=clinic)
@@ -2947,7 +3037,17 @@ def edit_appointment(request, appointment_id):
     from appointments.services.appointment_type_service import (
         get_appointment_types_for_doctor_in_clinic,
     )
-    # Filter appointment types by what this specific doctor offers in this clinic
+    from clinics.models import ClinicStaff as CS
+
+    doctors_qs = (
+        CS.objects.filter(clinic=clinic, role="DOCTOR", is_active=True)
+        .select_related("user")
+        .order_by("user__name")
+    )
+    doctor_users = [s.user for s in doctors_qs]
+    valid_doctor_ids = {u.id for u in doctor_users}
+
+    # Filter appointment types by what the current doctor offers in this clinic
     if appointment.doctor_id:
         appointment_types = get_appointment_types_for_doctor_in_clinic(
             appointment.doctor_id, clinic.id
@@ -2957,13 +3057,22 @@ def edit_appointment(request, appointment_id):
 
     if request.method == "POST":
         try:
+            new_doctor_id = int(request.POST.get("doctor_id") or 0)
             new_type_id = int(request.POST.get("appointment_type_id") or 0)
             new_date_str = request.POST.get("appointment_date", "").strip()
             new_time_str = request.POST.get("appointment_time", "").strip()
             new_reason = request.POST.get("reason", "").strip()
 
-            if not all([new_type_id, new_date_str, new_time_str]):
+            if not all([new_doctor_id, new_type_id, new_date_str, new_time_str]):
                 messages.error(request, _("يرجى ملء جميع الحقول المطلوبة."))
+                return redirect("secretary:edit_appointment", appointment_id=appointment_id)
+
+            if new_doctor_id not in valid_doctor_ids:
+                messages.error(request, _("الطبيب المحدد لا ينتمي إلى هذه العيادة."))
+                return redirect("secretary:edit_appointment", appointment_id=appointment_id)
+
+            if appointment.patient_id and new_doctor_id == appointment.patient_id:
+                messages.error(request, _("لا يمكن حجز الموعد للطبيب مع نفسه كمريض."))
                 return redirect("secretary:edit_appointment", appointment_id=appointment_id)
 
             from datetime import datetime as dt_cls
@@ -2975,24 +3084,27 @@ def edit_appointment(request, appointment_id):
                 messages.error(request, _("لا يمكن جدولة موعد في تاريخ ماضٍ."))
                 return redirect("secretary:edit_appointment", appointment_id=appointment_id)
 
-            # Validate type is enabled for this doctor (S-03 equivalent for edit)
-            if appointment.doctor_id:
-                enabled_type_ids = {t.id for t in appointment_types}
-                if enabled_type_ids and new_type_id not in enabled_type_ids:
-                    messages.error(request, _("نوع الموعد المحدد غير متاح لهذا الطبيب."))
-                    return redirect("secretary:edit_appointment", appointment_id=appointment_id)
+            # Validate type is enabled for the NEW doctor (S-03 equivalent for edit)
+            allowed_types = get_appointment_types_for_doctor_in_clinic(new_doctor_id, clinic.id)
+            enabled_type_ids = {t.id for t in allowed_types}
+            if enabled_type_ids and new_type_id not in enabled_type_ids:
+                messages.error(request, _("نوع الموعد المحدد غير متاح لهذا الطبيب."))
+                return redirect("secretary:edit_appointment", appointment_id=appointment_id)
 
             new_type = get_object_or_404(AppointmentType, id=new_type_id, clinic=clinic, is_active=True)
 
-            # S-05: Check for slot conflicts with other confirmed appointments for the same doctor
-            # (only if date, time, or doctor changes)
+            doctor_changed = new_doctor_id != appointment.doctor_id
             date_or_time_changed = (
                 new_date != appointment.appointment_date
                 or new_time != appointment.appointment_time
             )
-            if date_or_time_changed and appointment.doctor_id:
+            key_fields_changed = doctor_changed or date_or_time_changed
+
+            # S-05: Check for slot conflicts with other confirmed appointments for the
+            # (possibly new) doctor whenever doctor, date, or time changed.
+            if key_fields_changed:
                 conflict = Appointment.objects.filter(
-                    doctor_id=appointment.doctor_id,
+                    doctor_id=new_doctor_id,
                     appointment_date=new_date,
                     appointment_time=new_time,
                     status__in=[
@@ -3008,15 +3120,19 @@ def edit_appointment(request, appointment_id):
             old_date = appointment.appointment_date
             old_time = appointment.appointment_time
 
+            appointment.doctor_id = new_doctor_id
             appointment.appointment_type = new_type
             appointment.appointment_date = new_date
             appointment.appointment_time = new_time
             if new_reason:
                 appointment.reason = new_reason
-            appointment.save(update_fields=["appointment_type", "appointment_date", "appointment_time", "reason", "updated_at"])
+            appointment.save(update_fields=[
+                "doctor", "appointment_type", "appointment_date",
+                "appointment_time", "reason", "updated_at",
+            ])
 
-            # Notify patient if date/time changed
-            if date_or_time_changed:
+            # Notify patient if doctor, date, or time changed
+            if key_fields_changed:
                 from django.db import transaction as _txn
                 from appointments.services.appointment_notification_service import (
                     notify_appointment_rescheduled_by_staff,
@@ -3030,10 +3146,13 @@ def edit_appointment(request, appointment_id):
         except Exception as e:
             messages.error(request, _("حدث خطأ: %(error)s") % {"error": e})
 
+    today_str = date.today().isoformat()
     return render(request, "secretary/edit_appointment.html", {
         "clinic": clinic,
         "appointment": appointment,
         "appointment_types": appointment_types,
+        "doctor_users": doctor_users,
+        "today_str": today_str,
     })
 
 

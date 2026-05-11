@@ -418,6 +418,7 @@ class SecretaryAppointmentCRUDTests(SecretaryTestBase):
         resp = self.client.post(
             reverse("secretary:edit_appointment", args=[appt.id]),
             {
+                "doctor_id": str(self.doctor_a.id),
                 "appointment_type_id": str(self.appt_type_a.id),
                 "appointment_date": next_week.strftime("%Y-%m-%d"),
                 "appointment_time": "10:00",
@@ -436,6 +437,7 @@ class SecretaryAppointmentCRUDTests(SecretaryTestBase):
         self.client.post(
             reverse("secretary:edit_appointment", args=[appt.id]),
             {
+                "doctor_id": str(self.doctor_a.id),
                 "appointment_type_id": str(self.appt_type_a.id),
                 "appointment_date": yesterday.strftime("%Y-%m-%d"),
                 "appointment_time": "09:00",
@@ -470,6 +472,7 @@ class SecretaryAppointmentCRUDTests(SecretaryTestBase):
         self.client.post(
             reverse("secretary:edit_appointment", args=[appt2.id]),
             {
+                "doctor_id": str(self.doctor_a.id),
                 "appointment_type_id": str(self.appt_type_a.id),
                 "appointment_date": self.next_monday.strftime("%Y-%m-%d"),
                 "appointment_time": "09:00",  # conflicts with appt1

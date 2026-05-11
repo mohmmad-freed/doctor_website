@@ -1,6 +1,51 @@
 {% extends "secretary/base_secretary.html" %}
 {% load i18n %}
+{% load static %}
 {% block title %}{% trans "تعديل الموعد" %}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'accounts/css/calendar_widget.css' %}">
+<style>
+  .time-slot-btn {
+    padding: 6px 10px; border-radius: 10px; font-size: 0.8rem; font-weight: 600;
+    border: 1.5px solid #e5e7eb; background: white; color: #374151; cursor: pointer;
+    transition: all 0.15s; text-align: center;
+  }
+  .dark .time-slot-btn { background: #1e293b; border-color: #334155; color: #e2e8f0; }
+  .time-slot-btn:hover:not(:disabled) { border-color: #a855f7; color: #9333ea; background: #faf5ff; }
+  .dark .time-slot-btn:hover:not(:disabled) { border-color: #a855f7; background: rgba(168,85,247,0.1); }
+  .time-slot-btn.selected { background: #a855f7; color: white; border-color: #a855f7; }
+  .time-slot-btn.is-past { opacity: 0.28; cursor: not-allowed; background: #f3f4f6; color: #9ca3af; border-color: #e5e7eb; }
+  .dark .time-slot-btn.is-past { background: #1e293b; color: #475569; border-color: #1e293b; }
+  .time-slot-btn.is-booked { cursor: not-allowed; background: #fef3c7; border-color: #f59e0b; color: #92400e; opacity: 0.9; }
+  .dark .time-slot-btn.is-booked { background: rgba(245,158,11,0.12); border-color: #d97706; color: #fbbf24; }
+
+  /* Searchable doctor picker */
+  .doctor-picker { position: relative; }
+  .doctor-picker-trigger {
+    width: 100%; display: flex; align-items: center; justify-content: space-between;
+    gap: 0.5rem; text-align: start;
+  }
+  .doctor-picker-panel {
+    position: absolute; z-index: 30; inset-inline-start: 0; inset-inline-end: 0; top: calc(100% + 4px);
+    background: white; border: 1px solid #e5e7eb; border-radius: 0.75rem;
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+    max-height: 280px; display: flex; flex-direction: column; overflow: hidden;
+  }
+  .dark .doctor-picker-panel { background: #1e293b; border-color: #334155; }
+  .doctor-picker-list { overflow-y: auto; max-height: 220px; }
+  .doctor-picker-row {
+    display: flex; align-items: center; gap: 0.5rem; width: 100%;
+    padding: 0.5rem 0.75rem; font-size: 0.85rem; text-align: start; cursor: pointer;
+    color: #374151; background: transparent; border: none;
+  }
+  .dark .doctor-picker-row { color: #e2e8f0; }
+  .doctor-picker-row:hover:not(:disabled) { background: #faf5ff; color: #7e22ce; }
+  .dark .doctor-picker-row:hover:not(:disabled) { background: rgba(168,85,247,0.1); color: #d8b4fe; }
+  .doctor-picker-row:disabled { opacity: 0.4; cursor: not-allowed; }
+  .doctor-picker-row.is-hidden { display: none; }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="max-w-2xl mx-auto py-2" dir="{{ DIR }}">
@@ -57,49 +102,177 @@
       <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">{% trans "تعديل تفاصيل الموعد" %}</span>
     </div>
     <div class="px-5 py-5">
-      <form method="post" class="space-y-5">
+      <form method="post" class="space-y-5" id="edit-appt-form">
         {% csrf_token %}
 
-        {# Appointment type #}
+        {# Doctor — searchable picker #}
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
+            {% trans "الطبيب" %} <span class="text-red-500">*</span>
+          </label>
+          <div class="doctor-picker" id="doctor-picker">
+            <input type="hidden" name="doctor_id" id="doctor-select" value="{{ appointment.doctor_id|default_if_none:'' }}" required>
+            <button type="button" id="doctor-picker-trigger"
+                    class="doctor-picker-trigger w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
+              <span id="doctor-picker-label" class="truncate">
+                {% if appointment.doctor %}{{ appointment.doctor.name }}{% else %}— {% trans "اختر الطبيب" %} —{% endif %}
+              </span>
+              <i class="fa-solid fa-chevron-down text-xs text-gray-400"></i>
+            </button>
+            <div class="doctor-picker-panel hidden" id="doctor-picker-panel">
+              <div class="p-2 border-b border-gray-100 dark:border-gray-700">
+                <input type="text" id="doctor-picker-search" autocomplete="off"
+                       placeholder="{% trans 'ابحث عن طبيب...' %}"
+                       class="w-full text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500">
+              </div>
+              <div class="doctor-picker-list" id="doctor-picker-list">
+                {% for doc in doctor_users %}
+                <button type="button" class="doctor-picker-row"
+                        data-doctor-id="{{ doc.id }}"
+                        data-doctor-name="{{ doc.name }}"
+                        {% if appointment.patient_id and doc.id == appointment.patient_id %}disabled{% endif %}>
+                  <i class="fa-solid fa-user-doctor text-purple-500 text-xs"></i>
+                  <span class="flex-1 truncate">{{ doc.name }}</span>
+                  {% if appointment.doctor_id and doc.id == appointment.doctor_id %}
+                  <i class="fa-solid fa-check text-purple-500 text-xs" data-role="current-mark"></i>
+                  {% endif %}
+                </button>
+                {% empty %}
+                <p class="px-3 py-3 text-xs text-gray-400 text-center">
+                  {% trans "لا يوجد أطباء في هذه العيادة." %}
+                </p>
+                {% endfor %}
+              </div>
+              <p id="doctor-picker-empty" class="hidden px-3 py-3 text-xs text-gray-400 text-center">
+                {% trans "لا توجد نتائج مطابقة." %}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {# Appointment type — reloaded via HTMX when doctor changes #}
         <div>
           <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
             {% trans "نوع الموعد" %} <span class="text-red-500">*</span>
           </label>
-          <select name="appointment_type_id" required
-                  class="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
-            <option value="">{% trans "— اختر نوع الموعد —" %}</option>
-            {% for at in appointment_types %}
-            <option value="{{ at.id }}"
-                    {% if appointment.appointment_type_id == at.id %}selected{% endif %}>
-              {{ at.display_name }} ({{ at.duration_minutes }} {% trans "دقيقة" %} — ₪{{ at.price }})
-            </option>
-            {% endfor %}
-          </select>
-          {% if appointment.doctor_id %}
-          <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
-            <i class="fa-solid fa-circle-info me-0.5"></i>
-            {% trans "تظهر الأنواع المتاحة لهذا الطبيب في العيادة فقط." %}
-          </p>
-          {% endif %}
+          <div id="appt-type-container">
+            <select name="appointment_type_id" id="appt-type-select" required
+                    class="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
+              <option value="">{% trans "— اختر نوع الموعد —" %}</option>
+              {% for at in appointment_types %}
+              <option value="{{ at.id }}"
+                      data-duration="{{ at.duration_minutes }}"
+                      data-price="{{ at.price }}"
+                      {% if appointment.appointment_type_id == at.id %}selected{% endif %}>
+                {{ at.display_name }} — {{ at.duration_minutes }} {% trans "دقيقة" %}{% if at.price %} (₪{{ at.price }}){% endif %}
+              </option>
+              {% endfor %}
+            </select>
+            {% if not appointment_types %}
+            <p class="text-xs text-amber-600 dark:text-amber-400 mt-1.5 flex items-center gap-1">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+              {% trans "لا توجد أنواع مواعيد مُفعَّلة لهذا الطبيب في هذه العيادة." %}
+            </p>
+            {% endif %}
+          </div>
+          <p id="type-meta" class="hidden mt-1.5 text-xs text-gray-400 dark:text-gray-500"></p>
         </div>
 
-        {# Date + Time #}
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
-              {% trans "التاريخ الجديد" %} <span class="text-red-500">*</span>
-            </label>
-            <input type="date" name="appointment_date" required
-                   value="{{ appointment.appointment_date|date:'Y-m-d' }}"
-                   class="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
+        {# Date — inline calendar widget #}
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
+            {% trans "تاريخ الموعد" %} <span class="text-red-500">*</span>
+          </label>
+
+          <input type="hidden" name="appointment_date" id="appt-date-input"
+                 value="{{ appointment.appointment_date|date:'Y-m-d' }}" required>
+
+          <div class="cal-wrap" id="cal-widget" data-today="{{ today_str }}">
+            <div class="cal-header">
+              <button type="button" class="cal-nav-btn" data-role="cal-prev" aria-label="{% if IS_RTL %}الشهر السابق{% else %}Previous month{% endif %}">
+                <i class="fa-solid {% if IS_RTL %}fa-chevron-right{% else %}fa-chevron-left{% endif %}"></i>
+              </button>
+              <div class="cal-title">—</div>
+              <div class="flex items-center gap-2">
+                <button type="button" class="cal-today-btn" data-role="cal-today">{% if IS_RTL %}اليوم{% else %}Today{% endif %}</button>
+                <button type="button" class="cal-nav-btn" data-role="cal-next" aria-label="{% if IS_RTL %}الشهر التالي{% else %}Next month{% endif %}">
+                  <i class="fa-solid {% if IS_RTL %}fa-chevron-left{% else %}fa-chevron-right{% endif %}"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="cal-grid">
+              {% if IS_RTL %}
+              <div class="cal-dow">أحد</div>
+              <div class="cal-dow">إثن</div>
+              <div class="cal-dow">ثلا</div>
+              <div class="cal-dow">أرب</div>
+              <div class="cal-dow">خمي</div>
+              <div class="cal-dow">جمع</div>
+              <div class="cal-dow">سبت</div>
+              {% else %}
+              <div class="cal-dow">Sun</div>
+              <div class="cal-dow">Mon</div>
+              <div class="cal-dow">Tue</div>
+              <div class="cal-dow">Wed</div>
+              <div class="cal-dow">Thu</div>
+              <div class="cal-dow">Fri</div>
+              <div class="cal-dow">Sat</div>
+              {% endif %}
+            </div>
+
+            <div class="cal-grid mt-1" data-role="cal-days"></div>
+
+            <div class="cal-legend">
+              <span class="cal-legend-item">
+                <span class="cal-legend-dot dot-working"></span>
+                {% if IS_RTL %}أيام العمل{% else %}Working days{% endif %}
+              </span>
+              <span class="cal-legend-item">
+                <span class="cal-legend-dot dot-non-working"></span>
+                {% if IS_RTL %}إجازة الطبيب{% else %}Doctor off{% endif %}
+              </span>
+              <span class="cal-legend-item">
+                <span class="cal-legend-dot dot-selected"></span>
+                {% if IS_RTL %}المختار{% else %}Selected{% endif %}
+              </span>
+              <span class="cal-legend-item">
+                <span class="cal-legend-dot dot-full"></span>
+                {% if IS_RTL %}ممتلئ{% else %}Full{% endif %}
+              </span>
+            </div>
+
+            <div class="cal-selected-label">
+              <i class="fa-solid fa-calendar-day"></i>
+              <span data-role="cal-selected-text">{% if IS_RTL %}اختر تاريخاً{% else %}Pick a date{% endif %}</span>
+            </div>
           </div>
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
-              {% trans "الوقت الجديد" %} <span class="text-red-500">*</span>
+          <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500" id="cal-hint">
+            {% if IS_RTL %}اختر الطبيب أولاً لعرض أيام عمله.{% else %}Select a doctor first to see working days.{% endif %}
+          </p>
+        </div>
+
+        {# Time slots — HTMX-loaded grid #}
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200">
+              {% trans "الوقت" %} <span class="text-red-500">*</span>
             </label>
-            <input type="time" name="appointment_time" required
-                   value="{{ appointment.appointment_time|time:'H:i' }}"
-                   class="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 transition">
+            <span id="selected-time-label" class="text-xs text-purple-600 dark:text-purple-400 font-semibold hidden">
+              {% trans "المختار:" %} <span id="selected-time-display"></span>
+            </span>
+          </div>
+          <input type="hidden" id="exclude-appt-id" name="exclude_appointment_id" value="{{ appointment.id }}">
+          <input type="hidden" name="appointment_time" id="hidden-time"
+                 value="{{ appointment.appointment_time|time:'H:i' }}" required>
+          <div id="time-slots-container"
+               hx-get="{% url 'secretary:time_slots_htmx' %}"
+               hx-trigger="slotRefresh from:body"
+               hx-include="#doctor-select, #appt-date-input, #appt-type-container select, #exclude-appt-id"
+               hx-swap="innerHTML">
+            <p class="text-xs text-gray-400 dark:text-gray-500 text-center py-6">
+              {% trans "اختر الطبيب ونوع الموعد والتاريخ لعرض الأوقات المتاحة." %}
+            </p>
           </div>
         </div>
 
@@ -129,4 +302,276 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'accounts/js/calendar_widget.js' %}"></script>
+<script>
+(function() {
+  // ── State ────────────────────────────────────────────────────────────
+  var initialTime = '{{ appointment.appointment_time|time:"H:i" }}';
+  var selectedTime = initialTime;
+
+  var doctorSelect = document.getElementById('doctor-select');
+  var hiddenTime   = document.getElementById('hidden-time');
+  var timeContainer = document.getElementById('time-slots-container');
+  var selLabel = document.getElementById('selected-time-label');
+  var selDisplay = document.getElementById('selected-time-display');
+
+  // ── Inline calendar widget ──────────────────────────────────────────
+  var CAL = initCalendarWidget({
+    rootId: 'cal-widget',
+    inputId: 'appt-date-input',
+    hintId: 'cal-hint',
+    workingDaysUrl: "{% url 'secretary:doctor_working_days_json' %}",
+    workingDaysParams: function() {
+      var v = doctorSelect ? doctorSelect.value : '';
+      return v ? {doctor_id: v} : null;
+    },
+    fullDaysUrl: "{% url 'appointments:full_days_json' %}",
+    fullDaysParams: function() {
+      var docId = doctorSelect ? doctorSelect.value : '';
+      var typeEl = document.querySelector('#appt-type-container select');
+      var typeId = typeEl ? typeEl.value : '';
+      if (!docId || !typeId) return null;
+      return {
+        doctor_id: docId,
+        clinic_id: '{{ clinic.id }}',
+        appointment_type_id: typeId,
+        exclude_appointment_id: '{{ appointment.id }}'
+      };
+    },
+    i18n: {
+      {% if IS_RTL %}
+      isRtl: true,
+      months: ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'],
+      fullDow: ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'],
+      dowSep: '، ',
+      dowPyNames: ['الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت','الأحد'],
+      pickDate: 'اختر تاريخاً',
+      past: 'تاريخ ماضٍ',
+      doctorOff: 'الطبيب لا يعمل في هذا اليوم',
+      full: 'ممتلئ',
+      hintNoDoctor: 'اختر الطبيب أولاً لعرض أيام عمله.',
+      hintNoDays: 'هذا الطبيب لا يملك أيام عمل مسجلة في هذه العيادة.',
+      hintWorks: 'أيام عمل الطبيب: '
+      {% else %}
+      isRtl: false,
+      months: ['January','February','March','April','May','June','July','August','September','October','November','December'],
+      fullDow: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
+      dowSep: ', ',
+      dowPyNames: ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],
+      pickDate: 'Pick a date',
+      past: 'Past date',
+      doctorOff: 'Doctor does not work this day',
+      full: 'Fully booked',
+      hintNoDoctor: 'Select a doctor first to see working days.',
+      hintNoDays: 'This doctor has no working days set in this clinic.',
+      hintWorks: 'Doctor works on: '
+      {% endif %}
+    }
+  });
+
+  // ── Slot refresh ────────────────────────────────────────────────────
+  function triggerSlotRefresh() {
+    var doctor = doctorSelect.value;
+    var date = document.getElementById('appt-date-input').value;
+    var typeEl = document.querySelector('#appt-type-container select');
+    var type = typeEl ? typeEl.value : '';
+    if (doctor && date && type) {
+      htmx.trigger(timeContainer, 'slotRefresh');
+    }
+  }
+
+  function paintSelectedTime(t) {
+    document.querySelectorAll('.time-slot-btn').forEach(function(b) { b.classList.remove('selected'); });
+    if (!t) {
+      selectedTime = null;
+      hiddenTime.value = '';
+      selLabel.classList.add('hidden');
+      return;
+    }
+    var btn = document.querySelector('.time-slot-btn[data-time="' + t + '"]:not(:disabled)');
+    if (btn) {
+      btn.classList.add('selected');
+      selectedTime = t;
+      hiddenTime.value = t;
+      selDisplay.textContent = t;
+      selLabel.classList.remove('hidden');
+    } else {
+      selectedTime = null;
+      hiddenTime.value = '';
+      selLabel.classList.add('hidden');
+    }
+  }
+
+  function attachSlotClicks() {
+    document.querySelectorAll('.time-slot-btn:not(:disabled)').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        paintSelectedTime(this.dataset.time);
+      });
+    });
+    // Try to restore the previously-selected time after each swap.
+    if (selectedTime) paintSelectedTime(selectedTime);
+  }
+
+  // ── Appointment-type change ─────────────────────────────────────────
+  function showTypeMeta(sel) {
+    if (!sel) return;
+    var apply = function() {
+      var opt = sel.options[sel.selectedIndex];
+      var dur = opt ? opt.dataset.duration : '';
+      var price = opt ? opt.dataset.price : '';
+      var meta = document.getElementById('type-meta');
+      if (dur) {
+        meta.textContent = '{% trans "المدة:" %} ' + dur + ' {% trans "دقيقة" %}' + (price && price !== '0.00' ? ' — {% trans "السعر:" %} ₪' + price : '');
+        meta.classList.remove('hidden');
+      } else {
+        meta.classList.add('hidden');
+      }
+    };
+    apply();
+    sel.addEventListener('change', function() {
+      apply();
+      triggerSlotRefresh();
+      CAL.refreshFullDays();
+    });
+  }
+  showTypeMeta(document.querySelector('#appt-type-container select'));
+
+  // ── HTMX swap hooks ─────────────────────────────────────────────────
+  document.body.addEventListener('htmx:afterSwap', function(e) {
+    if (e.target.id === 'appt-type-container') {
+      var sel = e.target.querySelector('select');
+      showTypeMeta(sel);
+      // Reloading types means the previous slot grid is stale.
+      selectedTime = null;
+      hiddenTime.value = '';
+      selLabel.classList.add('hidden');
+      triggerSlotRefresh();
+      CAL.refreshFullDays();
+    }
+    if (e.target.id === 'time-slots-container') {
+      attachSlotClicks();
+    }
+  });
+
+  // ── Doctor picker (searchable) ──────────────────────────────────────
+  var pickerRoot    = document.getElementById('doctor-picker');
+  var pickerTrigger = document.getElementById('doctor-picker-trigger');
+  var pickerPanel   = document.getElementById('doctor-picker-panel');
+  var pickerSearch  = document.getElementById('doctor-picker-search');
+  var pickerList    = document.getElementById('doctor-picker-list');
+  var pickerLabel   = document.getElementById('doctor-picker-label');
+  var pickerEmpty   = document.getElementById('doctor-picker-empty');
+
+  function openPicker() {
+    pickerPanel.classList.remove('hidden');
+    pickerSearch.value = '';
+    filterPicker('');
+    setTimeout(function() { pickerSearch.focus(); }, 10);
+  }
+  function closePicker() {
+    pickerPanel.classList.add('hidden');
+  }
+  function filterPicker(q) {
+    q = (q || '').trim().toLowerCase();
+    var anyVisible = false;
+    pickerList.querySelectorAll('.doctor-picker-row').forEach(function(row) {
+      var name = (row.dataset.doctorName || '').toLowerCase();
+      var match = !q || name.indexOf(q) !== -1;
+      row.classList.toggle('is-hidden', !match);
+      if (match) anyVisible = true;
+    });
+    pickerEmpty.classList.toggle('hidden', anyVisible);
+  }
+  function selectDoctor(id, name) {
+    doctorSelect.value = id;
+    pickerLabel.textContent = name;
+    // Update the visual check mark
+    pickerList.querySelectorAll('[data-role="current-mark"]').forEach(function(el) { el.remove(); });
+    var row = pickerList.querySelector('.doctor-picker-row[data-doctor-id="' + id + '"]');
+    if (row) {
+      var mark = document.createElement('i');
+      mark.className = 'fa-solid fa-check text-purple-500 text-xs';
+      mark.setAttribute('data-role', 'current-mark');
+      row.appendChild(mark);
+    }
+    closePicker();
+    doctorSelect.dispatchEvent(new Event('change', {bubbles: true}));
+  }
+
+  pickerTrigger.addEventListener('click', function(e) {
+    e.preventDefault();
+    if (pickerPanel.classList.contains('hidden')) openPicker(); else closePicker();
+  });
+  pickerSearch.addEventListener('input', function() { filterPicker(this.value); });
+  pickerSearch.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') { closePicker(); pickerTrigger.focus(); }
+  });
+  pickerList.querySelectorAll('.doctor-picker-row').forEach(function(row) {
+    row.addEventListener('click', function() {
+      if (this.disabled) return;
+      selectDoctor(this.dataset.doctorId, this.dataset.doctorName);
+    });
+  });
+  document.addEventListener('click', function(e) {
+    if (!pickerRoot.contains(e.target)) closePicker();
+  });
+
+  // ── Doctor change wiring ────────────────────────────────────────────
+  doctorSelect.addEventListener('change', function() {
+    var v = doctorSelect.value;
+    if (!v) {
+      // Reset the types container to a disabled placeholder.
+      document.getElementById('appt-type-container').innerHTML =
+        '<select name="appointment_type_id" id="appt-type-select" required disabled ' +
+        'class="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 opacity-50 cursor-not-allowed">' +
+        '<option value="">— {% trans "اختر نوع الموعد" %} —</option></select>';
+      timeContainer.innerHTML =
+        '<p class="text-xs text-gray-400 dark:text-gray-500 text-center py-6">' +
+        '{% trans "اختر الطبيب ونوع الموعد والتاريخ لعرض الأوقات المتاحة." %}</p>';
+      CAL.setWorkingDays([]);
+      return;
+    }
+    // Reload appointment types via HTMX (will trigger the afterSwap branch above).
+    htmx.ajax('GET', "{% url 'secretary:doctor_types_htmx' %}", {
+      target: '#appt-type-container',
+      values: {doctor_id: v},
+      swap: 'innerHTML'
+    });
+    CAL.refreshWorkingDays();
+    // Slot refresh + full-day refresh fire via the afterSwap handler once types load.
+  });
+
+  document.getElementById('appt-date-input').addEventListener('change', function() {
+    selectedTime = null;
+    hiddenTime.value = '';
+    selLabel.classList.add('hidden');
+    triggerSlotRefresh();
+  });
+
+  // ── Form submit guard ───────────────────────────────────────────────
+  document.getElementById('edit-appt-form').addEventListener('submit', function(e) {
+    var doctor = doctorSelect.value;
+    var typeEl = document.querySelector('#appt-type-container select');
+    var type = typeEl ? typeEl.value : '';
+    var date = document.getElementById('appt-date-input').value;
+    var time = hiddenTime.value;
+    if (!doctor || !type || !date || !time) {
+      e.preventDefault();
+      alert('{% trans "يرجى إكمال جميع الحقول المطلوبة (الطبيب، نوع الموعد، التاريخ، والوقت)." %}');
+    }
+  });
+
+  // ── Initial load ────────────────────────────────────────────────────
+  // The doctor/type/date are already filled from the server; fetch working
+  // days, full days, and slots so the calendar reflects them and the current
+  // time is pre-selected.
+  if (doctorSelect.value) {
+    CAL.refreshWorkingDays();
+    triggerSlotRefresh();
+  }
+})();
+</script>
 {% endblock %}

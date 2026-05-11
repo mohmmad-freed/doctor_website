@@ -101,6 +101,10 @@ class DoctorViewTestBase(TestCase):
 
     def _make_appt(self, doctor, clinic, patient, appt_type,
                    appt_time=time(9, 0), status=Appointment.Status.CONFIRMED):
+        from patients.models import ClinicPatient
+        # Production booking guarantees a ClinicPatient row exists; mirror that
+        # invariant so views that source from ClinicPatient see the patient.
+        ClinicPatient.objects.get_or_create(patient=patient, clinic=clinic)
         return Appointment.objects.create(
             patient=patient, clinic=clinic, doctor=doctor,
             appointment_type=appt_type,
@@ -279,7 +283,7 @@ class DoctorPatientsListTests(DoctorViewTestBase):
         self.client.force_login(self.doctor_a)
         resp = self.client.get(reverse("doctors:patients"))
         self.assertEqual(resp.status_code, 200)
-        patient_ids = [p["patient_id"] for p in resp.context["patient_stats"]]
+        patient_ids = [p["patient_id"] for p in resp.context["patient_page"].object_list]
         self.assertIn(self.patient_a.id, patient_ids)
         self.assertNotIn(self.patient_b.id, patient_ids)
 
@@ -292,5 +296,5 @@ class DoctorPatientsListTests(DoctorViewTestBase):
         )
         self.client.force_login(self.doctor_a)
         resp = self.client.get(reverse("doctors:patients"))
-        stats = {p["patient_id"]: p for p in resp.context["patient_stats"]}
+        stats = {p["patient_id"]: p for p in resp.context["patient_page"].object_list}
         self.assertEqual(stats[self.patient_a.id]["total_visits"], 2)

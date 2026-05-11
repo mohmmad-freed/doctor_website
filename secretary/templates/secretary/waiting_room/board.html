@@ -13,19 +13,6 @@
       <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ today|date:"l، j F Y" }}</p>
     </div>
     <div class="flex items-center gap-2 flex-wrap">
-      {# Doctor filter #}
-      <form method="get" class="flex items-center gap-2">
-        <select name="doctor_id" onchange="this.form.submit()"
-                class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
-          <option value="">{% trans "جميع الأطباء" %}</option>
-          {% for doc in doctors %}
-          <option value="{{ doc.id }}" {% if doctor_filter == doc.id|stringformat:"s" %}selected{% endif %}>
-            {% trans "د." %} {{ doc.name }}
-          </option>
-          {% endfor %}
-        </select>
-      </form>
-
       <a href="{% url 'secretary:register_walk_in' %}"
          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold shadow transition-colors"
          title="{% trans 'تسجيل مريض وصل بدون حجز مسبق' %}">
@@ -104,9 +91,43 @@
         </span>
       </div>
 
+      {# Filter row: search (name/phone/time) + doctor dropdown #}
+      <div class="px-5 py-2.5 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
+        <div class="relative flex-1 min-w-0">
+          <i class="fa-solid fa-magnifying-glass absolute top-1/2 -translate-y-1/2 start-3 text-gray-300 dark:text-gray-500 text-xs"></i>
+          <input type="search"
+                 id="confirmed-search"
+                 name="q"
+                 value="{{ confirmed_q|default:'' }}"
+                 placeholder="{% trans 'ابحث بالاسم أو الجوال أو الوقت...' %}"
+                 hx-get="{% url 'secretary:waiting_room_confirmed_htmx' %}"
+                 hx-target="#confirmed-column"
+                 hx-swap="innerHTML"
+                 hx-include="#confirmed-doctor-filter"
+                 hx-trigger="keyup changed delay:300ms, search"
+                 class="w-full ps-9 pe-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
+        </div>
+        <select id="confirmed-doctor-filter"
+                name="doctor_id"
+                hx-get="{% url 'secretary:waiting_room_confirmed_htmx' %}"
+                hx-target="#confirmed-column"
+                hx-swap="innerHTML"
+                hx-include="#confirmed-search"
+                hx-trigger="change"
+                class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition flex-shrink-0">
+          <option value="">{% trans "جميع الأطباء" %}</option>
+          {% for doc in doctors %}
+          <option value="{{ doc.id }}" {% if doctor_filter == doc.id|stringformat:"s" %}selected{% endif %}>
+            {% trans "د." %} {{ doc.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
       <div id="confirmed-column"
-           class="divide-y divide-gray-50 dark:divide-gray-700 flex-1"
-           hx-get="{% url 'secretary:waiting_room_confirmed_htmx' %}{% if doctor_filter %}?doctor_id={{ doctor_filter }}{% endif %}"
+           class="divide-y divide-gray-50 dark:divide-gray-700 flex-1 overflow-y-auto max-h-[60vh]"
+           hx-get="{% url 'secretary:waiting_room_confirmed_htmx' %}"
+           hx-include="#confirmed-search, #confirmed-doctor-filter"
            hx-trigger="every 30s"
            hx-swap="innerHTML">
         {% include "secretary/htmx/waiting_room_confirmed_rows.html" with confirmed_list=confirmed_list clinic=clinic %}
@@ -131,8 +152,9 @@
       </div>
 
       <div id="checkedin-column"
-           class="divide-y divide-gray-50 dark:divide-gray-700 flex-1"
-           hx-get="{% url 'secretary:waiting_room_checkedin_htmx' %}{% if doctor_filter %}?doctor_id={{ doctor_filter }}{% endif %}"
+           class="divide-y divide-gray-50 dark:divide-gray-700 flex-1 overflow-y-auto max-h-[60vh]"
+           hx-get="{% url 'secretary:waiting_room_checkedin_htmx' %}"
+           hx-include="#confirmed-doctor-filter"
            hx-trigger="every 30s"
            hx-swap="innerHTML">
         {% include "secretary/htmx/waiting_room_checkedin_rows.html" with checkedin_list=checkedin_list clinic=clinic %}
