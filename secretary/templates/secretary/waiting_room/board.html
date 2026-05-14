@@ -107,21 +107,26 @@
                  hx-trigger="keyup changed delay:300ms, search"
                  class="w-full ps-9 pe-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
         </div>
-        <select id="confirmed-doctor-filter"
-                name="doctor_id"
-                hx-get="{% url 'secretary:waiting_room_confirmed_htmx' %}"
-                hx-target="#confirmed-column"
-                hx-swap="innerHTML"
-                hx-include="#confirmed-search"
-                hx-trigger="change"
-                class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition flex-shrink-0">
-          <option value="">{% trans "جميع الأطباء" %}</option>
-          {% for doc in doctors %}
-          <option value="{{ doc.id }}" {% if doctor_filter == doc.id|stringformat:"s" %}selected{% endif %}>
-            {% trans "د." %} {{ doc.name }}
-          </option>
-          {% endfor %}
-        </select>
+        <div class="relative flex-shrink-0">
+          <select id="confirmed-doctor-filter"
+                  name="doctor_id"
+                  hx-get="{% url 'secretary:waiting_room_confirmed_htmx' %}"
+                  hx-target="#confirmed-column"
+                  hx-swap="innerHTML"
+                  hx-include="#confirmed-search"
+                  hx-trigger="change"
+                  class="appearance-none cursor-pointer px-3 py-2 pe-8 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
+            <option value="">{% trans "جميع الأطباء" %}</option>
+            {% for doc in doctors %}
+            <option value="{{ doc.id }}" {% if doctor_filter == doc.id|stringformat:"s" %}selected{% endif %}>
+              {% trans "د." %} {{ doc.name }}
+            </option>
+            {% endfor %}
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 end-3 flex items-center">
+            <i class="fa-solid fa-chevron-down text-gray-400 dark:text-gray-500 text-xs"></i>
+          </div>
+        </div>
       </div>
 
       <div id="confirmed-column"
