@@ -1085,3 +1085,90 @@ class TodaysAppointmentsFilterTests(SecretaryTestBase):
             3 + resp.context["count_available"],
         )
         self.assertEqual(resp.context["count_confirmed"], 1)
+
+
+class EditAppointmentPreselectTests(SecretaryTestBase):
+    """The edit/reschedule page must load with the appointment's original
+    date and time pre-selected (calendar + slot grid)."""
+
+    def _slot_button_html(self, html, data_time):
+        """Return the <button> fragment for a given data-time, or '' if absent."""
+        marker = 'data-time="%s"' % data_time
+        idx = html.find(marker)
+        if idx == -1:
+            return ""
+        start = html.rfind("<button", 0, idx)
+        end = html.find("</button>", idx)
+        return html[start:end] if start != -1 and end != -1 else ""
+
+    def test_edit_page_prefills_original_date_and_time(self):
+        appt = self._make_appointment(appointment_time=time(10, 0))
+        self.client.force_login(self.secretary_a)
+        resp = self.client.get(reverse("secretary:edit_appointment", args=[appt.id]))
+        self.assertEqual(resp.status_code, 200)
+        html = resp.content.decode()
+        # Hidden inputs carry the appointment's current date & time.
+        self.assertIn(
+            'id="appt-date-input"', html
+        )
+        self.assertIn(appt.appointment_date.strftime("%Y-%m-%d"), html)
+        self.assertIn('id="hidden-time"', html)
+        self.assertIn('value="10:00"', html)
+        # The calendar keeps the original date selected, and the slot grid is
+        # loaded on first paint so the original time can be pre-selected.
+        self.assertIn("preserveInitialSelection: true", html)
+        self.assertIn("whenHtmxReady", html)
+        # Dead context var must be gone.
+        self.assertNotIn("selected_time", html)
+
+    def test_original_slot_is_selectable_when_self_excluded(self):
+        """time_slots_htmx must render the appointment's own time as an
+        available (enabled) button when exclude_appointment_id is sent —
+        otherwise the original time could never be pre-selected."""
+        appt = self._make_appointment(appointment_time=time(10, 0))
+        self.client.force_login(self.secretary_a)
+        params = {
+            "doctor_id": self.doctor_a.id,
+            "appointment_date": appt.appointment_date.strftime("%Y-%m-%d"),
+            "appointment_type_id": self.appt_type_a.id,
+        }
+
+        # Without excluding self: the 10:00 slot is taken by this appointment.
+        resp_no_excl = self.client.get(
+            reverse("secretary:time_slots_htmx"), params, HTTP_HX_REQUEST="true"
+        )
+        btn_no_excl = self._slot_button_html(resp_no_excl.content.decode(), "10:00")
+        self.assertTrue(btn_no_excl)
+        self.assertIn("disabled", btn_no_excl)
+
+        # Excluding self: the 10:00 slot is free and selectable.
+        resp = self.client.get(
+            reverse("secretary:time_slots_htmx"),
+            dict(params, exclude_appointment_id=appt.id),
+            HTTP_HX_REQUEST="true",
+        )
+        btn = self._slot_button_html(resp.content.decode(), "10:00")
+        self.assertTrue(btn, "expected a 10:00 slot button")
+        self.assertNotIn("disabled", btn)
+        self.assertNotIn("is-booked", btn)
+
+    def test_edit_then_save_unchanged_keeps_original_date_time(self):
+        """Submitting the edit form unchanged (original date/time, populated by
+        the pre-selection) must save successfully."""
+        appt = self._make_appointment(appointment_time=time(10, 0))
+        self.client.force_login(self.secretary_a)
+        resp = self.client.post(
+            reverse("secretary:edit_appointment", args=[appt.id]),
+            {
+                "doctor_id": str(self.doctor_a.id),
+                "appointment_type_id": str(self.appt_type_a.id),
+                "appointment_date": appt.appointment_date.strftime("%Y-%m-%d"),
+                "appointment_time": "10:00",
+                "exclude_appointment_id": str(appt.id),
+            },
+        )
+        self.assertRedirects(
+            resp, reverse("secretary:appointments"), fetch_redirect_response=False
+        )
+        appt.refresh_from_db()
+        self.assertEqual(appt.appointment_time, time(10, 0))

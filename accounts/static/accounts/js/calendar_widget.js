@@ -19,6 +19,10 @@
  *     fullDaysParams: function() {                // optional, returns object or null
  *       return {doctor_id: 5, clinic_id: 7, appointment_type_id: 3};
  *     },
+ *     preserveInitialSelection: false,            // optional; when true a
+ *       // prefilled date is NOT auto-cleared by working/full-day refreshes
+ *     onInitialSelectionStale: function(reason) {}, // optional; called once
+ *       // with 'day_off' | 'full' when the preserved date became invalid
  *     i18n: {
  *       isRtl: false,
  *       months: [...12 names...],
@@ -36,7 +40,7 @@
  *   });
  *
  * Returns: { setWorkingDays(days), refreshWorkingDays(), setFullDays(arr),
- *            refreshFullDays(), getSelected() }.
+ *            refreshFullDays(), releaseInitialSelection(), getSelected() }.
  */
 function initCalendarWidget(opts) {
   var root = document.getElementById(opts.rootId);
@@ -63,6 +67,15 @@ function initCalendarWidget(opts) {
   var T_HINT_NONE = i18n.hintNoDoctor || '';
   var T_HINT_NODAYS = i18n.hintNoDays || '';
   var T_HINT_WORKS = i18n.hintWorks || '';
+
+  // When true, a prefilled date is treated as an authoritative initial
+  // selection: working/full-day refreshes will NOT clear it (they notify via
+  // onInitialSelectionStale instead). Released on first user pick or via
+  // releaseInitialSelection(). Opt-in — default behaviour is unchanged.
+  var onInitialStale = typeof opts.onInitialSelectionStale === 'function'
+    ? opts.onInitialSelectionStale : null;
+  var preserveInitial = false;
+  var staleNotified = false;
 
   var todayStr = root.dataset.today; // YYYY-MM-DD
   var today;
@@ -95,7 +108,14 @@ function initCalendarWidget(opts) {
       viewYear = selected.getFullYear();
       viewMonth = selected.getMonth();
       if (dateInput && !dateInput.value) dateInput.value = prefill;
+      if (opts.preserveInitialSelection) preserveInitial = true;
     }
+  }
+
+  function notifyStale(reason) {
+    if (staleNotified) return;
+    staleNotified = true;
+    if (onInitialStale) onInitialStale(reason);
   }
 
   function pad(n) { return n < 10 ? '0' + n : '' + n; }
@@ -168,6 +188,7 @@ function initCalendarWidget(opts) {
   }
 
   function pickDate(d) {
+    preserveInitial = false;  // a deliberate user pick supersedes the initial selection
     selected = new Date(d.getFullYear(), d.getMonth(), d.getDate());
     viewYear = selected.getFullYear();
     viewMonth = selected.getMonth();
@@ -213,10 +234,14 @@ function initCalendarWidget(opts) {
       }
     }
     if (selected && days !== null && days.indexOf(pyWeekday(selected)) === -1) {
-      selected = null;
-      if (dateInput) dateInput.value = '';
-      setSelectedLabel();
-      if (dateInput) dateInput.dispatchEvent(new Event('change', {bubbles: true}));
+      if (preserveInitial) {
+        notifyStale('day_off');
+      } else {
+        selected = null;
+        if (dateInput) dateInput.value = '';
+        setSelectedLabel();
+        if (dateInput) dateInput.dispatchEvent(new Event('change', {bubbles: true}));
+      }
     }
     render();
     refreshFullDays();
@@ -246,10 +271,14 @@ function initCalendarWidget(opts) {
     }
     // If currently selected date became full, clear the selection.
     if (selected && fullDays[fmt(selected)]) {
-      selected = null;
-      if (dateInput) dateInput.value = '';
-      setSelectedLabel();
-      if (dateInput) dateInput.dispatchEvent(new Event('change', {bubbles: true}));
+      if (preserveInitial) {
+        notifyStale('full');
+      } else {
+        selected = null;
+        if (dateInput) dateInput.value = '';
+        setSelectedLabel();
+        if (dateInput) dateInput.dispatchEvent(new Event('change', {bubbles: true}));
+      }
     }
     render();
   }
@@ -293,6 +322,7 @@ function initCalendarWidget(opts) {
     refreshWorkingDays: refreshWorkingDays,
     setFullDays: setFullDays,
     refreshFullDays: refreshFullDays,
+    releaseInitialSelection: function() { preserveInitial = false; },
     getSelected: function() { return selected ? fmt(selected) : ''; },
   };
 }

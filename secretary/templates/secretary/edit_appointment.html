@@ -250,6 +250,11 @@
           <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500" id="cal-hint">
             {% if IS_RTL %}اختر الطبيب أولاً لعرض أيام عمله.{% else %}Select a doctor first to see working days.{% endif %}
           </p>
+          <div id="stale-date-warning"
+               class="hidden mt-2 flex items-start gap-2 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+            <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
+            <span id="stale-date-warning-text"></span>
+          </div>
         </div>
 
         {# Time slots — HTMX-loaded grid #}
@@ -265,11 +270,7 @@
           <input type="hidden" id="exclude-appt-id" name="exclude_appointment_id" value="{{ appointment.id }}">
           <input type="hidden" name="appointment_time" id="hidden-time"
                  value="{{ appointment.appointment_time|time:'H:i' }}" required>
-          <div id="time-slots-container"
-               hx-get="{% url 'secretary:time_slots_htmx' %}"
-               hx-trigger="slotRefresh from:body"
-               hx-include="#doctor-select, #appt-date-input, #appt-type-container select, #exclude-appt-id"
-               hx-swap="innerHTML">
+          <div id="time-slots-container">
             <p class="text-xs text-gray-400 dark:text-gray-500 text-center py-6">
               {% trans "اختر الطبيب ونوع الموعد والتاريخ لعرض الأوقات المتاحة." %}
             </p>
@@ -310,6 +311,7 @@
 (function() {
   // ── State ────────────────────────────────────────────────────────────
   var initialTime = '{{ appointment.appointment_time|time:"H:i" }}';
+  var initialDate = '{{ appointment.appointment_date|date:"Y-m-d" }}';
   var selectedTime = initialTime;
 
   var doctorSelect = document.getElementById('doctor-select');
@@ -317,12 +319,33 @@
   var timeContainer = document.getElementById('time-slots-container');
   var selLabel = document.getElementById('selected-time-label');
   var selDisplay = document.getElementById('selected-time-display');
+  var apptDateInput = document.getElementById('appt-date-input');
+  var staleWarn = document.getElementById('stale-date-warning');
+  var staleWarnText = document.getElementById('stale-date-warning-text');
+
+  // True while the calendar still holds the appointment's original date.
+  function onOriginalDate() { return apptDateInput.value === initialDate; }
+
+  // A deliberate doctor/type change drops the original booking as the
+  // reference: resume normal clear-on-invalid behaviour and hide the notice.
+  function releaseInitial() {
+    if (CAL) CAL.releaseInitialSelection();
+    if (staleWarn) staleWarn.classList.add('hidden');
+  }
 
   // ── Inline calendar widget ──────────────────────────────────────────
   var CAL = initCalendarWidget({
     rootId: 'cal-widget',
     inputId: 'appt-date-input',
     hintId: 'cal-hint',
+    preserveInitialSelection: true,
+    onInitialSelectionStale: function(reason) {
+      if (!staleWarn) return;
+      staleWarnText.textContent = (reason === 'full')
+        ? '{% if IS_RTL %}تاريخ الموعد الأصلي أصبح ممتلئاً بالكامل — يُفضّل اختيار موعد جديد.{% else %}The original appointment day is now fully booked — please pick a new slot.{% endif %}'
+        : '{% if IS_RTL %}تاريخ الموعد الأصلي لم يعد ضمن أيام عمل الطبيب — يُفضّل اختيار موعد جديد.{% else %}The original appointment day is no longer one of the doctor\'s working days — please pick a new slot.{% endif %}';
+      staleWarn.classList.remove('hidden');
+    },
     workingDaysUrl: "{% url 'secretary:doctor_working_days_json' %}",
     workingDaysParams: function() {
       var v = doctorSelect ? doctorSelect.value : '';
@@ -373,14 +396,27 @@
   });
 
   // ── Slot refresh ────────────────────────────────────────────────────
+  // Loaded explicitly via htmx.ajax (not a declarative hx-trigger) so the
+  // initial pre-selection is reliable regardless of htmx's deferred load
+  // order. htmx.ajax still fires htmx:afterSwap, so attachSlotClicks() (and
+  // thus the original-time pre-selection) runs as before.
+  var SLOTS_URL = "{% url 'secretary:time_slots_htmx' %}";
   function triggerSlotRefresh() {
     var doctor = doctorSelect.value;
-    var date = document.getElementById('appt-date-input').value;
+    var date = apptDateInput.value;
     var typeEl = document.querySelector('#appt-type-container select');
     var type = typeEl ? typeEl.value : '';
-    if (doctor && date && type) {
-      htmx.trigger(timeContainer, 'slotRefresh');
-    }
+    if (!(doctor && date && type) || !window.htmx) return;
+    htmx.ajax('GET', SLOTS_URL, {
+      target: '#time-slots-container',
+      swap: 'innerHTML',
+      values: {
+        doctor_id: doctor,
+        appointment_date: date,
+        appointment_type_id: type,
+        exclude_appointment_id: document.getElementById('exclude-appt-id').value
+      }
+    });
   }
 
   function paintSelectedTime(t) {
@@ -397,6 +433,13 @@
       selectedTime = t;
       hiddenTime.value = t;
       selDisplay.textContent = t;
+      selLabel.classList.remove('hidden');
+    } else if (t === initialTime && onOriginalDate()) {
+      // The original day is stale (no selectable slot button for it), but keep
+      // the appointment's own time submittable. The warning banner explains it.
+      selectedTime = initialTime;
+      hiddenTime.value = initialTime;
+      selDisplay.textContent = initialTime;
       selLabel.classList.remove('hidden');
     } else {
       selectedTime = null;
@@ -433,6 +476,7 @@
     apply();
     sel.addEventListener('change', function() {
       apply();
+      releaseInitial();
       triggerSlotRefresh();
       CAL.refreshFullDays();
     });
@@ -522,6 +566,7 @@
   // ── Doctor change wiring ────────────────────────────────────────────
   doctorSelect.addEventListener('change', function() {
     var v = doctorSelect.value;
+    releaseInitial();
     if (!v) {
       // Reset the types container to a disabled placeholder.
       document.getElementById('appt-type-container').innerHTML =
@@ -544,10 +589,11 @@
     // Slot refresh + full-day refresh fire via the afterSwap handler once types load.
   });
 
-  document.getElementById('appt-date-input').addEventListener('change', function() {
+  apptDateInput.addEventListener('change', function() {
     selectedTime = null;
     hiddenTime.value = '';
     selLabel.classList.add('hidden');
+    if (!onOriginalDate() && staleWarn) staleWarn.classList.add('hidden');
     triggerSlotRefresh();
   });
 
@@ -565,13 +611,21 @@
   });
 
   // ── Initial load ────────────────────────────────────────────────────
-  // The doctor/type/date are already filled from the server; fetch working
-  // days, full days, and slots so the calendar reflects them and the current
-  // time is pre-selected.
-  if (doctorSelect.value) {
-    CAL.refreshWorkingDays();
-    triggerSlotRefresh();
+  // The doctor/type/date are already filled from the server. initCalendarWidget
+  // already fetched working/full days on construction, so only the slot grid
+  // still needs to load so the current time can be pre-selected.
+  //
+  // htmx is loaded with `defer` (base_secretary.html) so it is NOT available
+  // while this inline script runs, and the declarative `slotRefresh from:body`
+  // trigger is timing-fragile on first paint. Fetch the grid explicitly via
+  // htmx.ajax (the same API the doctor-change path uses) once htmx is ready —
+  // htmx:afterSwap then runs attachSlotClicks() and pre-selects the time.
+  function whenHtmxReady(fn, tries) {
+    tries = (tries == null) ? 60 : tries;
+    if (window.htmx) { fn(); }
+    else if (tries > 0) { setTimeout(function() { whenHtmxReady(fn, tries - 1); }, 50); }
   }
+  whenHtmxReady(triggerSlotRefresh);
 })();
 </script>
 {% endblock %}

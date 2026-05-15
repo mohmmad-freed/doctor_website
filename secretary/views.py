@@ -1867,12 +1867,10 @@ def get_time_slots_htmx(request):
         except Exception as e:
             error = str(e)
 
-    selected_time = request.GET.get("selected_time", "")
     return render(request, "secretary/htmx/time_slots.html", {
         "slots": slots,
         "error": error,
         "duration": duration,
-        "selected_time": selected_time,
     })
 
 
