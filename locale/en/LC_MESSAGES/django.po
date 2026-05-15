@@ -2347,8 +2347,8 @@ msgstr "Booking settings saved."
 msgid "تم استلام طلب الحجز"
 msgstr "Booking request received"
 
-msgid "موعدك قيد المراجعة من السكرتارية وسيتم إعلامك عند تأكيده."
-msgstr "Your appointment is pending secretary review. You'll be notified once it's confirmed."
+msgid "موعدك بانتظار موافقة العيادة، سيتم إعلامك عند تأكيده."
+msgstr "Your appointment is pending the clinic's approval. You'll be notified once it's confirmed."
 
 # ── Waiting room: remove-from-queue modal & search ──────────────────────────
 msgid "هل تريد إرجاع"

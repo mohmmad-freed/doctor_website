@@ -175,10 +175,20 @@ def book_appointment_view(request, clinic_id):
             if questions:
                 save_intake_answers(appointment, questions, answers_dict, file_data, request.user)
 
-            messages.success(
-                request,
-                f"تم حجز موعدك بنجاح! رقم الحجز: #{appointment.id}"
-            )
+            _lang = request.user.preferred_language or "ar"
+            if appointment.status == "PENDING":
+                _msg = (
+                    f"Your booking request was received! Booking number: #{appointment.id}"
+                    if _lang == "en"
+                    else f"تم استلام طلب حجزك! رقم الحجز: #{appointment.id}"
+                )
+            else:
+                _msg = (
+                    f"Your appointment was booked successfully! Booking number: #{appointment.id}"
+                    if _lang == "en"
+                    else f"تم حجز موعدك بنجاح! رقم الحجز: #{appointment.id}"
+                )
+            messages.success(request, _msg)
             return redirect("appointments:booking_confirmation", appointment_id=appointment.id)
 
         except SlotUnavailableError as e:
