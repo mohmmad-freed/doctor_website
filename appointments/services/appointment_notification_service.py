@@ -20,9 +20,11 @@ logger = logging.getLogger(__name__)
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
 
-def _create_notification(patient, appointment, notification_type, title, message, cancelled_by_staff=None, context_role=None):
+def _create_notification(patient, appointment, notification_type, title, message, cancelled_by_staff=None, context_role=None, title_en="", message_en=""):
     """
     Create and persist an in-app AppointmentNotification.
+
+    Stored bilingually: Arabic in title/message, English in title_en/message_en.
 
     Returns the created notification, or None if creation fails.
     Failures are logged and never raised.
@@ -38,6 +40,8 @@ def _create_notification(patient, appointment, notification_type, title, message
             notification_type=notification_type,
             title=title,
             message=message,
+            title_en=title_en,
+            message_en=message_en,
             cancelled_by_staff=cancelled_by_staff,
             is_delivered=True,
         )
@@ -55,6 +59,14 @@ def _create_notification(patient, appointment, notification_type, title, message
             exc,
         )
         return None
+
+
+def _doctor_names(appointment):
+    """Return (arabic, english) doctor display names with title prefix."""
+    doc = appointment.doctor
+    if doc and doc.name:
+        return f"د. {doc.name}", f"Dr. {doc.name}"
+    return "الطبيب", "the doctor"
 
 
 def _try_send_email(send_fn, *args, **kwargs):
@@ -85,7 +97,7 @@ def notify_appointment_booked(appointment):
         from appointments.models import Appointment as _Appt
 
         patient = appointment.patient
-        doctor_name = appointment.doctor.name if appointment.doctor else "الطبيب"
+        doctor_ar, doctor_en = _doctor_names(appointment)
         date_str = appointment.appointment_date.strftime("%Y-%m-%d")
         time_str = appointment.appointment_time.strftime("%H:%M")
         clinic_name = appointment.clinic.name
@@ -93,16 +105,27 @@ def notify_appointment_booked(appointment):
         if appointment.status == _Appt.Status.PENDING:
             title = "تم استلام طلب الحجز"
             message = (
-                f"تم استلام طلب حجز موعد مع {doctor_name} "
+                f"تم استلام طلب حجز موعد مع {doctor_ar} "
                 f"بتاريخ {date_str} الساعة {time_str} "
                 f"في {clinic_name}. الموعد قيد المراجعة من السكرتارية."
+            )
+            title_en = "Booking Request Received"
+            message_en = (
+                f"Your booking request with {doctor_en} on {date_str} "
+                f"at {time_str} at {clinic_name} has been received. "
+                f"It is under review by the secretary."
             )
         else:
             title = "تم تأكيد موعدك"
             message = (
-                f"تم تأكيد موعدك مع {doctor_name} "
+                f"تم تأكيد موعدك مع {doctor_ar} "
                 f"بتاريخ {date_str} الساعة {time_str} "
                 f"في {clinic_name}."
+            )
+            title_en = "Your Appointment Is Confirmed"
+            message_en = (
+                f"Your appointment with {doctor_en} on {date_str} "
+                f"at {time_str} at {clinic_name} has been confirmed."
             )
 
         notification = _create_notification(
@@ -111,6 +134,8 @@ def notify_appointment_booked(appointment):
             notification_type=AppointmentNotification.Type.APPOINTMENT_BOOKED,
             title=title,
             message=message,
+            title_en=title_en,
+            message_en=message_en,
         )
 
         if notification is None:
@@ -139,16 +164,21 @@ def notify_appointment_cancelled_by_staff(appointment, clinic_staff):
     """
     try:
         patient = appointment.patient
-        doctor_name = appointment.doctor.name if appointment.doctor else "الطبيب"
+        doctor_ar, doctor_en = _doctor_names(appointment)
         date_str = appointment.appointment_date.strftime("%Y-%m-%d")
         time_str = appointment.appointment_time.strftime("%H:%M")
         clinic_name = appointment.clinic.name
 
         title = "تم إلغاء موعدك"
         message = (
-            f"تم إلغاء موعدك مع الدكتور {doctor_name} "
+            f"تم إلغاء موعدك مع {doctor_ar} "
             f"بتاريخ {date_str} الساعة {time_str} "
             f"في {clinic_name}."
+        )
+        title_en = "Your Appointment Was Cancelled"
+        message_en = (
+            f"Your appointment with {doctor_en} on {date_str} "
+            f"at {time_str} at {clinic_name} has been cancelled."
         )
 
         notification = _create_notification(
@@ -158,6 +188,8 @@ def notify_appointment_cancelled_by_staff(appointment, clinic_staff):
             title=title,
             message=message,
             cancelled_by_staff=clinic_staff,
+            title_en=title_en,
+            message_en=message_en,
         )
 
         if notification is None:
@@ -185,7 +217,7 @@ def notify_appointment_rescheduled_by_staff(appointment, old_date, old_time):
     """
     try:
         patient = appointment.patient
-        doctor_name = appointment.doctor.name if appointment.doctor else "الطبيب"
+        doctor_ar, doctor_en = _doctor_names(appointment)
         old_date_str = old_date.strftime("%Y-%m-%d")
         old_time_str = old_time.strftime("%H:%M")
         new_date_str = appointment.appointment_date.strftime("%Y-%m-%d")
@@ -194,9 +226,15 @@ def notify_appointment_rescheduled_by_staff(appointment, old_date, old_time):
 
         title = "تم تعديل موعدك"
         message = (
-            f"تم تعديل موعدك مع {doctor_name} في {clinic_name}. "
+            f"تم تعديل موعدك مع {doctor_ar} في {clinic_name}. "
             f"الموعد القديم: {old_date_str} الساعة {old_time_str}. "
             f"الموعد الجديد: {new_date_str} الساعة {new_time_str}."
+        )
+        title_en = "Your Appointment Was Rescheduled"
+        message_en = (
+            f"Your appointment with {doctor_en} at {clinic_name} was "
+            f"rescheduled. Old: {old_date_str} at {old_time_str}. "
+            f"New: {new_date_str} at {new_time_str}."
         )
 
         notification = _create_notification(
@@ -205,6 +243,8 @@ def notify_appointment_rescheduled_by_staff(appointment, old_date, old_time):
             notification_type=AppointmentNotification.Type.APPOINTMENT_RESCHEDULED,
             title=title,
             message=message,
+            title_en=title_en,
+            message_en=message_en,
         )
 
         if notification is None:
@@ -242,8 +282,12 @@ def notify_staff_patient_cancelled(appointment):
         title = "إلغاء موعد من قبل المريض"
         message = (
             f"قام المريض {patient_name} بإلغاء موعده "
-            f"بتاريخ {date_str} الساعة {time_str} "
-            f"في {appointment.clinic.name}."
+            f"بتاريخ {date_str} الساعة {time_str}."
+        )
+        title_en = "Appointment Cancelled by Patient"
+        message_en = (
+            f"Patient {patient_name} cancelled their appointment on "
+            f"{date_str} at {time_str}."
         )
 
         recipients = []
@@ -271,6 +315,8 @@ def notify_staff_patient_cancelled(appointment):
                     notification_type=AppointmentNotification.Type.APPOINTMENT_CANCELLED,
                     title=title,
                     message=message,
+                    title_en=title_en,
+                    message_en=message_en,
                     is_delivered=True,
                 )
             except Exception as exc:
@@ -303,8 +349,13 @@ def notify_staff_patient_edited(appointment, old_date, old_time, old_type):
         message = (
             f"قام المريض {patient_name} بتعديل موعده "
             f"من {old_date_str} الساعة {old_time_str} "
-            f"إلى {new_date_str} الساعة {new_time_str} "
-            f"في {appointment.clinic.name}."
+            f"إلى {new_date_str} الساعة {new_time_str}."
+        )
+        title_en = "Appointment Edited by Patient"
+        message_en = (
+            f"Patient {patient_name} changed their appointment from "
+            f"{old_date_str} at {old_time_str} to {new_date_str} "
+            f"at {new_time_str}."
         )
 
         recipients = []
@@ -330,6 +381,8 @@ def notify_staff_patient_edited(appointment, old_date, old_time, old_type):
                     notification_type=AppointmentNotification.Type.APPOINTMENT_EDITED,
                     title=title,
                     message=message,
+                    title_en=title_en,
+                    message_en=message_en,
                     is_delivered=True,
                 )
             except Exception as exc:
@@ -362,16 +415,21 @@ def notify_appointment_reminder(appointment):
             return
 
         patient = appointment.patient
-        doctor_name = appointment.doctor.name if appointment.doctor else "الطبيب"
+        doctor_ar, doctor_en = _doctor_names(appointment)
         date_str = appointment.appointment_date.strftime("%Y-%m-%d")
         time_str = appointment.appointment_time.strftime("%H:%M")
         clinic_name = appointment.clinic.name
 
         title = "تذكير بموعدك"
         message = (
-            f"تذكير: لديك موعد مع {doctor_name} "
+            f"تذكير: لديك موعد مع {doctor_ar} "
             f"بتاريخ {date_str} الساعة {time_str} "
             f"في {clinic_name}."
+        )
+        title_en = "Appointment Reminder"
+        message_en = (
+            f"Reminder: you have an appointment with {doctor_en} on "
+            f"{date_str} at {time_str} at {clinic_name}."
         )
 
         notification = _create_notification(
@@ -380,6 +438,8 @@ def notify_appointment_reminder(appointment):
             notification_type=AppointmentNotification.Type.APPOINTMENT_REMINDER,
             title=title,
             message=message,
+            title_en=title_en,
+            message_en=message_en,
         )
 
         if notification is None:
@@ -413,24 +473,34 @@ def notify_staff_appointment_booked(appointment):
         from clinics.models import ClinicStaff
 
         patient_name = appointment.patient.name if appointment.patient else "مريض"
-        doctor_name = appointment.doctor.name if appointment.doctor else "الطبيب"
+        doctor_ar, doctor_en = _doctor_names(appointment)
         date_str = appointment.appointment_date.strftime("%Y-%m-%d")
         time_str = appointment.appointment_time.strftime("%H:%M")
-        clinic_name = appointment.clinic.name
 
         is_pending = appointment.status == _Appt.Status.PENDING
         if is_pending:
             title = "حجز جديد بانتظار المراجعة"
             message = (
-                f"قام المريض {patient_name} بحجز موعد مع {doctor_name} "
-                f"بتاريخ {date_str} الساعة {time_str} في {clinic_name}. "
+                f"قام المريض {patient_name} بحجز موعد مع {doctor_ar} "
+                f"بتاريخ {date_str} الساعة {time_str}. "
                 f"الحجز قيد الانتظار ويحتاج إلى تأكيد."
+            )
+            title_en = "New Booking — Pending Review"
+            message_en = (
+                f"Patient {patient_name} booked an appointment with "
+                f"{doctor_en} on {date_str} at {time_str}. "
+                f"The booking is pending and needs confirmation."
             )
         else:
             title = "حجز موعد جديد"
             message = (
-                f"تم حجز موعد جديد للمريض {patient_name} مع {doctor_name} "
-                f"بتاريخ {date_str} الساعة {time_str} في {clinic_name}."
+                f"تم حجز موعد جديد للمريض {patient_name} مع {doctor_ar} "
+                f"بتاريخ {date_str} الساعة {time_str}."
+            )
+            title_en = "New Appointment Booked"
+            message_en = (
+                f"A new appointment was booked for patient {patient_name} "
+                f"with {doctor_en} on {date_str} at {time_str}."
             )
 
         recipients = []
@@ -455,6 +525,8 @@ def notify_staff_appointment_booked(appointment):
                     notification_type=AppointmentNotification.Type.APPOINTMENT_BOOKED,
                     title=title,
                     message=message,
+                    title_en=title_en,
+                    message_en=message_en,
                     is_delivered=True,
                 )
             except Exception as exc:
@@ -483,7 +555,7 @@ def notify_patient_status_changed(appointment, old_status, new_status, by_staff=
         from appointments.models import Appointment as _Appt
 
         patient = appointment.patient
-        doctor_name = appointment.doctor.name if appointment.doctor else "الطبيب"
+        doctor_ar, doctor_en = _doctor_names(appointment)
         date_str = appointment.appointment_date.strftime("%Y-%m-%d")
         time_str = appointment.appointment_time.strftime("%H:%M")
         clinic_name = appointment.clinic.name
@@ -491,17 +563,27 @@ def notify_patient_status_changed(appointment, old_status, new_status, by_staff=
         if new_status == _Appt.Status.CONFIRMED:
             title = "تم تأكيد موعدك"
             message = (
-                f"تم تأكيد موعدك مع {doctor_name} "
+                f"تم تأكيد موعدك مع {doctor_ar} "
                 f"بتاريخ {date_str} الساعة {time_str} "
                 f"في {clinic_name}."
+            )
+            title_en = "Your Appointment Is Confirmed"
+            message_en = (
+                f"Your appointment with {doctor_en} on {date_str} "
+                f"at {time_str} at {clinic_name} has been confirmed."
             )
         else:
             title = "تم تحديث حالة موعدك"
             new_label = appointment.get_status_display() if hasattr(appointment, "get_status_display") else new_status
             message = (
-                f"تم تحديث حالة موعدك مع {doctor_name} "
+                f"تم تحديث حالة موعدك مع {doctor_ar} "
                 f"بتاريخ {date_str} الساعة {time_str} "
                 f"في {clinic_name} إلى: {new_label}."
+            )
+            title_en = "Your Appointment Status Was Updated"
+            message_en = (
+                f"Your appointment with {doctor_en} on {date_str} "
+                f"at {time_str} at {clinic_name} was updated to: {new_label}."
             )
 
         notification = _create_notification(
@@ -511,6 +593,8 @@ def notify_patient_status_changed(appointment, old_status, new_status, by_staff=
             title=title,
             message=message,
             cancelled_by_staff=by_staff,
+            title_en=title_en,
+            message_en=message_en,
         )
 
         if notification is None:

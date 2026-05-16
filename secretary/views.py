@@ -230,7 +230,9 @@ def dashboard(request):
         from appointments.models import AppointmentNotification
         recent_activity = list(
             AppointmentNotification.objects.filter(
-                appointment__clinic=clinic
+                patient=staff.user,
+                context_role="SECRETARY",
+                appointment__clinic=clinic,
             )
             .select_related("appointment")
             .order_by("-created_at")[:8]
