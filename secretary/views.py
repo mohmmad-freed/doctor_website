@@ -17,6 +17,13 @@ from patients.models import ClinicPatient, PatientProfile
 User = get_user_model()
 
 
+def _sweep_clinic_no_shows(clinic):
+    """Persist overdue no-shows for this clinic before listing/aggregating,
+    so every status badge, filter, and report stays accurate without the cron."""
+    from compliance.services.compliance_service import apply_due_no_shows
+    apply_due_no_shows(Appointment.objects.filter(clinic=clinic))
+
+
 def _require_secretary(request):
     """Return the secretary's ClinicStaff record, or None if not a secretary."""
     from clinics.models import ClinicStaff
@@ -183,6 +190,7 @@ def dashboard(request):
         return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     clinic = staff.clinic
+    _sweep_clinic_no_shows(clinic)
     today = date.today()
 
     todays_appointments = (
@@ -313,6 +321,7 @@ def todays_appointments_htmx(request):
         return HttpResponseForbidden()
 
     clinic = staff.clinic
+    _sweep_clinic_no_shows(clinic)
     current_filter = request.GET.get("filter", "all")
     if current_filter not in ("all", "confirmed", "available"):
         current_filter = "all"
@@ -455,6 +464,7 @@ def waiting_room(request):
 
     from clinics.models import ClinicStaff as CS
     clinic = staff.clinic
+    _sweep_clinic_no_shows(clinic)
     today = date.today()
 
     doctor_filter = request.GET.get("doctor_id", "")
@@ -612,6 +622,7 @@ def waiting_room_confirmed_htmx(request):
         return HttpResponseForbidden()
 
     clinic = staff.clinic
+    _sweep_clinic_no_shows(clinic)
     today = date.today()
     doctor_filter = request.GET.get("doctor_id", "")
     confirmed_q = request.GET.get("q", "")
@@ -643,6 +654,7 @@ def waiting_room_checkedin_htmx(request):
         return HttpResponseForbidden()
 
     clinic = staff.clinic
+    _sweep_clinic_no_shows(clinic)
     today = date.today()
     doctor_filter = request.GET.get("doctor_id", "")
     now = timezone.now()
@@ -874,6 +886,7 @@ def report_daily(request):
         return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     clinic = staff.clinic
+    _sweep_clinic_no_shows(clinic)
     today = date.today()
 
     date_str = request.GET.get("date", today.isoformat())
@@ -961,6 +974,7 @@ def report_visits(request):
         return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     clinic = staff.clinic
+    _sweep_clinic_no_shows(clinic)
     today = date.today()
     default_from = (today - timedelta(days=29)).isoformat()
 
@@ -1066,6 +1080,7 @@ def report_noshows(request):
         return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     clinic = staff.clinic
+    _sweep_clinic_no_shows(clinic)
     today = date.today()
     default_from = (today - timedelta(days=29)).isoformat()
 
@@ -1174,6 +1189,7 @@ def report_doctors(request):
         return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     clinic = staff.clinic
+    _sweep_clinic_no_shows(clinic)
     today = date.today()
     month_start = today.replace(day=1)
 
@@ -1691,6 +1707,9 @@ def settings_clinic(request):
             allow_multi = False
         booking_settings.auto_confirm_patient_bookings = auto_confirm
         booking_settings.allow_multiple_bookings_same_day = allow_multi
+        no_show_after = request.POST.get("no_show_after")
+        if no_show_after in dict(booking_settings.NoShowAfter.choices):
+            booking_settings.no_show_after = no_show_after
         booking_settings.updated_by = request.user
         booking_settings.save()
         messages.success(request, _("تم حفظ إعدادات الحجز."))
@@ -2749,6 +2768,7 @@ def appointments_list(request):
     from clinics.models import ClinicStaff as CS
 
     clinic = staff.clinic
+    _sweep_clinic_no_shows(clinic)
     status_filter = request.GET.get("status", "")
     date_from = request.GET.get("date_from", "")
     date_to = request.GET.get("date_to", "")

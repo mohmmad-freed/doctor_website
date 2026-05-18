@@ -158,6 +158,11 @@ def get_patient_appointments(patient_user, upcoming_limit=None, past_limit=None)
     local_now = timezone.localtime(now)
     today = local_now.date()
 
+    # Persist any overdue no-shows first so the upcoming/past split and
+    # status_display are accurate without relying on the cron command.
+    from compliance.services.compliance_service import apply_due_no_shows
+    apply_due_no_shows(Appointment.objects.filter(patient=patient_user))
+
     base = _base_qs(patient_user)
 
     # ── Upcoming branch ───────────────────────────────────────────────────────

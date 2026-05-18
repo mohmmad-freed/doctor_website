@@ -2307,8 +2307,8 @@ msgstr "Statuses"
 msgid "إعدادات العيادة"
 msgstr "Clinic Settings"
 
-msgid "إدارة سياسة حجز المواعيد للعيادة. تنطبق هذه الإعدادات على حجوزات المرضى من تطبيق المريض فقط."
-msgstr "Manage the clinic's appointment booking policy. These settings only apply to bookings made by patients from the patient app."
+msgid "إدارة سياسة حجز المواعيد وعدم الحضور للعيادة."
+msgstr "Manage the clinic's appointment booking & no-show policy."
 
 msgid "إعدادات الحجز للعيادة"
 msgstr "Clinic booking settings"
@@ -2342,6 +2342,40 @@ msgstr "Save settings"
 
 msgid "تم حفظ إعدادات الحجز."
 msgstr "Booking settings saved."
+
+# ── No-show policy (secretary clinic settings) ──────────────────────────────
+msgid "سياسة عدم الحضور"
+msgstr "No-show Policy"
+
+msgid "تحويل الموعد إلى \"لم يحضر\" تلقائياً بعد"
+msgstr "Mark the appointment as \"no-show\" automatically after"
+
+msgid "المدة التي تمر بعد وقت بدء الموعد دون حضور المريض، ثم يُعتبر الموعد \"لم يحضر\" تلقائياً."
+msgstr "How long after the appointment start time, with no patient arrival, before it is automatically marked \"no-show\"."
+
+msgid "10 دقائق"
+msgstr "10 minutes"
+
+msgid "15 دقيقة"
+msgstr "15 minutes"
+
+msgid "30 دقيقة"
+msgstr "30 minutes"
+
+msgid "ساعة واحدة"
+msgstr "1 hour"
+
+msgid "ساعتان"
+msgstr "2 hours"
+
+msgid "4 ساعات"
+msgstr "4 hours"
+
+msgid "6 ساعات"
+msgstr "6 hours"
+
+msgid "نهاية يوم الموعد"
+msgstr "End of the appointment day"
 
 # ── Booking confirmation page (PENDING banner) ──────────────────────────────
 msgid "تم استلام طلب الحجز"

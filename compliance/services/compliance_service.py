@@ -113,48 +113,47 @@ def apply_manual_waiver(clinic: Clinic, patient: PatientProfile, staff_user=None
         
     return compliance
 
-from datetime import timedelta
-
 def process_appointment_no_show(appointment: Appointment):
     """
-    Checks if an appointment qualifies as a no-show and triggers the record_no_show logic.
-    Rules:
-    - status != CANCELLED
-    - current_time > appointment end_time + grace_period
-    - Idempotent
+    Marks an appointment as NO_SHOW once it is overdue per the clinic's
+    configurable `no_show_after` setting (measured from the appointment start
+    time). Idempotent: skips CANCELLED / NO_SHOW / COMPLETED appointments.
     """
     if appointment.status in (Appointment.Status.CANCELLED, Appointment.Status.NO_SHOW, Appointment.Status.COMPLETED):
         return
-    
-    grace_period_minutes = 60 # Configurable if needed
-    
-    # Calculate end datetime
-    from datetime import datetime
-    end_dt = datetime.combine(appointment.appointment_date, appointment.appointment_time)
-    
-    # Approximation - we add duration if available, else standard
-    if appointment.appointment_type:
-        end_dt += timedelta(minutes=appointment.appointment_type.duration_minutes)
-    else:
-        end_dt += timedelta(minutes=30)
-        
-    end_with_grace = end_dt + timedelta(minutes=grace_period_minutes)
-    
-    # Convert local naive to timezone aware or compare naive
+
+    booking_settings = appointment.clinic.get_or_create_booking_settings()
+    cutoff = booking_settings.no_show_cutoff(
+        appointment.appointment_date, appointment.appointment_time
+    )
     local_now = timezone.localtime(timezone.now()).replace(tzinfo=None)
-    
-    if local_now > end_with_grace:
+
+    if local_now > cutoff:
         # Mark as NO_SHOW
         appointment.status = Appointment.Status.NO_SHOW
         appointment.save(update_fields=['status', 'updated_at'])
-        
+
         # Trigger compliance penalty
         try:
             patient_profile = appointment.patient.patient_profile
             record_no_show(appointment.clinic, patient_profile, appointment)
-        except Exception as e:
+        except Exception:
             # Profile might not exist, skip penalty
             pass
+
+
+def apply_due_no_shows(appointments_qs):
+    """
+    Mark every overdue PENDING/CONFIRMED appointment in the queryset as
+    NO_SHOW (idempotent). Call before listing/filtering appointments so the
+    displayed/queried status is accurate without relying on the cron command.
+    """
+    candidates = appointments_qs.filter(
+        status__in=[Appointment.Status.PENDING, Appointment.Status.CONFIRMED],
+        appointment_date__lte=timezone.localtime(timezone.now()).date(),
+    ).select_related("clinic")
+    for appointment in candidates:
+        process_appointment_no_show(appointment)
 
 @transaction.atomic
 def run_auto_forgiveness():

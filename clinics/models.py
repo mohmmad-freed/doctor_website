@@ -474,6 +474,25 @@ class ClinicBookingSettings(models.Model):
         help_text="If False, a patient's 2nd same-day self-booking lands as PENDING "
                   "regardless of the auto-confirm setting.",
     )
+
+    class NoShowAfter(models.TextChoices):
+        M10 = "10m", "10 minutes"
+        M15 = "15m", "15 minutes"
+        M30 = "30m", "30 minutes"
+        H1 = "1h", "1 hour"
+        H2 = "2h", "2 hours"
+        H4 = "4h", "4 hours"
+        H6 = "6h", "6 hours"
+        D1 = "1d", "End of the appointment day"
+
+    no_show_after = models.CharField(
+        max_length=4,
+        choices=NoShowAfter.choices,
+        default=NoShowAfter.H1,
+        help_text="How long after the appointment start time an unattended "
+                  "appointment is auto-marked NO_SHOW. '1d' = once the "
+                  "appointment day has fully ended.",
+    )
     updated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -490,6 +509,21 @@ class ClinicBookingSettings(models.Model):
 
     def __str__(self):
         return f"Booking settings for {self.clinic.name}"
+
+    def no_show_cutoff(self, appt_date, appt_time):
+        """Naive-local datetime after which an unattended appointment on
+        appt_date/appt_time is a no-show. '1d' = midnight after that day."""
+        from datetime import datetime, timedelta
+        deltas = {
+            "10m": timedelta(minutes=10), "15m": timedelta(minutes=15),
+            "30m": timedelta(minutes=30), "1h": timedelta(hours=1),
+            "2h": timedelta(hours=2), "4h": timedelta(hours=4),
+            "6h": timedelta(hours=6),
+        }
+        if self.no_show_after == self.NoShowAfter.D1:
+            return datetime.combine(appt_date, datetime.min.time()) + timedelta(days=1)
+        start = datetime.combine(appt_date, appt_time)
+        return start + deltas.get(self.no_show_after, timedelta(hours=1))
 
 
 class ClinicWorkingHours(models.Model):

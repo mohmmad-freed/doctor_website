@@ -4,13 +4,13 @@
 {% block title %}{% trans "إعدادات العيادة" %} — {{ clinic.name }}{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+<div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-32 space-y-6">
 
   {# ── Header ── #}
   <div>
     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{% trans "إعدادات العيادة" %}</h1>
     <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-      {% trans "إدارة سياسة حجز المواعيد للعيادة. تنطبق هذه الإعدادات على حجوزات المرضى من تطبيق المريض فقط." %}
+      {% trans "إدارة سياسة حجز المواعيد وعدم الحضور للعيادة." %}
     </p>
   </div>
 
@@ -87,12 +87,41 @@
           </div>
         </label>
 
-        {# Note about scope #}
+        {# Note about scope — belongs with the booking policy options above #}
         <div class="flex items-start gap-3 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/40">
           <i class="fa-solid fa-circle-info text-blue-500 mt-0.5"></i>
           <p class="text-xs text-blue-800 dark:text-blue-200 leading-relaxed">
             {% trans "هذه الإعدادات تنطبق فقط على حجوزات المرضى من تطبيق المريض. الحجوزات التي تنشئها السكرتارية تكون مؤكَّدة دائماً." %}
           </p>
+        </div>
+
+        {# ── No-show policy section ── #}
+        <div class="pt-5 border-t border-gray-100 dark:border-gray-700">
+          <h3 class="font-semibold text-gray-900 dark:text-white text-sm flex items-center gap-2 mb-4">
+            <i class="fa-solid fa-user-clock text-primary-500"></i>
+            {% trans "سياسة عدم الحضور" %}
+          </h3>
+
+          <div class="p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+            <label for="id_no_show_after" class="block font-semibold text-gray-900 dark:text-white text-sm">
+              {% trans "تحويل الموعد إلى \"لم يحضر\" تلقائياً بعد" %}
+            </label>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+              {% trans "المدة التي تمر بعد وقت بدء الموعد دون حضور المريض، ثم يُعتبر الموعد \"لم يحضر\" تلقائياً." %}
+            </p>
+            <select id="id_no_show_after"
+                    name="no_show_after"
+                    class="mt-3 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-sm px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500">
+              <option value="10m" {% if booking_settings.no_show_after == "10m" %}selected{% endif %}>{% trans "10 دقائق" %}</option>
+              <option value="15m" {% if booking_settings.no_show_after == "15m" %}selected{% endif %}>{% trans "15 دقيقة" %}</option>
+              <option value="30m" {% if booking_settings.no_show_after == "30m" %}selected{% endif %}>{% trans "30 دقيقة" %}</option>
+              <option value="1h" {% if booking_settings.no_show_after == "1h" %}selected{% endif %}>{% trans "ساعة واحدة" %}</option>
+              <option value="2h" {% if booking_settings.no_show_after == "2h" %}selected{% endif %}>{% trans "ساعتان" %}</option>
+              <option value="4h" {% if booking_settings.no_show_after == "4h" %}selected{% endif %}>{% trans "4 ساعات" %}</option>
+              <option value="6h" {% if booking_settings.no_show_after == "6h" %}selected{% endif %}>{% trans "6 ساعات" %}</option>
+              <option value="1d" {% if booking_settings.no_show_after == "1d" %}selected{% endif %}>{% trans "نهاية يوم الموعد" %}</option>
+            </select>
+          </div>
         </div>
       </div>
 

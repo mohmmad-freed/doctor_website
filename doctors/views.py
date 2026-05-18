@@ -142,6 +142,9 @@ def appointments_list(request):
         _msg.error(request, "هذه الصفحة متاحة للأطباء فقط.")
         return redirect(_rev("accounts:home"))
 
+    from compliance.services.compliance_service import apply_due_no_shows
+    apply_due_no_shows(Appointment.objects.filter(doctor=user))
+
     status_filter = request.GET.get("status", "")
     date_filter = request.GET.get("date", "")
     clinic_filter = request.GET.get("clinic_id", "")
