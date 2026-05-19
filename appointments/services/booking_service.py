@@ -127,7 +127,10 @@ def book_appointment(
     from compliance.services.compliance_service import is_patient_blocked
     if hasattr(patient, 'patient_profile'):
         if is_patient_blocked(clinic, patient.patient_profile):
-            raise BookingError("You are blocked from booking at this clinic due to repeated no-shows.", code="patient_blocked")
+            raise BookingError(
+                _("عذراً، لا يمكنك الحجز في هذه العيادة لأنك محظور بسبب تكرار عدم الحضور. لرفع الحظر يرجى مراجعة العيادة شخصياً."),
+                code="patient_blocked",
+            )
 
     # ── 2b. Validate doctor is active at this clinic ──────────────────
     from clinics.models import ClinicStaff
@@ -313,6 +316,13 @@ def book_appointment(
             status == Appointment.Status.CONFIRMED
             and not booking_settings.auto_confirm_patient_bookings
         ):
+            status = Appointment.Status.PENDING
+
+        # New-patient request rule: a patient not yet registered in this clinic
+        # always books a PENDING *request* — the secretary accepts (which
+        # registers them) or rejects it. This overrides auto-confirm.
+        from patients.models import ClinicPatient
+        if not ClinicPatient.objects.filter(clinic=clinic, patient=patient).exists():
             status = Appointment.Status.PENDING
 
         # ── 7. Create the appointment ─────────────────────────────────

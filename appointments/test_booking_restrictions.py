@@ -23,6 +23,7 @@ from appointments.services import (
 )
 from clinics.models import Clinic, ClinicStaff, ClinicSubscription
 from doctors.models import DoctorAvailability, DoctorVerification
+from patients.models import ClinicPatient
 
 User = get_user_model()
 
@@ -65,6 +66,11 @@ class BookingRestrictionTestBase(TestCase):
             clinic=self.clinic, name="General",
             duration_minutes=30, price=Decimal("50.00"),
         )
+
+        # Register the patient in the clinic so bookings auto-confirm
+        # (an unregistered patient's booking now lands as a PENDING
+        # new-patient request — covered by its own dedicated tests).
+        ClinicPatient.objects.create(clinic=self.clinic, patient=self.patient)
 
         # Active subscription
         self.subscription = ClinicSubscription.objects.create(

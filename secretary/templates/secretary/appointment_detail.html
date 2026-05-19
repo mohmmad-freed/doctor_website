@@ -32,6 +32,11 @@
       {# Status chip (HTMX target) #}
       <div id="status-chip-{{ appointment.id }}" class="flex flex-wrap items-center gap-2 flex-shrink-0">
         <span class="status-badge status-{{ appointment.status|lower }}">{{ appointment.get_status_display }}</span>
+        {% if is_new_patient_request %}
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-[11px] font-semibold">
+          <i class="fa-solid fa-user-plus text-[10px]"></i> {% trans "مريض جديد" %}
+        </span>
+        {% else %}
         {% for target_status in valid_transitions %}
         {% if target_status == 'CANCELLED' %}{% comment %}handled below{% endcomment %}
         {% elif target_status == 'CONFIRMED' %}
@@ -77,9 +82,52 @@
         </form>
         {% endif %}
         {% endfor %}
+        {% endif %}
       </div>
     </div>
   </div>
+
+  {# New-patient request: accept (register + confirm) or reject (cancel) #}
+  {% if is_new_patient_request %}
+  <div class="bg-indigo-50 dark:bg-indigo-900/10 rounded-2xl border border-indigo-200 dark:border-indigo-800 p-5">
+    <div class="flex items-start gap-3">
+      <i class="fa-solid fa-user-plus text-indigo-500 mt-0.5"></i>
+      <div class="flex-1 min-w-0">
+        <p class="font-semibold text-indigo-800 dark:text-indigo-200 text-sm">{% trans "طلب حجز من مريض جديد" %}</p>
+        <p class="text-xs text-indigo-700 dark:text-indigo-300 mt-1 leading-relaxed">
+          {% trans "هذا المريض غير مسجّل في العيادة. القبول يؤكّد الموعد ويسجّل المريض في العيادة، والرفض يلغي الموعد دون تسجيله." %}
+        </p>
+        <div class="flex flex-wrap gap-3 mt-4">
+          <form method="post" action="{% url 'secretary:accept_new_patient_request' appointment.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <button type="submit"
+                    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors">
+              <i class="fa-solid fa-user-check text-xs"></i> {% trans "قبول وتسجيل المريض" %}
+            </button>
+          </form>
+          <button type="button" onclick="document.getElementById('reject-panel').classList.toggle('hidden')"
+                  class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 dark:border-red-900/40 bg-white dark:bg-slate-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-semibold transition-colors">
+            <i class="fa-solid fa-user-xmark text-xs"></i> {% trans "رفض الطلب" %}
+          </button>
+        </div>
+        <div id="reject-panel" class="hidden mt-4">
+          <form method="post" action="{% url 'secretary:reject_new_patient_request' appointment.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <textarea name="cancellation_reason" rows="2"
+                      placeholder="{% trans 'سبب الرفض (اختياري)...' %}"
+                      class="w-full text-sm rounded-xl border border-red-200 dark:border-red-800 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-400 resize-none mb-3"></textarea>
+            <button type="submit"
+                    class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors">
+              {% trans "تأكيد الرفض" %}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
   <div id="status-timeline-{{ appointment.id }}">
     {% include "secretary/htmx/appointment_status_timeline.html" %}
@@ -197,7 +245,7 @@
       <i class="fa-solid fa-pen-to-square text-xs"></i>
       {% trans "إعادة جدولة / تعديل" %}
     </a>
-    {% if 'CANCELLED' in valid_transitions %}
+    {% if 'CANCELLED' in valid_transitions and not is_new_patient_request %}
     <button type="button" onclick="document.getElementById('cancel-panel').classList.toggle('hidden')"
             class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-200 dark:border-red-900/40 bg-white dark:bg-slate-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-semibold transition-colors">
       <i class="fa-solid fa-xmark text-xs"></i>
@@ -207,7 +255,7 @@
   </div>
 
   {# Cancel panel (inline, not modal) #}
-  {% if 'CANCELLED' in valid_transitions %}
+  {% if 'CANCELLED' in valid_transitions and not is_new_patient_request %}
   <div id="cancel-panel" class="hidden bg-red-50 dark:bg-red-900/10 rounded-2xl border border-red-200 dark:border-red-800 p-5">
     <form method="post" action="{% url 'secretary:cancel_appointment' appointment.id %}">
       {% csrf_token %}

@@ -38,6 +38,7 @@
         <select name="status"
                 class="text-sm rounded-xl border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500">
           <option value="">{% trans "كل الحالات" %}</option>
+          <option value="new_patient" {% if current_status == 'new_patient' %}selected{% endif %}>{% trans "طلبات مرضى جدد" %}</option>
           {% for val, label in status_choices %}
           <option value="{{ val }}" {% if val == current_status %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
@@ -113,6 +114,11 @@
             </td>
             <td class="px-5 py-3">
               <span class="status-badge status-{{ appt.status|lower }}">{{ appt.get_status_display }}</span>
+              {% if appt.status == 'PENDING' and not appt.patient_registered %}
+              <span class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-[11px] font-semibold">
+                <i class="fa-solid fa-user-plus text-[10px]"></i> {% trans "مريض جديد" %}
+              </span>
+              {% endif %}
             </td>
             <td class="px-5 py-3">
               <div class="flex items-center gap-1">
@@ -121,7 +127,19 @@
                    class="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors" title="{% trans 'تفاصيل' %}">
                   <i class="fa-solid fa-eye text-xs"></i>
                 </a>
-                {% if appt.status not in terminal_statuses %}
+                {% if appt.status == 'PENDING' and not appt.patient_registered %}
+                <form method="post" action="{% url 'secretary:accept_new_patient_request' appt.id %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                  <button type="submit" aria-label="{% trans 'قبول المريض الجديد' %}" class="p-1.5 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors" title="{% trans 'قبول' %}">
+                    <i class="fa-solid fa-user-check text-xs"></i>
+                  </button>
+                </form>
+                <button type="button" aria-label="{% trans 'رفض طلب المريض الجديد' %}" onclick="openRejectModal({{ appt.id }}, '{{ appt.patient.name|escapejs }}')"
+                        class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="{% trans 'رفض' %}">
+                  <i class="fa-solid fa-user-xmark text-xs"></i>
+                </button>
+                {% elif appt.status not in terminal_statuses %}
                 {% if appt.status == 'CONFIRMED' %}
                 <form method="post" action="{% url 'secretary:checkin_appointment' appt.id %}">
                   {% csrf_token %}
@@ -194,7 +212,7 @@
 {# ── Cancel modal ── #}
 <div id="cancel-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm hidden">
   <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
-    <h3 class="font-bold text-gray-900 dark:text-white mb-1">{% trans "إلغاء الموعد" %}</h3>
+    <h3 class="font-bold text-gray-900 dark:text-white mb-1" id="cancel-modal-title" data-cancel-title="{% trans 'إلغاء الموعد' %}" data-reject-title="{% trans 'رفض طلب المريض الجديد' %}">{% trans "إلغاء الموعد" %}</h3>
     <p class="text-sm text-gray-500 dark:text-gray-400 mb-4" id="cancel-modal-patient-name"></p>
     <form method="post" id="cancel-modal-form">
       {% csrf_token %}
@@ -208,7 +226,8 @@
                   class="w-full text-sm rounded-xl border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-400 resize-none"></textarea>
       </div>
       <div class="flex gap-3">
-        <button type="submit"
+        <button type="submit" id="cancel-modal-submit"
+                data-cancel-label="{% trans 'تأكيد الإلغاء' %}" data-reject-label="{% trans 'تأكيد الرفض' %}"
                 class="flex-1 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors">
           {% trans "تأكيد الإلغاء" %}
         </button>
@@ -226,8 +245,21 @@
 {% block extra_js %}
 <script>
 function openCancelModal(apptId, patientName) {
+  var title = document.getElementById('cancel-modal-title');
+  var submit = document.getElementById('cancel-modal-submit');
+  title.textContent = title.dataset.cancelTitle;
+  submit.textContent = submit.dataset.cancelLabel;
   document.getElementById('cancel-modal-patient-name').textContent = '{% trans "المريض" %}: ' + patientName;
   document.getElementById('cancel-modal-form').action = '/secretary/appointments/' + apptId + '/cancel/';
+  document.getElementById('cancel-modal').classList.remove('hidden');
+}
+function openRejectModal(apptId, patientName) {
+  var title = document.getElementById('cancel-modal-title');
+  var submit = document.getElementById('cancel-modal-submit');
+  title.textContent = title.dataset.rejectTitle;
+  submit.textContent = submit.dataset.rejectLabel;
+  document.getElementById('cancel-modal-patient-name').textContent = '{% trans "المريض" %}: ' + patientName;
+  document.getElementById('cancel-modal-form').action = '/secretary/appointments/' + apptId + '/reject-new-patient/';
   document.getElementById('cancel-modal').classList.remove('hidden');
 }
 function closeCancelModal() {

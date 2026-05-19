@@ -2307,8 +2307,8 @@ msgstr "Statuses"
 msgid "إعدادات العيادة"
 msgstr "Clinic Settings"
 
-msgid "إدارة سياسة حجز المواعيد وعدم الحضور للعيادة."
-msgstr "Manage the clinic's appointment booking & no-show policy."
+msgid "إدارة سياسة الحجز وعدم الحضور والامتثال للعيادة."
+msgstr "Manage the clinic's booking, no-show, and compliance policies."
 
 msgid "إعدادات الحجز للعيادة"
 msgstr "Clinic booking settings"
@@ -2435,3 +2435,108 @@ msgstr "Appointment type not found."
 
 msgid "تاريخ غير صالح."
 msgstr "Invalid date."
+
+msgid "تم حفظ إعدادات الامتثال."
+msgstr "Compliance settings saved."
+
+msgid "تعذّر حفظ إعدادات الامتثال. تأكد من إدخال قيم صحيحة."
+msgstr "Couldn't save compliance settings. Make sure the values are valid."
+
+msgid "تعذّر رفع الحظر: لا يوجد ملف مريض."
+msgstr "Couldn't remove the block: no patient profile."
+
+msgid "تم رفع الحظر عن المريض."
+msgstr "The patient's block has been removed."
+
+msgid "لم يعد هذا الطلب بحاجة إلى مراجعة."
+msgstr "This request no longer needs review."
+
+msgid "تم قبول المريض الجديد وتأكيد الموعد."
+msgstr "New patient accepted and the appointment confirmed."
+
+msgid "تم رفض طلب الحجز من قِبل العيادة"
+msgstr "The booking request was rejected by the clinic."
+
+msgid "تم رفض طلب المريض الجديد."
+msgstr "The new patient request was rejected."
+
+msgid "عذراً، لا يمكنك الحجز في هذه العيادة لأنك محظور بسبب تكرار عدم الحضور. لرفع الحظر يرجى مراجعة العيادة شخصياً."
+msgstr "Sorry, you can't book at this clinic because you are blocked due to repeated no-shows. To remove the block, please visit the clinic in person."
+
+msgid "إعدادات الامتثال"
+msgstr "Compliance settings"
+
+msgid "تحكم في عدد حالات عدم الحضور المسموحة قبل حظر المريض وإعدادات المسامحة التلقائية."
+msgstr "Control how many no-shows are allowed before a patient is blocked, and the auto-forgiveness settings."
+
+msgid "الحد الأقصى لعدد مرات عدم الحضور قبل الحظر"
+msgstr "Maximum number of no-shows before blocking"
+
+msgid "عند وصول المريض لهذا العدد من حالات عدم الحضور، سيتم حظره تلقائياً."
+msgstr "When the patient reaches this number of no-shows, they will be blocked automatically."
+
+msgid "تفعيل المسامحة التلقائية"
+msgstr "Enable automatic forgiveness"
+
+msgid "إذا كان مفعّلاً: يُلغى الحظر تلقائياً بعد مرور عدد محدد من الأيام دون مخالفات."
+msgstr "If enabled: the block is automatically lifted after a set number of days without violations."
+
+msgid "مدة المسامحة (بالأيام)"
+msgstr "Forgiveness period (days)"
+
+msgid "عدد الأيام بدون مخالفات قبل إلغاء الحظر تلقائياً."
+msgstr "Number of days without violations before the block is automatically lifted."
+
+msgid "مريض محظور من الحجز حالياً"
+msgstr "patient currently blocked from booking"
+
+msgid "مرضى محظورون من الحجز حالياً"
+msgstr "patients currently blocked from booking"
+
+msgid "إخفاء"
+msgstr "Dismiss"
+
+msgid "محظور"
+msgstr "Blocked"
+
+msgid "رفع الحظر عن المريض"
+msgstr "Remove the patient's block"
+
+msgid "رفع الحظر"
+msgstr "Remove block"
+
+msgid "كل المرضى"
+msgstr "All patients"
+
+msgid "المحظورون فقط"
+msgstr "Blocked only"
+
+msgid "طلبات مرضى جدد"
+msgstr "New patient requests"
+
+msgid "قبول المريض الجديد"
+msgstr "Accept the new patient"
+
+msgid "قبول"
+msgstr "Accept"
+
+msgid "رفض طلب المريض الجديد"
+msgstr "Reject the new patient request"
+
+msgid "تأكيد الرفض"
+msgstr "Confirm rejection"
+
+msgid "طلب حجز من مريض جديد"
+msgstr "Booking request from a new patient"
+
+msgid "هذا المريض غير مسجّل في العيادة. القبول يؤكّد الموعد ويسجّل المريض في العيادة، والرفض يلغي الموعد دون تسجيله."
+msgstr "This patient is not registered at the clinic. Accepting confirms the appointment and registers the patient at the clinic; rejecting cancels the appointment without registering them."
+
+msgid "قبول وتسجيل المريض"
+msgstr "Accept and register the patient"
+
+msgid "رفض الطلب"
+msgstr "Reject the request"
+
+msgid "سبب الرفض (اختياري)..."
+msgstr "Reason for rejection (optional)..."

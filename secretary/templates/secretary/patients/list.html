@@ -20,6 +20,9 @@
     </a>
   </div>
 
+  {# ── Blocked patients banner (not dismissible here) ── #}
+  {% include "secretary/partials/blocked_banner.html" with blocked_count=blocked_count dismissible=False %}
+
   {# ── Messages ── #}
   {% if messages %}
   <div class="space-y-2">
@@ -51,7 +54,7 @@
           hx-trigger="input changed delay:400ms, search"
           hx-target="#patient-table-body"
           hx-swap="innerHTML"
-          hx-include="[name='sort']"
+          hx-include="[name='sort'],[name='filter']"
           hx-indicator="#search-spinner"
           autocomplete="off"
         >
@@ -70,7 +73,14 @@
         <option value="-last_visit" {% if sort == '-last_visit' %}selected{% endif %}>{% trans "آخر زيارة" %}</option>
       </select>
 
-      {% if search %}
+      {# Status filter #}
+      <select name="filter" onchange="this.form.submit()"
+              class="px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
+        <option value="all" {% if current_filter != 'blocked' %}selected{% endif %}>{% trans "كل المرضى" %}</option>
+        <option value="blocked" {% if current_filter == 'blocked' %}selected{% endif %}>{% trans "المحظورون فقط" %}</option>
+      </select>
+
+      {% if search or current_filter == 'blocked' %}
       <a href="{% url 'secretary:patient_list' %}"
          class="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
         {% trans "مسح" %}
@@ -128,13 +138,13 @@
       </span>
       <div class="flex items-center gap-2">
         {% if page_obj.has_previous %}
-        <a href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if sort %}sort={{ sort }}&{% endif %}page={{ page_obj.previous_page_number }}"
+        <a href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if sort %}sort={{ sort }}&{% endif %}{% if current_filter == 'blocked' %}filter=blocked&{% endif %}page={{ page_obj.previous_page_number }}"
            class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition">
           <i class="fa-solid fa-chevron-right text-xs"></i> {% trans "السابق" %}
         </a>
         {% endif %}
         {% if page_obj.has_next %}
-        <a href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if sort %}sort={{ sort }}&{% endif %}page={{ page_obj.next_page_number }}"
+        <a href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if sort %}sort={{ sort }}&{% endif %}{% if current_filter == 'blocked' %}filter=blocked&{% endif %}page={{ page_obj.next_page_number }}"
            class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 transition">
           {% trans "التالي" %} <i class="fa-solid fa-chevron-left text-xs"></i>
         </a>

@@ -14,6 +14,11 @@
         {% if profile and profile.date_of_birth %}
         <div class="text-xs text-gray-400 dark:text-gray-500">{{ profile.get_gender_display|default:"" }}{% if profile.gender and profile.date_of_birth %} · {% endif %}{{ profile.date_of_birth|date:"Y" }}</div>
         {% endif %}
+        {% if cp.is_blocked %}
+        <span class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 text-[11px] font-semibold">
+          <i class="fa-solid fa-user-lock text-[10px]"></i> {% trans "محظور" %}
+        </span>
+        {% endif %}
       </div>
     </a>
   </td>
@@ -80,6 +85,21 @@
          class="p-1.5 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors">
         <i class="fa-solid fa-calendar-plus text-xs"></i>
       </a>
+      {% if cp.is_blocked %}
+      <form method="post" action="{% url 'secretary:remove_patient_block' patient.id %}" class="inline">
+        {% csrf_token %}
+        <input type="hidden" name="q" value="{{ request.GET.q }}">
+        <input type="hidden" name="sort" value="{{ request.GET.sort }}">
+        <input type="hidden" name="filter" value="{{ request.GET.filter }}">
+        <input type="hidden" name="page" value="{{ request.GET.page }}">
+        <button type="submit"
+                aria-label="{% trans 'رفع الحظر عن المريض' %}"
+                title="{% trans 'رفع الحظر' %}"
+                class="p-1.5 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+          <i class="fa-solid fa-unlock text-xs"></i>
+        </button>
+      </form>
+      {% endif %}
     </div>
   </td>
 </tr>

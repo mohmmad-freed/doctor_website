@@ -26,15 +26,14 @@ def is_patient_blocked(clinic: Clinic, patient: PatientProfile) -> bool:
     compliance = get_or_create_compliance(clinic, patient)
     return compliance.status == 'BLOCKED'
 
-def get_global_compliance_warnings(patient: PatientProfile) -> list[Clinic]:
+def count_blocked_patients(clinic: Clinic) -> int:
     """
-    Returns a list of clinics where this patient is currently blocked.
+    Returns the number of patients currently BLOCKED in the given clinic.
+    Shared by the clinic-owner dashboard and the secretary banner/list.
     """
-    blocked_compliances = PatientClinicCompliance.objects.filter(
-        patient=patient,
-        status='BLOCKED'
-    ).select_related('clinic')
-    return [comp.clinic for comp in blocked_compliances]
+    return PatientClinicCompliance.objects.filter(
+        clinic=clinic, status='BLOCKED'
+    ).count()
 
 @transaction.atomic
 def record_no_show(clinic: Clinic, patient: PatientProfile, appointment: Appointment = None) -> PatientClinicCompliance:
@@ -120,6 +119,15 @@ def process_appointment_no_show(appointment: Appointment):
     time). Idempotent: skips CANCELLED / NO_SHOW / COMPLETED appointments.
     """
     if appointment.status in (Appointment.Status.CANCELLED, Appointment.Status.NO_SHOW, Appointment.Status.COMPLETED):
+        return
+
+    # An unaccepted new-patient request (PENDING + patient not yet registered
+    # in this clinic) is only a request — never penalize it as a no-show.
+    # This guarantees a patient cannot be blocked before being registered.
+    from patients.models import ClinicPatient
+    if appointment.status == Appointment.Status.PENDING and not ClinicPatient.objects.filter(
+        clinic=appointment.clinic, patient=appointment.patient
+    ).exists():
         return
 
     booking_settings = appointment.clinic.get_or_create_booking_settings()

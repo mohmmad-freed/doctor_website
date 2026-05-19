@@ -10,7 +10,7 @@
   <div>
     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{% trans "إعدادات العيادة" %}</h1>
     <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-      {% trans "إدارة سياسة حجز المواعيد وعدم الحضور للعيادة." %}
+      {% trans "إدارة سياسة الحجز وعدم الحضور والامتثال للعيادة." %}
     </p>
   </div>
 
@@ -42,6 +42,7 @@
 
     <form method="post" novalidate>
       {% csrf_token %}
+      <input type="hidden" name="form_section" value="booking">
       <div class="p-5 space-y-5">
 
         {# Auto-confirm patient bookings #}
@@ -142,6 +143,87 @@
     </form>
   </div>
 
+  {# ── Compliance (no-show blocking) Form ── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+      <h3 class="font-semibold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+        <i class="fa-solid fa-shield-halved text-primary-500"></i>
+        {% trans "إعدادات الامتثال" %}
+      </h3>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        {% trans "تحكم في عدد حالات عدم الحضور المسموحة قبل حظر المريض وإعدادات المسامحة التلقائية." %}
+      </p>
+    </div>
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="form_section" value="compliance">
+      <div class="p-5 space-y-5">
+
+        {# Max no-shows before block #}
+        <div class="p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+          <label for="id_max_no_show_count" class="block font-semibold text-gray-900 dark:text-white text-sm">
+            {% trans "الحد الأقصى لعدد مرات عدم الحضور قبل الحظر" %}
+          </label>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+            {% trans "عند وصول المريض لهذا العدد من حالات عدم الحضور، سيتم حظره تلقائياً." %}
+          </p>
+          <input type="number"
+                 id="id_max_no_show_count"
+                 name="max_no_show_count"
+                 min="1"
+                 value="{{ compliance_settings.score_threshold_block }}"
+                 required
+                 class="mt-3 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-sm px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500">
+        </div>
+
+        {# Enable auto-forgiveness #}
+        <label class="flex items-start gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-600 cursor-pointer transition">
+          <input type="checkbox"
+                 id="id_compliance_forgiveness_enabled"
+                 name="forgiveness_enabled"
+                 {% if compliance_settings.auto_forgive_enabled %}checked{% endif %}
+                 class="mt-1 w-5 h-5 accent-primary-600 cursor-pointer flex-shrink-0">
+          <div class="flex-1 min-w-0">
+            <div class="font-semibold text-gray-900 dark:text-white text-sm">
+              {% trans "تفعيل المسامحة التلقائية" %}
+            </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+              {% trans "إذا كان مفعّلاً: يُلغى الحظر تلقائياً بعد مرور عدد محدد من الأيام دون مخالفات." %}
+            </p>
+          </div>
+        </label>
+
+        {# Forgiveness duration (conditional) #}
+        <div id="compliance_forgiveness_fields"
+             class="p-4 rounded-xl border border-gray-200 dark:border-gray-700 {% if not compliance_settings.auto_forgive_enabled %}hidden{% endif %}">
+          <label for="id_compliance_forgiveness_days" class="block font-semibold text-gray-900 dark:text-white text-sm">
+            {% trans "مدة المسامحة (بالأيام)" %}
+          </label>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+            {% trans "عدد الأيام بدون مخالفات قبل إلغاء الحظر تلقائياً." %}
+          </p>
+          <input type="number"
+                 id="id_compliance_forgiveness_days"
+                 name="forgiveness_days"
+                 min="1"
+                 value="{{ compliance_settings.auto_forgive_after_days|default:'' }}"
+                 {% if compliance_settings.auto_forgive_enabled %}required{% endif %}
+                 class="mt-3 w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-sm px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500">
+        </div>
+
+      </div>
+
+      <div class="px-5 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 flex justify-end">
+        <button type="submit"
+                class="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold shadow-sm transition">
+          <i class="fa-solid fa-floppy-disk"></i>
+          {% trans "حفظ الإعدادات" %}
+        </button>
+      </div>
+    </form>
+  </div>
+
 </div>
 
 <script>
@@ -165,6 +247,25 @@
       }
     }
     auto.addEventListener('change', sync);
+  })();
+
+  (function () {
+    var enabled = document.getElementById('id_compliance_forgiveness_enabled');
+    var fields = document.getElementById('compliance_forgiveness_fields');
+    var days = document.getElementById('id_compliance_forgiveness_days');
+    if (!enabled || !fields || !days) return;
+
+    function sync() {
+      if (enabled.checked) {
+        fields.classList.remove('hidden');
+        days.required = true;
+      } else {
+        fields.classList.add('hidden');
+        days.required = false;
+        days.value = '';
+      }
+    }
+    enabled.addEventListener('change', sync);
   })();
 </script>
 {% endblock %}

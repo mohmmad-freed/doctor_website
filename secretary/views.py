@@ -191,6 +191,8 @@ def dashboard(request):
 
     clinic = staff.clinic
     _sweep_clinic_no_shows(clinic)
+    from compliance.services.compliance_service import count_blocked_patients
+    blocked_count = count_blocked_patients(clinic)
     today = date.today()
 
     todays_appointments = (
@@ -297,6 +299,7 @@ def dashboard(request):
         "recent_activity": recent_activity,
         "terminal_statuses": terminal_statuses,
         "unread_secretary_notification_count": unread_secretary_notification_count,
+        "blocked_count": blocked_count,
     })
 
 
@@ -389,6 +392,9 @@ def appointment_detail(request, appointment_id):
     )
     profile = getattr(appointment.patient, "patient_profile", None)
     clinic_patient = ClinicPatient.objects.filter(clinic=clinic, patient=appointment.patient).first()
+    is_new_patient_request = (
+        appointment.status == Appointment.Status.PENDING and clinic_patient is None
+    )
 
     from secretary.services import get_valid_transitions
 
@@ -416,6 +422,7 @@ def appointment_detail(request, appointment_id):
         "appointment": appointment,
         "profile": profile,
         "clinic_patient": clinic_patient,
+        "is_new_patient_request": is_new_patient_request,
         "terminal_statuses": terminal_statuses,
         "valid_transitions": get_valid_transitions(appointment.status),
         "status_steps": status_steps,
@@ -1695,10 +1702,41 @@ def settings_clinic(request):
     if not staff:
         return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
+    from clinics.services import (
+        get_clinic_compliance_settings,
+        update_clinic_compliance_settings,
+    )
+
     clinic = staff.clinic
     booking_settings = clinic.get_or_create_booking_settings()
 
     if request.method == "POST":
+        section = request.POST.get("form_section")
+
+        if section == "compliance":
+            from django.core.exceptions import ValidationError
+            try:
+                max_no_show_count = int(request.POST.get("max_no_show_count", 3))
+                forgiveness_enabled = request.POST.get("forgiveness_enabled") == "on"
+                days_raw = request.POST.get("forgiveness_days")
+                forgiveness_days = (
+                    int(days_raw) if (days_raw and forgiveness_enabled) else None
+                )
+                update_clinic_compliance_settings(
+                    clinic,
+                    max_no_show_count,
+                    forgiveness_enabled,
+                    forgiveness_days,
+                )
+                messages.success(request, _("تم حفظ إعدادات الامتثال."))
+            except (ValidationError, ValueError):
+                messages.error(
+                    request,
+                    _("تعذّر حفظ إعدادات الامتثال. تأكد من إدخال قيم صحيحة."),
+                )
+            return redirect("secretary:settings_clinic")
+
+        # Default: booking-policy section
         auto_confirm = bool(request.POST.get("auto_confirm_patient_bookings"))
         allow_multi = bool(request.POST.get("allow_multiple_bookings_same_day"))
         # Same-day rule only makes sense when auto-confirm is on. If a patient
@@ -1719,10 +1757,95 @@ def settings_clinic(request):
         "clinic": clinic,
         "staff": staff,
         "booking_settings": booking_settings,
+        "compliance_settings": get_clinic_compliance_settings(clinic),
     })
 
 
 # ── New appointment module views ──────────────────────────────────────────────
+
+@login_required
+@require_POST
+def accept_new_patient_request(request, appointment_id):
+    """Accept an unregistered patient's pending booking: register them in the
+    clinic and confirm the appointment (atomic). Reuses _generate_file_number
+    and transition_appointment_status."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+
+    from django.db import transaction
+    from secretary.services import transition_appointment_status
+    from appointments.services.booking_service import BookingError
+
+    clinic = staff.clinic
+    appointment = get_object_or_404(Appointment, id=appointment_id, clinic=clinic)
+
+    already_registered = ClinicPatient.objects.filter(
+        clinic=clinic, patient=appointment.patient
+    ).exists()
+    next_url = request.POST.get("next") or ""
+    redirect_to = next_url if next_url.startswith("/") else "secretary:appointments"
+
+    if appointment.status != Appointment.Status.PENDING or already_registered:
+        messages.error(request, _("لم يعد هذا الطلب بحاجة إلى مراجعة."))
+        return redirect(redirect_to)
+
+    try:
+        with transaction.atomic():
+            ClinicPatient.objects.get_or_create(
+                clinic=clinic,
+                patient=appointment.patient,
+                defaults={
+                    "registered_by": request.user,
+                    "file_number": _generate_file_number(clinic),
+                },
+            )
+            transition_appointment_status(
+                appointment, Appointment.Status.CONFIRMED, actor=request.user
+            )
+        messages.success(request, _("تم قبول المريض الجديد وتأكيد الموعد."))
+    except BookingError as e:
+        messages.error(request, e.message)
+    return redirect(redirect_to)
+
+
+@login_required
+@require_POST
+def reject_new_patient_request(request, appointment_id):
+    """Reject an unregistered patient's pending booking: cancel it without
+    registering the patient."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+
+    from secretary.services import transition_appointment_status
+    from appointments.services.booking_service import BookingError
+
+    clinic = staff.clinic
+    appointment = get_object_or_404(Appointment, id=appointment_id, clinic=clinic)
+
+    next_url = request.POST.get("next") or ""
+    redirect_to = next_url if next_url.startswith("/") else "secretary:appointments"
+
+    if appointment.status != Appointment.Status.PENDING:
+        messages.error(request, _("لم يعد هذا الطلب بحاجة إلى مراجعة."))
+        return redirect(redirect_to)
+
+    reason = request.POST.get("cancellation_reason", "").strip() or _(
+        "تم رفض طلب الحجز من قِبل العيادة"
+    )
+    try:
+        transition_appointment_status(
+            appointment,
+            Appointment.Status.CANCELLED,
+            cancellation_reason=reason,
+            actor=request.user,
+        )
+        messages.success(request, _("تم رفض طلب المريض الجديد."))
+    except BookingError as e:
+        messages.error(request, e.message)
+    return redirect(redirect_to)
+
 
 @login_required
 @require_POST
@@ -2262,30 +2385,30 @@ def _compute_age(dob) -> int | None:
     return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
 
 
-@login_required
-def patient_list(request):
-    """Full patient roster for this clinic with search, sort, pagination."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+# Allowed patient-list sort fields (whitelist), shared by the full page and
+# the HTMX live-search endpoint.
+_PATIENT_LIST_ALLOWED_SORTS = {
+    "name": "patient__name",
+    "-name": "-patient__name",
+    "file_number": "file_number",
+    "-file_number": "-file_number",
+    "registered_at": "registered_at",
+    "-registered_at": "-registered_at",
+}
 
-    from django.core.paginator import Paginator
-    from django.db.models import Max, Count
 
-    clinic = staff.clinic
-    search = request.GET.get("q", "").strip()
-    sort = request.GET.get("sort", "-registered_at")
+def _patient_list_queryset(clinic, search="", sort="-registered_at", blocked_only=False):
+    """Shared roster queryset for the patient list (full page + HTMX search).
 
-    # Allowed sort fields (whitelist)
-    _ALLOWED_SORTS = {
-        "name": "patient__name",
-        "-name": "-patient__name",
-        "file_number": "file_number",
-        "-file_number": "-file_number",
-        "registered_at": "registered_at",
-        "-registered_at": "-registered_at",
-    }
-    order_by = _ALLOWED_SORTS.get(sort, "-registered_at")
+    Annotates each ClinicPatient with last_visit, visit_count and is_blocked
+    (compliance BLOCKED in this clinic, derived via an Exists subquery so
+    profile-less users simply yield is_blocked=False). Applies whitelisted
+    sort, optional search, and an optional blocked-only filter.
+    """
+    from django.db.models import Max, Count, Exists, OuterRef
+    from compliance.models import PatientClinicCompliance
+
+    order_by = _PATIENT_LIST_ALLOWED_SORTS.get(sort, "-registered_at")
 
     qs = (
         ClinicPatient.objects.filter(clinic=clinic)
@@ -2305,6 +2428,13 @@ def patient_list(request):
                     patient__appointments_as_patient__status="COMPLETED",
                 ),
             ),
+            is_blocked=Exists(
+                PatientClinicCompliance.objects.filter(
+                    clinic=clinic,
+                    status="BLOCKED",
+                    patient=OuterRef("patient__patient_profile"),
+                )
+            ),
         )
         .order_by(order_by)
     )
@@ -2318,6 +2448,40 @@ def patient_list(request):
             | Q(file_number__icontains=search)
         )
 
+    if blocked_only:
+        qs = qs.filter(is_blocked=True)
+
+    return qs
+
+
+def _patient_list_filter(request):
+    """Read + whitelist the patient-list status filter from the request."""
+    value = request.GET.get("filter", "")
+    return value if value in ("all", "blocked") else ""
+
+
+@login_required
+def patient_list(request):
+    """Full patient roster for this clinic with search, sort, pagination."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+
+    from django.core.paginator import Paginator
+    from compliance.services.compliance_service import count_blocked_patients
+
+    clinic = staff.clinic
+    search = request.GET.get("q", "").strip()
+    sort = request.GET.get("sort", "-registered_at")
+    current_filter = _patient_list_filter(request)
+
+    qs = _patient_list_queryset(
+        clinic,
+        search=search,
+        sort=sort,
+        blocked_only=(current_filter == "blocked"),
+    )
+
     paginator = Paginator(qs, 20)
     page = paginator.get_page(request.GET.get("page", 1))
 
@@ -2327,6 +2491,8 @@ def patient_list(request):
         "clinic_patients": page.object_list,
         "search": search,
         "sort": sort,
+        "current_filter": current_filter,
+        "blocked_count": count_blocked_patients(clinic),
         "total_count": paginator.count,
     })
 
@@ -2714,47 +2880,58 @@ def patient_list_htmx(request):
     if not staff:
         return HttpResponseForbidden()
 
-    from django.db.models import Max, Count
-
     clinic = staff.clinic
     search = request.GET.get("q", "").strip()
+    sort = request.GET.get("sort", "-registered_at")
+    current_filter = _patient_list_filter(request)
 
-    qs = (
-        ClinicPatient.objects.filter(clinic=clinic)
-        .select_related("patient", "patient__patient_profile")
-        .annotate(
-            last_visit=Max(
-                "patient__appointments_as_patient__appointment_date",
-                filter=Q(
-                    patient__appointments_as_patient__clinic=clinic,
-                    patient__appointments_as_patient__status="COMPLETED",
-                ),
-            ),
-            visit_count=Count(
-                "patient__appointments_as_patient",
-                filter=Q(
-                    patient__appointments_as_patient__clinic=clinic,
-                    patient__appointments_as_patient__status="COMPLETED",
-                ),
-            ),
-        )
-        .order_by("-registered_at")
-    )
+    # Live-search only kicks in at 2+ chars; below that show the full list
+    # (still honoring the active sort + blocked filter).
+    effective_search = search if len(search) >= 2 else ""
 
-    if len(search) >= 2:
-        normalized = PhoneNumberAuthBackend.normalize_phone_number(search)
-        qs = qs.filter(
-            Q(patient__name__icontains=search)
-            | Q(patient__phone__icontains=normalized)
-            | Q(patient__national_id__icontains=search)
-            | Q(file_number__icontains=search)
-        )
+    qs = _patient_list_queryset(
+        clinic,
+        search=effective_search,
+        sort=sort,
+        blocked_only=(current_filter == "blocked"),
+    )[:20]
 
-    qs = qs[:20]
     return render(request, "secretary/htmx/patient_list_rows.html", {
         "clinic_patients": qs,
         "search": search,
     })
+
+
+@login_required
+@require_POST
+def remove_patient_block(request, patient_id):
+    """Lift a patient's no-show block (manual waiver) — e.g. when the patient
+    comes to the clinic in person. Reuses compliance.apply_manual_waiver."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+
+    clinic = staff.clinic
+    cp = get_object_or_404(ClinicPatient, clinic=clinic, patient_id=patient_id)
+    profile = getattr(cp.patient, "patient_profile", None)
+    if profile is None:
+        messages.error(request, _("تعذّر رفع الحظر: لا يوجد ملف مريض."))
+    else:
+        from compliance.services.compliance_service import apply_manual_waiver
+        apply_manual_waiver(clinic, profile, staff_user=request.user)
+        messages.success(request, _("تم رفع الحظر عن المريض."))
+
+    # Preserve the list state (search / sort / filter / page) on return.
+    params = {}
+    for key in ("q", "sort", "filter", "page"):
+        val = request.POST.get(key) or request.GET.get(key)
+        if val:
+            params[key] = val
+    url = reverse("secretary:patient_list")
+    if params:
+        from urllib.parse import urlencode
+        url = f"{url}?{urlencode(params)}"
+    return redirect(url)
 
 
 @login_required
@@ -2775,12 +2952,27 @@ def appointments_list(request):
     doctor_filter = request.GET.get("doctor_id", "")
     search = request.GET.get("q", "").strip()
 
+    from django.db.models import Exists, OuterRef
+
     qs = (
         Appointment.objects.filter(clinic=clinic)
         .select_related("patient", "doctor", "appointment_type")
+        .annotate(
+            patient_registered=Exists(
+                ClinicPatient.objects.filter(
+                    clinic=clinic, patient=OuterRef("patient")
+                )
+            )
+        )
         .order_by("-appointment_date", "appointment_time")
     )
-    if status_filter:
+    if status_filter == "new_patient":
+        # Pseudo-filter: pending bookings from patients not yet registered
+        # in this clinic — the "new patient" requests.
+        qs = qs.filter(
+            status=Appointment.Status.PENDING, patient_registered=False
+        )
+    elif status_filter:
         qs = qs.filter(status=status_filter)
     if doctor_filter:
         qs = qs.filter(doctor_id=doctor_filter)

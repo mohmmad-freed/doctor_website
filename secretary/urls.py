@@ -16,6 +16,8 @@ urlpatterns = [
     path('appointments/<int:appointment_id>/cancel/', views.cancel_appointment, name='cancel_appointment'),
     path('appointments/<int:appointment_id>/checkin/', views.checkin_appointment, name='checkin_appointment'),
     path('appointments/<int:appointment_id>/status/', views.update_appointment_status, name='update_appointment_status'),
+    path('appointments/<int:appointment_id>/accept-new-patient/', views.accept_new_patient_request, name='accept_new_patient_request'),
+    path('appointments/<int:appointment_id>/reject-new-patient/', views.reject_new_patient_request, name='reject_new_patient_request'),
     path('appointments/<int:appointment_id>/remove-from-queue/', views.remove_from_queue, name='remove_from_queue'),
     path('calendar/', views.calendar_view, name='calendar'),
 
@@ -35,6 +37,7 @@ urlpatterns = [
     path('patients/new/', views.create_new_patient, name='create_new_patient'),
     path('patients/<int:patient_id>/', views.patient_detail, name='patient_detail'),
     path('patients/<int:patient_id>/edit/', views.edit_patient, name='edit_patient'),
+    path('patients/<int:patient_id>/remove-block/', views.remove_patient_block, name='remove_patient_block'),
     path('patients/htmx/search/', views.patient_list_htmx, name='patient_list_htmx'),
     path('patients/search/', views.patient_search_htmx, name='patient_search'),
     path('patients/<int:patient_id>/card/', views.patient_detail_htmx, name='patient_card'),

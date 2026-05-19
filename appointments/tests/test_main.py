@@ -27,6 +27,7 @@ from appointments.services import (
 )
 from clinics.models import Clinic, ClinicStaff
 from doctors.models import DoctorAvailability, DoctorVerification
+from patients.models import ClinicPatient
 
 User = get_user_model()
 
@@ -107,6 +108,12 @@ class BookingTestMixin:
             user=self.doctor,
             identity_status="IDENTITY_VERIFIED",
         )
+
+        # Register both patients in the clinic so bookings auto-confirm
+        # (an unregistered patient's booking now lands as a PENDING
+        # new-patient request — covered by its own dedicated tests).
+        ClinicPatient.objects.create(clinic=self.clinic, patient=self.patient)
+        ClinicPatient.objects.create(clinic=self.clinic, patient=self.patient2)
 
 
 # ═══════════════════════════════════════════════════════════════════

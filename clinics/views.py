@@ -234,10 +234,8 @@ def my_clinic(request, clinic_id):
         )
 
     # ── Blocked patients ──────────────────────────────────────────────
-    from compliance.models import PatientClinicCompliance
-    blocked_patients_count = PatientClinicCompliance.objects.filter(
-        clinic=clinic, status="BLOCKED",
-    ).count()
+    from compliance.services.compliance_service import count_blocked_patients
+    blocked_patients_count = count_blocked_patients(clinic)
 
     # ── Recent activity feed (last 10 appointment events) ─────────────
     recent_activity = list(

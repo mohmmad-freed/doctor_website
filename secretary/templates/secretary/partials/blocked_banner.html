@@ -1,0 +1,54 @@
+{% load i18n %}
+{% if blocked_count %}
+
+{% if not dismissible %}
+<a href="{% url 'secretary:patient_list' %}?filter=blocked"
+   class="group flex items-center gap-3 rounded-2xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 hover:bg-red-100 dark:hover:bg-red-900/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 transition-colors">
+  <span class="flex-shrink-0 w-9 h-9 rounded-full bg-red-100 dark:bg-red-900/40 inline-flex items-center justify-center text-red-600 dark:text-red-300">
+    <i class="fa-solid fa-user-lock"></i>
+  </span>
+  <span class="flex items-baseline gap-1.5 flex-1 min-w-0 text-red-700 dark:text-red-300">
+    <span class="text-base font-bold tabular-nums">{{ blocked_count }}</span>
+    <span class="text-sm font-medium truncate">
+      {% if blocked_count == 1 %}{% trans "مريض محظور من الحجز حالياً" %}{% else %}{% trans "مرضى محظورون من الحجز حالياً" %}{% endif %}
+    </span>
+  </span>
+  <i class="fa-solid {% if IS_RTL %}fa-chevron-left{% else %}fa-chevron-right{% endif %} text-red-500 dark:text-red-400 text-sm flex-shrink-0 transition-transform {% if IS_RTL %}group-hover:-translate-x-0.5{% else %}group-hover:translate-x-0.5{% endif %}"></i>
+</a>
+
+{% else %}
+<div id="blocked-banner"
+     data-bb-key="blockedBanner:{{ clinic.id }}:{{ blocked_count }}"
+     class="hidden flex items-center gap-3 rounded-2xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3">
+  <a href="{% url 'secretary:patient_list' %}?filter=blocked"
+     class="group flex items-center gap-3 flex-1 min-w-0 hover:bg-red-100/60 dark:hover:bg-red-900/30 -mx-2 px-2 py-1 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 transition-colors">
+    <span class="flex-shrink-0 w-9 h-9 rounded-full bg-red-100 dark:bg-red-900/40 inline-flex items-center justify-center text-red-600 dark:text-red-300">
+      <i class="fa-solid fa-user-lock"></i>
+    </span>
+    <span class="flex items-baseline gap-1.5 flex-1 min-w-0 text-red-700 dark:text-red-300">
+      <span class="text-base font-bold tabular-nums">{{ blocked_count }}</span>
+      <span class="text-sm font-medium truncate">
+        {% if blocked_count == 1 %}{% trans "مريض محظور من الحجز حالياً" %}{% else %}{% trans "مرضى محظورون من الحجز حالياً" %}{% endif %}
+      </span>
+    </span>
+    <i class="fa-solid {% if IS_RTL %}fa-chevron-left{% else %}fa-chevron-right{% endif %} text-red-500 dark:text-red-400 text-sm flex-shrink-0 transition-transform {% if IS_RTL %}group-hover:-translate-x-0.5{% else %}group-hover:translate-x-0.5{% endif %}"></i>
+  </a>
+  <button type="button"
+          aria-label="{% trans 'إخفاء' %}"
+          onclick="(function(b){try{localStorage.setItem(b.dataset.bbKey,'1')}catch(e){}b.remove();})(document.getElementById('blocked-banner'))"
+          class="flex-shrink-0 p-1.5 rounded-lg text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors">
+    <i class="fa-solid fa-xmark"></i>
+  </button>
+</div>
+<script>
+  (function () {
+    var b = document.getElementById('blocked-banner');
+    if (!b) return;
+    try {
+      if (!localStorage.getItem(b.dataset.bbKey)) b.classList.remove('hidden');
+    } catch (e) { b.classList.remove('hidden'); }
+  })();
+</script>
+{% endif %}
+
+{% endif %}
