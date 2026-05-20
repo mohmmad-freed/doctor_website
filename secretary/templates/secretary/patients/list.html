@@ -23,19 +23,6 @@
   {# ── Blocked patients banner (not dismissible here) ── #}
   {% include "secretary/partials/blocked_banner.html" with blocked_count=blocked_count dismissible=False %}
 
-  {# ── Messages ── #}
-  {% if messages %}
-  <div class="space-y-2">
-    {% for msg in messages %}
-    <div class="px-4 py-3 rounded-xl text-sm font-medium
-      {% if msg.tags == 'success' %}bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800
-      {% elif msg.tags == 'error' %}bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800
-      {% else %}bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800{% endif %}">
-      {{ msg }}
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
 
   {# ── Search & Filters ── #}
   <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">

@@ -824,3 +824,19 @@ msgstr ""
 
 msgid "سبب الرفض (اختياري)..."
 msgstr ""
+
+# ── Patient detail (page) ─────────────────────────────────────────────────────
+msgid "المعلومات الشخصية"
+msgstr ""
+
+msgid "السجلات الطبية"
+msgstr ""
+
+msgid "%(a)s سنة"
+msgstr ""
+
+msgid "سجل المواعيد (%(count)s)"
+msgstr ""
+
+msgid "السجلات الطبية (%(count)s)"
+msgstr ""

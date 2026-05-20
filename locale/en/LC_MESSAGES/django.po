@@ -776,11 +776,20 @@ msgstr "Clinic Notes"
 msgid "الدكتور"
 msgstr "Doctor"
 
+msgid "سجل المواعيد (%(count)s)"
+msgstr "Appointment History (%(count)s)"
+
 msgid "لا توجد مواعيد مسجلة"
 msgstr "No appointments registered"
 
 msgid "حجز أول موعد"
 msgstr "Book First Appointment"
+
+msgid "السجلات الطبية"
+msgstr "Medical Records"
+
+msgid "السجلات الطبية (%(count)s)"
+msgstr "Medical Records (%(count)s)"
 
 msgid "لا توجد سجلات طبية"
 msgstr "No medical records"
@@ -1283,8 +1292,8 @@ msgstr "Cannot register them again in the same clinic."
 msgid "رقم الهوية غير متوفر"
 msgstr "ID number not available"
 
-msgid "{{ a }} سنة"
-msgstr "{{ a }} years old"
+msgid "%(a)s سنة"
+msgstr "%(a)s years old"
 
 msgid "تاريخ الميلاد غير متوفر"
 msgstr "Date of birth not available"

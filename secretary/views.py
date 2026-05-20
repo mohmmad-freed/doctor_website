@@ -2551,10 +2551,10 @@ def patient_detail(request, patient_id):
     blood_type_choices = _PP.BLOOD_TYPE_CHOICES
 
     tab_list = [
-        ("info",         "المعلومات الشخصية", "fa-solid fa-user"),
-        ("appointments", "المواعيد",           "fa-solid fa-calendar-days"),
-        ("records",      "السجلات الطبية",     "fa-solid fa-folder-open"),
-        ("billing",      "الفواتير",            "fa-solid fa-receipt"),
+        ("info",         _("المعلومات الشخصية"), "fa-solid fa-user"),
+        ("appointments", _("المواعيد"),           "fa-solid fa-calendar-days"),
+        ("records",      _("السجلات الطبية"),     "fa-solid fa-folder-open"),
+        ("billing",      _("الفواتير"),            "fa-solid fa-receipt"),
     ]
 
     return render(request, "secretary/patients/detail.html", {
