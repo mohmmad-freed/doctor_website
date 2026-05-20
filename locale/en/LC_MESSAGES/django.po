@@ -2549,3 +2549,28 @@ msgstr "Reject the request"
 
 msgid "سبب الرفض (اختياري)..."
 msgstr "Reason for rejection (optional)..."
+
+# ── Notification center (staff) — type badges & header copy ───────────────────
+msgid "محجوز"
+msgstr "Booked"
+
+msgid "غير مقروء"
+msgstr "Unread"
+
+msgid "معاد جدولته"
+msgstr "Rescheduled"
+
+msgid "معدّل"
+msgstr "Edited"
+
+msgid "تذكير"
+msgstr "Reminder"
+
+msgid "تحديث الحالة"
+msgstr "Status Update"
+
+msgid "إشعار"
+msgstr "Notification"
+
+msgid "لديك <b>%(count)s</b> إشعار غير مقروء"
+msgstr "You have <b>%(count)s</b> unread notifications"

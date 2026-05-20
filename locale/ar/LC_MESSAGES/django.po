@@ -840,3 +840,28 @@ msgstr ""
 
 msgid "السجلات الطبية (%(count)s)"
 msgstr ""
+
+# ── Notification center (staff) — type badges & header copy ───────────────────
+msgid "غير مقروء"
+msgstr ""
+
+msgid "ملغى"
+msgstr ""
+
+msgid "معاد جدولته"
+msgstr ""
+
+msgid "معدّل"
+msgstr ""
+
+msgid "تذكير"
+msgstr ""
+
+msgid "تحديث الحالة"
+msgstr ""
+
+msgid "إشعار"
+msgstr ""
+
+msgid "لديك <b>%(count)s</b> إشعار غير مقروء"
+msgstr ""
