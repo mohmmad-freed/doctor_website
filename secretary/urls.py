@@ -18,6 +18,8 @@ urlpatterns = [
     path('appointments/<int:appointment_id>/status/', views.update_appointment_status, name='update_appointment_status'),
     path('appointments/<int:appointment_id>/accept-new-patient/', views.accept_new_patient_request, name='accept_new_patient_request'),
     path('appointments/<int:appointment_id>/reject-new-patient/', views.reject_new_patient_request, name='reject_new_patient_request'),
+    path('appointments/<int:appointment_id>/register-new-patient-only/', views.register_new_patient_only, name='register_new_patient_only'),
+    path('appointments/<int:appointment_id>/notification-modal/', views.notification_appointment_modal, name='notification_appointment_modal'),
     path('appointments/<int:appointment_id>/remove-from-queue/', views.remove_from_queue, name='remove_from_queue'),
     path('calendar/', views.calendar_view, name='calendar'),
 

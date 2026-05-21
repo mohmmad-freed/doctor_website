@@ -2574,3 +2574,58 @@ msgstr "Notification"
 
 msgid "لديك <b>%(count)s</b> إشعار غير مقروء"
 msgstr "You have <b>%(count)s</b> unread notifications"
+
+# ── Secretary notifications: appointment action modal ───────────────────────
+msgid "معلومات المريض"
+msgstr "Patient info"
+
+msgid "النموذج المعبأ"
+msgstr "Submitted form"
+
+msgid "الملفات المرفقة"
+msgstr "Attached files"
+
+msgid "قبول الموعد"
+msgstr "Confirm appointment"
+
+msgid "رفض الموعد"
+msgstr "Reject appointment"
+
+msgid "تسجيل المريض فقط"
+msgstr "Register patient only"
+
+msgid "إعادة جدولة"
+msgstr "Reschedule"
+
+msgid "تم تسجيل المريض وإلغاء طلب الموعد."
+msgstr "Patient registered; appointment rejected."
+
+msgid "تم تسجيل المريض دون تأكيد هذا الموعد"
+msgstr "Patient registered without confirming this appointment"
+
+msgid "هذا المريض غير مسجّل في العيادة. اختر أحد الإجراءات أدناه."
+msgstr "This patient is not registered with the clinic. Choose one of the actions below."
+
+msgid "سيُسجَّل المريض في العيادة ويُلغى هذا الموعد."
+msgstr "The patient will be registered with the clinic and this appointment will be cancelled."
+
+msgid "سبب إلغاء الموعد (اختياري)..."
+msgstr "Reason for cancelling the appointment (optional)..."
+
+msgid "تأكيد التسجيل وإلغاء الموعد"
+msgstr "Confirm registration & cancel appointment"
+
+msgid "طلب موعد بانتظار المراجعة."
+msgstr "Appointment request awaiting review."
+
+msgid "سبب الرفض..."
+msgstr "Reason for rejection..."
+
+msgid "فتح صفحة التفاصيل الكاملة"
+msgstr "Open full details page"
+
+msgid "قيد المراجعة"
+msgstr "Pending Review"
+
+msgid "تم الرفض"
+msgstr "Rejected"

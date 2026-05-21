@@ -27,6 +27,9 @@ from appointments.models import AppointmentNotification
 def _resolve_appointment_url(notification):
     """
     Return the best URL to link a notification to based strictly on its context.
+
+    Secretary notifications return None here because they open an in-page modal
+    instead of navigating; `_render_notifications` sets `modal_url` for them.
     """
     if not notification.appointment_id:
         return None
@@ -38,11 +41,21 @@ def _resolve_appointment_url(notification):
     if notification.context_role == AppointmentNotification.ContextRole.DOCTOR:
         return reverse("doctors:appointments")
     if notification.context_role == AppointmentNotification.ContextRole.SECRETARY:
-        return reverse("secretary:appointments")
+        return None
     if notification.context_role == AppointmentNotification.ContextRole.CLINIC_OWNER:
         # Link back to the specific clinic's dashboard
         return reverse("clinics:my_clinic", kwargs={"clinic_id": notification.appointment.clinic_id})
     return None
+
+
+def _resolve_modal_url(notification):
+    """Secretary notifications open an HTMX modal on the notifications page."""
+    if not notification.appointment_id:
+        return None
+    if notification.context_role != AppointmentNotification.ContextRole.SECRETARY:
+        return None
+    from django.urls import reverse
+    return reverse("secretary:notification_appointment_modal", args=[notification.appointment_id])
 
 
 def _render_notifications(request, context_role, template, base_template):
@@ -59,6 +72,7 @@ def _render_notifications(request, context_role, template, base_template):
     notifications = list(notifications_qs)
     for notif in notifications:
         notif.target_url = _resolve_appointment_url(notif)
+        notif.modal_url = _resolve_modal_url(notif)
 
     context = {
         "notifications": notifications,

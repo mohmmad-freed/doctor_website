@@ -414,6 +414,7 @@ def appointment_detail(request, appointment_id):
         "appointments": reverse("secretary:appointments"),
         "dashboard": reverse("secretary:dashboard"),
         "calendar": reverse("secretary:calendar") + "?restore=1",
+        "notifications": reverse("appointments:secretary_notifications"),
     }
     back_url = _back_map.get(request.GET.get("return_to", ""), reverse("secretary:appointments"))
 
@@ -429,6 +430,96 @@ def appointment_detail(request, appointment_id):
         "current_step_index": current_step_index,
         "back_url": back_url,
     })
+
+
+@login_required
+def notification_appointment_modal(request, appointment_id):
+    """HTMX endpoint: return the appointment action modal partial for the secretary
+    notifications page. Status-aware: branches between pending/confirmed/cancelled/etc."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+
+    clinic = staff.clinic
+    appointment = get_object_or_404(
+        Appointment.objects.select_related(
+            "patient", "doctor", "appointment_type", "patient__patient_profile"
+        ).prefetch_related("answers__question", "attachments"),
+        id=appointment_id, clinic=clinic,
+    )
+    profile = getattr(appointment.patient, "patient_profile", None)
+    clinic_patient = ClinicPatient.objects.filter(
+        clinic=clinic, patient=appointment.patient
+    ).first()
+    is_new_patient_request = (
+        appointment.status == Appointment.Status.PENDING and clinic_patient is None
+    )
+    terminal_statuses = [
+        Appointment.Status.COMPLETED,
+        Appointment.Status.CANCELLED,
+        Appointment.Status.NO_SHOW,
+    ]
+    return render(request, "secretary/_appointment_modal.html", {
+        "appointment": appointment,
+        "profile": profile,
+        "clinic_patient": clinic_patient,
+        "is_new_patient_request": is_new_patient_request,
+        "terminal_statuses": terminal_statuses,
+    })
+
+
+@login_required
+@require_POST
+def register_new_patient_only(request, appointment_id):
+    """Register an unregistered patient in the clinic AND cancel this booking.
+
+    Used when the secretary wants to keep the patient on file for future visits
+    but reject the specific slot they requested. Atomic: both happen or neither.
+    """
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+
+    from django.db import transaction
+    from secretary.services import transition_appointment_status
+    from appointments.services.booking_service import BookingError
+
+    clinic = staff.clinic
+    appointment = get_object_or_404(Appointment, id=appointment_id, clinic=clinic)
+
+    already_registered = ClinicPatient.objects.filter(
+        clinic=clinic, patient=appointment.patient
+    ).exists()
+    next_url = request.POST.get("next") or ""
+    redirect_to = next_url if next_url.startswith("/") else "secretary:appointments"
+
+    if appointment.status != Appointment.Status.PENDING or already_registered:
+        messages.error(request, _("لم يعد هذا الطلب بحاجة إلى مراجعة."))
+        return redirect(redirect_to)
+
+    reason = request.POST.get("cancellation_reason", "").strip() or _(
+        "تم تسجيل المريض دون تأكيد هذا الموعد"
+    )
+    try:
+        with transaction.atomic():
+            ClinicPatient.objects.get_or_create(
+                clinic=clinic,
+                patient=appointment.patient,
+                defaults={
+                    "registered_by": request.user,
+                    "file_number": _generate_file_number(clinic),
+                },
+            )
+            transition_appointment_status(
+                appointment,
+                Appointment.Status.CANCELLED,
+                cancellation_reason=reason,
+                actor=request.user,
+            )
+        messages.success(request, _("تم تسجيل المريض وإلغاء طلب الموعد."))
+    except BookingError as e:
+        messages.error(request, e.message)
+    return redirect(redirect_to)
 
 
 def _filter_confirmed_by_query(qs, q: str):

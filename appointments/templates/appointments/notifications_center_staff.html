@@ -133,9 +133,19 @@
 
         {# Resolve icon + color classes based on type #}
         {% if notif.notification_type == 'APPOINTMENT_BOOKED' %}
-            {% with icon_class="fa-regular fa-calendar-check" color_bg="bg-emerald-100 dark:bg-emerald-900/30" color_text="text-emerald-600 dark:text-emerald-400" badge_bg="bg-emerald-50 dark:bg-emerald-900/20" badge_text="text-emerald-700 dark:text-emerald-400" %}
-            {% include "appointments/partials/notif_card_doctor.html" %}
-            {% endwith %}
+            {% if notif.appointment and notif.appointment.status == 'PENDING' %}
+                {% with icon_class="fa-regular fa-clock" color_bg="bg-amber-100 dark:bg-amber-900/30" color_text="text-amber-600 dark:text-amber-400" badge_bg="bg-amber-50 dark:bg-amber-900/20" badge_text="text-amber-700 dark:text-amber-400" %}
+                {% include "appointments/partials/notif_card_doctor.html" %}
+                {% endwith %}
+            {% elif notif.appointment and notif.appointment.status == 'CANCELLED' %}
+                {% with icon_class="fa-regular fa-calendar-xmark" color_bg="bg-red-100 dark:bg-red-900/30" color_text="text-red-600 dark:text-red-400" badge_bg="bg-red-50 dark:bg-red-900/20" badge_text="text-red-700 dark:text-red-400" %}
+                {% include "appointments/partials/notif_card_doctor.html" %}
+                {% endwith %}
+            {% else %}
+                {% with icon_class="fa-regular fa-calendar-check" color_bg="bg-emerald-100 dark:bg-emerald-900/30" color_text="text-emerald-600 dark:text-emerald-400" badge_bg="bg-emerald-50 dark:bg-emerald-900/20" badge_text="text-emerald-700 dark:text-emerald-400" %}
+                {% include "appointments/partials/notif_card_doctor.html" %}
+                {% endwith %}
+            {% endif %}
         {% elif notif.notification_type == 'APPOINTMENT_CANCELLED' %}
             {% with icon_class="fa-regular fa-calendar-xmark" color_bg="bg-red-100 dark:bg-red-900/30" color_text="text-red-600 dark:text-red-400" badge_bg="bg-red-50 dark:bg-red-900/20" badge_text="text-red-700 dark:text-red-400" %}
             {% include "appointments/partials/notif_card_doctor.html" %}
@@ -185,4 +195,7 @@
     {% endif %}
 
 </div>
+
+{# Modal mount point — secretary notifications inject the action modal here via HTMX #}
+<div id="notification-modal-root"></div>
 {% endblock %}
