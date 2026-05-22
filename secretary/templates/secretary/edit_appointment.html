@@ -79,7 +79,7 @@
 
         <dt class="text-gray-500 dark:text-gray-400 font-medium">{% trans "الموعد الحالي" %}</dt>
         <dd class="col-span-2 text-gray-700 dark:text-gray-200 font-mono" dir="ltr">
-          {{ appointment.appointment_date|date:"d/m/Y" }} — {{ appointment.appointment_time|time:"H:i" }}
+          {{ appointment.appointment_date|date:"d/m/Y" }} — {{ appointment.appointment_time|clock:CLOCK_12H }}
         </dd>
 
         <dt class="text-gray-500 dark:text-gray-400 font-medium">{% trans "الحالة" %}</dt>

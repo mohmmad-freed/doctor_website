@@ -8,7 +8,7 @@
     <div class="flex items-center gap-3 min-w-0 flex-1">
       <div class="text-center flex-shrink-0">
         <div class="text-base font-bold text-gray-900 dark:text-gray-100 tabular-nums leading-none">
-          {{ appt.appointment_time|time:"H:i" }}
+          {{ appt.appointment_time|clock:CLOCK_12H }}
         </div>
       </div>
       <div class="min-w-0">

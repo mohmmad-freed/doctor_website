@@ -92,7 +92,7 @@
             {# Time #}
             <div class="text-center flex-shrink-0 w-12">
               <div class="text-lg font-bold text-gray-900 dark:text-gray-100 tabular-nums leading-none">
-                {{ appt.appointment_time|time:"H:i" }}
+                {{ appt.appointment_time|clock:CLOCK_12H }}
               </div>
             </div>
 

@@ -50,7 +50,7 @@
     <div class="space-y-1.5 pr-7">
       {% for appt in conflicting_appointments %}
       <div class="flex items-center gap-3 text-xs">
-        <span class="text-amber-600 dark:text-amber-400 font-mono">{{ appt.appointment_date|date:"Y/m/d" }} {{ appt.appointment_time|time:"H:i" }}</span>
+        <span class="text-amber-600 dark:text-amber-400 font-mono">{{ appt.appointment_date|date:"Y/m/d" }} {{ appt.appointment_time|clock:CLOCK_12H }}</span>
         <span class="text-gray-700 dark:text-gray-300">{{ appt.patient.name }}</span>
         <a href="{% url 'secretary:appointment_detail' appt.id %}"
            class="text-purple-600 dark:text-purple-400 hover:underline" target="_blank">

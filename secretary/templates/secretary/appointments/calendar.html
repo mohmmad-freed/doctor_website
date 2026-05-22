@@ -489,6 +489,7 @@ var selectedDoctorId = '';
 var calendarInstance = null;
 var currentLang = '{{ CURRENT_LANG }}';
 var isRTL = {{ IS_RTL|yesno:"true,false" }};
+var SEC_USE_12H = {{ CLOCK_12H|yesno:"true,false" }};
 
 // ── Persist calendar state across booking workflow ──
 var CAL_STATE_KEY = 'secretaryCalendarState';
@@ -591,8 +592,8 @@ document.addEventListener('DOMContentLoaded', function() {
     nowIndicator: true,
     weekends: true,
     height: 620,
-    eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
-    slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
+    eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: SEC_USE_12H },
+    slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: SEC_USE_12H },
 
     // Fetch events from our JSON endpoint
     events: function(info, successCb, failureCb) {
@@ -742,7 +743,7 @@ document.addEventListener('DOMContentLoaded', function() {
       var props = arg.event.extendedProps;
       if (props.kind === 'unavailable' || props.kind === 'past') return { html: '' };
       var time = arg.event.start
-        ? arg.event.start.toLocaleTimeString(currentLang, {hour:'2-digit',minute:'2-digit',hour12:false})
+        ? arg.event.start.toLocaleTimeString(currentLang, {hour:'2-digit',minute:'2-digit',hour12:SEC_USE_12H})
         : '';
       if (props.kind === 'group') {
         var stripes = (props.by_status || []).map(function(s) {
@@ -796,7 +797,7 @@ function openGroupModal(event) {
   var modal = document.getElementById('group-modal');
   if (!modal) return;
   var time = event.start
-    ? event.start.toLocaleTimeString(currentLang, {hour:'2-digit',minute:'2-digit',hour12:false})
+    ? event.start.toLocaleTimeString(currentLang, {hour:'2-digit',minute:'2-digit',hour12:SEC_USE_12H})
     : '';
   document.getElementById('gm-title').textContent =
     time + ' · ' + (props.count || 0) + ' ' + ttApptsWord;

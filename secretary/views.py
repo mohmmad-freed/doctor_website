@@ -13,8 +13,15 @@ from django.views.decorators.http import require_POST
 
 from appointments.models import Appointment, AppointmentType
 from patients.models import ClinicPatient, PatientProfile
+from secretary.timefmt import format_clock
 
 User = get_user_model()
+
+
+def _clock(request, value):
+    """Format a time/datetime honoring the requesting user's 24h/12h preference."""
+    use_12h = getattr(request.user, "time_format", "24") == "12"
+    return format_clock(value, use_12h, getattr(request, "LANGUAGE_CODE", "ar"))
 
 
 def _sweep_clinic_no_shows(clinic):
@@ -1041,7 +1048,7 @@ def report_daily(request):
         writer.writerow(["الوقت", "المريض", "الطبيب", "الخدمة", "الحالة", "السعر"])
         for appt in appointments:
             writer.writerow([
-                appt.appointment_time.strftime("%H:%M"),
+                _clock(request, appt.appointment_time),
                 appt.patient.name,
                 appt.doctor.name if appt.doctor else "",
                 appt.appointment_type.display_name if appt.appointment_type else "",
@@ -1145,7 +1152,7 @@ def report_visits(request):
             writer.writerow([
                 appt.patient.name,
                 appt.appointment_date.strftime("%Y/%m/%d"),
-                appt.appointment_time.strftime("%H:%M"),
+                _clock(request, appt.appointment_time),
                 appt.doctor.name if appt.doctor else "",
                 appt.appointment_type.display_name if appt.appointment_type else "",
                 appt.get_status_display(),
@@ -1749,6 +1756,15 @@ def settings_profile(request):
                 messages.success(request, _("تم حفظ الملف الشخصي بنجاح."))
                 return redirect("secretary:settings_profile")
 
+        # ── Display preferences (time format) ────────────────────────
+        elif action == "preferences":
+            fmt = request.POST.get("time_format", "24")
+            if fmt in {"24", "12"}:
+                user.time_format = fmt
+                user.save(update_fields=["time_format"])
+                messages.success(request, _("تم حفظ تفضيل عرض الوقت."))
+            return redirect("secretary:settings_profile")
+
         # ── Password change ──────────────────────────────────────────
         elif action == "password":
             current_pw = request.POST.get("current_password", "")
@@ -2255,7 +2271,7 @@ def appointments_json(request):
             "status_label": appt.get_status_display(),
             "url": f"/secretary/appointments/{appt.id}/",
             "time": appt.appointment_time.strftime("%H:%M"),
-            "time_label": appt.appointment_time.strftime("%H:%M"),
+            "time_label": _clock(request, appt.appointment_time),
             "duration_minutes": duration,
         }
         buckets[(appt.appointment_date, bucket_idx)].append(

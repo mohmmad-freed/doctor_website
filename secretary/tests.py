@@ -1469,3 +1469,93 @@ class AppointmentDetailReturnToNotificationsTests(SecretaryTestBase):
             resp,
             reverse("secretary:appointment_detail", args=[appt.id]) + "?return_to=notifications",
         )
+
+
+class FormatClockHelperTests(TestCase):
+    """Unit tests for the shared 24h/12h time formatter."""
+
+    def test_24h_format(self):
+        from secretary.timefmt import format_clock
+        self.assertEqual(format_clock(time(14, 30), False), "14:30")
+        self.assertEqual(format_clock(time(9, 5), False), "09:05")
+
+    def test_12h_arabic_markers(self):
+        from secretary.timefmt import format_clock
+        self.assertEqual(format_clock(time(14, 30), True, "ar"), "2:30 م")
+        self.assertEqual(format_clock(time(9, 5), True, "ar"), "9:05 ص")
+
+    def test_12h_english_markers(self):
+        from secretary.timefmt import format_clock
+        self.assertEqual(format_clock(time(14, 30), True, "en"), "2:30 PM")
+        self.assertEqual(format_clock(time(9, 5), True, "en"), "9:05 AM")
+
+    def test_midnight_and_noon_edges(self):
+        from secretary.timefmt import format_clock
+        self.assertEqual(format_clock(time(0, 0), True, "en"), "12:00 AM")
+        self.assertEqual(format_clock(time(12, 0), True, "en"), "12:00 PM")
+        self.assertEqual(format_clock(time(0, 0), True, "ar"), "12:00 ص")
+
+    def test_none_returns_empty_string(self):
+        from secretary.timefmt import format_clock
+        self.assertEqual(format_clock(None, True), "")
+
+    def test_aware_datetime_is_localized(self):
+        """Aware datetimes must format the same as Django's tz-aware localtime."""
+        import datetime as _dt
+        from secretary.timefmt import format_clock
+        aware = _dt.datetime(2026, 1, 15, 23, 30, tzinfo=_dt.timezone.utc)
+        expected = timezone.localtime(aware).strftime("%H:%M")
+        self.assertEqual(format_clock(aware, False), expected)
+
+
+class TimeFormatPreferenceTests(SecretaryTestBase):
+    """The secretary profile page persists the 24h/12h display preference."""
+
+    def test_default_is_24h(self):
+        self.assertEqual(self.secretary_a.time_format, "24")
+
+    def test_profile_page_shows_time_format_setting(self):
+        self.client.force_login(self.secretary_a)
+        resp = self.client.get(reverse("secretary:settings_profile"))
+        self.assertContains(resp, 'name="time_format"')
+
+    def test_save_12h_preference(self):
+        self.client.force_login(self.secretary_a)
+        resp = self.client.post(
+            reverse("secretary:settings_profile"),
+            {"action": "preferences", "time_format": "12"},
+        )
+        self.assertRedirects(resp, reverse("secretary:settings_profile"))
+        self.secretary_a.refresh_from_db()
+        self.assertEqual(self.secretary_a.time_format, "12")
+
+    def test_invalid_value_is_ignored(self):
+        self.client.force_login(self.secretary_a)
+        self.client.post(
+            reverse("secretary:settings_profile"),
+            {"action": "preferences", "time_format": "garbage"},
+        )
+        self.secretary_a.refresh_from_db()
+        self.assertEqual(self.secretary_a.time_format, "24")
+
+    def test_clock_filter_available_as_builtin(self):
+        """The clock filter renders without an explicit {% load %}."""
+        from django.template import Template, Context
+        out = Template("{{ t|clock:True }}").render(Context({"t": time(14, 30)}))
+        self.assertIn("2:30", out)
+
+    def test_clock_text_reformats_embedded_time_for_12h(self):
+        """A baked-in 24h time inside a notification message is rewritten to 12h,
+        while the date (which has no colon) is left untouched."""
+        from django.template import Template, Context
+        msg = "A new appointment was booked on 2026-05-23 at 17:45."
+        out = Template("{{ m|clock_text:True }}").render(Context({"m": msg}))
+        self.assertIn("5:45", out)
+        self.assertNotIn("17:45", out)
+        self.assertIn("2026-05-23", out)
+
+    def test_clock_text_is_noop_for_24h(self):
+        from django.template import Template, Context
+        msg = "Booked at 17:45."
+        out = Template("{{ m|clock_text:False }}").render(Context({"m": msg}))
+        self.assertIn("17:45", out)

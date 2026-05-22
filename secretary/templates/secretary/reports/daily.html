@@ -160,7 +160,7 @@
           {% for appt in appointments %}
           <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors print:hover:bg-transparent">
             <td class="px-4 py-3 text-xs text-gray-400 dark:text-gray-500">{{ forloop.counter }}</td>
-            <td class="px-4 py-3 font-mono text-gray-700 dark:text-gray-300 text-sm">{{ appt.appointment_time|time:"H:i" }}</td>
+            <td class="px-4 py-3 font-mono text-gray-700 dark:text-gray-300 text-sm">{{ appt.appointment_time|clock:CLOCK_12H }}</td>
             <td class="px-4 py-3">
               <div class="font-medium text-gray-900 dark:text-gray-100">{{ appt.patient.name }}</div>
               <div class="text-xs text-gray-400 dark:text-gray-500">{{ appt.patient.phone }}</div>

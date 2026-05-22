@@ -119,6 +119,18 @@ class CustomUser(AbstractUser):
         help_text="User's preferred UI language. Null means role-based default applies.",
     )
 
+    TIME_FORMAT_CHOICES = [
+        ("24", "24-hour"),
+        ("12", "12-hour (AM/PM)"),
+    ]
+
+    time_format = models.CharField(
+        max_length=2,
+        choices=TIME_FORMAT_CHOICES,
+        default="24",
+        help_text="Preferred time-of-day display style across the secretary side.",
+    )
+
     # Set phone as the unique identifier for login
     USERNAME_FIELD = "phone"
     REQUIRED_FIELDS = []

@@ -17,7 +17,7 @@
           data-time="{{ slot.time|time:'H:i' }}"
           {% if not slot.is_available %}disabled{% endif %}
           {% if slot.is_booked %}title="{% trans 'محجوز' %}"{% endif %}>
-    {{ slot.time|time:"H:i" }}
+    {{ slot.time|clock:CLOCK_12H }}
     {% if slot.is_booked %}
     <br><span class="text-[9px] font-normal">{% trans "محجوز" %}</span>
     {% endif %}

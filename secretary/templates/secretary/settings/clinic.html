@@ -131,7 +131,7 @@
           {% if booking_settings.updated_by %}
             {% trans "آخر تحديث:" %}
             <span class="font-medium text-gray-700 dark:text-gray-300">{{ booking_settings.updated_by.name }}</span>
-            · {{ booking_settings.updated_at|date:"Y-m-d H:i" }}
+            · {{ booking_settings.updated_at|date:"Y-m-d" }} {{ booking_settings.updated_at|clock:CLOCK_12H }}
           {% endif %}
         </div>
         <button type="submit"

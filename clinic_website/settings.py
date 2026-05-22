@@ -114,6 +114,10 @@ TEMPLATES = [
                 "appointments.context_processors.unread_notifications",
                 "doctors.context_processors.doctor_context",
                 "accounts.context_processors.language_context",
+                "secretary.context_processors.time_format",
+            ],
+            "builtins": [
+                "secretary.templatetags.clock_extras",
             ],
         },
     },

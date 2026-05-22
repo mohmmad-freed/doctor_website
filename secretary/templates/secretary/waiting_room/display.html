@@ -212,9 +212,10 @@
     // Live clock
     function updateClock() {
       var now = new Date();
-      var h = String(now.getHours()).padStart(2, '0');
-      var m = String(now.getMinutes()).padStart(2, '0');
-      document.getElementById('clock').textContent = h + ':' + m;
+      var locale = {% if display_is_rtl %}'ar-PS'{% else %}'en-GB'{% endif %};
+      document.getElementById('clock').textContent = now.toLocaleTimeString(locale, {
+        hour: '2-digit', minute: '2-digit', hour12: {{ CLOCK_12H|yesno:"true,false" }}
+      });
     }
     updateClock();
     setInterval(updateClock, 1000);

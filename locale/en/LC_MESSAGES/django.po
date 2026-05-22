@@ -880,6 +880,21 @@ msgstr "Light"
 msgid "ليلي"
 msgstr "Dark"
 
+msgid "نمط عرض الوقت"
+msgstr "Time display format"
+
+msgid "كيفية عرض الوقت في كامل لوحة السكرتارية"
+msgstr "How time is shown across the secretary panel"
+
+msgid "24 ساعة (14:30)"
+msgstr "24-hour (14:30)"
+
+msgid "12 ساعة (2:30 م)"
+msgstr "12-hour (2:30 PM)"
+
+msgid "تم حفظ تفضيل عرض الوقت."
+msgstr "Time display preference saved."
+
 msgid "عرض التقويم الافتراضي"
 msgstr "Default Calendar View"
 

@@ -95,7 +95,7 @@
           </div>
           <div class="flex justify-between gap-3">
             <span class="text-gray-500 dark:text-gray-400">{% trans "الوقت" %}</span>
-            <span class="font-semibold text-gray-800 dark:text-gray-100" dir="ltr">{{ appointment.appointment_time|time:"H:i" }}</span>
+            <span class="font-semibold text-gray-800 dark:text-gray-100" dir="ltr">{{ appointment.appointment_time|clock:CLOCK_12H }}</span>
           </div>
           <div class="flex justify-between gap-3">
             <span class="text-gray-500 dark:text-gray-400">{% trans "الطبيب" %}</span>
@@ -122,7 +122,7 @@
           {% if appointment.checked_in_at %}
           <div class="flex justify-between gap-3 pt-2 border-t border-gray-200 dark:border-slate-700">
             <span class="text-gray-500 dark:text-gray-400">{% trans "وقت الوصول" %}</span>
-            <span class="text-gray-700 dark:text-gray-300" dir="ltr">{{ appointment.checked_in_at|date:"H:i" }}</span>
+            <span class="text-gray-700 dark:text-gray-300" dir="ltr">{{ appointment.checked_in_at|clock:CLOCK_12H }}</span>
           </div>
           {% endif %}
         </div>

@@ -145,7 +145,7 @@
               <div class="text-xs text-gray-400 dark:text-gray-500">{{ appt.patient.phone }}</div>
             </td>
             <td class="px-4 py-3 text-gray-700 dark:text-gray-300">{{ appt.appointment_date|date:"j/m/Y" }}</td>
-            <td class="px-4 py-3 font-mono text-gray-600 dark:text-gray-400">{{ appt.appointment_time|time:"H:i" }}</td>
+            <td class="px-4 py-3 font-mono text-gray-600 dark:text-gray-400">{{ appt.appointment_time|clock:CLOCK_12H }}</td>
             <td class="px-4 py-3 text-gray-600 dark:text-gray-400">
               {% if appt.doctor %}د. {{ appt.doctor.name }}{% else %}—{% endif %}
             </td>

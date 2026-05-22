@@ -25,7 +25,7 @@
         </h1>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
           {{ appointment.appointment_date|date:"d/m/Y" }}
-          &mdash; {{ appointment.appointment_time|time:"H:i" }}
+          &mdash; {{ appointment.appointment_time|clock:CLOCK_12H }}
           &mdash; {% trans "موعد" %} #{{ appointment.id }}
         </p>
       </div>
@@ -217,7 +217,7 @@
         {% if appointment.checked_in_at %}
         <div class="flex justify-between">
           <span class="text-gray-500 dark:text-gray-400">{% trans "وقت الوصول" %}</span>
-          <span class="text-gray-700 dark:text-gray-300">{{ appointment.checked_in_at|date:"H:i" }}</span>
+          <span class="text-gray-700 dark:text-gray-300">{{ appointment.checked_in_at|clock:CLOCK_12H }}</span>
         </div>
         {% endif %}
       </div>

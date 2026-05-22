@@ -43,13 +43,13 @@
           <span class="text-gray-300 dark:text-gray-600">·</span>
           <span title="{% trans 'وقت الموعد المحجوز' %}" class="inline-flex items-center gap-1">
             <i class="fa-regular fa-calendar text-[10px]"></i>
-            <span class="font-mono">{{ appt.appointment_time|time:"H:i" }}</span>
+            <span class="font-mono">{{ appt.appointment_time|clock:CLOCK_12H }}</span>
           </span>
           {% endif %}
           <span class="text-gray-300 dark:text-gray-600">·</span>
           <span title="{% trans 'وقت الوصول' %}" class="inline-flex items-center gap-1">
             <i class="fa-regular fa-clock text-[10px]"></i>
-            <span class="font-mono">{{ appt.checked_in_at|time:"H:i" }}</span>
+            <span class="font-mono">{{ appt.checked_in_at|clock:CLOCK_12H }}</span>
           </span>
         </div>
       </div>

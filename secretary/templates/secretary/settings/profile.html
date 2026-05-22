@@ -248,6 +248,22 @@
         </div>
       </div>
 
+      {# Time display format (server-saved, applies across the secretary side) #}
+      <form method="post" class="px-5 py-4 flex items-center justify-between gap-4">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="preferences">
+        <div>
+          <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{% trans "نمط عرض الوقت" %}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{% trans "كيفية عرض الوقت في كامل لوحة السكرتارية" %}</p>
+        </div>
+        <select name="time_format"
+                onchange="this.form.submit()"
+                class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
+          <option value="24" {% if user.time_format == '24' %}selected{% endif %}>{% trans "24 ساعة (14:30)" %}</option>
+          <option value="12" {% if user.time_format == '12' %}selected{% endif %}>{% trans "12 ساعة (2:30 م)" %}</option>
+        </select>
+      </form>
+
       {# Default calendar view #}
       <div class="px-5 py-4 flex items-center justify-between gap-4">
         <div>
