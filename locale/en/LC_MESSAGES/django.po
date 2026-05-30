@@ -2517,6 +2517,9 @@ msgstr "patient currently blocked from booking"
 msgid "مرضى محظورون من الحجز حالياً"
 msgstr "patients currently blocked from booking"
 
+msgid "تعرض الآن"
+msgstr "Now viewing"
+
 msgid "إخفاء"
 msgstr "Dismiss"
 

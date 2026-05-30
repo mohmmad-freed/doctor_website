@@ -20,8 +20,8 @@
     </a>
   </div>
 
-  {# ── Blocked patients banner (not dismissible here) ── #}
-  {% include "secretary/partials/blocked_banner.html" with blocked_count=blocked_count dismissible=False %}
+  {# ── Blocked patients banner (not dismissible here; active variant when filter is on) ── #}
+  {% include "secretary/partials/blocked_banner.html" with blocked_count=blocked_count dismissible=False is_active=blocked_filter_active %}
 
 
   {# ── Search & Filters ── #}

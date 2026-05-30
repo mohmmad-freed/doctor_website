@@ -2,6 +2,25 @@
 {% if blocked_count %}
 
 {% if not dismissible %}
+{% if is_active %}
+<div role="status"
+     aria-current="page"
+     class="flex items-center gap-3 rounded-2xl border border-red-300 dark:border-red-700 bg-red-100/70 dark:bg-red-900/30 ring-1 ring-inset ring-red-200 dark:ring-red-800 px-4 py-3 cursor-default">
+  <span class="flex-shrink-0 w-9 h-9 rounded-full bg-red-200/80 dark:bg-red-900/50 inline-flex items-center justify-center text-red-700 dark:text-red-200">
+    <i class="fa-solid fa-user-lock"></i>
+  </span>
+  <span class="flex items-baseline gap-1.5 flex-1 min-w-0 text-red-800 dark:text-red-200">
+    <span class="text-base font-bold tabular-nums">{{ blocked_count }}</span>
+    <span class="text-sm font-medium truncate">
+      {% if blocked_count == 1 %}{% trans "مريض محظور من الحجز حالياً" %}{% else %}{% trans "مرضى محظورون من الحجز حالياً" %}{% endif %}
+    </span>
+  </span>
+  <span class="flex-shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-200/80 dark:bg-red-900/50 text-red-700 dark:text-red-200 text-xs font-semibold">
+    <i class="fa-solid fa-eye text-[10px]"></i>
+    {% trans "تعرض الآن" %}
+  </span>
+</div>
+{% else %}
 <a href="{% url 'secretary:patient_list' %}?filter=blocked"
    class="group flex items-center gap-3 rounded-2xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 hover:bg-red-100 dark:hover:bg-red-900/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 transition-colors">
   <span class="flex-shrink-0 w-9 h-9 rounded-full bg-red-100 dark:bg-red-900/40 inline-flex items-center justify-center text-red-600 dark:text-red-300">
@@ -15,6 +34,7 @@
   </span>
   <i class="fa-solid {% if IS_RTL %}fa-chevron-left{% else %}fa-chevron-right{% endif %} text-red-500 dark:text-red-400 text-sm flex-shrink-0 transition-transform {% if IS_RTL %}group-hover:-translate-x-0.5{% else %}group-hover:translate-x-0.5{% endif %}"></i>
 </a>
+{% endif %}
 
 {% else %}
 <div id="blocked-banner"

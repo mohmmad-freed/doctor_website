@@ -777,6 +777,9 @@ msgstr ""
 msgid "مرضى محظورون من الحجز حالياً"
 msgstr ""
 
+msgid "تعرض الآن"
+msgstr ""
+
 msgid "إخفاء"
 msgstr ""
 

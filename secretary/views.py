@@ -2599,6 +2599,7 @@ def patient_list(request):
         "search": search,
         "sort": sort,
         "current_filter": current_filter,
+        "blocked_filter_active": current_filter == "blocked",
         "blocked_count": count_blocked_patients(clinic),
         "total_count": paginator.count,
     })
