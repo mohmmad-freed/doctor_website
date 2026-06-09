@@ -16,14 +16,14 @@
                         {% if primary %}
                             <div class="drawer-doctor-specialty">
                                 <i class="fa-solid fa-stethoscope"></i>
-                                {{ primary.name_ar }}
+                                {{ primary.display_name }}
                             </div>
                         {% endif %}
                     {% endwith %}
                     {% if profile.years_of_experience %}
                         <div class="drawer-doctor-exp">
                             <i class="fa-regular fa-clock"></i>
-                            {{ profile.years_of_experience }} سنوات خبرة
+                            {{ profile.years_of_experience }} {% trans "سنوات خبرة" %}
                         </div>
                     {% endif %}
                 {% endif %}
@@ -36,7 +36,7 @@
     <!-- Section title -->
     <h3 class="drawer-section-title">
         <i class="fa-regular fa-calendar-days"></i>
-        أوقات العمل الأسبوعية
+        {% trans "أوقات العمل الأسبوعية" %}
     </h3>
 
     {% if has_availability %}
@@ -64,7 +64,7 @@
     {% else %}
     <div class="schedule-empty-state">
         <i class="fa-regular fa-calendar-xmark"></i>
-        <p>لم يتم تحديد أوقات عمل لهذا الطبيب في هذه العيادة بعد.</p>
+        <p>{% trans "لم يتم تحديد أوقات عمل لهذا الطبيب في هذه العيادة بعد." %}</p>
     </div>
     {% endif %}
 

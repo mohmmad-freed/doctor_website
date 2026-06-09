@@ -18,6 +18,14 @@ class Specialty(models.Model):
     def __str__(self):
         return f"{self.name_ar} ({self.name})"
 
+    @property
+    def display_name(self):
+        """Specialty name in the active language (English falls back to Arabic)."""
+        from django.utils.translation import get_language
+        if (get_language() or "ar").startswith("ar"):
+            return self.name_ar or self.name
+        return self.name or self.name_ar
+
 
 class DoctorProfile(models.Model):
     user = models.OneToOneField(

@@ -1,6 +1,7 @@
 {% extends 'accounts/base.html' %}
+{% load i18n %}
 
-{% block title %}{{ clinic.name }} — لوحة التحكم{% endblock %}
+{% block title %}{{ clinic.name }} — {% trans "لوحة التحكم" %}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -859,11 +860,11 @@
                 <div>
                     {% if clinic.status == "ACTIVE" %}
                     <span class="hero-status">
-                        <span class="hdot"></span> نشطة
+                        <span class="hdot"></span> {% trans "نشطة" %}
                     </span>
                     {% elif clinic.status == "PENDING" %}
                     <span class="hero-status" style="background:rgba(255,255,255,0.1);">
-                        <span class="hdot" style="background:#93c5fd;animation:none;"></span> قيد المراجعة
+                        <span class="hdot" style="background:#93c5fd;animation:none;"></span> {% trans "قيد المراجعة" %}
                     </span>
                     {% else %}
                     <span class="hero-status" style="background:rgba(245,158,11,0.2);border-color:rgba(245,158,11,0.3);">
@@ -876,10 +877,10 @@
 
         <div class="hero-right">
             <a href="{% url 'clinics:my_clinics' %}" class="btn-hero-sm btn-ghost">
-                <i class="fa-solid fa-arrow-right"></i> عياداتي
+                <i class="fa-solid fa-arrow-{% if IS_RTL %}right{% else %}left{% endif %}"></i> {% trans "عياداتي" %}
             </a>
             <a href="{% url 'clinics:reports' %}" class="btn-hero-sm btn-white">
-                <i class="fa-solid fa-chart-bar"></i> التقارير
+                <i class="fa-solid fa-chart-bar"></i> {% trans "التقارير" %}
             </a>
         </div>
     </div>
@@ -893,7 +894,7 @@
             </div>
             <div class="metric-body">
                 <div class="metric-num">{{ today_appointments }}</div>
-                <div class="metric-lbl">مواعيد اليوم</div>
+                <div class="metric-lbl">{% trans "مواعيد اليوم" %}</div>
             </div>
         </div>
         <!-- Today's Revenue -->
@@ -902,8 +903,8 @@
                 <i class="fa-solid fa-coins"></i>
             </div>
             <div class="metric-body">
-                <div class="metric-num">{{ today_revenue|floatformat:0 }} <span class="metric-cap">ر.س</span></div>
-                <div class="metric-lbl">إيرادات اليوم</div>
+                <div class="metric-num">{{ today_revenue|floatformat:0 }} <span class="metric-cap">{% trans "ر.س" %}</span></div>
+                <div class="metric-lbl">{% trans "إيرادات اليوم" %}</div>
             </div>
         </div>
         <!-- Doctors -->
@@ -916,7 +917,7 @@
                     <span class="metric-cap">/ {% if subscription.max_doctors == 0 %}∞{% else %}{{ subscription.max_doctors }}{% endif %}</span>
                     {% endif %}
                 </div>
-                <div class="metric-lbl">الأطباء</div>
+                <div class="metric-lbl">{% trans "الأطباء" %}</div>
             </div>
         </div>
         <!-- Secretaries -->
@@ -929,7 +930,7 @@
                     <span class="metric-cap">/ {% if subscription.max_secretaries == 0 %}∞{% else %}{{ subscription.max_secretaries }}{% endif %}</span>
                     {% endif %}
                 </div>
-                <div class="metric-lbl">السكرتارية</div>
+                <div class="metric-lbl">{% trans "السكرتارية" %}</div>
             </div>
         </div>
         <!-- Plan -->
@@ -938,7 +939,7 @@
             <div class="metric-icon mi-green"><i class="fa-solid fa-tag"></i></div>
             <div class="metric-body">
                 <div class="metric-num" style="font-size:1.05rem;">{{ subscription.get_plan_name_display }}</div>
-                <div class="metric-lbl">خطة الاشتراك</div>
+                <div class="metric-lbl">{% trans "خطة الاشتراك" %}</div>
             </div>
         </div>
         <!-- Expiry -->
@@ -948,7 +949,7 @@
             </div>
             <div class="metric-body">
                 <div class="metric-num" style="font-size:0.95rem;font-weight:700;">{{ subscription.expires_at|date:"d/m/Y" }}</div>
-                <div class="metric-lbl">تاريخ انتهاء الاشتراك</div>
+                <div class="metric-lbl">{% trans "تاريخ انتهاء الاشتراك" %}</div>
             </div>
         </div>
         {% endif %}
@@ -964,9 +965,9 @@
             </div>
             <div>
                 <h3 style="margin:0;font-size:0.95rem;font-weight:700;{% if sub_days_remaining <= 3 %}color:#991b1b;{% elif sub_days_remaining <= 7 %}color:#9a3412;{% else %}color:#92400e;{% endif %}">
-                    {% if sub_days_remaining <= 0 %}⚠️ انتهى الاشتراك!{% elif sub_days_remaining <= 3 %}⚠️ الاشتراك ينتهي خلال {{ sub_days_remaining }} أيام{% else %}تنبيه: الاشتراك ينتهي خلال {{ sub_days_remaining }} يوماً{% endif %}
+                    {% if sub_days_remaining <= 0 %}{% trans "⚠️ انتهى الاشتراك!" %}{% elif sub_days_remaining <= 3 %}{% blocktrans with days=sub_days_remaining %}⚠️ الاشتراك ينتهي خلال {{ days }} أيام{% endblocktrans %}{% else %}{% blocktrans with days=sub_days_remaining %}تنبيه: الاشتراك ينتهي خلال {{ days }} يوماً{% endblocktrans %}{% endif %}
                 </h3>
-                <p style="margin:0.2rem 0 0;font-size:0.8rem;{% if sub_days_remaining <= 3 %}color:#dc2626;{% elif sub_days_remaining <= 7 %}color:#ea580c;{% else %}color:#d97706;{% endif %}">يرجى تجديد الاشتراك لضمان استمرارية الخدمة.</p>
+                <p style="margin:0.2rem 0 0;font-size:0.8rem;{% if sub_days_remaining <= 3 %}color:#dc2626;{% elif sub_days_remaining <= 7 %}color:#ea580c;{% else %}color:#d97706;{% endif %}">{% trans "يرجى تجديد الاشتراك لضمان استمرارية الخدمة." %}</p>
             </div>
         </div>
     </div>
@@ -975,22 +976,22 @@
     <!-- ── Quick Actions Bar ──────────────────────────────────────── -->
     <div class="quick-actions-bar">
         <a href="{% url 'clinics:create_invitation' clinic_id=clinic.id %}" class="qa-btn">
-            <i class="fa-solid fa-user-doctor"></i> دعوة طبيب
+            <i class="fa-solid fa-user-doctor"></i> {% trans "دعوة طبيب" %}
         </a>
         <a href="{% url 'clinics:create_secretary_invitation' clinic_id=clinic.id %}" class="qa-btn">
-            <i class="fa-solid fa-user-tie"></i> دعوة سكرتير/ة
+            <i class="fa-solid fa-user-tie"></i> {% trans "دعوة سكرتير/ة" %}
         </a>
         <a href="{% url 'clinics:working_hours_list' clinic_id=clinic.id %}" class="qa-btn">
-            <i class="fa-solid fa-clock"></i> ساعات العمل
+            <i class="fa-solid fa-clock"></i> {% trans "ساعات العمل" %}
         </a>
         <a href="{% url 'clinics:appointment_types_list' clinic_id=clinic.id %}" class="qa-btn">
-            <i class="fa-solid fa-calendar-check"></i> أنواع المواعيد
+            <i class="fa-solid fa-calendar-check"></i> {% trans "أنواع المواعيد" %}
         </a>
         <a href="{% url 'clinics:reports' %}" class="qa-btn">
-            <i class="fa-solid fa-chart-pie"></i> التقارير
+            <i class="fa-solid fa-chart-pie"></i> {% trans "التقارير" %}
         </a>
         <a href="{% url 'clinics:compliance_settings' clinic_id=clinic.id %}" class="qa-btn">
-            <i class="fa-solid fa-shield-halved"></i> الامتثال
+            <i class="fa-solid fa-shield-halved"></i> {% trans "الامتثال" %}
         </a>
     </div>
 
@@ -1004,11 +1005,11 @@
                     <i class="fa-solid fa-calendar-exclamation" style="font-size:1rem;"></i>
                 </div>
                 <div>
-                    <h3 style="margin:0;font-size:0.95rem;font-weight:700;color:#9a3412;">تنبيه: مواعيد معلقة</h3>
-                    <p style="margin:0.2rem 0 0;font-size:0.8rem;color:#c2410c;">يوجد {{ pending_appointments }} موعد بانتظار التأكيد.</p>
+                    <h3 style="margin:0;font-size:0.95rem;font-weight:700;color:#9a3412;">{% trans "تنبيه: مواعيد معلقة" %}</h3>
+                    <p style="margin:0.2rem 0 0;font-size:0.8rem;color:#c2410c;">{% blocktrans with count=pending_appointments %}يوجد {{ count }} موعد بانتظار التأكيد.{% endblocktrans %}</p>
                 </div>
             </div>
-            <a href="#appointments-section" style="padding:0.4rem 0.9rem;border-radius:8px;background:#f97316;color:white;font-size:0.8rem;font-weight:700;text-decoration:none;transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='none'">مراجعة</a>
+            <a href="#appointments-section" style="padding:0.4rem 0.9rem;border-radius:8px;background:#f97316;color:white;font-size:0.8rem;font-weight:700;text-decoration:none;transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='none'">{% trans "مراجعة" %}</a>
         </div>
         {% endif %}
         
@@ -1019,11 +1020,11 @@
                     <i class="fa-solid fa-file-signature" style="font-size:1rem;"></i>
                 </div>
                 <div>
-                    <h3 style="margin:0;font-size:0.95rem;font-weight:700;color:#1e40af;">تنبيه: مؤهلات تحتاج للمراجعة</h3>
-                    <p style="margin:0.2rem 0 0;font-size:0.8rem;color:#1d4ed8;">يوجد {{ pending_credentials }} طلب اعتماد مؤهلات لأطباء في العيادة.</p>
+                    <h3 style="margin:0;font-size:0.95rem;font-weight:700;color:#1e40af;">{% trans "تنبيه: مؤهلات تحتاج للمراجعة" %}</h3>
+                    <p style="margin:0.2rem 0 0;font-size:0.8rem;color:#1d4ed8;">{% blocktrans with count=pending_credentials %}يوجد {{ count }} طلب اعتماد مؤهلات لأطباء في العيادة.{% endblocktrans %}</p>
                 </div>
             </div>
-            <a href="{% url 'clinics:credentials_list' clinic_id=clinic.id %}" style="padding:0.4rem 0.9rem;border-radius:8px;background:#3b82f6;color:white;font-size:0.8rem;font-weight:700;text-decoration:none;transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='none'">مراجعة</a>
+            <a href="{% url 'clinics:credentials_list' clinic_id=clinic.id %}" style="padding:0.4rem 0.9rem;border-radius:8px;background:#3b82f6;color:white;font-size:0.8rem;font-weight:700;text-decoration:none;transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='none'">{% trans "مراجعة" %}</a>
         </div>
         {% endif %}
 
@@ -1034,11 +1035,11 @@
                     <i class="fa-solid fa-envelope-open-text" style="font-size:1rem;"></i>
                 </div>
                 <div>
-                    <h3 style="margin:0;font-size:0.95rem;font-weight:700;color:#15803d;">دعوات معلقة</h3>
-                    <p style="margin:0.2rem 0 0;font-size:0.8rem;color:#16a34a;">يوجد {{ pending_invitations }} دعوة بانتظار القبول.</p>
+                    <h3 style="margin:0;font-size:0.95rem;font-weight:700;color:#15803d;">{% trans "دعوات معلقة" %}</h3>
+                    <p style="margin:0.2rem 0 0;font-size:0.8rem;color:#16a34a;">{% blocktrans with count=pending_invitations %}يوجد {{ count }} دعوة بانتظار القبول.{% endblocktrans %}</p>
                 </div>
             </div>
-            <a href="{% url 'clinics:invitations_list' clinic_id=clinic.id %}" style="padding:0.4rem 0.9rem;border-radius:8px;background:#16a34a;color:white;font-size:0.8rem;font-weight:700;text-decoration:none;transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='none'">عرض</a>
+            <a href="{% url 'clinics:invitations_list' clinic_id=clinic.id %}" style="padding:0.4rem 0.9rem;border-radius:8px;background:#16a34a;color:white;font-size:0.8rem;font-weight:700;text-decoration:none;transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='none'">{% trans "عرض" %}</a>
         </div>
         {% endif %}
 
@@ -1049,7 +1050,7 @@
                     <i class="fa-solid fa-umbrella-beach" style="font-size:1rem;"></i>
                 </div>
                 <div>
-                    <h3 style="margin:0;font-size:0.95rem;font-weight:700;color:#6b21a8;">عطلة قادمة: {{ next_holiday.title }}</h3>
+                    <h3 style="margin:0;font-size:0.95rem;font-weight:700;color:#6b21a8;">{% blocktrans with title=next_holiday.title %}عطلة قادمة: {{ title }}{% endblocktrans %}</h3>
                     <p style="margin:0.2rem 0 0;font-size:0.8rem;color:#7c3aed;">{{ next_holiday.start_date|date:'d/m/Y' }} — {{ next_holiday.end_date|date:'d/m/Y' }}</p>
                 </div>
             </div>
@@ -1063,7 +1064,7 @@
                     <i class="fa-solid fa-user-shield" style="font-size:1rem;"></i>
                 </div>
                 <div>
-                    <h3 style="margin:0;font-size:0.95rem;font-weight:700;color:#991b1b;">أطباء بانتظار التحقق</h3>
+                    <h3 style="margin:0;font-size:0.95rem;font-weight:700;color:#991b1b;">{% trans "أطباء بانتظار التحقق" %}</h3>
                     <p style="margin:0.2rem 0 0;font-size:0.8rem;color:#dc2626;">{{ unverified_doctors|join:', ' }}</p>
                 </div>
             </div>
@@ -1077,11 +1078,11 @@
                     <i class="fa-solid fa-ban" style="font-size:1rem;"></i>
                 </div>
                 <div>
-                    <h3 style="margin:0;font-size:0.95rem;font-weight:700;color:#991b1b;">مرضى محظورون</h3>
-                    <p style="margin:0.2rem 0 0;font-size:0.8rem;color:#dc2626;">يوجد {{ blocked_patients_count }} مريض محظور حالياً من الحجز.</p>
+                    <h3 style="margin:0;font-size:0.95rem;font-weight:700;color:#991b1b;">{% trans "مرضى محظورون" %}</h3>
+                    <p style="margin:0.2rem 0 0;font-size:0.8rem;color:#dc2626;">{% blocktrans with count=blocked_patients_count %}يوجد {{ count }} مريض محظور حالياً من الحجز.{% endblocktrans %}</p>
                 </div>
             </div>
-            <a href="{% url 'clinics:compliance_settings' clinic_id=clinic.id %}" style="padding:0.4rem 0.9rem;border-radius:8px;background:#dc2626;color:white;font-size:0.8rem;font-weight:700;text-decoration:none;transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='none'">إدارة</a>
+            <a href="{% url 'clinics:compliance_settings' clinic_id=clinic.id %}" style="padding:0.4rem 0.9rem;border-radius:8px;background:#dc2626;color:white;font-size:0.8rem;font-weight:700;text-decoration:none;transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='none'">{% trans "إدارة" %}</a>
         </div>
         {% endif %}
     </div>
@@ -1090,8 +1091,8 @@
     <!-- ── Today's Timeline ───────────────────────────────────────── -->
     <div class="p-card timeline-section">
         <div class="p-card-head">
-            <h2 class="p-card-title"><i class="fa-solid fa-timeline"></i> جدول اليوم</h2>
-            <span style="font-size:0.78rem;font-weight:700;color:var(--color-text-muted);">{{ today_timeline|length }} موعد</span>
+            <h2 class="p-card-title"><i class="fa-solid fa-timeline"></i> {% trans "جدول اليوم" %}</h2>
+            <span style="font-size:0.78rem;font-weight:700;color:var(--color-text-muted);">{% blocktrans with count=today_timeline|length %}{{ count }} موعد{% endblocktrans %}</span>
         </div>
         <div class="p-card-body" style="padding:0;">
             {% if today_timeline %}
@@ -1108,7 +1109,7 @@
                         </div>
                     </div>
                     <span class="s-badge {% if item.status == 'PENDING' %}s-pending{% elif item.status == 'COMPLETED' %}s-active{% elif item.status == 'CANCELLED' %}s-expired{% else %}s-suspended{% endif %}" style="font-size:0.68rem;">
-                        {% if item.status == 'PENDING' %}معلق{% elif item.status == 'CONFIRMED' %}مؤكد{% elif item.status == 'COMPLETED' %}مكتمل{% elif item.status == 'CANCELLED' %}ملغي{% elif item.status == 'NO_SHOW' %}لم يحضر{% else %}{{ item.status }}{% endif %}
+                        {% if item.status == 'PENDING' %}{% trans "معلق" %}{% elif item.status == 'CONFIRMED' %}{% trans "مؤكد" %}{% elif item.status == 'COMPLETED' %}{% trans "مكتمل" %}{% elif item.status == 'CANCELLED' %}{% trans "ملغي" %}{% elif item.status == 'NO_SHOW' %}{% trans "لم يحضر" %}{% else %}{{ item.status }}{% endif %}
                     </span>
                 </li>
                 {% endfor %}
@@ -1116,14 +1117,14 @@
             {% else %}
             <div style="text-align:center;padding:2rem;color:var(--color-text-muted);font-size:0.88rem;">
                 <i class="fa-regular fa-calendar-check" style="font-size:1.5rem;opacity:0.4;display:block;margin-bottom:0.5rem;"></i>
-                لا توجد مواعيد مجدولة لهذا اليوم
+                {% trans "لا توجد مواعيد مجدولة لهذا اليوم" %}
             </div>
             {% endif %}
         </div>
     </div>
 
     <!-- ── Week-at-a-Glance ───────────────────────────────────────── -->
-    <h3 class="dash-section-title"><i class="fa-solid fa-chart-simple"></i> نظرة على الأسبوع</h3>
+    <h3 class="dash-section-title"><i class="fa-solid fa-chart-simple"></i> {% trans "نظرة على الأسبوع" %}</h3>
     <div class="week-strip">
         {% for wd in week_days %}
         <div class="week-day {% if wd.is_today %}wd-today{% endif %}">
@@ -1139,7 +1140,7 @@
 
     <!-- ── Doctor Overview Cards ──────────────────────────────────── -->
     {% if doctor_cards %}
-    <h3 class="dash-section-title"><i class="fa-solid fa-user-doctor"></i> أداء الأطباء اليوم</h3>
+    <h3 class="dash-section-title"><i class="fa-solid fa-user-doctor"></i> {% trans "أداء الأطباء اليوم" %}</h3>
     <div class="doc-cards-grid">
         {% for dc in doctor_cards %}
         <div class="doc-card">
@@ -1148,19 +1149,19 @@
                 <div class="doc-card-name">{{ dc.name }}</div>
                 <div class="doc-card-stats">
                     <span class="doc-stat-pill dsp-appts">
-                        <i class="fa-solid fa-calendar-day"></i> {{ dc.today_count }} موعد
+                        <i class="fa-solid fa-calendar-day"></i> {% blocktrans with count=dc.today_count %}{{ count }} موعد{% endblocktrans %}
                     </span>
                     {% if dc.cred_status == 'CREDENTIALS_VERIFIED' %}
-                    <span class="doc-stat-pill dsp-verified"><i class="fa-solid fa-circle-check"></i> معتمد</span>
+                    <span class="doc-stat-pill dsp-verified"><i class="fa-solid fa-circle-check"></i> {% trans "معتمد" %}</span>
                     {% elif dc.cred_status == 'CREDENTIALS_PENDING' %}
-                    <span class="doc-stat-pill dsp-pending"><i class="fa-solid fa-hourglass-half"></i> قيد المراجعة</span>
+                    <span class="doc-stat-pill dsp-pending"><i class="fa-solid fa-hourglass-half"></i> {% trans "قيد المراجعة" %}</span>
                     {% else %}
-                    <span class="doc-stat-pill dsp-unverified"><i class="fa-solid fa-triangle-exclamation"></i> بلا مؤهلات</span>
+                    <span class="doc-stat-pill dsp-unverified"><i class="fa-solid fa-triangle-exclamation"></i> {% trans "بلا مؤهلات" %}</span>
                     {% endif %}
                     {% if dc.id_status == 'IDENTITY_VERIFIED' %}
-                    <span class="doc-stat-pill dsp-verified"><i class="fa-solid fa-shield-check"></i> موثق</span>
+                    <span class="doc-stat-pill dsp-verified"><i class="fa-solid fa-shield-check"></i> {% trans "موثق" %}</span>
                     {% elif dc.id_status == 'IDENTITY_PENDING_REVIEW' %}
-                    <span class="doc-stat-pill dsp-pending"><i class="fa-solid fa-hourglass-half"></i> بانتظار التحقق</span>
+                    <span class="doc-stat-pill dsp-pending"><i class="fa-solid fa-hourglass-half"></i> {% trans "بانتظار التحقق" %}</span>
                     {% endif %}
                 </div>
             </div>
@@ -1173,12 +1174,12 @@
     <div class="info-pair">
         <div class="p-card">
             <div class="p-card-head">
-                <h2 class="p-card-title"><i class="fa-solid fa-chart-line"></i> إيرادات آخر 7 أيام</h2>
+                <h2 class="p-card-title"><i class="fa-solid fa-chart-line"></i> {% trans "إيرادات آخر 7 أيام" %}</h2>
             </div>
             <div class="p-card-body">
                 <div class="spark-container">
                     {% for r in revenue_7d %}
-                    <div class="spark-bar" style="height: {% widthratio r.amount revenue_max 100 %}%;" title="{{ r.date }}: {{ r.amount|floatformat:0 }} ر.س"></div>
+                    <div class="spark-bar" style="height: {% widthratio r.amount revenue_max 100 %}%;" title="{{ r.date }}: {{ r.amount|floatformat:0 }} {% trans 'ر.س' %}"></div>
                     {% endfor %}
                 </div>
                 <div style="display:flex;justify-content:space-between;font-size:0.68rem;color:var(--color-text-muted);direction:ltr;margin-top:0.3rem;">
@@ -1192,18 +1193,18 @@
         <!-- No-Show & Cancellation Rates -->
         <div class="p-card">
             <div class="p-card-head">
-                <h2 class="p-card-title"><i class="fa-solid fa-chart-pie"></i> معدلات الشهر الحالي</h2>
+                <h2 class="p-card-title"><i class="fa-solid fa-chart-pie"></i> {% trans "معدلات الشهر الحالي" %}</h2>
             </div>
             <div class="p-card-body">
                 <div style="display:flex;gap:1.5rem;">
                     <div style="flex:1;text-align:center;">
                         <div style="font-size:1.8rem;font-weight:800;color:{% if noshow_rate_month > 15 %}#dc2626{% elif noshow_rate_month > 5 %}#d97706{% else %}#059669{% endif %};line-height:1;">{{ noshow_rate_month }}%</div>
-                        <div style="font-size:0.75rem;font-weight:600;color:var(--color-text-muted);margin-top:0.3rem;">عدم الحضور</div>
+                        <div style="font-size:0.75rem;font-weight:600;color:var(--color-text-muted);margin-top:0.3rem;">{% trans "عدم الحضور" %}</div>
                     </div>
                     <div style="width:1px;background:var(--color-surface-border);"></div>
                     <div style="flex:1;text-align:center;">
                         <div style="font-size:1.8rem;font-weight:800;color:{% if cancellation_rate_month > 20 %}#dc2626{% elif cancellation_rate_month > 10 %}#d97706{% else %}#059669{% endif %};line-height:1;">{{ cancellation_rate_month }}%</div>
-                        <div style="font-size:0.75rem;font-weight:600;color:var(--color-text-muted);margin-top:0.3rem;">الإلغاء</div>
+                        <div style="font-size:0.75rem;font-weight:600;color:var(--color-text-muted);margin-top:0.3rem;">{% trans "الإلغاء" %}</div>
                     </div>
                 </div>
             </div>
@@ -1214,7 +1215,7 @@
     {% if recent_activity %}
     <div class="p-card" style="margin-bottom:1.25rem;">
         <div class="p-card-head">
-            <h2 class="p-card-title"><i class="fa-solid fa-clock-rotate-left"></i> آخر النشاطات</h2>
+            <h2 class="p-card-title"><i class="fa-solid fa-clock-rotate-left"></i> {% trans "آخر النشاطات" %}</h2>
         </div>
         <div class="p-card-body" style="padding:0;">
             <ul class="activity-list">
@@ -1229,13 +1230,14 @@
                         {% else %}<i class="fa-solid fa-calendar-plus"></i>{% endif %}
                     </div>
                     <div class="activity-text">
-                        <strong>{{ act.patient__name|default:'مريض' }}</strong>
-                        {% if act.status == 'PENDING' %} — حجز جديد بانتظار التأكيد
-                        {% elif act.status == 'CONFIRMED' %} — تم تأكيد الموعد
-                        {% elif act.status == 'COMPLETED' %} — تمت الزيارة بنجاح
-                        {% elif act.status == 'CANCELLED' %} — تم إلغاء الموعد
-                        {% elif act.status == 'NO_SHOW' %} — لم يحضر
-                        {% else %} — حالة: {{ act.status }}{% endif %}
+                        {% trans "مريض" as patient_default %}
+                        <strong>{{ act.patient__name|default:patient_default }}</strong>
+                        {% if act.status == 'PENDING' %} — {% trans "حجز جديد بانتظار التأكيد" %}
+                        {% elif act.status == 'CONFIRMED' %} — {% trans "تم تأكيد الموعد" %}
+                        {% elif act.status == 'COMPLETED' %} — {% trans "تمت الزيارة بنجاح" %}
+                        {% elif act.status == 'CANCELLED' %} — {% trans "تم إلغاء الموعد" %}
+                        {% elif act.status == 'NO_SHOW' %} — {% trans "لم يحضر" %}
+                        {% else %} — {% blocktrans with status=act.status %}حالة: {{ status }}{% endblocktrans %}{% endif %}
                         · <span style="color:var(--color-text-muted);">{{ act.doctor__name|default:'—' }}</span>
                     </div>
                     <span class="activity-time">{{ act.appointment_date|date:'d/m' }}</span>
@@ -1252,24 +1254,24 @@
         <!-- Clinic Info -->
         <div class="p-card">
             <div class="p-card-head">
-                <h2 class="p-card-title"><i class="fa-solid fa-circle-info"></i> معلومات العيادة</h2>
+                <h2 class="p-card-title"><i class="fa-solid fa-circle-info"></i> {% trans "معلومات العيادة" %}</h2>
             </div>
             <div class="p-card-body">
                 <dl class="dl-grid">
-                    <dt class="dl-dt">الاسم</dt>
+                    <dt class="dl-dt">{% trans "الاسم" %}</dt>
                     <dd class="dl-dd">{{ clinic.name }}</dd>
                     {% if clinic.phone %}
-                    <dt class="dl-dt">الهاتف</dt>
+                    <dt class="dl-dt">{% trans "الهاتف" %}</dt>
                     <dd class="dl-dd" style="direction:ltr;display:inline-block;">{{ clinic.phone }}</dd>
                     {% endif %}
-                    <dt class="dl-dt">العنوان</dt>
+                    <dt class="dl-dt">{% trans "العنوان" %}</dt>
                     <dd class="dl-dd">{{ clinic.address|default:"—" }}</dd>
-                    <dt class="dl-dt">الحالة</dt>
+                    <dt class="dl-dt">{% trans "الحالة" %}</dt>
                     <dd class="dl-dd">
                         {% if clinic.status == "ACTIVE" %}
-                            <span class="s-badge s-active">نشطة</span>
+                            <span class="s-badge s-active">{% trans "نشطة" %}</span>
                         {% elif clinic.status == "PENDING" %}
-                            <span class="s-badge s-pending">قيد المراجعة</span>
+                            <span class="s-badge s-pending">{% trans "قيد المراجعة" %}</span>
                         {% else %}
                             <span class="s-badge s-suspended">{{ clinic.get_status_display }}</span>
                         {% endif %}
@@ -1282,20 +1284,20 @@
         {% if subscription %}
         <div class="p-card">
             <div class="p-card-head">
-                <h2 class="p-card-title"><i class="fa-solid fa-credit-card"></i> الاشتراك</h2>
+                <h2 class="p-card-title"><i class="fa-solid fa-credit-card"></i> {% trans "الاشتراك" %}</h2>
                 {% if subscription.effective_status == "ACTIVE" %}
-                    <span class="s-badge s-active">نشط</span>
+                    <span class="s-badge s-active">{% trans "نشط" %}</span>
                 {% elif subscription.effective_status == "EXPIRED" %}
-                    <span class="s-badge s-expired">منتهي</span>
+                    <span class="s-badge s-expired">{% trans "منتهي" %}</span>
                 {% else %}
-                    <span class="s-badge s-suspended">موقوف</span>
+                    <span class="s-badge s-suspended">{% trans "موقوف" %}</span>
                 {% endif %}
             </div>
             <div class="p-card-body">
                 <dl class="dl-grid" style="margin-bottom:1rem;">
-                    <dt class="dl-dt">الخطة</dt>
+                    <dt class="dl-dt">{% trans "الخطة" %}</dt>
                     <dd class="dl-dd">{{ subscription.get_plan_name_display }}</dd>
-                    <dt class="dl-dt">ينتهي في</dt>
+                    <dt class="dl-dt">{% trans "ينتهي في" %}</dt>
                     <dd class="dl-dd" style="direction:ltr;display:inline-block;">{{ subscription.expires_at|date:"d/m/Y" }}</dd>
                 </dl>
 
@@ -1304,11 +1306,11 @@
                     <!-- Doctors -->
                     <div class="cap-row">
                         <div class="cap-row-head">
-                            <span class="cap-label"><i class="fa-solid fa-stethoscope" style="margin-left:0.3rem;color:var(--color-primary-500);font-size:0.75rem;"></i>الأطباء</span>
+                            <span class="cap-label"><i class="fa-solid fa-stethoscope" style="margin-inline-end:0.3rem;color:var(--color-primary-500);font-size:0.75rem;"></i>{% trans "الأطباء" %}</span>
                             <span class="cap-count">
                                 {{ doctors|length }}
                                 {% if subscription.max_doctors == 0 %}
-                                <span class="cap-max">/ غير محدود</span>
+                                <span class="cap-max">/ {% trans "غير محدود" %}</span>
                                 {% else %}
                                 <span class="cap-max">/ {{ subscription.max_doctors }}</span>
                                 {% endif %}
@@ -1327,11 +1329,11 @@
                     <!-- Secretaries -->
                     <div class="cap-row">
                         <div class="cap-row-head">
-                            <span class="cap-label"><i class="fa-solid fa-user-tie" style="margin-left:0.3rem;color:#7c3aed;font-size:0.75rem;"></i>السكرتارية</span>
+                            <span class="cap-label"><i class="fa-solid fa-user-tie" style="margin-inline-end:0.3rem;color:#7c3aed;font-size:0.75rem;"></i>{% trans "السكرتارية" %}</span>
                             <span class="cap-count">
                                 {{ secretaries|length }}
                                 {% if subscription.max_secretaries == 0 %}
-                                <span class="cap-max">/ غير محدود</span>
+                                <span class="cap-max">/ {% trans "غير محدود" %}</span>
                                 {% else %}
                                 <span class="cap-max">/ {{ subscription.max_secretaries }}</span>
                                 {% endif %}
@@ -1354,7 +1356,7 @@
         <div class="p-card" style="display:flex;align-items:center;justify-content:center;">
             <div style="text-align:center;padding:2rem;color:var(--color-text-muted);font-size:0.88rem;">
                 <i class="fa-solid fa-circle-exclamation" style="font-size:1.8rem;opacity:0.4;display:block;margin-bottom:0.75rem;"></i>
-                لا يوجد اشتراك مرتبط بهذه العيادة
+                {% trans "لا يوجد اشتراك مرتبط بهذه العيادة" %}
             </div>
         </div>
         {% endif %}
@@ -1364,12 +1366,12 @@
     <!-- ── Staff Section ──────────────────────────────────────────── -->
     <div class="p-card">
         <div class="p-card-head">
-            <h2 class="p-card-title"><i class="fa-solid fa-user-group"></i> الكادر الطبي والإداري</h2>
+            <h2 class="p-card-title"><i class="fa-solid fa-user-group"></i> {% trans "الكادر الطبي والإداري" %}</h2>
             <div style="display:flex;gap:0.5rem;">
                 <a href="{% url 'clinics:create_invitation' clinic_id=clinic.id %}"
                    style="font-size:0.8rem;font-weight:700;color:var(--color-primary-500);text-decoration:none;display:flex;align-items:center;gap:0.3rem;padding:4px 10px;border:1px solid var(--color-primary-500);border-radius:7px;transition:background 0.15s;"
                    onmouseover="this.style.background='rgba(0,120,212,0.06)'" onmouseout="this.style.background='transparent'">
-                    <i class="fa-solid fa-user-plus"></i> دعوة طبيب
+                    <i class="fa-solid fa-user-plus"></i> {% trans "دعوة طبيب" %}
                 </a>
             </div>
         </div>
@@ -1377,14 +1379,14 @@
 
             <!-- Clinic Owner -->
             <p class="staff-group-lbl">
-                <i class="fa-solid fa-crown"></i> مالك العيادة
+                <i class="fa-solid fa-crown"></i> {% trans "مالك العيادة" %}
             </p>
             {% if clinic_owner %}
             <div class="staff-grid" style="margin-bottom:1.75rem;">
                 <div class="staff-card">
                     <div class="avatar av-owner">{{ clinic_owner.user.name|first }}</div>
                     <span class="staff-name">{{ clinic_owner.user.name }}</span>
-                    <span class="role-pill rp-owner">مالك</span>
+                    <span class="role-pill rp-owner">{% trans "مالك" %}</span>
                     {% if clinic_owner.user.phone %}
                     <span class="staff-sub">{{ clinic_owner.user.phone }}</span>
                     {% endif %}
@@ -1395,15 +1397,15 @@
             <!-- Doctors -->
             <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem;flex-wrap:wrap;">
                 <p class="staff-group-lbl" style="margin-bottom:0;">
-                    <i class="fa-solid fa-stethoscope"></i> الأطباء
+                    <i class="fa-solid fa-stethoscope"></i> {% trans "الأطباء" %}
                     <span class="staff-count-pill">{{ doctors|length }}{% if subscription %} / {% if subscription.max_doctors == 0 %}∞{% else %}{{ subscription.max_doctors }}{% endif %}{% endif %}</span>
                 </p>
                 {% if not owner_is_doctor %}
                 <form method="post" action="{% url 'clinics:add_self_as_staff' clinic_id=clinic.id %}" style="margin:0;">
                     {% csrf_token %}
                     <input type="hidden" name="role" value="DOCTOR">
-                    <button type="submit" class="staff-add-self-btn" title="إضافة نفسك كطبيب في هذه العيادة">
-                        <i class="fa-solid fa-user-plus"></i> إضافة نفسك كطبيب
+                    <button type="submit" class="staff-add-self-btn" title="{% trans 'إضافة نفسك كطبيب في هذه العيادة' %}">
+                        <i class="fa-solid fa-user-plus"></i> {% trans "إضافة نفسك كطبيب" %}
                     </button>
                 </form>
                 {% endif %}
@@ -1418,25 +1420,25 @@
                      hx-indicator=".drawer-loading">
                     <div class="avatar av-doctor">{{ staff_member.user.name|first }}</div>
                     <span class="staff-name">{{ staff_member.user.name }}</span>
-                    <span class="role-pill rp-doctor">طبيب</span>
+                    <span class="role-pill rp-doctor">{% trans "طبيب" %}</span>
                     {% with profile=staff_member.user.doctor_profile %}
                         {% if profile %}
                             {% with primary=profile.primary_specialty %}
-                                {% if primary %}<span class="staff-sub">{{ primary.name_ar }}</span>{% endif %}
+                                {% if primary %}<span class="staff-sub">{{ primary.display_name }}</span>{% endif %}
                             {% endwith %}
                             {% if profile.years_of_experience %}
-                            <span class="staff-sub">{{ profile.years_of_experience }} سنوات</span>
+                            <span class="staff-sub">{{ profile.years_of_experience }} {% trans "سنوات" %}</span>
                             {% endif %}
                         {% endif %}
                     {% endwith %}
-                    <span class="schedule-hint"><i class="fa-regular fa-calendar-days"></i> جدول العمل</span>
+                    <span class="schedule-hint"><i class="fa-regular fa-calendar-days"></i> {% trans "جدول العمل" %}</span>
                     <form method="post" action="{% url 'clinics:remove_staff' clinic_id=clinic.id staff_id=staff_member.id %}"
                           style="margin-top:0.35rem;" onclick="event.stopPropagation();">
                         {% csrf_token %}
                         <button type="submit" class="staff-remove-btn"
-                                onclick="return confirm('هل أنت متأكد من إزالة هذا الطبيب من الكادر؟')"
-                                title="إزالة من الكادر">
-                            <i class="fa-solid fa-user-minus"></i> إزالة
+                                onclick="return confirm('{% trans "هل أنت متأكد من إزالة هذا الطبيب من الكادر؟" %}')"
+                                title="{% trans 'إزالة من الكادر' %}">
+                            <i class="fa-solid fa-user-minus"></i> {% trans "إزالة" %}
                         </button>
                     </form>
                 </div>
@@ -1445,23 +1447,23 @@
             {% else %}
             <p class="staff-empty" style="margin-bottom:1.5rem;">
                 <i class="fa-regular fa-face-meh"></i>
-                لا يوجد أطباء —
-                <a href="{% url 'clinics:create_invitation' clinic_id=clinic.id %}">دعوة طبيب</a>
+                {% trans "لا يوجد أطباء —" %}
+                <a href="{% url 'clinics:create_invitation' clinic_id=clinic.id %}">{% trans "دعوة طبيب" %}</a>
             </p>
             {% endif %}
 
             <!-- Secretaries -->
             <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem;margin-bottom:0.6rem;flex-wrap:wrap;">
                 <p class="staff-group-lbl" style="margin-bottom:0;">
-                    <i class="fa-solid fa-user-tie"></i> السكرتارية
+                    <i class="fa-solid fa-user-tie"></i> {% trans "السكرتارية" %}
                     <span class="staff-count-pill">{{ secretaries|length }}{% if subscription %} / {% if subscription.max_secretaries == 0 %}∞{% else %}{{ subscription.max_secretaries }}{% endif %}{% endif %}</span>
                 </p>
                 {% if not owner_is_secretary %}
                 <form method="post" action="{% url 'clinics:add_self_as_staff' clinic_id=clinic.id %}" style="margin:0;">
                     {% csrf_token %}
                     <input type="hidden" name="role" value="SECRETARY">
-                    <button type="submit" class="staff-add-self-btn" title="إضافة نفسك كسكرتير/ة في هذه العيادة">
-                        <i class="fa-solid fa-user-plus"></i> إضافة نفسك كسكرتير/ة
+                    <button type="submit" class="staff-add-self-btn" title="{% trans 'إضافة نفسك كسكرتير/ة في هذه العيادة' %}">
+                        <i class="fa-solid fa-user-plus"></i> {% trans "إضافة نفسك كسكرتير/ة" %}
                     </button>
                 </form>
                 {% endif %}
@@ -1472,7 +1474,7 @@
                 <div class="staff-card">
                     <div class="avatar av-secretary">{{ staff_member.user.name|first }}</div>
                     <span class="staff-name">{{ staff_member.user.name }}</span>
-                    <span class="role-pill rp-secretary">سكرتير/ة</span>
+                    <span class="role-pill rp-secretary">{% trans "سكرتير/ة" %}</span>
                     {% if staff_member.user.phone %}
                     <span class="staff-sub">{{ staff_member.user.phone }}</span>
                     {% endif %}
@@ -1480,9 +1482,9 @@
                           style="margin-top:0.35rem;">
                         {% csrf_token %}
                         <button type="submit" class="staff-remove-btn"
-                                onclick="return confirm('هل أنت متأكد من إزالة هذا السكرتير/ة من الكادر؟')"
-                                title="إزالة من الكادر">
-                            <i class="fa-solid fa-user-minus"></i> إزالة
+                                onclick="return confirm('{% trans "هل أنت متأكد من إزالة هذا السكرتير/ة من الكادر؟" %}')"
+                                title="{% trans 'إزالة من الكادر' %}">
+                            <i class="fa-solid fa-user-minus"></i> {% trans "إزالة" %}
                         </button>
                     </form>
                 </div>
@@ -1491,8 +1493,8 @@
             {% else %}
             <p class="staff-empty">
                 <i class="fa-regular fa-face-meh"></i>
-                لا يوجد سكرتارية —
-                <a href="{% url 'clinics:create_secretary_invitation' clinic_id=clinic.id %}">دعوة سكرتير/ة</a>
+                {% trans "لا يوجد سكرتارية —" %}
+                <a href="{% url 'clinics:create_secretary_invitation' clinic_id=clinic.id %}">{% trans "دعوة سكرتير/ة" %}</a>
             </p>
             {% endif %}
 
@@ -1505,39 +1507,39 @@
     <!-- ── Settings & Quick Links ─────────────────────────────────── -->
     <div class="p-card">
         <div class="p-card-head">
-            <h2 class="p-card-title"><i class="fa-solid fa-sliders"></i> الإعدادات والإدارة</h2>
+            <h2 class="p-card-title"><i class="fa-solid fa-sliders"></i> {% trans "الإعدادات والإدارة" %}</h2>
         </div>
         <div class="p-card-body">
             <div class="quick-grid">
                 <a href="{% url 'clinics:working_hours_list' clinic_id=clinic.id %}" class="quick-tile">
                     <div class="qt-icon mi-blue"><i class="fa-solid fa-clock"></i></div>
-                    <span class="qt-label">ساعات العمل</span>
-                    <span class="qt-sub">جدول أيام العمل</span>
+                    <span class="qt-label">{% trans "ساعات العمل" %}</span>
+                    <span class="qt-sub">{% trans "جدول أيام العمل" %}</span>
                 </a>
                 <a href="{% url 'clinics:appointment_types_list' clinic_id=clinic.id %}" class="quick-tile">
                     <div class="qt-icon mi-green"><i class="fa-solid fa-calendar-check"></i></div>
-                    <span class="qt-label">أنواع المواعيد</span>
-                    <span class="qt-sub">إدارة أنواع الخدمات</span>
+                    <span class="qt-label">{% trans "أنواع المواعيد" %}</span>
+                    <span class="qt-sub">{% trans "إدارة أنواع الخدمات" %}</span>
                 </a>
                 <a href="{% url 'clinics:invitations_list' clinic_id=clinic.id %}" class="quick-tile">
                     <div class="qt-icon mi-purple"><i class="fa-solid fa-envelope-open-text"></i></div>
-                    <span class="qt-label">سجل الدعوات</span>
-                    <span class="qt-sub">الدعوات المرسلة والمقبولة</span>
+                    <span class="qt-label">{% trans "سجل الدعوات" %}</span>
+                    <span class="qt-sub">{% trans "الدعوات المرسلة والمقبولة" %}</span>
                 </a>
                 <a href="{% url 'clinics:credentials_list' clinic_id=clinic.id %}" class="quick-tile">
                     <div class="qt-icon mi-amber"><i class="fa-solid fa-clipboard-check"></i></div>
-                    <span class="qt-label">مراجعة المؤهلات</span>
-                    <span class="qt-sub">شهادات وتراخيص الأطباء</span>
+                    <span class="qt-label">{% trans "مراجعة المؤهلات" %}</span>
+                    <span class="qt-sub">{% trans "شهادات وتراخيص الأطباء" %}</span>
                 </a>
                 <a href="{% url 'clinics:compliance_settings' clinic_id=clinic.id %}" class="quick-tile">
                     <div class="qt-icon mi-red"><i class="fa-solid fa-shield-halved"></i></div>
-                    <span class="qt-label">إعدادات الامتثال</span>
-                    <span class="qt-sub">قواعد الحجز والخصوصية</span>
+                    <span class="qt-label">{% trans "إعدادات الامتثال" %}</span>
+                    <span class="qt-sub">{% trans "قواعد الحجز والخصوصية" %}</span>
                 </a>
                 <a href="{% url 'clinics:reports' %}" class="quick-tile">
                     <div class="qt-icon" style="background:rgba(0,191,165,0.1);color:#00bfa5;"><i class="fa-solid fa-chart-pie"></i></div>
-                    <span class="qt-label">التقارير</span>
-                    <span class="qt-sub">تحليلات ومؤشرات الأداء</span>
+                    <span class="qt-label">{% trans "التقارير" %}</span>
+                    <span class="qt-sub">{% trans "تحليلات ومؤشرات الأداء" %}</span>
                 </a>
             </div>
         </div>
@@ -1547,13 +1549,13 @@
 
 <!-- ── Doctor Schedule Drawer ──────────────────────────────────────── -->
 <div class="schedule-backdrop" id="scheduleBackdrop" onclick="closeScheduleDrawer()"></div>
-<div class="schedule-drawer" id="scheduleDrawer" role="dialog" aria-modal="true" aria-label="جدول عمل الطبيب">
+<div class="schedule-drawer" id="scheduleDrawer" role="dialog" aria-modal="true" aria-label="{% trans 'جدول عمل الطبيب' %}">
     <div class="drawer-topbar">
         <div class="drawer-title">
             <i class="fa-regular fa-calendar-days"></i>
-            جدول العمل
+            {% trans "جدول العمل" %}
         </div>
-        <button class="drawer-close-btn" onclick="closeScheduleDrawer()" aria-label="إغلاق">
+        <button class="drawer-close-btn" onclick="closeScheduleDrawer()" aria-label="{% trans 'إغلاق' %}">
             <i class="fa-solid fa-xmark"></i>
         </button>
     </div>
@@ -1561,7 +1563,7 @@
          hx-on::after-swap="openScheduleDrawer()">
         <div class="drawer-loading" style="display:none;">
             <i class="fa-solid fa-circle-notch"></i>
-            جاري التحميل...
+            {% trans "جاري التحميل..." %}
         </div>
     </div>
 </div>

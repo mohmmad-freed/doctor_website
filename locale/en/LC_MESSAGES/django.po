@@ -2647,3 +2647,942 @@ msgstr "Pending Review"
 
 msgid "تم الرفض"
 msgstr "Rejected"
+
+# ── Clinic owner side (auto-appended) ──
+msgid "9 أرقام"
+msgstr "9 digits"
+
+msgid "آخر مراجعة: %(reviewed_at)s — بواسطة %(reviewer)s"
+msgstr "Last reviewed: %(reviewed_at)s — by %(reviewer)s"
+
+msgid "أبريل"
+msgstr "April"
+
+msgid "أحد"
+msgstr "Sun"
+
+msgid "أداء الأطباء اليوم"
+msgstr "Doctor Performance Today"
+
+msgid "أدخل الرمز الذي أرسلناه إلى"
+msgstr "Enter the code we sent to"
+
+msgid "أدخل بريداً إلكترونياً صحيحاً."
+msgstr "Enter a valid email address."
+
+msgid "أدخل رقم الهوية الوطنية"
+msgstr "Enter the national ID number"
+
+msgid "أدخل رمز التفعيل الجديد"
+msgstr "Enter the new activation code"
+
+msgid "أدخل رمز التفعيل الخاص بالعيادة الجديدة."
+msgstr "Enter the activation code for the new clinic."
+
+msgid "أربعاء"
+msgstr "Wed"
+
+msgid "أطباء"
+msgstr "Doctors"
+
+msgid "أطباء بانتظار التحقق"
+msgstr "Doctors awaiting verification"
+
+msgid "أطباء نشطون"
+msgstr "Active Doctors"
+
+msgid "أغسطس"
+msgstr "August"
+
+msgid "أكتوبر"
+msgstr "October"
+
+msgid "أكثر أنواع المواعيد طلباً"
+msgstr "Most Requested Appointment Types"
+
+msgid "أكثر الأطباء مواعيد (أعلى 10)"
+msgstr "Doctors with Most Appointments (Top 10)"
+
+msgid "أكمل معلومات العيادة ثم اضغط \"إنشاء العيادة\"."
+msgstr "Complete the clinic details, then click \"Create Clinic\"."
+
+msgid "أنت مضاف بالفعل بهذا الدور."
+msgstr "You are already added in this role."
+
+msgid "أوقات العمل الأسبوعية"
+msgstr "Weekly Working Hours"
+
+msgid "إجمالي العيادات"
+msgstr "Total Clinics"
+
+msgid "إدارة"
+msgstr "Manage"
+
+msgid "إدارة أنواع الخدمات"
+msgstr "Manage service types"
+
+msgid "إدارة أنواع المواعيد ومدة كل منها وسعرها للعيادة."
+msgstr "Manage appointment types, their durations, and prices for the clinic."
+
+msgid "إدارة العيادة"
+msgstr "Manage Clinic"
+
+msgid "إدارة الكوادر الطبية"
+msgstr "Manage Medical Staff"
+
+msgid "إدارة عياداتك واشتراكاتك وكادرك الطبي من مكان واحد"
+msgstr "Manage your clinics, subscriptions, and medical staff from one place"
+
+msgid "إرسال الدعوة"
+msgstr "Send Invitation"
+
+msgid "إزالة"
+msgstr "Remove"
+
+msgid "إزالة من الكادر"
+msgstr "Remove from staff"
+
+msgid "إضافة عيادة"
+msgstr "Add Clinic"
+
+msgid "إضافة عيادة جديدة"
+msgstr "Add New Clinic"
+
+msgid "إضافة فترة"
+msgstr "Add Period"
+
+msgid "إضافة فترة عمل"
+msgstr "Add Working Period"
+
+msgid "إضافة نفسك كسكرتير/ة"
+msgstr "Add yourself as secretary"
+
+msgid "إضافة نفسك كسكرتير/ة في هذه العيادة"
+msgstr "Add yourself as a secretary in this clinic"
+
+msgid "إضافة نفسك كطبيب"
+msgstr "Add yourself as doctor"
+
+msgid "إضافة نفسك كطبيب في هذه العيادة"
+msgstr "Add yourself as a doctor in this clinic"
+
+msgid "إضافة نوع موعد"
+msgstr "Add Appointment Type"
+
+msgid "إضافة نوع موعد جديد"
+msgstr "Add New Appointment Type"
+
+msgid "إعادة الإرسال"
+msgstr "Resend"
+
+msgid "إعادة ضبط"
+msgstr "Reset"
+
+msgid "إعداد أوقات الدوام الرسمية للعيادة (الأيام والساعات المفتوحة)."
+msgstr "Set the clinic's official working hours (open days and times)."
+
+msgid "إلغاء الدعوة"
+msgstr "Cancel Invitation"
+
+msgid "إلى الساعة"
+msgstr "To"
+
+msgid "إنشاء العيادة"
+msgstr "Create Clinic"
+
+msgid "إيرادات آخر 7 أيام"
+msgstr "Revenue — Last 7 Days"
+
+msgid "إيرادات اليوم"
+msgstr "Today's Revenue"
+
+msgid "ابدأ بإضافة عيادتك الأولى باستخدام كود التفعيل"
+msgstr "Start by adding your first clinic using the activation code"
+
+msgid "ابدأ ببناء فريقك الطبي عن طريق دعوة أطباء وسكرتارية للانضمام إلى عيادتك."
+msgstr "Start building your medical team by inviting doctors and secretaries to join your clinic."
+
+msgid "اثنين"
+msgstr "Mon"
+
+msgid "اختر المدينة"
+msgstr "Select city"
+
+msgid "اختر شهراً وسنة"
+msgstr "Choose a month and year"
+
+msgid "ادخل اسم السكرتير أو الاستقبال"
+msgstr "Enter the secretary or receptionist's name"
+
+msgid "ادخل اسم الطبيب"
+msgstr "Enter the doctor's name"
+
+msgid "اسم السكرتير/ة"
+msgstr "Secretary Name"
+
+msgid "اسم الطبيب"
+msgstr "Doctor Name"
+
+msgid "اسم العيادة"
+msgstr "Clinic Name"
+
+msgid "اعتماد"
+msgstr "Approve"
+
+msgid "اكتب سبب الرفض هنا..."
+msgstr "Write the rejection reason here..."
+
+msgid "الأطباء"
+msgstr "Doctors"
+
+msgid "الإثنين"
+msgstr "Monday"
+
+msgid "الإجراءات"
+msgstr "Actions"
+
+msgid "الإعدادات والإدارة"
+msgstr "Settings & Management"
+
+msgid "الإلغاء"
+msgstr "Cancellation"
+
+msgid "الإيرادات التقديرية (₪)"
+msgstr "Estimated Revenue (₪)"
+
+msgid "الإيرادات التقديرية حسب الخدمة (₪)"
+msgstr "Estimated Revenue by Service (₪)"
+
+msgid "الاسم (إنجليزي/أساسي)"
+msgstr "Name (English/Primary)"
+
+msgid "الاسم (عربي)"
+msgstr "Name (Arabic)"
+
+msgid "الاسم مطلوب."
+msgstr "Name is required."
+
+msgid "الاشتراك"
+msgstr "Subscription"
+
+msgid "الامتثال"
+msgstr "Compliance"
+
+msgid "البريد الإلكتروني غير صحيح."
+msgstr "The email address is invalid."
+
+msgid "البريد الإلكتروني للسكرتير/ة"
+msgstr "Secretary's Email"
+
+msgid "البريد الإلكتروني للطبيب"
+msgstr "Doctor's Email"
+
+msgid "البريد الإلكتروني للعيادة"
+msgstr "Clinic Email"
+
+msgid "البريد الإلكتروني مطلوب."
+msgstr "Email is required."
+
+msgid "التحقق من بريد العيادة"
+msgstr "Clinic Email Verification"
+
+msgid "التحقق من بريد المالك"
+msgstr "Owner Email Verification"
+
+msgid "التحقق من هاتف العيادة"
+msgstr "Clinic Phone Verification"
+
+msgid "التحقق من هاتف المالك"
+msgstr "Owner Phone Verification"
+
+msgid "التحليلات والأداء"
+msgstr "Analytics & Performance"
+
+msgid "التخصصات الطبية"
+msgstr "Medical Specialties"
+
+msgid "التقارير والتحليلات"
+msgstr "Reports & Analytics"
+
+msgid "الخدمات والأنواع"
+msgstr "Services & Types"
+
+msgid "الخدمة"
+msgstr "Service"
+
+msgid "الخطة"
+msgstr "Plan"
+
+msgid "الخطوة 1 من 2"
+msgstr "Step 1 of 2"
+
+msgid "الخطوة 1 من 4"
+msgstr "Step 1 of 4"
+
+msgid "الخطوة 2 من 2"
+msgstr "Step 2 of 2"
+
+msgid "الخطوة 2 من 4"
+msgstr "Step 2 of 4"
+
+msgid "الخطوة 3 من 4"
+msgstr "Step 3 of 4"
+
+msgid "الخطوة 4 من 4"
+msgstr "Step 4 of 4"
+
+msgid "الدعوات المرسلة والمقبولة"
+msgstr "Sent and accepted invitations"
+
+msgid "الساعات الذروة (8 ص — 9 م)"
+msgstr "Peak Hours (8 AM — 9 PM)"
+
+msgid "السعر (₪)"
+msgstr "Price (₪)"
+
+msgid "الشهر التالي"
+msgstr "Next month"
+
+msgid "الشهر السابق"
+msgstr "Previous month"
+
+msgid "الشهر الماضي"
+msgstr "Last Month"
+
+msgid "العنوان"
+msgstr "Address"
+
+msgid "العنوان التفصيلي"
+msgstr "Detailed Address"
+
+msgid "الفترة الزمنية"
+msgstr "Time Period"
+
+msgid "الكادر الطبي والإداري"
+msgstr "Medical & Administrative Staff"
+
+msgid "المؤهلات المسجلة"
+msgstr "Registered Credentials"
+
+msgid "المدة (دقائق)"
+msgstr "Duration (minutes)"
+
+msgid "المدة بالدقائق"
+msgstr "Duration in minutes"
+
+msgid "المقاييس الرئيسية"
+msgstr "Key Metrics"
+
+msgid "بانتظار التحقق"
+msgstr "Awaiting verification"
+
+msgid "بانتظار الرفع"
+msgstr "Awaiting upload"
+
+msgid "بانتظار القبول"
+msgstr "Awaiting acceptance"
+
+msgid "بدون ملف"
+msgstr "No profile"
+
+msgid "بريد العيادة"
+msgstr "Clinic Email"
+
+msgid "بريد المالك"
+msgstr "Owner Email"
+
+msgid "بلا مؤهلات"
+msgstr "No credentials"
+
+msgid "بيانات السكرتير/ة"
+msgstr "Secretary Details"
+
+msgid "بيانات الطبيب"
+msgstr "Doctor Details"
+
+msgid "بيانات مجمّعة لجميع عياداتك — مفيدة لتحسين الجودة واتخاذ القرار"
+msgstr "Aggregated data across all your clinics — useful for quality improvement and decision-making"
+
+msgid "تأكيد الرمز"
+msgstr "Confirm Code"
+
+msgid "تأكيد الرمز وتفعيل العيادة"
+msgstr "Confirm Code & Activate Clinic"
+
+msgid "تاريخ انتهاء الاشتراك"
+msgstr "Subscription Expiry Date"
+
+msgid "تحديث معلوماتك الشخصية"
+msgstr "Update your personal information"
+
+msgid "تحديد اليوم كمغلق بالكامل"
+msgstr "Mark the day as fully closed"
+
+msgid "تحديد تفاصيل نوع الموعد للعيادة."
+msgstr "Set the appointment type details for the clinic."
+
+msgid "تحكم في عدد حالات عدم الحضور المسموحة وإعدادات المسامحة التلقائية."
+msgstr "Control the number of allowed no-shows and the automatic forgiveness settings."
+
+msgid "تحليلات ومؤشرات الأداء"
+msgstr "Analytics and performance indicators"
+
+msgid "تطبيق"
+msgstr "Apply"
+
+msgid "تعديل المعلومات"
+msgstr "Edit Information"
+
+msgid "تعديل فترة عمل"
+msgstr "Edit Working Period"
+
+msgid "تعديل نوع الموعد"
+msgstr "Edit Appointment Type"
+
+msgid "تعديل نوع الموعد: %(name)s"
+msgstr "Edit Appointment Type: %(name)s"
+
+msgid "تغيير البريد الإلكتروني يتطلب التحقق عبر رابط يُرسل إلى العنوان الجديد."
+msgstr "Changing the email requires verification via a link sent to the new address."
+
+msgid "تغيير الحالة"
+msgstr "Toggle status"
+
+msgid "تفاصيل العيادة"
+msgstr "Clinic Details"
+
+msgid "تفاصيل العيادة الجديدة"
+msgstr "New Clinic Details"
+
+msgid "تفصيل لكل عيادة"
+msgstr "Per-Clinic Breakdown"
+
+msgid "تم إرسال الدعوة بنجاح."
+msgstr "The invitation was sent successfully."
+
+msgid "تم إرسال دعوة السكرتير/ة بنجاح."
+msgstr "The secretary invitation was sent successfully."
+
+msgid "تم إزالة العضو من الكادر بنجاح."
+msgstr "The member was removed from the staff successfully."
+
+msgid "تم إلغاء الدعوة بنجاح."
+msgstr "The invitation was cancelled successfully."
+
+msgid "تم إلغاء الموعد"
+msgstr "Appointment cancelled"
+
+msgid "تم إنشاء عيادة \"%(name)s\" بنجاح!"
+msgstr "Clinic \"%(name)s\" was created successfully!"
+
+msgid "تم اختيار"
+msgstr "Selected"
+
+msgid "تم اختيار <strong id=\"selectedCount\">0</strong> تخصص"
+msgstr "<strong id=\"selectedCount\">0</strong> specialties selected"
+
+msgid "تم اعتماد مؤهلات د. %(name)s بنجاح."
+msgstr "Dr. %(name)s's credentials were approved successfully."
+
+msgid "تم التحقق من جميع القنوات! عيادتك أصبحت نشطة."
+msgstr "All channels verified! Your clinic is now active."
+
+msgid "تم القبول"
+msgstr "Accepted"
+
+msgid "تم تأكيد الموعد"
+msgstr "Appointment confirmed"
+
+msgid "تم تحديث إعدادات الامتثال بنجاح."
+msgstr "Compliance settings updated successfully."
+
+msgid "تم تحديث ساعات العمل بنجاح."
+msgstr "Working hours updated successfully."
+
+msgid "تم حذف ساعات العمل بنجاح."
+msgstr "Working hours deleted successfully."
+
+msgid "تم حفظ التغييرات بنجاح."
+msgstr "Changes saved successfully."
+
+msgid "تم رفض مؤهلات د. %(name)s."
+msgstr "Dr. %(name)s's credentials were rejected."
+
+msgid "تمت إضافة ساعات العمل بنجاح."
+msgstr "Working hours added successfully."
+
+msgid "تمت إضافتك كـ%(label)s في هذه العيادة."
+msgstr "You have been added as %(label)s in this clinic."
+
+msgid "تمت الزيارة بنجاح"
+msgstr "Visit completed successfully"
+
+msgid "تنبيه: الاشتراك ينتهي خلال %(days)s يوماً"
+msgstr "Notice: subscription expires in %(days)s days"
+
+msgid "تنبيه: مؤهلات تحتاج للمراجعة"
+msgstr "Notice: credentials need review"
+
+msgid "تنبيه: مواعيد معلقة"
+msgstr "Notice: pending appointments"
+
+msgid "توزيع الجنس"
+msgstr "Gender Distribution"
+
+msgid "توزيع المواعيد حسب الحالة"
+msgstr "Appointment Distribution by Status"
+
+msgid "توزيع المواعيد حسب يوم الأسبوع"
+msgstr "Appointment Distribution by Day of Week"
+
+msgid "ثلاثاء"
+msgstr "Tue"
+
+msgid "جارٍ التحقق"
+msgstr "Verifying..."
+
+msgid "جدد"
+msgstr "new"
+
+msgid "جدول أيام العمل"
+msgstr "Working days schedule"
+
+msgid "جدول العمل"
+msgstr "Work Schedule"
+
+msgid "جدول اليوم"
+msgstr "Today's Schedule"
+
+msgid "جدول عمل الطبيب"
+msgstr "Doctor's work schedule"
+
+msgid "جمعة"
+msgstr "Fri"
+
+msgid "جميع العيادات"
+msgstr "All Clinics"
+
+msgid "حالة: %(status)s"
+msgstr "Status: %(status)s"
+
+msgid "حجز جديد بانتظار التأكيد"
+msgstr "New booking awaiting confirmation"
+
+msgid "حجم المواعيد — آخر 12 شهراً"
+msgstr "Appointment Volume — Last 12 Months"
+
+msgid "حضر"
+msgstr "Attended"
+
+msgid "خطة الاشتراك"
+msgstr "Subscription Plan"
+
+msgid "خميس"
+msgstr "Thu"
+
+msgid "دعوات معلقة"
+msgstr "Pending invitations"
+
+msgid "دعوة أطباء وسكرتارية للانضمام إلى عيادتك"
+msgstr "Invite doctors and secretaries to join your clinic"
+
+msgid "دعوة سكرتير/ة"
+msgstr "Invite Secretary"
+
+msgid "دعوة سكرتير/ة جديد"
+msgstr "Invite New Secretary"
+
+msgid "دعوة طبيب"
+msgstr "Invite Doctor"
+
+msgid "دعوة طبيب جديد"
+msgstr "Invite New Doctor"
+
+msgid "دور غير صحيح."
+msgstr "Invalid role."
+
+msgid "دور: سكرتير/ة الاستقبال"
+msgstr "Role: Reception secretary"
+
+msgid "ديسمبر"
+msgstr "December"
+
+msgid "ر.س"
+msgstr "SAR"
+
+msgid "رقم الهاتف غير صحيح. يجب أن يتكون من 10 أرقام ويبدأ بـ 05."
+msgstr "Invalid phone number. It must be 10 digits and start with 05."
+
+msgid "رقم الهاتف مرتبط بحسابك ولا يمكن تغييره."
+msgstr "The phone number is tied to your account and cannot be changed."
+
+msgid "رقم الهوية لا يمكن تعديله."
+msgstr "The ID number cannot be edited."
+
+msgid "رقم هاتف السكرتير/ة"
+msgstr "Secretary's Phone Number"
+
+msgid "رقم هاتف الطبيب"
+msgstr "Doctor's Phone Number"
+
+msgid "رمز التفعيل"
+msgstr "Activation Code"
+
+msgid "رمز التفعيل غير صالح أو منتهي الصلاحية"
+msgstr "The activation code is invalid or expired"
+
+msgid "رمز التفعيل لم يعد صالحاً."
+msgstr "The activation code is no longer valid."
+
+msgid "ساعات العمل"
+msgstr "Working Hours"
+
+msgid "ساعات عمل العيادة"
+msgstr "Clinic Working Hours"
+
+msgid "سبب الرفض السابق:"
+msgstr "Previous rejection reason:"
+
+msgid "سبت"
+msgstr "Sat"
+
+msgid "سبتمبر"
+msgstr "September"
+
+msgid "سجل الدعوات"
+msgstr "Invitations Log"
+
+msgid "سجل المواعيد"
+msgstr "Appointments Log"
+
+msgid "سنوات"
+msgstr "years"
+
+msgid "سيتلقى الشخص المدعو رسالة نصية تتيح له قبول الدعوة والانضمام إلى فريق عيادتك."
+msgstr "The invitee will receive a text message allowing them to accept the invitation and join your clinic team."
+
+msgid "سيتلقى الطبيب رسالة نصية تتيح له قبول الدعوة والانضمام إلى عيادتك."
+msgstr "The doctor will receive a text message allowing them to accept the invitation and join your clinic."
+
+msgid "سيتم البحث عن الشخص بناءً على رقم هاتفه. إن لم يكن مسجلاً سيتلقى دعوة عبر الرسائل النصية."
+msgstr "The person will be searched by their phone number. If not registered, they'll receive an invitation via SMS."
+
+msgid "سيتم البحث عن الطبيب بناءً على رقم هاتفه. إن لم يكن مسجلاً سيتلقى دعوة عبر الرسائل النصية."
+msgstr "The doctor will be searched by their phone number. If not registered, they'll receive an invitation via SMS."
+
+msgid "شهادات وتراخيص الأطباء"
+msgstr "Doctors' certificates and licenses"
+
+msgid "صلاحية إدارة المواعيد وخدمة المرضى، دون الوصول إلى الملفات الطبية."
+msgstr "Permission to manage appointments and serve patients, without access to medical records."
+
+msgid "صيغة صحيحة ✓"
+msgstr "Valid format ✓"
+
+msgid "عام"
+msgstr "General"
+
+msgid "عدد المواعيد"
+msgstr "Number of Appointments"
+
+msgid "عدد المواعيد المكتملة"
+msgstr "Completed Appointments Count"
+
+msgid "عدم الحضور"
+msgstr "No-show"
+
+msgid "عرض الشهادة المرفوعة"
+msgstr "View uploaded certificate"
+
+msgid "عطلة قادمة: %(title)s"
+msgstr "Upcoming holiday: %(title)s"
+
+msgid "عيادتي"
+msgstr "My Clinic"
+
+msgid "غير محدود"
+msgstr "Unlimited"
+
+msgid "غير موثق"
+msgstr "Unverified"
+
+msgid "فبراير"
+msgstr "February"
+
+msgid "فترات العمل"
+msgstr "Working Periods"
+
+msgid "قادم"
+msgstr "Upcoming"
+
+msgid "قواعد الحجز والخصوصية"
+msgstr "Booking and privacy rules"
+
+msgid "كل الوقت"
+msgstr "All Time"
+
+msgid "لا توجد أنواع مواعيد"
+msgstr "No appointment types"
+
+msgid "لا توجد بيانات مواعيد بعد — ستظهر التقارير بمجرد بدء الحجوزات."
+msgstr "No appointment data yet — reports will appear once bookings begin."
+
+msgid "لا توجد تخصصات متاحة حالياً."
+msgstr "No specialties available at the moment."
+
+msgid "لا توجد دعوات تطابق التصفية المختارة"
+msgstr "No invitations match the selected filter"
+
+msgid "لا توجد عيادات بعد"
+msgstr "No clinics yet"
+
+msgid "لا توجد عيادات مسجلة بعد."
+msgstr "No clinics registered yet."
+
+msgid "لا توجد فترات عمل"
+msgstr "No working periods"
+
+msgid "لا توجد مواعيد في %(month)s %(year)s"
+msgstr "No appointments in %(month)s %(year)s"
+
+msgid "لا توجد مواعيد مجدولة لهذا اليوم"
+msgstr "No appointments scheduled for today"
+
+msgid "لا يمكن إزالة مالك العيادة من الكادر."
+msgstr "The clinic owner cannot be removed from the staff."
+
+msgid "لا يوجد أطباء —"
+msgstr "No doctors —"
+
+msgid "لا يوجد اشتراك مرتبط"
+msgstr "No subscription linked"
+
+msgid "لا يوجد اشتراك مرتبط بهذه العيادة"
+msgstr "No subscription linked to this clinic"
+
+msgid "لا يوجد سكرتارية —"
+msgstr "No secretaries —"
+
+msgid "لقد وصلت للحد الأقصى من الأطباء وفق خطة الاشتراك."
+msgstr "You have reached the maximum number of doctors under your subscription plan."
+
+msgid "لقد وصلت للحد الأقصى من السكرتارية وفق خطة الاشتراك."
+msgstr "You have reached the maximum number of secretaries under your subscription plan."
+
+msgid "لم تقم بإرسال أي دعوة بعد"
+msgstr "You haven't sent any invitations yet"
+
+msgid "لم تقم بإضافة أي أنواع مواعيد لهذه العيادة بعد."
+msgstr "You haven't added any appointment types for this clinic yet."
+
+msgid "لم يتم تحديد أوقات عمل لهذا الطبيب في هذه العيادة بعد."
+msgstr "No working hours have been set for this doctor in this clinic yet."
+
+msgid "لم يصلك الرمز؟"
+msgstr "Didn't receive the code?"
+
+msgid "لم يقم الطبيب برفع الشهادة بعد"
+msgstr "The doctor hasn't uploaded the certificate yet"
+
+msgid "مارس"
+msgstr "March"
+
+msgid "مالك"
+msgstr "Owner"
+
+msgid "مالك العيادة"
+msgstr "Clinic Owner"
+
+msgid "مايو"
+msgstr "May"
+
+msgid "متكررون"
+msgstr "returning"
+
+msgid "مثال: General Checkup"
+msgstr "e.g. General Checkup"
+
+msgid "مثال: د. محمد أحمد"
+msgstr "e.g. Dr. Mohammed Ahmad"
+
+msgid "مثال: سارة أحمد"
+msgstr "e.g. Sara Ahmad"
+
+msgid "مثال: فحص عام"
+msgstr "e.g. General Checkup"
+
+msgid "مراجعة"
+msgstr "Review"
+
+msgid "مراجعة المؤهلات"
+msgstr "Review Credentials"
+
+msgid "مراجعة مؤهلات الأطباء"
+msgstr "Review Doctor Credentials"
+
+msgid "مرحباً دكتور %(welcome_name)s! تم إنشاء حسابك. يرجى إتمام التحقق من قنوات التواصل."
+msgstr "Welcome Dr. %(welcome_name)s! Your account has been created. Please complete the verification of your contact channels."
+
+msgid "مرحباً، %(name)s"
+msgstr "Welcome, %(name)s"
+
+msgid "مرضى جدد مقابل متكررون"
+msgstr "New vs Returning Patients"
+
+msgid "مرضى عائدون"
+msgstr "Returning Patients"
+
+msgid "مرضى محظورون"
+msgstr "Blocked Patients"
+
+msgid "مرفوض"
+msgstr "Rejected"
+
+msgid "مرفوضة"
+msgstr "Rejected"
+
+msgid "معتمد"
+msgstr "Verified"
+
+msgid "معدل الإكمال"
+msgstr "Completion Rate"
+
+msgid "معدل الإلغاء"
+msgstr "Cancellation Rate"
+
+msgid "معدل عدم الحضور"
+msgstr "No-show Rate"
+
+msgid "معدلات الشهر الحالي"
+msgstr "Current Month Rates"
+
+msgid "معلومات العيادة"
+msgstr "Clinic Information"
+
+msgid "معلومات الهوية"
+msgstr "Identity Information"
+
+msgid "مغلق"
+msgstr "Closed"
+
+msgid "مفتوح"
+msgstr "Open"
+
+msgid "مقبولة"
+msgstr "Accepted"
+
+msgid "ملخص العيادة"
+msgstr "Clinic Summary"
+
+msgid "من الساعة"
+msgstr "From"
+
+msgid "من المواعيد المكتملة"
+msgstr "From completed appointments"
+
+msgid "منتهي"
+msgstr "Expired"
+
+msgid "مواعيد"
+msgstr "appointments"
+
+msgid "مواعيد مكتملة"
+msgstr "Completed Appointments"
+
+msgid "موقوف"
+msgstr "Suspended"
+
+msgid "موقوفة"
+msgstr "Suspended"
+
+msgid "مُعتمد"
+msgstr "Verified"
+
+msgid "نشطة"
+msgstr "Active"
+
+msgid "نظرة على الأسبوع"
+msgstr "Week at a Glance"
+
+msgid "نوع الموعد نشط ومتاح للحجز"
+msgstr "Appointment type is active and available for booking"
+
+msgid "نوفمبر"
+msgstr "November"
+
+msgid "هاتف العيادة"
+msgstr "Clinic Phone"
+
+msgid "هاتف المالك"
+msgstr "Owner Phone"
+
+msgid "هذا الحقل مطلوب."
+msgstr "This field is required."
+
+msgid "هذا العام"
+msgstr "This Year"
+
+msgid "هل أنت متأكد من إزالة هذا السكرتير/ة من الكادر؟"
+msgstr "Are you sure you want to remove this secretary from the staff?"
+
+msgid "هل أنت متأكد من إزالة هذا الطبيب من الكادر؟"
+msgstr "Are you sure you want to remove this doctor from the staff?"
+
+msgid "هل أنت متأكد من اعتماد هذا المؤهل؟"
+msgstr "Are you sure you want to approve this credential?"
+
+msgid "هل أنت متأكد من حذف هذه الفترة؟"
+msgstr "Are you sure you want to delete this period?"
+
+msgid "وصف (اختياري)"
+msgstr "Description (optional)"
+
+msgid "وصف العيادة"
+msgstr "Clinic Description"
+
+msgid "وصف تفصيلي لنوع الموعد ومحتواه"
+msgstr "A detailed description of the appointment type and its content"
+
+msgid "يجب إدخال سبب الرفض."
+msgstr "You must enter a rejection reason."
+
+msgid "يرجى تجديد الاشتراك لضمان استمرارية الخدمة."
+msgstr "Please renew the subscription to ensure continuity of service."
+
+msgid "يناير"
+msgstr "January"
+
+msgid "ينتهي %(exp)s"
+msgstr "Expires %(exp)s"
+
+msgid "ينتهي في"
+msgstr "Expires on"
+
+msgid "يوجد %(count)s دعوة بانتظار القبول."
+msgstr "There are %(count)s invitations awaiting acceptance."
+
+msgid "يوجد %(count)s طلب اعتماد مؤهلات لأطباء في العيادة."
+msgstr "There are %(count)s credential approval requests for doctors in the clinic."
+
+msgid "يوجد %(count)s مريض محظور حالياً من الحجز."
+msgstr "There are %(count)s patients currently blocked from booking."
+
+msgid "يوجد %(count)s موعد بانتظار التأكيد."
+msgstr "There are %(count)s appointments awaiting confirmation."
+
+msgid "يوليو"
+msgstr "July"
+
+msgid "يونيو"
+msgstr "June"
+
+msgid "⚠️ الاشتراك ينتهي خلال %(days)s أيام"
+msgstr "⚠️ Subscription expires in %(days)s days"
+
+msgid "⚠️ انتهى الاشتراك!"
+msgstr "⚠️ Subscription has expired!"
+
+msgctxt "schedule"
+msgid "غير محدد"
+msgstr "Not set"
+

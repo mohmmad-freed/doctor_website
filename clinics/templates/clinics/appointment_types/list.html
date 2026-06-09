@@ -1,7 +1,7 @@
 {% extends 'accounts/base.html' %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}أنواع المواعيد - عيادتي{% endblock %}
+{% block title %}{% trans "أنواع المواعيد" %} - {% trans "عيادتي" %}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -83,7 +83,7 @@
     table { width: 100%; border-collapse: collapse; }
 
     th {
-        text-align: right;
+        text-align: start;
         padding: 0.75rem 1rem;
         border-bottom: 2px solid var(--color-surface-border);
         color: var(--color-text-muted);
@@ -178,15 +178,15 @@
     <div class="page-card page-header">
         <div>
             <h1>
-                <i class="fa-solid fa-calendar-check" style="color:var(--color-primary-500);margin-left:0.4rem;"></i>أنواع المواعيد
+                <i class="fa-solid fa-calendar-check" style="color:var(--color-primary-500);margin-inline-end:0.4rem;"></i>{% trans "أنواع المواعيد" %}
             </h1>
-            <p>إدارة أنواع المواعيد ومدة كل منها وسعرها للعيادة.</p>
+            <p>{% trans "إدارة أنواع المواعيد ومدة كل منها وسعرها للعيادة." %}</p>
             <a href="{% url 'clinics:my_clinic' clinic_id=clinic.id %}" class="btn-back">
-                <i class="fa-solid fa-arrow-right"></i> {{ clinic.name }}
+                <i class="fa-solid fa-arrow-{% if IS_RTL %}right{% else %}left{% endif %}"></i> {{ clinic.name }}
             </a>
         </div>
         <a href="{% url 'clinics:appointment_type_create' clinic_id=clinic.id %}" class="btn-primary">
-            <i class="fa-solid fa-plus"></i> إضافة نوع موعد
+            <i class="fa-solid fa-plus"></i> {% trans "إضافة نوع موعد" %}
         </a>
     </div>
 
@@ -197,12 +197,12 @@
             <table>
                 <thead>
                     <tr>
-                        <th>الاسم</th>
-                        <th>الاسم (عربي)</th>
-                        <th>المدة (دقائق)</th>
-                        <th>السعر (₪)</th>
-                        <th>الحالة</th>
-                        <th>الإجراءات</th>
+                        <th>{% trans "الاسم" %}</th>
+                        <th>{% trans "الاسم (عربي)" %}</th>
+                        <th>{% trans "المدة (دقائق)" %}</th>
+                        <th>{% trans "السعر (₪)" %}</th>
+                        <th>{% trans "الحالة" %}</th>
+                        <th>{% trans "الإجراءات" %}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -215,22 +215,22 @@
                         <td>
                             {% if type.is_active %}
                             <span class="status-badge status-active">
-                                <i class="fa-solid fa-check-circle"></i> نشط
+                                <i class="fa-solid fa-check-circle"></i> {% trans "نشط" %}
                             </span>
                             {% else %}
                             <span class="status-badge status-inactive">
-                                <i class="fa-solid fa-xmark-circle"></i> غير نشط
+                                <i class="fa-solid fa-xmark-circle"></i> {% trans "غير نشط" %}
                             </span>
                             {% endif %}
                         </td>
                         <td>
                             <div class="actions">
-                                <a href="{% url 'clinics:appointment_type_update' clinic_id=clinic.id type_id=type.id %}" class="btn-edit" title="تعديل">
+                                <a href="{% url 'clinics:appointment_type_update' clinic_id=clinic.id type_id=type.id %}" class="btn-edit" title="{% trans 'تعديل' %}">
                                     <i class="fa-solid fa-pen-to-square"></i>
                                 </a>
                                 <form method="post" action="{% url 'clinics:appointment_type_toggle' clinic_id=clinic.id type_id=type.id %}" style="margin:0;">
                                     {% csrf_token %}
-                                    <button type="submit" class="btn-toggle" title="تغيير الحالة">
+                                    <button type="submit" class="btn-toggle" title="{% trans 'تغيير الحالة' %}">
                                         {% if type.is_active %}
                                         <i class="fa-solid fa-toggle-on" style="font-size:1.3rem;color:#16a34a;"></i>
                                         {% else %}
@@ -247,10 +247,10 @@
             {% else %}
             <div class="empty-state">
                 <i class="fa-solid fa-clipboard-list"></i>
-                <h3>لا توجد أنواع مواعيد</h3>
-                <p>لم تقم بإضافة أي أنواع مواعيد لهذه العيادة بعد.</p>
+                <h3>{% trans "لا توجد أنواع مواعيد" %}</h3>
+                <p>{% trans "لم تقم بإضافة أي أنواع مواعيد لهذه العيادة بعد." %}</p>
                 <a href="{% url 'clinics:appointment_type_create' clinic_id=clinic.id %}" class="btn-primary" style="display:inline-flex;">
-                    <i class="fa-solid fa-plus"></i> إضافة نوع موعد
+                    <i class="fa-solid fa-plus"></i> {% trans "إضافة نوع موعد" %}
                 </a>
             </div>
             {% endif %}

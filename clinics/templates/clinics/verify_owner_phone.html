@@ -1,7 +1,7 @@
 {% extends 'accounts/base.html' %}
-{% load static mask_filters %}
+{% load static mask_filters i18n %}
 
-{% block title %}التحقق من هاتف المالك — الخطوة 1 من 4{% endblock %}
+{% block title %}{% trans "التحقق من هاتف المالك" %} — {% trans "الخطوة 1 من 4" %}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'accounts/css/loader.css' %}">
@@ -154,9 +154,9 @@
             <div class="icon-circle">
                 <i class="fa-solid fa-mobile-screen"></i>
             </div>
-            <h1 class="page-title">التحقق من هاتف المالك</h1>
+            <h1 class="page-title">{% trans "التحقق من هاتف المالك" %}</h1>
             <p class="page-subtitle">
-                أدخل الرمز الذي أرسلناه إلى
+                {% trans "أدخل الرمز الذي أرسلناه إلى" %}
                 <span class="phone-highlight" dir="ltr">{{ phone|mask_phone }}</span>
             </p>
         </div>
@@ -164,20 +164,20 @@
         <!-- 4-step wizard indicator: step 1 active -->
         <div class="wizard-container">
             <div class="step-indicator">
-                <div class="step-dot active" title="هاتف المالك"></div>
+                <div class="step-dot active" title="{% trans 'هاتف المالك' %}"></div>
                 <div class="step-line"></div>
-                <div class="step-dot" title="بريد المالك"></div>
+                <div class="step-dot" title="{% trans 'بريد المالك' %}"></div>
                 <div class="step-line"></div>
-                <div class="step-dot" title="هاتف العيادة"></div>
+                <div class="step-dot" title="{% trans 'هاتف العيادة' %}"></div>
                 <div class="step-line"></div>
-                <div class="step-dot" title="بريد العيادة"></div>
+                <div class="step-dot" title="{% trans 'بريد العيادة' %}"></div>
             </div>
         </div>
 
         {% if welcome_name %}
         <div class="alert-welcome">
             <i class="fa-solid fa-circle-check"></i>
-            مرحباً دكتور {{ welcome_name }}! تم إنشاء حسابك. يرجى إتمام التحقق من قنوات التواصل.
+            {% blocktrans %}مرحباً دكتور {{ welcome_name }}! تم إنشاء حسابك. يرجى إتمام التحقق من قنوات التواصل.{% endblocktrans %}
         </div>
         {% endif %}
 
@@ -201,25 +201,26 @@
                 <input type="text" maxlength="1" class="otp-input" inputmode="numeric">
             </div>
             <button type="submit" class="btn-submit" id="verifyBtn">
-                <span>تأكيد الرمز</span>
+                <span>{% trans "تأكيد الرمز" %}</span>
                 <i class="fa-solid fa-check-double"></i>
             </button>
         </form>
 
         <div class="resend-section">
-            <p class="text-sm text-muted">لم يصلك الرمز؟</p>
+            <p class="text-sm text-muted">{% trans "لم يصلك الرمز؟" %}</p>
             <form method="post" id="resendForm">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="resend">
                 <button type="submit" id="resendBtn" class="btn-resend" {% if cooldown %}disabled{% endif %}>
                     <i class="fa-solid fa-rotate-right"></i>
-                    <span>إعادة الإرسال</span>
+                    <span>{% trans "إعادة الإرسال" %}</span>
                     {% if cooldown %}<span id="timer">(60)</span>{% endif %}
                 </button>
             </form>
         </div>
 
-        {% include 'accounts/_heartbeat_loader.html' with overlay_id='verifyOverlay' loader_text='جارٍ التحقق' loader_icon='fa-shield-halved' %}
+        {% trans "جارٍ التحقق" as loader_label %}
+        {% include 'accounts/_heartbeat_loader.html' with overlay_id='verifyOverlay' loader_text=loader_label loader_icon='fa-shield-halved' %}
     </div>
 </div>
 {% endblock %}

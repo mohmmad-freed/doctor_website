@@ -6,8 +6,8 @@
     {# ── Header: title + month navigation ── #}
     <div class="appt-header">
         <h2 style="margin:0;border:none;padding:0;">
-            <i class="fa-solid fa-calendar-days" style="color:var(--color-primary-500);margin-left:0.4rem;font-size:0.95rem;"></i>
-            سجل المواعيد
+            <i class="fa-solid fa-calendar-days" style="color:var(--color-primary-500);margin-inline-end:0.4rem;font-size:0.95rem;"></i>
+            {% trans "سجل المواعيد" %}
         </h2>
         <div class="month-nav">
             <a class="month-btn"
@@ -15,25 +15,25 @@
                hx-target="#appointments-panel"
                hx-swap="outerHTML"
                hx-indicator="#appt-spinner"
-               title="الشهر السابق">
-                <i class="fa-solid fa-chevron-right"></i>
+               title="{% trans 'الشهر السابق' %}">
+                <i class="fa-solid fa-chevron-{% if IS_RTL %}right{% else %}left{% endif %}"></i>
             </a>
 
             {# ── Month/year picker ── #}
             <div class="month-picker-wrap" id="month-picker-wrap">
                 <button class="month-label" id="month-picker-btn" type="button"
-                        onclick="toggleApptPicker()" title="اختر شهراً وسنة">
+                        onclick="toggleApptPicker()" title="{% trans 'اختر شهراً وسنة' %}">
                     {{ appt_month_name }} {{ appt_year }}
                     <i class="fa-solid fa-chevron-down picker-chevron"></i>
                 </button>
                 <div class="month-picker-dropdown" id="month-picker-dropdown">
                     <div class="picker-year-nav">
                         <button type="button" class="picker-year-btn" onclick="apptPickerChangeYear(-1)">
-                            <i class="fa-solid fa-chevron-right"></i>
+                            <i class="fa-solid fa-chevron-{% if IS_RTL %}right{% else %}left{% endif %}"></i>
                         </button>
                         <span class="picker-year-label" id="picker-year-label">{{ appt_year }}</span>
                         <button type="button" class="picker-year-btn" onclick="apptPickerChangeYear(1)">
-                            <i class="fa-solid fa-chevron-left"></i>
+                            <i class="fa-solid fa-chevron-{% if IS_RTL %}left{% else %}right{% endif %}"></i>
                         </button>
                     </div>
                     <div class="picker-months-grid" id="picker-months-grid">
@@ -47,8 +47,8 @@
                hx-target="#appointments-panel"
                hx-swap="outerHTML"
                hx-indicator="#appt-spinner"
-               title="الشهر التالي">
-                <i class="fa-solid fa-chevron-left"></i>
+               title="{% trans 'الشهر التالي' %}">
+                <i class="fa-solid fa-chevron-{% if IS_RTL %}left{% else %}right{% endif %}"></i>
             </a>
             <span id="appt-spinner" class="htmx-indicator appt-spinner">
                 <i class="fa-solid fa-circle-notch fa-spin"></i>
@@ -63,8 +63,8 @@
         var _currentMonth = {{ appt_month }};
         var _currentYear = {{ appt_year }};
         var ARABIC_MONTHS = [
-            'يناير','فبراير','مارس','أبريل','مايو','يونيو',
-            'يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'
+            '{% trans "يناير" %}','{% trans "فبراير" %}','{% trans "مارس" %}','{% trans "أبريل" %}','{% trans "مايو" %}','{% trans "يونيو" %}',
+            '{% trans "يوليو" %}','{% trans "أغسطس" %}','{% trans "سبتمبر" %}','{% trans "أكتوبر" %}','{% trans "نوفمبر" %}','{% trans "ديسمبر" %}'
         ];
 
         function renderPickerMonths() {
@@ -130,23 +130,23 @@
     <div class="appt-stats">
         <div class="stat-chip stat-total">
             <span class="stat-num">{{ appt_stats.total }}</span>
-            <span class="stat-lbl">إجمالي</span>
+            <span class="stat-lbl">{% trans "إجمالي" %}</span>
         </div>
         <div class="stat-chip stat-completed">
             <span class="stat-num">{{ appt_stats.completed }}</span>
-            <span class="stat-lbl">مكتمل</span>
+            <span class="stat-lbl">{% trans "مكتمل" %}</span>
         </div>
         <div class="stat-chip stat-pending">
             <span class="stat-num">{{ appt_stats.pending }}</span>
-            <span class="stat-lbl">قادم</span>
+            <span class="stat-lbl">{% trans "قادم" %}</span>
         </div>
         <div class="stat-chip stat-cancelled">
             <span class="stat-num">{{ appt_stats.cancelled }}</span>
-            <span class="stat-lbl">ملغي</span>
+            <span class="stat-lbl">{% trans "ملغي" %}</span>
         </div>
         <div class="stat-chip stat-noshow">
             <span class="stat-num">{{ appt_stats.no_shows }}</span>
-            <span class="stat-lbl">لم يحضر</span>
+            <span class="stat-lbl">{% trans "لم يحضر" %}</span>
         </div>
     </div>
 
@@ -156,12 +156,12 @@
         <table class="appt-table">
             <thead>
                 <tr>
-                    <th>التاريخ</th>
-                    <th>الوقت</th>
-                    <th>المريض</th>
-                    <th>الطبيب</th>
-                    <th>نوع الموعد</th>
-                    <th>الحالة</th>
+                    <th>{% trans "التاريخ" %}</th>
+                    <th>{% trans "الوقت" %}</th>
+                    <th>{% trans "المريض" %}</th>
+                    <th>{% trans "الطبيب" %}</th>
+                    <th>{% trans "نوع الموعد" %}</th>
+                    <th>{% trans "الحالة" %}</th>
                 </tr>
             </thead>
             <tbody>
@@ -172,7 +172,7 @@
                     <td class="appt-patient">{{ appt.patient.name }}</td>
                     <td class="appt-doctor">
                         {% if appt.doctor %}
-                            د. {{ appt.doctor.name }}
+                            {% trans "د." %} {{ appt.doctor.name }}
                         {% else %}
                             <span style="color:var(--color-text-muted);">—</span>
                         {% endif %}
@@ -186,19 +186,19 @@
                     </td>
                     <td>
                         {% if appt.status == "PENDING" %}
-                            <span class="abadge abadge-pending">قيد الانتظار</span>
+                            <span class="abadge abadge-pending">{% trans "قيد الانتظار" %}</span>
                         {% elif appt.status == "CONFIRMED" %}
-                            <span class="abadge abadge-confirmed">مؤكد</span>
+                            <span class="abadge abadge-confirmed">{% trans "مؤكد" %}</span>
                         {% elif appt.status == "CHECKED_IN" %}
-                            <span class="abadge abadge-checked-in">وصل</span>
+                            <span class="abadge abadge-checked-in">{% trans "وصل" %}</span>
                         {% elif appt.status == "IN_PROGRESS" %}
-                            <span class="abadge abadge-in-progress">جارٍ</span>
+                            <span class="abadge abadge-in-progress">{% trans "جارٍ" %}</span>
                         {% elif appt.status == "COMPLETED" %}
-                            <span class="abadge abadge-completed">مكتمل</span>
+                            <span class="abadge abadge-completed">{% trans "مكتمل" %}</span>
                         {% elif appt.status == "CANCELLED" %}
-                            <span class="abadge abadge-cancelled">ملغي</span>
+                            <span class="abadge abadge-cancelled">{% trans "ملغي" %}</span>
                         {% elif appt.status == "NO_SHOW" %}
-                            <span class="abadge abadge-no-show">لم يحضر</span>
+                            <span class="abadge abadge-no-show">{% trans "لم يحضر" %}</span>
                         {% endif %}
                     </td>
                 </tr>
@@ -209,7 +209,7 @@
     {% else %}
     <div class="appt-empty">
         <i class="fa-regular fa-calendar-xmark"></i>
-        <p>لا توجد مواعيد في {{ appt_month_name }} {{ appt_year }}</p>
+        <p>{% blocktrans with month=appt_month_name year=appt_year %}لا توجد مواعيد في {{ month }} {{ year }}{% endblocktrans %}</p>
     </div>
     {% endif %}
 

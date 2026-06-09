@@ -1,7 +1,7 @@
 {% extends 'accounts/base.html' %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}ساعات العمل - عيادتي{% endblock %}
+{% block title %}{% trans "ساعات العمل" %} - {% trans "عيادتي" %}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -81,7 +81,7 @@
     table { width: 100%; border-collapse: collapse; }
 
     th {
-        text-align: right;
+        text-align: start;
         padding: 0.75rem 1rem;
         border-bottom: 2px solid var(--color-surface-border);
         color: var(--color-text-muted);
@@ -275,14 +275,14 @@
     <!-- Header -->
     <div class="page-card page-header">
         <div>
-            <h1><i class="fa-solid fa-clock" style="color:var(--color-primary-500);margin-left:0.4rem;"></i>ساعات عمل العيادة</h1>
-            <p>إعداد أوقات الدوام الرسمية للعيادة (الأيام والساعات المفتوحة).</p>
+            <h1><i class="fa-solid fa-clock" style="color:var(--color-primary-500);margin-inline-end:0.4rem;"></i>{% trans "ساعات عمل العيادة" %}</h1>
+            <p>{% trans "إعداد أوقات الدوام الرسمية للعيادة (الأيام والساعات المفتوحة)." %}</p>
             <a href="{% url 'clinics:my_clinic' clinic_id=clinic.id %}" class="btn-back">
-                <i class="fa-solid fa-arrow-right"></i> {{ clinic.name }}
+                <i class="fa-solid fa-arrow-{% if IS_RTL %}right{% else %}left{% endif %}"></i> {{ clinic.name }}
             </a>
         </div>
         <button type="button" class="btn-primary" onclick="openCreateModal()">
-            <i class="fa-solid fa-plus"></i> إضافة فترة عمل
+            <i class="fa-solid fa-plus"></i> {% trans "إضافة فترة عمل" %}
         </button>
     </div>
 
@@ -292,10 +292,10 @@
             <table>
                 <thead>
                     <tr>
-                        <th style="width:20%;">اليوم</th>
-                        <th style="width:15%;">الحالة</th>
-                        <th style="width:40%;">فترات العمل</th>
-                        <th style="width:25%;">الإجراءات</th>
+                        <th style="width:20%;">{% trans "اليوم" %}</th>
+                        <th style="width:15%;">{% trans "الحالة" %}</th>
+                        <th style="width:40%;">{% trans "فترات العمل" %}</th>
+                        <th style="width:25%;">{% trans "الإجراءات" %}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -304,16 +304,16 @@
                         <td><strong>{{ day.day_name }}</strong></td>
                         <td>
                             {% if day.is_closed %}
-                            <span class="status-badge status-closed">مغلق</span>
+                            <span class="status-badge status-closed">{% trans "مغلق" %}</span>
                             {% elif day.hours %}
-                            <span class="status-badge status-open">مفتوح</span>
+                            <span class="status-badge status-open">{% trans "مفتوح" %}</span>
                             {% else %}
-                            <span style="color:var(--color-text-muted);font-size:0.85rem;">غير محدد</span>
+                            <span style="color:var(--color-text-muted);font-size:0.85rem;">{% trans "غير محدد" context "schedule" %}</span>
                             {% endif %}
                         </td>
                         <td>
                             {% if day.is_closed %}
-                            <span style="color:var(--color-text-muted);font-size:0.85rem;">لا توجد فترات عمل</span>
+                            <span style="color:var(--color-text-muted);font-size:0.85rem;">{% trans "لا توجد فترات عمل" %}</span>
                             {% elif day.hours %}
                                 {% for hour in day.hours %}
                                 <div class="working-range">
@@ -335,11 +335,11 @@
                                             data-end="{{ hour.end_time|time:'H:i' }}" 
                                             data-closed="{{ hour.is_closed|yesno:'true,false' }}"
                                             onclick="openUpdateModal(this)">
-                                        <i class="fa-solid fa-pen"></i> تعديل
+                                        <i class="fa-solid fa-pen"></i> {% trans "تعديل" %}
                                     </button>
-                                    <form method="post" action="{% url 'clinics:working_hours_delete' clinic_id=clinic.id id=hour.id %}" style="margin:0;" onsubmit="return confirm('هل أنت متأكد من حذف هذه الفترة؟');">
+                                    <form method="post" action="{% url 'clinics:working_hours_delete' clinic_id=clinic.id id=hour.id %}" style="margin:0;" onsubmit="return confirm('{% trans "هل أنت متأكد من حذف هذه الفترة؟" %}');">
                                         {% csrf_token %}
-                                        <button type="submit" class="btn-danger" title="حذف">
+                                        <button type="submit" class="btn-danger" title="{% trans 'حذف' %}">
                                             <i class="fa-solid fa-trash"></i>
                                         </button>
                                     </form>
@@ -348,7 +348,7 @@
                             {% endif %}
                             {% if not day.is_closed %}
                             <button type="button" class="btn-action" onclick="openCreateModalDay('{{ day.day_val }}')">
-                                <i class="fa-solid fa-plus"></i> إضافة فترة
+                                <i class="fa-solid fa-plus"></i> {% trans "إضافة فترة" %}
                             </button>
                             {% endif %}
                         </td>
@@ -364,7 +364,7 @@
 <div id="workingHoursModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h2 id="modalTitle">إضافة فترة عمل</h2>
+            <h2 id="modalTitle">{% trans "إضافة فترة عمل" %}</h2>
             <button type="button" class="modal-close" onclick="closeModal()">&times;</button>
         </div>
 
@@ -372,7 +372,7 @@
             {% csrf_token %}
 
             <div class="form-group" id="weekdayGroup">
-                <label class="form-label" for="id_weekday">اليوم</label>
+                <label class="form-label" for="id_weekday">{% trans "اليوم" %}</label>
                 <select name="weekday" id="id_weekday" class="form-control" required>
                     {% for day_val, day_name in days %}
                     <option value="{{ day_val }}">{{ day_name }}</option>
@@ -382,23 +382,23 @@
 
             <div class="checkbox-row">
                 <input type="checkbox" name="is_closed" id="id_is_closed" onchange="toggleTimeFields()">
-                <label for="id_is_closed">تحديد اليوم كمغلق بالكامل</label>
+                <label for="id_is_closed">{% trans "تحديد اليوم كمغلق بالكامل" %}</label>
             </div>
 
             <div id="timeFields">
                 <div class="form-group">
-                    <label class="form-label" for="id_start_time">من الساعة</label>
+                    <label class="form-label" for="id_start_time">{% trans "من الساعة" %}</label>
                     <input type="time" name="start_time" id="id_start_time" class="form-control">
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="id_end_time">إلى الساعة</label>
+                    <label class="form-label" for="id_end_time">{% trans "إلى الساعة" %}</label>
                     <input type="time" name="end_time" id="id_end_time" class="form-control">
                 </div>
             </div>
 
             <div class="modal-actions">
-                <button type="button" onclick="closeModal()" class="btn-action" style="padding:0.5rem 1rem;border-style:solid;">إلغاء</button>
-                <button type="submit" class="btn-primary">حفظ</button>
+                <button type="button" onclick="closeModal()" class="btn-action" style="padding:0.5rem 1rem;border-style:solid;">{% trans "إلغاء" %}</button>
+                <button type="submit" class="btn-primary">{% trans "حفظ" %}</button>
             </div>
         </form>
     </div>
@@ -429,7 +429,7 @@
 
     function openCreateModal() {
         form.action = createUrl;
-        title.innerText = 'إضافة فترة عمل';
+        title.innerText = '{% trans "إضافة فترة عمل" %}';
         form.reset();
         startTimeInput.required = true;
         endTimeInput.required = true;
@@ -453,7 +453,7 @@
         const isClosed = btn.dataset.closed === 'true';
 
         form.action = "/clinics/" + clinicId + "/settings/working-hours/" + id + "/update/";
-        title.innerText = 'تعديل فترة عمل';
+        title.innerText = '{% trans "تعديل فترة عمل" %}';
         document.getElementById('id_weekday').value = weekday;
         weekdayGroup.style.display = 'none';
         isClosedCheckbox.checked = isClosed;

@@ -1,7 +1,7 @@
 {% extends 'accounts/base.html' %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}عياداتي{% endblock %}
+{% block title %}{% trans "عياداتي" %}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -368,16 +368,17 @@
         <div class="hero-orb hero-orb-1"></div>
         <div class="hero-orb hero-orb-2"></div>
         <div class="hero-content">
-            <p class="hero-eyebrow">لوحة التحكم</p>
-            <h1 class="hero-title">مرحباً، {{ user.name|default:"مالك العيادة" }}</h1>
-            <p class="hero-subtitle">إدارة عياداتك واشتراكاتك وكادرك الطبي من مكان واحد</p>
+            <p class="hero-eyebrow">{% trans "لوحة التحكم" %}</p>
+            {% trans "مالك العيادة" as default_owner %}
+            <h1 class="hero-title">{% blocktrans with name=user.name|default:default_owner %}مرحباً، {{ name }}{% endblocktrans %}</h1>
+            <p class="hero-subtitle">{% trans "إدارة عياداتك واشتراكاتك وكادرك الطبي من مكان واحد" %}</p>
         </div>
         <div class="hero-ctas">
             <a href="{% url 'clinics:add_clinic_code' %}" class="btn-cta-white">
-                <i class="fa-solid fa-plus"></i> إضافة عيادة
+                <i class="fa-solid fa-plus"></i> {% trans "إضافة عيادة" %}
             </a>
             <a href="{% url 'clinics:reports' %}" class="btn-cta-ghost">
-                <i class="fa-solid fa-chart-bar"></i> التقارير
+                <i class="fa-solid fa-chart-bar"></i> {% trans "التقارير" %}
             </a>
         </div>
     </div>
@@ -388,22 +389,22 @@
             <div class="tile-icon ti-blue"><i class="fa-solid fa-hospital"></i></div>
             <div class="tile-body">
                 <div class="tile-num">{{ clinics|length }}</div>
-                <div class="tile-lbl">إجمالي العيادات</div>
+                <div class="tile-lbl">{% trans "إجمالي العيادات" %}</div>
             </div>
         </div>
         <div class="stat-tile">
             <div class="tile-icon ti-green"><i class="fa-solid fa-circle-check"></i></div>
             <div class="tile-body">
                 <div class="tile-num">{{ clinics|length }}</div>
-                <div class="tile-lbl">عياداتي</div>
+                <div class="tile-lbl">{% trans "عياداتي" %}</div>
             </div>
         </div>
         <div class="stat-tile">
             <div class="tile-icon ti-purple"><i class="fa-solid fa-user-circle"></i></div>
             <div class="tile-body">
                 <a href="{% url 'clinics:owner_profile' %}" style="text-decoration:none;display:block;">
-                    <div class="tile-num" style="font-size:1rem;font-weight:700;color:var(--color-primary-500);">الملف</div>
-                    <div class="tile-lbl">الملف الشخصي</div>
+                    <div class="tile-num" style="font-size:1rem;font-weight:700;color:var(--color-primary-500);">{% trans "الملف" %}</div>
+                    <div class="tile-lbl">{% trans "الملف الشخصي" %}</div>
                 </a>
             </div>
         </div>
@@ -411,8 +412,8 @@
             <div class="tile-icon ti-amber"><i class="fa-solid fa-chart-pie"></i></div>
             <div class="tile-body">
                 <a href="{% url 'clinics:reports' %}" style="text-decoration:none;display:block;">
-                    <div class="tile-num" style="font-size:1rem;font-weight:700;color:var(--color-primary-500);">التقارير</div>
-                    <div class="tile-lbl">التحليلات والأداء</div>
+                    <div class="tile-num" style="font-size:1rem;font-weight:700;color:var(--color-primary-500);">{% trans "التقارير" %}</div>
+                    <div class="tile-lbl">{% trans "التحليلات والأداء" %}</div>
                 </a>
             </div>
         </div>
@@ -421,7 +422,7 @@
     <!-- ── Clinics Grid ───────────────────────────────────────────── -->
     {% if clinics %}
     <div class="section-head">
-        <h2><i class="fa-solid fa-hospital-user"></i> عياداتي</h2>
+        <h2><i class="fa-solid fa-hospital-user"></i> {% trans "عياداتي" %}</h2>
     </div>
 
     <div class="clinic-grid">
@@ -457,8 +458,8 @@
                         {% elif clinic.status == 'PENDING' %}lb-pending
                         {% else %}lb-suspended{% endif %}">
                         <span class="bdot"></span>
-                        {% if clinic.status == 'ACTIVE' %}نشطة
-                        {% elif clinic.status == 'PENDING' %}قيد المراجعة
+                        {% if clinic.status == 'ACTIVE' %}{% trans "نشطة" %}
+                        {% elif clinic.status == 'PENDING' %}{% trans "قيد المراجعة" %}
                         {% else %}{{ clinic.get_status_display }}{% endif %}
                     </span>
                 </div>
@@ -472,7 +473,7 @@
                             <i class="fa-solid fa-tag"></i>
                             {{ sub.get_plan_name_display }}
                         </span>
-                        <span class="sub-exp">ينتهي {{ sub.expires_at|date:"d/m/Y" }}</span>
+                        <span class="sub-exp">{% blocktrans with exp=sub.expires_at|date:"d/m/Y" %}ينتهي {{ exp }}{% endblocktrans %}</span>
                     </div>
                     <div class="sub-track">
                         <div class="sub-fill {% if sub.effective_status == 'EXPIRED' %}fill-exp{% elif sub.effective_status == 'SUSPENDED' %}fill-warn{% else %}fill-ok{% endif %}"
@@ -482,8 +483,8 @@
                 </div>
                 {% else %}
                 <div class="sub-mini" style="text-align:center;color:var(--color-text-muted);font-size:0.82rem;padding:0.85rem;">
-                    <i class="fa-solid fa-circle-exclamation" style="margin-left:0.35rem;"></i>
-                    لا يوجد اشتراك مرتبط
+                    <i class="fa-solid fa-circle-exclamation" style="margin-inline-end:0.35rem;"></i>
+                    {% trans "لا يوجد اشتراك مرتبط" %}
                 </div>
                 {% endif %}
                 {% endwith %}
@@ -492,9 +493,9 @@
             <!-- Footer actions -->
             <div class="card-foot">
                 <a href="{% url 'clinics:my_clinic' clinic_id=clinic.id %}" class="btn-go">
-                    <i class="fa-solid fa-sliders"></i> إدارة العيادة
+                    <i class="fa-solid fa-sliders"></i> {% trans "إدارة العيادة" %}
                 </a>
-                <a href="{% url 'clinics:reports' %}" class="btn-rpt" title="التقارير">
+                <a href="{% url 'clinics:reports' %}" class="btn-rpt" title="{% trans 'التقارير' %}">
                     <i class="fa-solid fa-chart-bar"></i>
                 </a>
             </div>
@@ -507,10 +508,10 @@
     <!-- Empty state -->
     <div class="empty-wrap">
         <div class="empty-icon"><i class="fa-solid fa-hospital"></i></div>
-        <h3>لا توجد عيادات بعد</h3>
-        <p>ابدأ بإضافة عيادتك الأولى باستخدام كود التفعيل</p>
+        <h3>{% trans "لا توجد عيادات بعد" %}</h3>
+        <p>{% trans "ابدأ بإضافة عيادتك الأولى باستخدام كود التفعيل" %}</p>
         <a href="{% url 'clinics:add_clinic_code' %}" class="btn-go" style="display:inline-flex;max-width:220px;margin:0 auto;">
-            <i class="fa-solid fa-plus"></i> إضافة عيادة جديدة
+            <i class="fa-solid fa-plus"></i> {% trans "إضافة عيادة جديدة" %}
         </a>
     </div>
     {% endif %}

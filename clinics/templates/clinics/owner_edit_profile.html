@@ -1,6 +1,7 @@
 {% extends 'accounts/base.html' %}
+{% load i18n %}
 
-{% block title %}تعديل الملف الشخصي{% endblock %}
+{% block title %}{% trans "تعديل الملف الشخصي" %}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -82,7 +83,7 @@
 }
 .field-label .opt {
     font-size: 0.72rem; font-weight: 500;
-    color: var(--color-text-muted); margin-right: 0.25rem;
+    color: var(--color-text-muted); margin-inline-start: 0.25rem;
 }
 
 .field-input,
@@ -123,11 +124,11 @@
     position: relative;
 }
 .field-locked .field-input:disabled {
-    padding-left: 2.2rem;
+    padding-inline-start: 2.2rem;
 }
 .lock-icon {
     position: absolute;
-    left: 0.75rem;
+    inset-inline-start: 0.75rem;
     top: 50%;
     transform: translateY(-50%);
     color: var(--color-text-muted);
@@ -193,19 +194,19 @@
         <div class="edit-header-left">
             <div class="edit-header-icon"><i class="fa-solid fa-user-pen"></i></div>
             <div>
-                <h1 class="edit-header-title">تعديل الملف الشخصي</h1>
-                <p class="edit-header-sub">تحديث معلوماتك الشخصية</p>
+                <h1 class="edit-header-title">{% trans "تعديل الملف الشخصي" %}</h1>
+                <p class="edit-header-sub">{% trans "تحديث معلوماتك الشخصية" %}</p>
             </div>
         </div>
         <a href="{% url 'clinics:owner_profile' %}" class="btn-header-back">
-            <i class="fa-solid fa-arrow-right"></i> الملف الشخصي
+            <i class="fa-solid fa-arrow-{% if IS_RTL %}right{% else %}left{% endif %}"></i> {% trans "الملف الشخصي" %}
         </a>
     </div>
 
     <!-- ── Edit Form ──────────────────────────────────────────────── -->
     <div class="form-card">
         <div class="form-card-head">
-            <h2><i class="fa-solid fa-pen-to-square"></i> تعديل المعلومات</h2>
+            <h2><i class="fa-solid fa-pen-to-square"></i> {% trans "تعديل المعلومات" %}</h2>
         </div>
         <div class="form-card-body">
             <form method="post" novalidate>
@@ -216,7 +217,7 @@
                     <div class="field-group field-full">
                         <label class="field-label" for="id_name">
                             <i class="fa-solid fa-user" style="color:var(--color-primary-500);font-size:0.78rem;"></i>
-                            الاسم الكامل
+                            {% trans "الاسم الكامل" %}
                         </label>
                         <input type="text"
                                id="id_name"
@@ -224,7 +225,7 @@
                                value="{{ form_data.name|default:user.name }}"
                                class="field-input {% if errors.name %}has-error{% endif %}"
                                autocomplete="name"
-                               placeholder="أدخل اسمك الكامل"
+                               placeholder="{% trans 'أدخل اسمك الكامل' %}"
                                required>
                         {% if errors.name %}
                         <span class="field-error"><i class="fa-solid fa-circle-exclamation"></i> {{ errors.name }}</span>
@@ -235,7 +236,7 @@
                     <div class="field-group field-full">
                         <label class="field-label" for="id_email">
                             <i class="fa-solid fa-envelope" style="color:var(--color-primary-500);font-size:0.78rem;"></i>
-                            البريد الإلكتروني
+                            {% trans "البريد الإلكتروني" %}
                         </label>
                         <input type="email"
                                id="id_email"
@@ -251,7 +252,7 @@
                         {% else %}
                         <div class="email-notice">
                             <i class="fa-solid fa-circle-info"></i>
-                            <span>تغيير البريد الإلكتروني يتطلب التحقق عبر رابط يُرسل إلى العنوان الجديد.</span>
+                            <span>{% trans "تغيير البريد الإلكتروني يتطلب التحقق عبر رابط يُرسل إلى العنوان الجديد." %}</span>
                         </div>
                         {% endif %}
                     </div>
@@ -260,7 +261,7 @@
                     <div class="field-group">
                         <label class="field-label">
                             <i class="fa-solid fa-phone" style="color:var(--color-text-muted);font-size:0.78rem;"></i>
-                            رقم الهاتف
+                            {% trans "رقم الهاتف" %}
                         </label>
                         <div class="field-locked">
                             <input type="text" value="{{ user.phone }}" class="field-input" disabled dir="ltr">
@@ -268,7 +269,7 @@
                         </div>
                         <span class="field-hint">
                             <i class="fa-solid fa-lock"></i>
-                            رقم الهاتف مرتبط بحسابك ولا يمكن تغييره.
+                            {% trans "رقم الهاتف مرتبط بحسابك ولا يمكن تغييره." %}
                         </span>
                     </div>
 
@@ -276,7 +277,7 @@
                     <div class="field-group">
                         <label class="field-label">
                             <i class="fa-solid fa-id-card" style="color:var(--color-text-muted);font-size:0.78rem;"></i>
-                            رقم الهوية الوطنية
+                            {% trans "رقم الهوية الوطنية" %}
                         </label>
                         <div class="field-locked">
                             <input type="text" value="{{ user.national_id|default:'—' }}" class="field-input" disabled>
@@ -284,7 +285,7 @@
                         </div>
                         <span class="field-hint">
                             <i class="fa-solid fa-lock"></i>
-                            رقم الهوية لا يمكن تعديله.
+                            {% trans "رقم الهوية لا يمكن تعديله." %}
                         </span>
                     </div>
 
@@ -292,11 +293,11 @@
                     <div class="field-group field-full">
                         <label class="field-label" for="id_city">
                             <i class="fa-solid fa-city" style="color:var(--color-primary-500);font-size:0.78rem;"></i>
-                            المدينة
-                            <span class="opt">(اختياري)</span>
+                            {% trans "المدينة" %}
+                            <span class="opt">{% trans "(اختياري)" %}</span>
                         </label>
                         <select id="id_city" name="city" class="field-input field-select">
-                            <option value="">— اختر المدينة —</option>
+                            <option value="">{% trans "— اختر المدينة —" %}</option>
                             {% for city in cities %}
                             <option value="{{ city.id }}"
                                 {% if form_data.city %}
@@ -312,10 +313,10 @@
 
                 <!-- Actions -->
                 <div class="form-actions">
-                    <a href="{% url 'clinics:owner_profile' %}" class="btn-cancel">إلغاء</a>
+                    <a href="{% url 'clinics:owner_profile' %}" class="btn-cancel">{% trans "إلغاء" %}</a>
                     <button type="submit" class="btn-save">
                         <i class="fa-solid fa-floppy-disk"></i>
-                        حفظ التغييرات
+                        {% trans "حفظ التغييرات" %}
                     </button>
                 </div>
             </form>

@@ -1,7 +1,7 @@
 {% extends 'accounts/base.html' %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}إضافة عيادة جديدة — تفاصيل العيادة{% endblock %}
+{% block title %}{% trans "إضافة عيادة جديدة" %} — {% trans "تفاصيل العيادة" %}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -181,7 +181,7 @@
     .spec-badge {
         position: absolute;
         top: 8px;
-        right: 8px;
+        inset-inline-end: 8px;
         width: 20px;
         height: 20px;
         border-radius: 50%;
@@ -289,18 +289,18 @@
 {% block content %}
 <div class="add-clinic-wrapper">
     <a href="{% url 'clinics:my_clinics' %}" class="back-link">
-        <i class="fa-solid fa-arrow-right"></i> عياداتي
+        <i class="fa-solid fa-arrow-{% if IS_RTL %}right{% else %}left{% endif %}"></i> {% trans "عياداتي" %}
     </a>
 
     <div class="add-clinic-card">
         <div class="step-indicator">
             <div class="step-dot done"></div>
             <div class="step-dot active"></div>
-            <span>الخطوة 2 من 2</span>
+            <span>{% trans "الخطوة 2 من 2" %}</span>
         </div>
 
-        <h1>تفاصيل العيادة الجديدة</h1>
-        <p class="subtitle">أكمل معلومات العيادة ثم اضغط "إنشاء العيادة".</p>
+        <h1>{% trans "تفاصيل العيادة الجديدة" %}</h1>
+        <p class="subtitle">{% trans 'أكمل معلومات العيادة ثم اضغط "إنشاء العيادة".' %}</p>
 
         <form method="post">
             {% csrf_token %}
@@ -328,7 +328,7 @@
                 <label class="form-label" for="id_clinic_city">{{ form.clinic_city.label }}</label>
                 <select name="clinic_city" id="id_clinic_city"
                     class="form-control {% if form.clinic_city.errors %}error{% endif %}">
-                    <option value="">اختر المدينة</option>
+                    <option value="">{% trans "اختر المدينة" %}</option>
                     {% for city in form.clinic_city.field.queryset %}
                     <option value="{{ city.pk }}" {% if form.clinic_city.value == city.pk|stringformat:"s" %}selected{% endif %}>
                         {{ city.name }}
@@ -344,7 +344,7 @@
                     <label class="form-label" style="margin:0;">{{ form.specialties.label }}</label>
                     <span class="spec-counter" id="specCounter">
                         <i class="fa-solid fa-circle-check" style="font-size:0.85rem;"></i>
-                        <span>تم اختيار <span class="spec-counter-num" id="specCount">0</span></span>
+                        <span>{% trans "تم اختيار" %} <span class="spec-counter-num" id="specCount">0</span></span>
                     </span>
                 </div>
                 {% for error in form.specialties.errors %}<div class="error-msg">{{ error }}</div>{% endfor %}
@@ -361,7 +361,7 @@
                     {% endfor %}
                 </div>
                 {% else %}
-                <p style="color:var(--color-text-muted);font-size:0.88rem;margin-top:0.5rem;">لا توجد تخصصات متاحة حالياً.</p>
+                <p style="color:var(--color-text-muted);font-size:0.88rem;margin-top:0.5rem;">{% trans "لا توجد تخصصات متاحة حالياً." %}</p>
                 {% endif %}
             </div>
 
@@ -397,10 +397,10 @@
 
             <div class="btn-row">
                 <button type="submit" name="action" value="back" class="btn-back">
-                    <i class="fa-solid fa-arrow-right"></i> رجوع
+                    <i class="fa-solid fa-arrow-{% if IS_RTL %}right{% else %}left{% endif %}"></i> {% trans "رجوع" %}
                 </button>
                 <button type="submit" class="btn-primary">
-                    <i class="fa-solid fa-hospital"></i> إنشاء العيادة
+                    <i class="fa-solid fa-hospital"></i> {% trans "إنشاء العيادة" %}
                 </button>
             </div>
         </form>

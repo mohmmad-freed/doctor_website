@@ -445,7 +445,7 @@
                     {% if "MAIN_DOCTOR" in user.roles %}
                     <a href="{% url 'clinics:owner_profile' %}" class="user-menu-item">
                         <i class="fa-solid fa-user-circle"></i>
-                        الملف الشخصي
+                        {% trans "الملف الشخصي" %}
                     </a>
                     {% endif %}
 

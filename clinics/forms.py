@@ -1,5 +1,6 @@
 from django import forms
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 from accounts.models import City, CustomUser
 from accounts.services.identity_claim_service import get_verified_claim_for_user
@@ -12,8 +13,8 @@ class AddClinicCodeForm(forms.Form):
 
     activation_code = forms.CharField(
         max_length=20,
-        label="رمز التفعيل",
-        widget=forms.TextInput(attrs={"placeholder": "أدخل رمز التفعيل الجديد"}),
+        label=_("رمز التفعيل"),
+        widget=forms.TextInput(attrs={"placeholder": _("أدخل رمز التفعيل الجديد")}),
     )
 
     def __init__(self, *args, user_phone=None, user_national_id=None, **kwargs):
@@ -23,7 +24,7 @@ class AddClinicCodeForm(forms.Form):
 
     def clean_activation_code(self):
         code = (self.cleaned_data.get("activation_code") or "").strip()
-        _GENERIC_ERROR = "رمز التفعيل غير صالح أو منتهي الصلاحية"
+        _GENERIC_ERROR = _("رمز التفعيل غير صالح أو منتهي الصلاحية")
 
         try:
             ac = ClinicActivationCode.objects.get(code=code)
@@ -55,111 +56,110 @@ class AddClinicCodeForm(forms.Form):
 class AddClinicDetailsForm(forms.Form):
     """Step 2: Logged-in clinic owner fills in clinic details."""
 
-    clinic_name = forms.CharField(max_length=255, label="اسم العيادة")
+    clinic_name = forms.CharField(max_length=255, label=_("اسم العيادة"))
     clinic_address = forms.CharField(
         widget=forms.Textarea(attrs={"rows": 2}),
-        label="العنوان التفصيلي",
+        label=_("العنوان التفصيلي"),
     )
     clinic_city = forms.ModelChoiceField(
         queryset=City.objects.all(),
         required=False,
-        label="المدينة",
-        empty_label="اختر المدينة",
+        label=_("المدينة"),
+        empty_label=_("اختر المدينة"),
     )
     specialties = forms.ModelMultipleChoiceField(
         queryset=Specialty.objects.all(),
         widget=forms.CheckboxSelectMultiple,
-        label="التخصصات الطبية",
+        label=_("التخصصات الطبية"),
     )
     clinic_phone = forms.CharField(
         max_length=20,
         required=False,
-        label="هاتف العيادة",
+        label=_("هاتف العيادة"),
         widget=forms.TextInput(attrs={"placeholder": "05XXXXXXXX"}),
     )
     clinic_email = forms.EmailField(
         required=False,
-        label="البريد الإلكتروني للعيادة",
+        label=_("البريد الإلكتروني للعيادة"),
         widget=forms.EmailInput(attrs={"placeholder": "clinic@example.com"}),
     )
     clinic_description = forms.CharField(
         widget=forms.Textarea(attrs={"rows": 3}),
         required=False,
-        label="وصف العيادة",
+        label=_("وصف العيادة"),
     )
 
 from accounts.backends import PhoneNumberAuthBackend
 
 class ClinicInvitationForm(forms.Form):
     doctor_name = forms.CharField(
-        max_length=255, 
-        label="اسم الطبيب",
-        widget=forms.TextInput(attrs={"placeholder": "ادخل اسم الطبيب", "class": "form-control"})
+        max_length=255,
+        label=_("اسم الطبيب"),
+        widget=forms.TextInput(attrs={"placeholder": _("ادخل اسم الطبيب"), "class": "form-control"})
     )
     doctor_phone = forms.CharField(
-        max_length=20, 
-        label="رقم هاتف الطبيب",
+        max_length=20,
+        label=_("رقم هاتف الطبيب"),
         widget=forms.TextInput(attrs={"placeholder": "05XXXXXXXX", "class": "form-control"})
     )
     doctor_email = forms.EmailField(
-        label="البريد الإلكتروني للطبيب",
+        label=_("البريد الإلكتروني للطبيب"),
         widget=forms.EmailInput(attrs={"placeholder": "doctor@example.com", "class": "form-control"}),
         error_messages={
-            "required": "هذا الحقل مطلوب.",
-            "invalid": "أدخل بريداً إلكترونياً صحيحاً.",
+            "required": _("هذا الحقل مطلوب."),
+            "invalid": _("أدخل بريداً إلكترونياً صحيحاً."),
         },
     )
     doctor_national_id = forms.CharField(
         max_length=20,
-        label="رقم الهوية الوطنية",
+        label=_("رقم الهوية الوطنية"),
         required=False,
-        widget=forms.TextInput(attrs={"placeholder": "أدخل رقم الهوية الوطنية", "class": "form-control"})
+        widget=forms.TextInput(attrs={"placeholder": _("أدخل رقم الهوية الوطنية"), "class": "form-control"})
     )
     specialties = forms.ModelMultipleChoiceField(
         queryset=Specialty.objects.all(),
         widget=forms.CheckboxSelectMultiple,
-        label="التخصصات الطبية",
+        label=_("التخصصات الطبية"),
         required=False
     )
-    
+
     def clean_doctor_phone(self):
         phone = self.cleaned_data.get("doctor_phone", "").strip()
         phone = PhoneNumberAuthBackend.normalize_phone_number(phone)
         if not PhoneNumberAuthBackend.is_valid_phone_number(phone):
-             raise forms.ValidationError("رقم الهاتف غير صحيح. يجب أن يتكون من 10 أرقام ويبدأ بـ 05.")
+             raise forms.ValidationError(_("رقم الهاتف غير صحيح. يجب أن يتكون من 10 أرقام ويبدأ بـ 05."))
         return phone
 
 
 class SecretaryInvitationForm(forms.Form):
     secretary_name = forms.CharField(
-        max_length=255, 
-        label="اسم السكرتير/ة",
-        widget=forms.TextInput(attrs={"placeholder": "ادخل اسم السكرتير أو الاستقبال", "class": "form-control"})
+        max_length=255,
+        label=_("اسم السكرتير/ة"),
+        widget=forms.TextInput(attrs={"placeholder": _("ادخل اسم السكرتير أو الاستقبال"), "class": "form-control"})
     )
     secretary_phone = forms.CharField(
-        max_length=20, 
-        label="رقم هاتف السكرتير/ة",
+        max_length=20,
+        label=_("رقم هاتف السكرتير/ة"),
         widget=forms.TextInput(attrs={"placeholder": "05XXXXXXXX", "class": "form-control"})
     )
     secretary_email = forms.EmailField(
-        label="البريد الإلكتروني للسكرتير/ة",
+        label=_("البريد الإلكتروني للسكرتير/ة"),
         widget=forms.EmailInput(attrs={"placeholder": "secretary@example.com", "class": "form-control"}),
         error_messages={
-            "required": "هذا الحقل مطلوب.",
-            "invalid": "أدخل بريداً إلكترونياً صحيحاً.",
+            "required": _("هذا الحقل مطلوب."),
+            "invalid": _("أدخل بريداً إلكترونياً صحيحاً."),
         },
     )
     secretary_national_id = forms.CharField(
         max_length=20,
-        label="رقم الهوية الوطنية",
+        label=_("رقم الهوية الوطنية"),
         required=False,
-        widget=forms.TextInput(attrs={"placeholder": "أدخل رقم الهوية الوطنية", "class": "form-control"})
+        widget=forms.TextInput(attrs={"placeholder": _("أدخل رقم الهوية الوطنية"), "class": "form-control"})
     )
-    
+
     def clean_secretary_phone(self):
         phone = self.cleaned_data.get("secretary_phone", "").strip()
         phone = PhoneNumberAuthBackend.normalize_phone_number(phone)
         if not PhoneNumberAuthBackend.is_valid_phone_number(phone):
-             raise forms.ValidationError("رقم الهاتف غير صحيح. يجب أن يتكون من 10 أرقام ويبدأ بـ 05.")
+             raise forms.ValidationError(_("رقم الهاتف غير صحيح. يجب أن يتكون من 10 أرقام ويبدأ بـ 05."))
         return phone
-

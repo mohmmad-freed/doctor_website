@@ -1,7 +1,7 @@
 {% extends 'accounts/base.html' %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}إدارة الكوادر الطبية — {{ clinic.name }}{% endblock %}
+{% block title %}{% trans "إدارة الكوادر الطبية" %} — {{ clinic.name }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -489,20 +489,20 @@
         <div class="header-top">
             <div class="header-title">
                 <h1>
-                    <i class="fa-solid fa-user-group" style="color:var(--color-primary-500);margin-left:0.45rem;"></i>
-                    إدارة الكوادر الطبية
+                    <i class="fa-solid fa-user-group" style="color:var(--color-primary-500);margin-inline-end:0.45rem;"></i>
+                    {% trans "إدارة الكوادر الطبية" %}
                 </h1>
-                <p>{{ clinic.name }} — دعوة أطباء وسكرتارية للانضمام إلى عيادتك</p>
+                <p>{{ clinic.name }} — {% trans "دعوة أطباء وسكرتارية للانضمام إلى عيادتك" %}</p>
                 <a href="{% url 'clinics:my_clinic' clinic.id %}" class="btn-back">
-                    <i class="fa-solid fa-arrow-right"></i> {{ clinic.name }}
+                    <i class="fa-solid fa-arrow-{% if IS_RTL %}right{% else %}left{% endif %}"></i> {{ clinic.name }}
                 </a>
             </div>
             <div class="header-actions">
                 <a href="{% url 'clinics:create_invitation' clinic.id %}" class="btn-primary">
-                    <i class="fa-solid fa-user-doctor"></i> دعوة طبيب
+                    <i class="fa-solid fa-user-doctor"></i> {% trans "دعوة طبيب" %}
                 </a>
                 <a href="{% url 'clinics:create_secretary_invitation' clinic.id %}" class="btn-outline">
-                    <i class="fa-solid fa-headset"></i> دعوة سكرتير/ة
+                    <i class="fa-solid fa-headset"></i> {% trans "دعوة سكرتير/ة" %}
                 </a>
             </div>
         </div>
@@ -512,15 +512,15 @@
         <div class="stats-row" id="statsRow" style="display:none;">
             <div class="stat-item">
                 <span class="stat-dot dot-total"></span>
-                <span>الإجمالي: <strong id="stat-total">—</strong></span>
+                <span>{% trans "الإجمالي" %}: <strong id="stat-total">—</strong></span>
             </div>
             <div class="stat-item">
                 <span class="stat-dot dot-pending"></span>
-                <span>بانتظار القبول: <strong id="stat-pending">—</strong></span>
+                <span>{% trans "بانتظار القبول" %}: <strong id="stat-pending">—</strong></span>
             </div>
             <div class="stat-item">
                 <span class="stat-dot dot-accepted"></span>
-                <span>تم القبول: <strong id="stat-accepted">—</strong></span>
+                <span>{% trans "تم القبول" %}: <strong id="stat-accepted">—</strong></span>
             </div>
         </div>
         {% endif %}
@@ -530,30 +530,30 @@
     <!-- ── Filter Bar ── -->
     <div class="filter-bar">
         <div class="filter-group">
-            <span class="filter-label">عرض:</span>
-            <button class="filter-pill active" data-role="all">الكل</button>
+            <span class="filter-label">{% trans "عرض" %}:</span>
+            <button class="filter-pill active" data-role="all">{% trans "الكل" %}</button>
             <button class="filter-pill" data-role="DOCTOR">
-                <i class="fa-solid fa-user-doctor"></i> أطباء
+                <i class="fa-solid fa-user-doctor"></i> {% trans "أطباء" %}
             </button>
             <button class="filter-pill" data-role="SECRETARY">
-                <i class="fa-solid fa-headset"></i> سكرتارية
+                <i class="fa-solid fa-headset"></i> {% trans "سكرتارية" %}
             </button>
         </div>
 
         <div class="filter-divider"></div>
 
         <div class="filter-group">
-            <span class="filter-label">الحالة:</span>
-            <button class="filter-pill active" data-status="all">الكل</button>
+            <span class="filter-label">{% trans "الحالة" %}:</span>
+            <button class="filter-pill active" data-status="all">{% trans "الكل" %}</button>
             <button class="filter-pill" data-status="PENDING">
-                <i class="fa-solid fa-clock"></i> بانتظار القبول
+                <i class="fa-solid fa-clock"></i> {% trans "بانتظار القبول" %}
             </button>
             <button class="filter-pill" data-status="ACCEPTED">
-                <i class="fa-solid fa-check"></i> مقبولة
+                <i class="fa-solid fa-check"></i> {% trans "مقبولة" %}
             </button>
-            <button class="filter-pill" data-status="REJECTED">مرفوضة</button>
-            <button class="filter-pill" data-status="CANCELLED">ملغاة</button>
-            <button class="filter-pill" data-status="EXPIRED">منتهية</button>
+            <button class="filter-pill" data-status="REJECTED">{% trans "مرفوضة" %}</button>
+            <button class="filter-pill" data-status="CANCELLED">{% trans "ملغاة" %}</button>
+            <button class="filter-pill" data-status="EXPIRED">{% trans "منتهية" %}</button>
         </div>
     </div>
 
@@ -584,7 +584,7 @@
                     {% if specs %}
                     <div class="spec-chips">
                         {% for spec in specs %}
-                        <span class="spec-chip">{{ spec.name }}</span>
+                        <span class="spec-chip">{{ spec.display_name }}</span>
                         {% endfor %}
                     </div>
                     {% endif %}
@@ -597,44 +597,44 @@
                 <div style="display:flex;gap:0.4rem;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
                     {% if inv.role == 'SECRETARY' %}
                     <span class="role-badge role-secretary">
-                        <i class="fa-solid fa-headset"></i> سكرتير/ة
+                        <i class="fa-solid fa-headset"></i> {% trans "سكرتير/ة" %}
                     </span>
                     {% else %}
                     <span class="role-badge role-doctor">
-                        <i class="fa-solid fa-user-doctor"></i> طبيب
+                        <i class="fa-solid fa-user-doctor"></i> {% trans "طبيب" %}
                     </span>
                     {% endif %}
 
                     {% if inv.status == 'PENDING' and inv.is_expired %}
                         <span class="status-badge status-expired">
-                            <i class="fa-solid fa-hourglass-end"></i> منتهية
+                            <i class="fa-solid fa-hourglass-end"></i> {% trans "منتهية" %}
                         </span>
                     {% elif inv.status == 'PENDING' %}
                         <span class="status-badge status-pending">
-                            <i class="fa-solid fa-clock"></i> بانتظار القبول
+                            <i class="fa-solid fa-clock"></i> {% trans "بانتظار القبول" %}
                         </span>
                     {% elif inv.status == 'ACCEPTED' %}
                         <span class="status-badge status-accepted">
-                            <i class="fa-solid fa-check-circle"></i> تم القبول
+                            <i class="fa-solid fa-check-circle"></i> {% trans "تم القبول" %}
                         </span>
                     {% elif inv.status == 'REJECTED' %}
                         <span class="status-badge status-rejected">
-                            <i class="fa-solid fa-times-circle"></i> مرفوضة
+                            <i class="fa-solid fa-times-circle"></i> {% trans "مرفوضة" %}
                         </span>
                     {% elif inv.status == 'EXPIRED' %}
                         <span class="status-badge status-expired">
-                            <i class="fa-solid fa-hourglass-end"></i> منتهية
+                            <i class="fa-solid fa-hourglass-end"></i> {% trans "منتهية" %}
                         </span>
                     {% elif inv.status == 'CANCELLED' %}
                         <span class="status-badge status-cancelled">
-                            <i class="fa-solid fa-ban"></i> ملغاة
+                            <i class="fa-solid fa-ban"></i> {% trans "ملغاة" %}
                         </span>
                     {% endif %}
                 </div>
 
                 <div class="inv-date" title="{{ inv.created_at|date:'Y-m-d H:i' }}">
-                    <i class="fa-regular fa-calendar" style="margin-left:0.25rem;"></i>
-                    {{ inv.created_at|timesince }} مضت
+                    <i class="fa-regular fa-calendar" style="margin-inline-end:0.25rem;"></i>
+                    {% blocktrans with when=inv.created_at|timesince %}{{ when }} مضت{% endblocktrans %}
                 </div>
 
                 <!-- Cancel action with inline confirm -->
@@ -645,18 +645,18 @@
                         id="cancelBtn-{{ inv.id }}"
                         onclick="showCancelConfirm('{{ inv.id }}')"
                     >
-                        <i class="fa-solid fa-xmark"></i> إلغاء الدعوة
+                        <i class="fa-solid fa-xmark"></i> {% trans "إلغاء الدعوة" %}
                     </button>
                     <div class="cancel-confirm" id="cancelConfirm-{{ inv.id }}">
-                        <span>هل أنت متأكد؟</span>
+                        <span>{% trans "هل أنت متأكد؟" %}</span>
                         <form method="post" action="{% url 'clinics:cancel_invitation' clinic.id inv.id %}" style="display:inline;">
                             {% csrf_token %}
                             <button type="submit" class="btn-confirm-yes">
-                                <i class="fa-solid fa-check"></i> نعم
+                                <i class="fa-solid fa-check"></i> {% trans "نعم" %}
                             </button>
                         </form>
                         <button class="btn-confirm-no" onclick="hideCancelConfirm('{{ inv.id }}')">
-                            تراجع
+                            {% trans "تراجع" %}
                         </button>
                     </div>
                 </div>
@@ -669,7 +669,7 @@
     <!-- No results after filter -->
     <div class="no-results-msg" id="noResultsMsg">
         <i class="fa-solid fa-filter-circle-xmark" style="font-size:1.8rem;margin-bottom:0.5rem;display:block;"></i>
-        لا توجد دعوات تطابق التصفية المختارة
+        {% trans "لا توجد دعوات تطابق التصفية المختارة" %}
     </div>
 
     {% else %}
@@ -679,14 +679,14 @@
             <div class="empty-icon">
                 <i class="fa-solid fa-user-group"></i>
             </div>
-            <h3>لم تقم بإرسال أي دعوة بعد</h3>
-            <p>ابدأ ببناء فريقك الطبي عن طريق دعوة أطباء وسكرتارية للانضمام إلى عيادتك.</p>
+            <h3>{% trans "لم تقم بإرسال أي دعوة بعد" %}</h3>
+            <p>{% trans "ابدأ ببناء فريقك الطبي عن طريق دعوة أطباء وسكرتارية للانضمام إلى عيادتك." %}</p>
             <div class="empty-actions">
                 <a href="{% url 'clinics:create_invitation' clinic.id %}" class="btn-primary">
-                    <i class="fa-solid fa-user-doctor"></i> دعوة طبيب
+                    <i class="fa-solid fa-user-doctor"></i> {% trans "دعوة طبيب" %}
                 </a>
                 <a href="{% url 'clinics:create_secretary_invitation' clinic.id %}" class="btn-outline">
-                    <i class="fa-solid fa-headset"></i> دعوة سكرتير/ة
+                    <i class="fa-solid fa-headset"></i> {% trans "دعوة سكرتير/ة" %}
                 </a>
             </div>
         </div>

@@ -1,6 +1,7 @@
 {% extends 'accounts/base.html' %}
+{% load i18n %}
 
-{% block title %}الملف الشخصي{% endblock %}
+{% block title %}{% trans "الملف الشخصي" %}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -219,25 +220,25 @@
                 <span class="hero-phone">{{ user.phone }}</span>
                 <div class="hero-roles">
                     {% if "MAIN_DOCTOR" in user.roles %}
-                    <span class="role-chip"><i class="fa-solid fa-crown" style="font-size:0.65rem;"></i> صاحب عيادة</span>
+                    <span class="role-chip"><i class="fa-solid fa-crown" style="font-size:0.65rem;"></i> {% trans "صاحب عيادة" %}</span>
                     {% endif %}
                     {% if "DOCTOR" in user.roles %}
-                    <span class="role-chip"><i class="fa-solid fa-stethoscope" style="font-size:0.65rem;"></i> طبيب</span>
+                    <span class="role-chip"><i class="fa-solid fa-stethoscope" style="font-size:0.65rem;"></i> {% trans "طبيب" %}</span>
                     {% endif %}
                     {% if "PATIENT" in user.roles %}
-                    <span class="role-chip"><i class="fa-solid fa-user-injured" style="font-size:0.65rem;"></i> مريض</span>
+                    <span class="role-chip"><i class="fa-solid fa-user-injured" style="font-size:0.65rem;"></i> {% trans "مريض" %}</span>
                     {% endif %}
                     {% if "SECRETARY" in user.roles %}
-                    <span class="role-chip"><i class="fa-solid fa-user-tie" style="font-size:0.65rem;"></i> سكرتير/ة</span>
+                    <span class="role-chip"><i class="fa-solid fa-user-tie" style="font-size:0.65rem;"></i> {% trans "سكرتير/ة" %}</span>
                     {% endif %}
                 </div>
             </div>
             <div class="hero-actions">
                 <a href="{% url 'clinics:owner_edit_profile' %}" class="btn-edit-hero">
-                    <i class="fa-solid fa-pen-to-square"></i> تعديل الملف
+                    <i class="fa-solid fa-pen-to-square"></i> {% trans "تعديل الملف" %}
                 </a>
                 <a href="{% url 'clinics:my_clinics' %}" class="btn-back-hero">
-                    <i class="fa-solid fa-arrow-right"></i> عياداتي
+                    <i class="fa-solid fa-arrow-{% if IS_RTL %}right{% else %}left{% endif %}"></i> {% trans "عياداتي" %}
                 </a>
             </div>
         </div>
@@ -246,42 +247,42 @@
     <!-- ── Identity Information ───────────────────────────────────── -->
     <div class="sec-card">
         <div class="sec-head">
-            <h2 class="sec-title"><i class="fa-solid fa-id-card"></i> معلومات الهوية</h2>
+            <h2 class="sec-title"><i class="fa-solid fa-id-card"></i> {% trans "معلومات الهوية" %}</h2>
         </div>
         <div class="sec-body">
             <dl class="info-dl">
-                <dt class="info-dt">رقم الهاتف</dt>
+                <dt class="info-dt">{% trans "رقم الهاتف" %}</dt>
                 <dd class="info-dd">
                     <span style="direction:ltr;display:inline-block;">{{ user.phone }}</span>
                     {% if user.is_verified %}
-                        <span class="v-badge vb-yes"><i class="fa-solid fa-circle-check"></i> موثق</span>
+                        <span class="v-badge vb-yes"><i class="fa-solid fa-circle-check"></i> {% trans "موثق" %}</span>
                     {% else %}
-                        <span class="v-badge vb-no"><i class="fa-solid fa-circle-xmark"></i> غير موثق</span>
+                        <span class="v-badge vb-no"><i class="fa-solid fa-circle-xmark"></i> {% trans "غير موثق" %}</span>
                     {% endif %}
                 </dd>
 
-                <dt class="info-dt">رقم الهوية</dt>
+                <dt class="info-dt">{% trans "رقم الهوية" %}</dt>
                 <dd class="info-dd">{{ user.national_id|default:"—" }}</dd>
 
-                <dt class="info-dt">البريد الإلكتروني</dt>
+                <dt class="info-dt">{% trans "البريد الإلكتروني" %}</dt>
                 <dd class="info-dd">
                     {% if user.email %}
                         <span style="direction:ltr;display:inline-block;">{{ user.email }}</span>
                         {% if user.email_verified %}
-                            <span class="v-badge vb-yes"><i class="fa-solid fa-circle-check"></i> موثق</span>
+                            <span class="v-badge vb-yes"><i class="fa-solid fa-circle-check"></i> {% trans "موثق" %}</span>
                         {% else %}
-                            <span class="v-badge vb-no"><i class="fa-solid fa-circle-xmark"></i> غير موثق</span>
+                            <span class="v-badge vb-no"><i class="fa-solid fa-circle-xmark"></i> {% trans "غير موثق" %}</span>
                         {% endif %}
                     {% else %}
                         <span style="color:var(--color-text-muted);">—</span>
                     {% endif %}
                     <a href="{% url 'accounts:change_email_request' %}" class="btn-inline">
-                        <i class="fa-solid fa-pen"></i> تغيير
+                        <i class="fa-solid fa-pen"></i> {% trans "تغيير" %}
                     </a>
                 </dd>
 
                 {% if user.city %}
-                <dt class="info-dt">المدينة</dt>
+                <dt class="info-dt">{% trans "المدينة" %}</dt>
                 <dd class="info-dd">{{ user.city.name }}</dd>
                 {% endif %}
             </dl>
@@ -294,9 +295,9 @@
         <div class="sec-head">
             <h2 class="sec-title">
                 <i class="fa-solid fa-hospital"></i>
-                عياداتي
+                {% trans "عياداتي" %}
             </h2>
-            <span style="font-size:0.8rem;color:var(--color-text-muted);font-weight:600;">{{ owned_clinics|length }} عيادة</span>
+            <span style="font-size:0.8rem;color:var(--color-text-muted);font-weight:600;">{% blocktrans with count=owned_clinics|length %}{{ count }} عيادة{% endblocktrans %}</span>
         </div>
         <div class="sec-body">
             <div class="clinic-list">
@@ -309,19 +310,19 @@
                         <div class="clinic-row-name">{{ clinic.name }}</div>
                         {% if clinic.address %}
                         <div class="clinic-row-addr">
-                            <i class="fa-solid fa-location-dot" style="font-size:0.7rem;margin-left:0.25rem;"></i>
+                            <i class="fa-solid fa-location-dot" style="font-size:0.7rem;margin-inline-end:0.25rem;"></i>
                             {{ clinic.address }}
                         </div>
                         {% endif %}
                     </div>
                     {% if clinic.status == "ACTIVE" %}
-                        <span class="st-pill stp-active">نشطة</span>
+                        <span class="st-pill stp-active">{% trans "نشطة" %}</span>
                     {% elif clinic.status == "PENDING" %}
-                        <span class="st-pill stp-pending">قيد المراجعة</span>
+                        <span class="st-pill stp-pending">{% trans "قيد المراجعة" %}</span>
                     {% else %}
                         <span class="st-pill stp-suspended">{{ clinic.get_status_display }}</span>
                     {% endif %}
-                    <i class="fa-solid fa-arrow-left" style="color:var(--color-text-muted);font-size:0.78rem;flex-shrink:0;"></i>
+                    <i class="fa-solid fa-arrow-{% if IS_RTL %}left{% else %}right{% endif %}" style="color:var(--color-text-muted);font-size:0.78rem;flex-shrink:0;"></i>
                 </a>
                 {% endfor %}
             </div>

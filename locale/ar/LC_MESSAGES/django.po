@@ -868,3 +868,942 @@ msgstr ""
 
 msgid "لديك <b>%(count)s</b> إشعار غير مقروء"
 msgstr ""
+
+# ── Clinic owner side (auto-appended) ──
+msgid "9 أرقام"
+msgstr ""
+
+msgid "آخر مراجعة: %(reviewed_at)s — بواسطة %(reviewer)s"
+msgstr ""
+
+msgid "أبريل"
+msgstr ""
+
+msgid "أحد"
+msgstr ""
+
+msgid "أداء الأطباء اليوم"
+msgstr ""
+
+msgid "أدخل الرمز الذي أرسلناه إلى"
+msgstr ""
+
+msgid "أدخل بريداً إلكترونياً صحيحاً."
+msgstr ""
+
+msgid "أدخل رقم الهوية الوطنية"
+msgstr ""
+
+msgid "أدخل رمز التفعيل الجديد"
+msgstr ""
+
+msgid "أدخل رمز التفعيل الخاص بالعيادة الجديدة."
+msgstr ""
+
+msgid "أربعاء"
+msgstr ""
+
+msgid "أطباء"
+msgstr ""
+
+msgid "أطباء بانتظار التحقق"
+msgstr ""
+
+msgid "أطباء نشطون"
+msgstr ""
+
+msgid "أغسطس"
+msgstr ""
+
+msgid "أكتوبر"
+msgstr ""
+
+msgid "أكثر أنواع المواعيد طلباً"
+msgstr ""
+
+msgid "أكثر الأطباء مواعيد (أعلى 10)"
+msgstr ""
+
+msgid "أكمل معلومات العيادة ثم اضغط \"إنشاء العيادة\"."
+msgstr ""
+
+msgid "أنت مضاف بالفعل بهذا الدور."
+msgstr ""
+
+msgid "أوقات العمل الأسبوعية"
+msgstr ""
+
+msgid "إجمالي العيادات"
+msgstr ""
+
+msgid "إدارة"
+msgstr ""
+
+msgid "إدارة أنواع الخدمات"
+msgstr ""
+
+msgid "إدارة أنواع المواعيد ومدة كل منها وسعرها للعيادة."
+msgstr ""
+
+msgid "إدارة العيادة"
+msgstr ""
+
+msgid "إدارة الكوادر الطبية"
+msgstr ""
+
+msgid "إدارة عياداتك واشتراكاتك وكادرك الطبي من مكان واحد"
+msgstr ""
+
+msgid "إرسال الدعوة"
+msgstr ""
+
+msgid "إزالة"
+msgstr ""
+
+msgid "إزالة من الكادر"
+msgstr ""
+
+msgid "إضافة عيادة"
+msgstr ""
+
+msgid "إضافة عيادة جديدة"
+msgstr ""
+
+msgid "إضافة فترة"
+msgstr ""
+
+msgid "إضافة فترة عمل"
+msgstr ""
+
+msgid "إضافة نفسك كسكرتير/ة"
+msgstr ""
+
+msgid "إضافة نفسك كسكرتير/ة في هذه العيادة"
+msgstr ""
+
+msgid "إضافة نفسك كطبيب"
+msgstr ""
+
+msgid "إضافة نفسك كطبيب في هذه العيادة"
+msgstr ""
+
+msgid "إضافة نوع موعد"
+msgstr ""
+
+msgid "إضافة نوع موعد جديد"
+msgstr ""
+
+msgid "إعادة الإرسال"
+msgstr ""
+
+msgid "إعادة ضبط"
+msgstr ""
+
+msgid "إعداد أوقات الدوام الرسمية للعيادة (الأيام والساعات المفتوحة)."
+msgstr ""
+
+msgid "إلغاء الدعوة"
+msgstr ""
+
+msgid "إلى الساعة"
+msgstr ""
+
+msgid "إنشاء العيادة"
+msgstr ""
+
+msgid "إيرادات آخر 7 أيام"
+msgstr ""
+
+msgid "إيرادات اليوم"
+msgstr ""
+
+msgid "ابدأ بإضافة عيادتك الأولى باستخدام كود التفعيل"
+msgstr ""
+
+msgid "ابدأ ببناء فريقك الطبي عن طريق دعوة أطباء وسكرتارية للانضمام إلى عيادتك."
+msgstr ""
+
+msgid "اثنين"
+msgstr ""
+
+msgid "اختر المدينة"
+msgstr ""
+
+msgid "اختر شهراً وسنة"
+msgstr ""
+
+msgid "ادخل اسم السكرتير أو الاستقبال"
+msgstr ""
+
+msgid "ادخل اسم الطبيب"
+msgstr ""
+
+msgid "اسم السكرتير/ة"
+msgstr ""
+
+msgid "اسم الطبيب"
+msgstr ""
+
+msgid "اسم العيادة"
+msgstr ""
+
+msgid "اعتماد"
+msgstr ""
+
+msgid "اكتب سبب الرفض هنا..."
+msgstr ""
+
+msgid "الأطباء"
+msgstr ""
+
+msgid "الإثنين"
+msgstr ""
+
+msgid "الإجراءات"
+msgstr ""
+
+msgid "الإعدادات والإدارة"
+msgstr ""
+
+msgid "الإلغاء"
+msgstr ""
+
+msgid "الإيرادات التقديرية (₪)"
+msgstr ""
+
+msgid "الإيرادات التقديرية حسب الخدمة (₪)"
+msgstr ""
+
+msgid "الاسم (إنجليزي/أساسي)"
+msgstr ""
+
+msgid "الاسم (عربي)"
+msgstr ""
+
+msgid "الاسم مطلوب."
+msgstr ""
+
+msgid "الاشتراك"
+msgstr ""
+
+msgid "الامتثال"
+msgstr ""
+
+msgid "البريد الإلكتروني غير صحيح."
+msgstr ""
+
+msgid "البريد الإلكتروني للسكرتير/ة"
+msgstr ""
+
+msgid "البريد الإلكتروني للطبيب"
+msgstr ""
+
+msgid "البريد الإلكتروني للعيادة"
+msgstr ""
+
+msgid "البريد الإلكتروني مطلوب."
+msgstr ""
+
+msgid "التحقق من بريد العيادة"
+msgstr ""
+
+msgid "التحقق من بريد المالك"
+msgstr ""
+
+msgid "التحقق من هاتف العيادة"
+msgstr ""
+
+msgid "التحقق من هاتف المالك"
+msgstr ""
+
+msgid "التحليلات والأداء"
+msgstr ""
+
+msgid "التخصصات الطبية"
+msgstr ""
+
+msgid "التقارير والتحليلات"
+msgstr ""
+
+msgid "الخدمات والأنواع"
+msgstr ""
+
+msgid "الخدمة"
+msgstr ""
+
+msgid "الخطة"
+msgstr ""
+
+msgid "الخطوة 1 من 2"
+msgstr ""
+
+msgid "الخطوة 1 من 4"
+msgstr ""
+
+msgid "الخطوة 2 من 2"
+msgstr ""
+
+msgid "الخطوة 2 من 4"
+msgstr ""
+
+msgid "الخطوة 3 من 4"
+msgstr ""
+
+msgid "الخطوة 4 من 4"
+msgstr ""
+
+msgid "الدعوات المرسلة والمقبولة"
+msgstr ""
+
+msgid "الساعات الذروة (8 ص — 9 م)"
+msgstr ""
+
+msgid "السعر (₪)"
+msgstr ""
+
+msgid "الشهر التالي"
+msgstr ""
+
+msgid "الشهر السابق"
+msgstr ""
+
+msgid "الشهر الماضي"
+msgstr ""
+
+msgid "العنوان"
+msgstr ""
+
+msgid "العنوان التفصيلي"
+msgstr ""
+
+msgid "الفترة الزمنية"
+msgstr ""
+
+msgid "الكادر الطبي والإداري"
+msgstr ""
+
+msgid "المؤهلات المسجلة"
+msgstr ""
+
+msgid "المدة (دقائق)"
+msgstr ""
+
+msgid "المدة بالدقائق"
+msgstr ""
+
+msgid "المقاييس الرئيسية"
+msgstr ""
+
+msgid "بانتظار التحقق"
+msgstr ""
+
+msgid "بانتظار الرفع"
+msgstr ""
+
+msgid "بانتظار القبول"
+msgstr ""
+
+msgid "بدون ملف"
+msgstr ""
+
+msgid "بريد العيادة"
+msgstr ""
+
+msgid "بريد المالك"
+msgstr ""
+
+msgid "بلا مؤهلات"
+msgstr ""
+
+msgid "بيانات السكرتير/ة"
+msgstr ""
+
+msgid "بيانات الطبيب"
+msgstr ""
+
+msgid "بيانات مجمّعة لجميع عياداتك — مفيدة لتحسين الجودة واتخاذ القرار"
+msgstr ""
+
+msgid "تأكيد الرمز"
+msgstr ""
+
+msgid "تأكيد الرمز وتفعيل العيادة"
+msgstr ""
+
+msgid "تاريخ انتهاء الاشتراك"
+msgstr ""
+
+msgid "تحديث معلوماتك الشخصية"
+msgstr ""
+
+msgid "تحديد اليوم كمغلق بالكامل"
+msgstr ""
+
+msgid "تحديد تفاصيل نوع الموعد للعيادة."
+msgstr ""
+
+msgid "تحكم في عدد حالات عدم الحضور المسموحة وإعدادات المسامحة التلقائية."
+msgstr ""
+
+msgid "تحليلات ومؤشرات الأداء"
+msgstr ""
+
+msgid "تطبيق"
+msgstr ""
+
+msgid "تعديل المعلومات"
+msgstr ""
+
+msgid "تعديل فترة عمل"
+msgstr ""
+
+msgid "تعديل نوع الموعد"
+msgstr ""
+
+msgid "تعديل نوع الموعد: %(name)s"
+msgstr ""
+
+msgid "تغيير البريد الإلكتروني يتطلب التحقق عبر رابط يُرسل إلى العنوان الجديد."
+msgstr ""
+
+msgid "تغيير الحالة"
+msgstr ""
+
+msgid "تفاصيل العيادة"
+msgstr ""
+
+msgid "تفاصيل العيادة الجديدة"
+msgstr ""
+
+msgid "تفصيل لكل عيادة"
+msgstr ""
+
+msgid "تم إرسال الدعوة بنجاح."
+msgstr ""
+
+msgid "تم إرسال دعوة السكرتير/ة بنجاح."
+msgstr ""
+
+msgid "تم إزالة العضو من الكادر بنجاح."
+msgstr ""
+
+msgid "تم إلغاء الدعوة بنجاح."
+msgstr ""
+
+msgid "تم إلغاء الموعد"
+msgstr ""
+
+msgid "تم إنشاء عيادة \"%(name)s\" بنجاح!"
+msgstr ""
+
+msgid "تم اختيار"
+msgstr ""
+
+msgid "تم اختيار <strong id=\"selectedCount\">0</strong> تخصص"
+msgstr ""
+
+msgid "تم اعتماد مؤهلات د. %(name)s بنجاح."
+msgstr ""
+
+msgid "تم التحقق من جميع القنوات! عيادتك أصبحت نشطة."
+msgstr ""
+
+msgid "تم القبول"
+msgstr ""
+
+msgid "تم تأكيد الموعد"
+msgstr ""
+
+msgid "تم تحديث إعدادات الامتثال بنجاح."
+msgstr ""
+
+msgid "تم تحديث ساعات العمل بنجاح."
+msgstr ""
+
+msgid "تم حذف ساعات العمل بنجاح."
+msgstr ""
+
+msgid "تم حفظ التغييرات بنجاح."
+msgstr ""
+
+msgid "تم رفض مؤهلات د. %(name)s."
+msgstr ""
+
+msgid "تمت إضافة ساعات العمل بنجاح."
+msgstr ""
+
+msgid "تمت إضافتك كـ%(label)s في هذه العيادة."
+msgstr ""
+
+msgid "تمت الزيارة بنجاح"
+msgstr ""
+
+msgid "تنبيه: الاشتراك ينتهي خلال %(days)s يوماً"
+msgstr ""
+
+msgid "تنبيه: مؤهلات تحتاج للمراجعة"
+msgstr ""
+
+msgid "تنبيه: مواعيد معلقة"
+msgstr ""
+
+msgid "توزيع الجنس"
+msgstr ""
+
+msgid "توزيع المواعيد حسب الحالة"
+msgstr ""
+
+msgid "توزيع المواعيد حسب يوم الأسبوع"
+msgstr ""
+
+msgid "ثلاثاء"
+msgstr ""
+
+msgid "جارٍ التحقق"
+msgstr ""
+
+msgid "جدد"
+msgstr ""
+
+msgid "جدول أيام العمل"
+msgstr ""
+
+msgid "جدول العمل"
+msgstr ""
+
+msgid "جدول اليوم"
+msgstr ""
+
+msgid "جدول عمل الطبيب"
+msgstr ""
+
+msgid "جمعة"
+msgstr ""
+
+msgid "جميع العيادات"
+msgstr ""
+
+msgid "حالة: %(status)s"
+msgstr ""
+
+msgid "حجز جديد بانتظار التأكيد"
+msgstr ""
+
+msgid "حجم المواعيد — آخر 12 شهراً"
+msgstr ""
+
+msgid "حضر"
+msgstr ""
+
+msgid "خطة الاشتراك"
+msgstr ""
+
+msgid "خميس"
+msgstr ""
+
+msgid "دعوات معلقة"
+msgstr ""
+
+msgid "دعوة أطباء وسكرتارية للانضمام إلى عيادتك"
+msgstr ""
+
+msgid "دعوة سكرتير/ة"
+msgstr ""
+
+msgid "دعوة سكرتير/ة جديد"
+msgstr ""
+
+msgid "دعوة طبيب"
+msgstr ""
+
+msgid "دعوة طبيب جديد"
+msgstr ""
+
+msgid "دور غير صحيح."
+msgstr ""
+
+msgid "دور: سكرتير/ة الاستقبال"
+msgstr ""
+
+msgid "ديسمبر"
+msgstr ""
+
+msgid "ر.س"
+msgstr ""
+
+msgid "رقم الهاتف غير صحيح. يجب أن يتكون من 10 أرقام ويبدأ بـ 05."
+msgstr ""
+
+msgid "رقم الهاتف مرتبط بحسابك ولا يمكن تغييره."
+msgstr ""
+
+msgid "رقم الهوية لا يمكن تعديله."
+msgstr ""
+
+msgid "رقم هاتف السكرتير/ة"
+msgstr ""
+
+msgid "رقم هاتف الطبيب"
+msgstr ""
+
+msgid "رمز التفعيل"
+msgstr ""
+
+msgid "رمز التفعيل غير صالح أو منتهي الصلاحية"
+msgstr ""
+
+msgid "رمز التفعيل لم يعد صالحاً."
+msgstr ""
+
+msgid "ساعات العمل"
+msgstr ""
+
+msgid "ساعات عمل العيادة"
+msgstr ""
+
+msgid "سبب الرفض السابق:"
+msgstr ""
+
+msgid "سبت"
+msgstr ""
+
+msgid "سبتمبر"
+msgstr ""
+
+msgid "سجل الدعوات"
+msgstr ""
+
+msgid "سجل المواعيد"
+msgstr ""
+
+msgid "سنوات"
+msgstr ""
+
+msgid "سيتلقى الشخص المدعو رسالة نصية تتيح له قبول الدعوة والانضمام إلى فريق عيادتك."
+msgstr ""
+
+msgid "سيتلقى الطبيب رسالة نصية تتيح له قبول الدعوة والانضمام إلى عيادتك."
+msgstr ""
+
+msgid "سيتم البحث عن الشخص بناءً على رقم هاتفه. إن لم يكن مسجلاً سيتلقى دعوة عبر الرسائل النصية."
+msgstr ""
+
+msgid "سيتم البحث عن الطبيب بناءً على رقم هاتفه. إن لم يكن مسجلاً سيتلقى دعوة عبر الرسائل النصية."
+msgstr ""
+
+msgid "شهادات وتراخيص الأطباء"
+msgstr ""
+
+msgid "صلاحية إدارة المواعيد وخدمة المرضى، دون الوصول إلى الملفات الطبية."
+msgstr ""
+
+msgid "صيغة صحيحة ✓"
+msgstr ""
+
+msgid "عام"
+msgstr ""
+
+msgid "عدد المواعيد"
+msgstr ""
+
+msgid "عدد المواعيد المكتملة"
+msgstr ""
+
+msgid "عدم الحضور"
+msgstr ""
+
+msgid "عرض الشهادة المرفوعة"
+msgstr ""
+
+msgid "عطلة قادمة: %(title)s"
+msgstr ""
+
+msgid "عيادتي"
+msgstr ""
+
+msgid "غير محدود"
+msgstr ""
+
+msgid "غير موثق"
+msgstr ""
+
+msgid "فبراير"
+msgstr ""
+
+msgid "فترات العمل"
+msgstr ""
+
+msgid "قادم"
+msgstr ""
+
+msgid "قواعد الحجز والخصوصية"
+msgstr ""
+
+msgid "كل الوقت"
+msgstr ""
+
+msgid "لا توجد أنواع مواعيد"
+msgstr ""
+
+msgid "لا توجد بيانات مواعيد بعد — ستظهر التقارير بمجرد بدء الحجوزات."
+msgstr ""
+
+msgid "لا توجد تخصصات متاحة حالياً."
+msgstr ""
+
+msgid "لا توجد دعوات تطابق التصفية المختارة"
+msgstr ""
+
+msgid "لا توجد عيادات بعد"
+msgstr ""
+
+msgid "لا توجد عيادات مسجلة بعد."
+msgstr ""
+
+msgid "لا توجد فترات عمل"
+msgstr ""
+
+msgid "لا توجد مواعيد في %(month)s %(year)s"
+msgstr ""
+
+msgid "لا توجد مواعيد مجدولة لهذا اليوم"
+msgstr ""
+
+msgid "لا يمكن إزالة مالك العيادة من الكادر."
+msgstr ""
+
+msgid "لا يوجد أطباء —"
+msgstr ""
+
+msgid "لا يوجد اشتراك مرتبط"
+msgstr ""
+
+msgid "لا يوجد اشتراك مرتبط بهذه العيادة"
+msgstr ""
+
+msgid "لا يوجد سكرتارية —"
+msgstr ""
+
+msgid "لقد وصلت للحد الأقصى من الأطباء وفق خطة الاشتراك."
+msgstr ""
+
+msgid "لقد وصلت للحد الأقصى من السكرتارية وفق خطة الاشتراك."
+msgstr ""
+
+msgid "لم تقم بإرسال أي دعوة بعد"
+msgstr ""
+
+msgid "لم تقم بإضافة أي أنواع مواعيد لهذه العيادة بعد."
+msgstr ""
+
+msgid "لم يتم تحديد أوقات عمل لهذا الطبيب في هذه العيادة بعد."
+msgstr ""
+
+msgid "لم يصلك الرمز؟"
+msgstr ""
+
+msgid "لم يقم الطبيب برفع الشهادة بعد"
+msgstr ""
+
+msgid "مارس"
+msgstr ""
+
+msgid "مالك"
+msgstr ""
+
+msgid "مالك العيادة"
+msgstr ""
+
+msgid "مايو"
+msgstr ""
+
+msgid "متكررون"
+msgstr ""
+
+msgid "مثال: General Checkup"
+msgstr ""
+
+msgid "مثال: د. محمد أحمد"
+msgstr ""
+
+msgid "مثال: سارة أحمد"
+msgstr ""
+
+msgid "مثال: فحص عام"
+msgstr ""
+
+msgid "مراجعة"
+msgstr ""
+
+msgid "مراجعة المؤهلات"
+msgstr ""
+
+msgid "مراجعة مؤهلات الأطباء"
+msgstr ""
+
+msgid "مرحباً دكتور %(welcome_name)s! تم إنشاء حسابك. يرجى إتمام التحقق من قنوات التواصل."
+msgstr ""
+
+msgid "مرحباً، %(name)s"
+msgstr ""
+
+msgid "مرضى جدد مقابل متكررون"
+msgstr ""
+
+msgid "مرضى عائدون"
+msgstr ""
+
+msgid "مرضى محظورون"
+msgstr ""
+
+msgid "مرفوض"
+msgstr ""
+
+msgid "مرفوضة"
+msgstr ""
+
+msgid "معتمد"
+msgstr ""
+
+msgid "معدل الإكمال"
+msgstr ""
+
+msgid "معدل الإلغاء"
+msgstr ""
+
+msgid "معدل عدم الحضور"
+msgstr ""
+
+msgid "معدلات الشهر الحالي"
+msgstr ""
+
+msgid "معلومات العيادة"
+msgstr ""
+
+msgid "معلومات الهوية"
+msgstr ""
+
+msgid "مغلق"
+msgstr ""
+
+msgid "مفتوح"
+msgstr ""
+
+msgid "مقبولة"
+msgstr ""
+
+msgid "ملخص العيادة"
+msgstr ""
+
+msgid "من الساعة"
+msgstr ""
+
+msgid "من المواعيد المكتملة"
+msgstr ""
+
+msgid "منتهي"
+msgstr ""
+
+msgid "مواعيد"
+msgstr ""
+
+msgid "مواعيد مكتملة"
+msgstr ""
+
+msgid "موقوف"
+msgstr ""
+
+msgid "موقوفة"
+msgstr ""
+
+msgid "مُعتمد"
+msgstr ""
+
+msgid "نشطة"
+msgstr ""
+
+msgid "نظرة على الأسبوع"
+msgstr ""
+
+msgid "نوع الموعد نشط ومتاح للحجز"
+msgstr ""
+
+msgid "نوفمبر"
+msgstr ""
+
+msgid "هاتف العيادة"
+msgstr ""
+
+msgid "هاتف المالك"
+msgstr ""
+
+msgid "هذا الحقل مطلوب."
+msgstr ""
+
+msgid "هذا العام"
+msgstr ""
+
+msgid "هل أنت متأكد من إزالة هذا السكرتير/ة من الكادر؟"
+msgstr ""
+
+msgid "هل أنت متأكد من إزالة هذا الطبيب من الكادر؟"
+msgstr ""
+
+msgid "هل أنت متأكد من اعتماد هذا المؤهل؟"
+msgstr ""
+
+msgid "هل أنت متأكد من حذف هذه الفترة؟"
+msgstr ""
+
+msgid "وصف (اختياري)"
+msgstr ""
+
+msgid "وصف العيادة"
+msgstr ""
+
+msgid "وصف تفصيلي لنوع الموعد ومحتواه"
+msgstr ""
+
+msgid "يجب إدخال سبب الرفض."
+msgstr ""
+
+msgid "يرجى تجديد الاشتراك لضمان استمرارية الخدمة."
+msgstr ""
+
+msgid "يناير"
+msgstr ""
+
+msgid "ينتهي %(exp)s"
+msgstr ""
+
+msgid "ينتهي في"
+msgstr ""
+
+msgid "يوجد %(count)s دعوة بانتظار القبول."
+msgstr ""
+
+msgid "يوجد %(count)s طلب اعتماد مؤهلات لأطباء في العيادة."
+msgstr ""
+
+msgid "يوجد %(count)s مريض محظور حالياً من الحجز."
+msgstr ""
+
+msgid "يوجد %(count)s موعد بانتظار التأكيد."
+msgstr ""
+
+msgid "يوليو"
+msgstr ""
+
+msgid "يونيو"
+msgstr ""
+
+msgid "⚠️ الاشتراك ينتهي خلال %(days)s أيام"
+msgstr ""
+
+msgid "⚠️ انتهى الاشتراك!"
+msgstr ""
+
+msgctxt "schedule"
+msgid "غير محدد"
+msgstr ""
+

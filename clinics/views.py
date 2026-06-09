@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.http import HttpResponse
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.translation import gettext as _, gettext_lazy
 
 from accounts.otp_utils import request_otp, verify_otp, is_in_cooldown, get_remaining_resends
 from accounts.email_utils import send_email_otp, verify_email_otp, is_email_otp_in_cooldown
@@ -13,8 +14,10 @@ from .models import Clinic, ClinicSubscription, ClinicVerification, ClinicStaff
 
 
 _ARABIC_MONTHS = [
-    "", "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
-    "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر",
+    "", gettext_lazy("يناير"), gettext_lazy("فبراير"), gettext_lazy("مارس"),
+    gettext_lazy("أبريل"), gettext_lazy("مايو"), gettext_lazy("يونيو"),
+    gettext_lazy("يوليو"), gettext_lazy("أغسطس"), gettext_lazy("سبتمبر"),
+    gettext_lazy("أكتوبر"), gettext_lazy("نوفمبر"), gettext_lazy("ديسمبر"),
 ]
 
 
@@ -165,7 +168,7 @@ def my_clinic(request, clinic_id):
     days_since_monday = today.weekday()
     week_start = today - timedelta(days=days_since_monday)
     week_days = []
-    day_labels = ["اثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت", "أحد"]
+    day_labels = [_("اثنين"), _("ثلاثاء"), _("أربعاء"), _("خميس"), _("جمعة"), _("سبت"), _("أحد")]
     for i in range(7):
         d = week_start + timedelta(days=i)
         count = Appointment.objects.filter(clinic=clinic, appointment_date=d).count()
@@ -347,10 +350,10 @@ def owner_edit_profile(request):
 
         errors = {}
         if not name:
-            errors["name"] = "الاسم مطلوب."
+            errors["name"] = _("الاسم مطلوب.")
 
         if not email:
-            errors["email"] = "البريد الإلكتروني مطلوب."
+            errors["email"] = _("البريد الإلكتروني مطلوب.")
 
         # Detect email change
         current_email = user.email or ""
@@ -363,7 +366,7 @@ def owner_edit_profile(request):
             try:
                 _validate_email(email)
             except DjangoValidationError:
-                errors["email"] = "البريد الإلكتروني غير صحيح."
+                errors["email"] = _("البريد الإلكتروني غير صحيح.")
 
             if not errors:
                 # Save non-email fields first
@@ -391,7 +394,7 @@ def owner_edit_profile(request):
             else:
                 user.city = None
             user.save(update_fields=["name", "city"])
-            messages.success(request, "تم حفظ التغييرات بنجاح.")
+            messages.success(request, _("تم حفظ التغييرات بنجاح."))
             return redirect("clinics:owner_profile")
 
         return render(request, "clinics/owner_edit_profile.html", {
@@ -434,7 +437,7 @@ def remove_staff(request, clinic_id, staff_id):
     staff = get_object_or_404(ClinicStaff, id=staff_id, clinic=clinic, is_active=True)
 
     if staff.role == "MAIN_DOCTOR":
-        messages.error(request, "لا يمكن إزالة مالك العيادة من الكادر.")
+        messages.error(request, _("لا يمكن إزالة مالك العيادة من الكادر."))
         return redirect("clinics:my_clinic", clinic_id=clinic_id)
 
     removed_role = staff.role
@@ -467,7 +470,7 @@ def remove_staff(request, clinic_id, staff_id):
         removed_user.role = new_primary
         removed_user.save(update_fields=["roles", "role"])
 
-    messages.success(request, "تم إزالة العضو من الكادر بنجاح.")
+    messages.success(request, _("تم إزالة العضو من الكادر بنجاح."))
     return redirect("clinics:my_clinic", clinic_id=clinic_id)
 
 
@@ -480,22 +483,22 @@ def add_self_as_staff(request, clinic_id):
     role = request.POST.get("role")
 
     if role not in ("DOCTOR", "SECRETARY"):
-        messages.error(request, "دور غير صحيح.")
+        messages.error(request, _("دور غير صحيح."))
         return redirect("clinics:my_clinic", clinic_id=clinic_id)
 
     # Already an active member with this role?
     if ClinicStaff.objects.filter(clinic=clinic, user=request.user, role=role, is_active=True).exists():
-        messages.error(request, "أنت مضاف بالفعل بهذا الدور.")
+        messages.error(request, _("أنت مضاف بالفعل بهذا الدور."))
         return redirect("clinics:my_clinic", clinic_id=clinic_id)
 
     # Subscription capacity check
     subscription = getattr(clinic, "subscription", None)
     if subscription:
         if role == "DOCTOR" and not subscription.can_add_doctor():
-            messages.error(request, "لقد وصلت للحد الأقصى من الأطباء وفق خطة الاشتراك.")
+            messages.error(request, _("لقد وصلت للحد الأقصى من الأطباء وفق خطة الاشتراك."))
             return redirect("clinics:my_clinic", clinic_id=clinic_id)
         if role == "SECRETARY" and not subscription.can_add_secretary():
-            messages.error(request, "لقد وصلت للحد الأقصى من السكرتارية وفق خطة الاشتراك.")
+            messages.error(request, _("لقد وصلت للحد الأقصى من السكرتارية وفق خطة الاشتراك."))
             return redirect("clinics:my_clinic", clinic_id=clinic_id)
 
     # Reactivate a previously revoked entry or create a new one
@@ -523,8 +526,8 @@ def add_self_as_staff(request, clinic_id):
         from doctors.models import DoctorProfile
         DoctorProfile.objects.get_or_create(user=request.user)
 
-    label = "طبيب" if role == "DOCTOR" else "سكرتير/ة"
-    messages.success(request, f"تمت إضافتك كـ{label} في هذه العيادة.")
+    label = _("طبيب") if role == "DOCTOR" else _("سكرتير/ة")
+    messages.success(request, _("تمت إضافتك كـ%(label)s في هذه العيادة.") % {"label": label})
     return redirect("clinics:my_clinic", clinic_id=clinic_id)
 
 
@@ -561,13 +564,13 @@ def create_invitation_view(request, clinic_id):
                     form.cleaned_data,
                     accept_base_url=request.build_absolute_uri("/"),
                 )
-                messages.success(request, "تم إرسال الدعوة بنجاح.")
+                messages.success(request, _("تم إرسال الدعوة بنجاح."))
                 return redirect(reverse("clinics:invitations_list", kwargs={"clinic_id": clinic_id}))
             except Exception as e:
                 err_msg = str(e)
                 if hasattr(e, 'messages'):
                     err_msg = " ".join(e.messages)
-                messages.error(request, f"خطأ: {err_msg}")
+                messages.error(request, _("خطأ: %(error)s") % {"error": err_msg})
     else:
         form = ClinicInvitationForm()
 
@@ -592,13 +595,13 @@ def create_secretary_invitation_view(request, clinic_id):
                     role="SECRETARY",
                     accept_base_url=request.build_absolute_uri("/"),
                 )
-                messages.success(request, "تم إرسال دعوة السكرتير/ة بنجاح.")
+                messages.success(request, _("تم إرسال دعوة السكرتير/ة بنجاح."))
                 return redirect(reverse("clinics:invitations_list", kwargs={"clinic_id": clinic_id}))
             except Exception as e:
                 err_msg = str(e)
                 if hasattr(e, 'messages'):
                     err_msg = " ".join(e.messages)
-                messages.error(request, f"خطأ: {err_msg}")
+                messages.error(request, _("خطأ: %(error)s") % {"error": err_msg})
     else:
         form = SecretaryInvitationForm()
 
@@ -616,12 +619,12 @@ def cancel_invitation_view(request, clinic_id, invitation_id):
     if request.method == "POST":
         try:
             cancel_invitation(invitation, request.user)
-            messages.success(request, "تم إلغاء الدعوة بنجاح.")
+            messages.success(request, _("تم إلغاء الدعوة بنجاح."))
         except Exception as e:
             err_msg = str(e)
             if hasattr(e, 'messages'):
                 err_msg = " ".join(e.messages)
-            messages.error(request, f"خطأ: {err_msg}")
+            messages.error(request, _("خطأ: %(error)s") % {"error": err_msg})
 
     # Redirecting back to invitations list since this might be an HTMX call or normal POST
     return redirect(reverse("clinics:invitations_list", kwargs={"clinic_id": clinic_id}))
@@ -774,7 +777,7 @@ def verify_clinic_phone(request, clinic_id):
                 return redirect(reverse("clinics:verify_clinic_email", kwargs={"clinic_id": clinic_id}))
             # No clinic email — activate now if all required steps done
             _activate_clinic_if_ready(clinic, verification)
-            messages.success(request, "تم التحقق من جميع القنوات! عيادتك أصبحت نشطة.")
+            messages.success(request, _("تم التحقق من جميع القنوات! عيادتك أصبحت نشطة."))
             return redirect(reverse("clinics:my_clinic", kwargs={"clinic_id": clinic_id}))
         messages.error(request, msg)
 
@@ -832,7 +835,7 @@ def verify_clinic_email(request, clinic_id):
             verification.clinic_email_verified_at = timezone.now()
             verification.save()
             _activate_clinic_if_ready(clinic, verification)
-            messages.success(request, "تم التحقق من جميع القنوات! عيادتك أصبحت نشطة.")
+            messages.success(request, _("تم التحقق من جميع القنوات! عيادتك أصبحت نشطة."))
             return redirect(reverse("clinics:my_clinic", kwargs={"clinic_id": clinic_id}))
         messages.error(request, msg)
 
@@ -861,8 +864,12 @@ def clinic_working_hours_list_view(request, clinic_id):
     clinic = get_owner_clinic_or_404(request, clinic_id)
     working_hours = get_clinic_working_hours(clinic)
 
-    # Group by weekday for easier display
-    days = ClinicWorkingHours.DAY_CHOICES
+    # Group by weekday for easier display (localized day names, keyed by DAY_CHOICES value)
+    day_names = [
+        _("الاثنين"), _("الثلاثاء"), _("الأربعاء"), _("الخميس"),
+        _("الجمعة"), _("السبت"), _("الأحد"),
+    ]
+    days = [(val, day_names[val]) for val, _lbl in ClinicWorkingHours.DAY_CHOICES]
     schedule = []
     for day_val, day_name in days:
         day_hours = [wh for wh in working_hours if wh.weekday == day_val]
@@ -902,14 +909,14 @@ def clinic_working_hours_create_view(request, clinic_id):
                 end_time = parse_time(end_time_str)
 
             create_working_hours(clinic, weekday, start_time, end_time, is_closed)
-            messages.success(request, "تمت إضافة ساعات العمل بنجاح.")
+            messages.success(request, _("تمت إضافة ساعات العمل بنجاح."))
         except Exception as e:
             err_msg = str(e)
             if hasattr(e, 'message_dict'):
                 err_msg = " ".join([f"{k}: {', '.join(v)}" for k, v in e.message_dict.items()])
             elif hasattr(e, 'messages'):
                 err_msg = " ".join(e.messages)
-            messages.error(request, f"خطأ: {err_msg}")
+            messages.error(request, _("خطأ: %(error)s") % {"error": err_msg})
 
     return redirect(reverse("clinics:working_hours_list", kwargs={"clinic_id": clinic_id}))
 
@@ -935,14 +942,14 @@ def clinic_working_hours_update_view(request, clinic_id, id):
                 end_time = parse_time(end_time_str)
 
             update_working_hours(instance, start_time, end_time, is_closed)
-            messages.success(request, "تم تحديث ساعات العمل بنجاح.")
+            messages.success(request, _("تم تحديث ساعات العمل بنجاح."))
         except Exception as e:
             err_msg = str(e)
             if hasattr(e, 'message_dict'):
                 err_msg = " ".join([f"{k}: {', '.join(v)}" for k, v in e.message_dict.items()])
             elif hasattr(e, 'messages'):
                 err_msg = " ".join(e.messages)
-            messages.error(request, f"خطأ: {err_msg}")
+            messages.error(request, _("خطأ: %(error)s") % {"error": err_msg})
 
     return redirect(reverse("clinics:working_hours_list", kwargs={"clinic_id": clinic_id}))
 
@@ -953,7 +960,7 @@ def clinic_working_hours_delete_view(request, clinic_id, id):
 
     if request.method == "POST":
         delete_working_hours(instance)
-        messages.success(request, "تم حذف ساعات العمل بنجاح.")
+        messages.success(request, _("تم حذف ساعات العمل بنجاح."))
 
     return redirect(reverse("clinics:working_hours_list", kwargs={"clinic_id": clinic_id}))
 
@@ -993,14 +1000,14 @@ def compliance_settings_update_view(request, clinic_id):
                 forgiveness_enabled=forgiveness_enabled,
                 forgiveness_days=forgiveness_days,
             )
-            messages.success(request, "تم تحديث إعدادات الامتثال بنجاح.")
+            messages.success(request, _("تم تحديث إعدادات الامتثال بنجاح."))
         except Exception as e:
             err_msg = str(e)
             if hasattr(e, 'message_dict'):
                 err_msg = " ".join([f"{k}: {', '.join(v)}" for k, v in e.message_dict.items()])
             elif hasattr(e, 'messages'):
                 err_msg = " ".join(e.messages)
-            messages.error(request, f"خطأ: {err_msg}")
+            messages.error(request, _("خطأ: %(error)s") % {"error": err_msg})
 
     return redirect(reverse("clinics:compliance_settings", kwargs={"clinic_id": clinic_id}))
 
@@ -1059,16 +1066,16 @@ def add_clinic_details_view(request):
                     owner_verified_at=timezone.now(),
                 )
                 del request.session["add_clinic"]
-                messages.success(request, f"تم إنشاء عيادة \"{clinic.name}\" بنجاح!")
+                messages.success(request, _('تم إنشاء عيادة "%(name)s" بنجاح!') % {"name": clinic.name})
                 return redirect(reverse("clinics:my_clinics"))
             except ClinicActivationCode.DoesNotExist:
-                messages.error(request, "رمز التفعيل لم يعد صالحاً.")
+                messages.error(request, _("رمز التفعيل لم يعد صالحاً."))
                 return redirect(reverse("clinics:add_clinic_code"))
             except Exception as e:
                 err_msg = str(e)
                 if hasattr(e, 'messages'):
                     err_msg = " ".join(e.messages)
-                messages.error(request, f"خطأ: {err_msg}")
+                messages.error(request, _("خطأ: %(error)s") % {"error": err_msg})
     else:
         form = AddClinicDetailsForm()
 
@@ -1133,7 +1140,7 @@ def clinic_credential_approve(request, clinic_id, credential_id):
 
         messages.success(
             request,
-            f"تم اعتماد مؤهلات د. {credential.doctor.name} بنجاح."
+            _("تم اعتماد مؤهلات د. %(name)s بنجاح.") % {"name": credential.doctor.name}
         )
 
     return redirect(reverse("clinics:credentials_list", kwargs={"clinic_id": clinic_id}))
@@ -1151,7 +1158,7 @@ def clinic_credential_reject(request, clinic_id, credential_id):
         from django.utils import timezone as _tz
         reason = request.POST.get("rejection_reason", "").strip()
         if not reason:
-            messages.error(request, "يجب إدخال سبب الرفض.")
+            messages.error(request, _("يجب إدخال سبب الرفض."))
             return redirect(reverse("clinics:credentials_list", kwargs={"clinic_id": clinic_id}))
 
         credential.credential_status = "CREDENTIALS_REJECTED"
@@ -1176,7 +1183,7 @@ def clinic_credential_reject(request, clinic_id, credential_id):
 
         messages.success(
             request,
-            f"تم رفض مؤهلات د. {credential.doctor.name}."
+            _("تم رفض مؤهلات د. %(name)s.") % {"name": credential.doctor.name}
         )
 
     return redirect(reverse("clinics:credentials_list", kwargs={"clinic_id": clinic_id}))
@@ -1290,7 +1297,10 @@ def reports_view(request):
         .annotate(n=Count("id"))
     )
     dow_map    = {r["appointment_date__week_day"]: r["n"] for r in dow_raw}
-    arabic_days = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"]
+    arabic_days = [
+        _("الأحد"), _("الإثنين"), _("الثلاثاء"), _("الأربعاء"),
+        _("الخميس"), _("الجمعة"), _("السبت"),
+    ]
     dow_labels = arabic_days
     dow_data   = [dow_map.get(i + 1, 0) for i in range(7)]
 
@@ -1334,13 +1344,13 @@ def reports_view(request):
         .values("gender")
         .annotate(n=Count("id"))
     )
-    gender_label_map = {"M": "ذكر", "F": "أنثى", "": "غير محدد"}
-    gender_labels = [gender_label_map.get(r["gender"], "غير محدد") for r in gender_raw]
+    gender_label_map = {"M": _("ذكر"), "F": _("أنثى"), "": _("غير محدد")}
+    gender_labels = [gender_label_map.get(r["gender"], _("غير محدد")) for r in gender_raw]
     gender_data   = [r["n"] for r in gender_raw]
     profiled_count = sum(gender_data)
     no_profile_count = len(patient_ids) - profiled_count
     if no_profile_count > 0:
-        gender_labels.append("بدون ملف")
+        gender_labels.append(_("بدون ملف"))
         gender_data.append(no_profile_count)
 
     # ── New vs returning patients ─────────────────────────────────────────────
@@ -1395,9 +1405,9 @@ def reports_view(request):
 
     # ── Status chart ──────────────────────────────────────────────────────────
     status_label_map = {
-        "PENDING": "معلق", "CONFIRMED": "مؤكد", "CHECKED_IN": "حضر",
-        "IN_PROGRESS": "جارٍ", "COMPLETED": "مكتمل",
-        "CANCELLED": "ملغى", "NO_SHOW": "لم يحضر",
+        "PENDING": _("معلق"), "CONFIRMED": _("مؤكد"), "CHECKED_IN": _("حضر"),
+        "IN_PROGRESS": _("جارٍ"), "COMPLETED": _("مكتمل"),
+        "CANCELLED": _("ملغى"), "NO_SHOW": _("لم يحضر"),
     }
     status_labels_chart = [status_label_map.get(s, s) for s in status_counts]
     status_data_chart   = list(status_counts.values())
@@ -1442,7 +1452,7 @@ def reports_view(request):
         "type_data_json":            json.dumps(type_data),
         "gender_labels_json":        json.dumps(gender_labels,         ensure_ascii=False),
         "gender_data_json":          json.dumps(gender_data),
-        "new_returning_labels_json": json.dumps(["مرضى جدد", "مرضى متكررون"], ensure_ascii=False),
+        "new_returning_labels_json": json.dumps([_("مرضى جدد"), _("مرضى متكررون")], ensure_ascii=False),
         "new_returning_data_json":   json.dumps([new_patients, returning_patients]),
     }
     return render(request, "clinics/reports.html", context)

@@ -1,7 +1,7 @@
 {% extends 'accounts/base.html' %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}إعدادات الامتثال - عيادتي{% endblock %}
+{% block title %}{% trans "إعدادات الامتثال" %} - {% trans "عيادتي" %}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -128,11 +128,11 @@
     <!-- Header -->
     <div class="page-card">
         <h1>
-            <i class="fa-solid fa-shield-halved" style="color:var(--color-primary-500);margin-left:0.4rem;"></i>إعدادات الامتثال
+            <i class="fa-solid fa-shield-halved" style="color:var(--color-primary-500);margin-inline-end:0.4rem;"></i>{% trans "إعدادات الامتثال" %}
         </h1>
-        <p>تحكم في عدد حالات عدم الحضور المسموحة وإعدادات المسامحة التلقائية.</p>
+        <p>{% trans "تحكم في عدد حالات عدم الحضور المسموحة وإعدادات المسامحة التلقائية." %}</p>
         <a href="{% url 'clinics:my_clinic' clinic_id=clinic.id %}" class="btn-back">
-            <i class="fa-solid fa-arrow-right"></i> {{ clinic.name }}
+            <i class="fa-solid fa-arrow-{% if IS_RTL %}right{% else %}left{% endif %}"></i> {{ clinic.name }}
         </a>
     </div>
 
@@ -143,7 +143,7 @@
 
             <div class="form-group">
                 <label class="form-label" for="id_max_no_show_count">
-                    الحد الأقصى لعدد مرات عدم الحضور قبل الحظر
+                    {% trans "الحد الأقصى لعدد مرات عدم الحضور قبل الحظر" %}
                 </label>
                 <input type="number"
                        name="max_no_show_count"
@@ -152,7 +152,7 @@
                        min="1"
                        value="{{ settings.score_threshold_block }}"
                        required>
-                <p class="form-hint">عند وصول المريض لهذا العدد من حالات عدم الحضور، سيتم حظره تلقائياً.</p>
+                <p class="form-hint">{% trans "عند وصول المريض لهذا العدد من حالات عدم الحضور، سيتم حظره تلقائياً." %}</p>
             </div>
 
             <div class="checkbox-row">
@@ -161,25 +161,25 @@
                        id="id_forgiveness_enabled"
                        {% if settings.auto_forgive_enabled %}checked{% endif %}
                        onchange="toggleForgivenessFields()">
-                <label for="id_forgiveness_enabled">تفعيل المسامحة التلقائية</label>
+                <label for="id_forgiveness_enabled">{% trans "تفعيل المسامحة التلقائية" %}</label>
             </div>
 
             <div id="forgiveness_fields" style="{% if not settings.auto_forgive_enabled %}display:none;{% endif %}">
                 <div class="form-group">
-                    <label class="form-label" for="id_forgiveness_days">مدة المسامحة (بالأيام)</label>
+                    <label class="form-label" for="id_forgiveness_days">{% trans "مدة المسامحة (بالأيام)" %}</label>
                     <input type="number"
                            name="forgiveness_days"
                            id="id_forgiveness_days"
                            class="form-control"
                            min="1"
                            value="{{ settings.auto_forgive_after_days|default:'' }}">
-                    <p class="form-hint">عدد الأيام بدون مخالفات قبل إلغاء الحظر تلقائياً.</p>
+                    <p class="form-hint">{% trans "عدد الأيام بدون مخالفات قبل إلغاء الحظر تلقائياً." %}</p>
                 </div>
             </div>
 
             <div style="margin-top: 1.5rem;">
                 <button type="submit" class="btn-primary">
-                    <i class="fa-solid fa-floppy-disk"></i> حفظ الإعدادات
+                    <i class="fa-solid fa-floppy-disk"></i> {% trans "حفظ الإعدادات" %}
                 </button>
             </div>
         </form>

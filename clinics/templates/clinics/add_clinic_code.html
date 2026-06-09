@@ -1,7 +1,7 @@
 {% extends 'accounts/base.html' %}
-{% load static %}
+{% load static i18n %}
 
-{% block title %}إضافة عيادة جديدة — رمز التفعيل{% endblock %}
+{% block title %}{% trans "إضافة عيادة جديدة" %} — {% trans "رمز التفعيل" %}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -111,18 +111,18 @@
 {% block content %}
 <div class="add-clinic-wrapper">
     <a href="{% url 'clinics:my_clinics' %}" class="back-link">
-        <i class="fa-solid fa-arrow-right"></i> عياداتي
+        <i class="fa-solid fa-arrow-{% if IS_RTL %}right{% else %}left{% endif %}"></i> {% trans "عياداتي" %}
     </a>
 
     <div class="add-clinic-card">
         <div class="step-indicator">
             <div class="step-dot active"></div>
             <div class="step-dot"></div>
-            <span>الخطوة 1 من 2</span>
+            <span>{% trans "الخطوة 1 من 2" %}</span>
         </div>
 
-        <h1>إضافة عيادة جديدة</h1>
-        <p class="subtitle">أدخل رمز التفعيل الخاص بالعيادة الجديدة.</p>
+        <h1>{% trans "إضافة عيادة جديدة" %}</h1>
+        <p class="subtitle">{% trans "أدخل رمز التفعيل الخاص بالعيادة الجديدة." %}</p>
 
         <form method="post">
             {% csrf_token %}
@@ -145,7 +145,7 @@
             {% endfor %}
 
             <button type="submit" class="btn-primary">
-                <i class="fa-solid fa-arrow-left"></i> التالي
+                <i class="fa-solid fa-arrow-{% if IS_RTL %}left{% else %}right{% endif %}"></i> {% trans "التالي" %}
             </button>
         </form>
     </div>
