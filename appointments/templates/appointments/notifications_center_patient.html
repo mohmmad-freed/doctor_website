@@ -1,175 +1,190 @@
 {% extends 'patients/base_dashboard.html' %}
-{% load i18n %}
+{% load static i18n %}
 
 {% block title %}{% trans "مركز الإشعارات" %} | {{ block.super }}{% endblock %}
 
+{% block extra_head %}
+<style>
+    /* Accent bar pinned to the inline-start edge (RTL-safe). */
+    .notif-card__bar { inset-inline-start: 0; }
+
+    /* Two-line clamp for the message body. */
+    .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    /* Staggered fade-in for the list items. */
+    .notif-card {
+        opacity: 0;
+        animation: notifFadeIn 0.45s ease-out forwards;
+    }
+    @keyframes notifFadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .notif-card { animation: none; opacity: 1; }
+        .notif-card:hover { transform: none !important; }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="max-w-3xl mx-auto space-y-6 animate-fade-in-up">
+<div class="max-w-3xl mx-auto animate-fade-in-up space-y-5">
 
-    <!-- Header -->
-    <div class="flex items-center justify-between">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <i class="fa-regular fa-bell text-primary-500"></i>
-                {% trans "مركز الإشعارات" %}
-            </h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {% if unread_count > 0 %}
-                {% if IS_RTL %}
-                لديك <span class="font-bold text-primary-600 dark:text-primary-400">{{ unread_count }}</span> إشعار غير مقروء
-                {% else %}
-                You have <span class="font-bold text-primary-600 dark:text-primary-400">{{ unread_count }}</span> unread notification{{ unread_count|pluralize }}
-                {% endif %}
-                {% else %}
-                {% trans "كل إشعاراتك مقروءة" %}
-                {% endif %}
-            </p>
+    {# ── Header card ── #}
+    <div class="relative overflow-hidden rounded-2xl border border-gray-200 dark:border-slate-700
+                bg-white dark:bg-slate-800 shadow-sm p-5 md:p-6">
+        <div class="absolute inset-x-0 top-0 h-1
+                    bg-gradient-to-l from-primary-500 via-primary-400 to-secondary-500"></div>
+
+        <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-primary-100 dark:bg-primary-900/40
+                        flex items-center justify-center flex-shrink-0">
+                <i class="fa-regular fa-bell text-primary-600 dark:text-primary-400 text-xl"></i>
+            </div>
+
+            <div class="flex-grow min-w-0">
+                <h1 class="text-xl font-bold text-gray-900 dark:text-white">
+                    {% trans "مركز الإشعارات" %}
+                </h1>
+                <p class="text-sm text-gray-500 dark:text-slate-400 mt-0.5
+                          [&_b]:font-bold [&_b]:text-gray-800 dark:[&_b]:text-gray-200">
+                    {% if unread_count > 0 %}
+                        {% blocktrans with count=unread_count %}لديك <b>{{ count }}</b> إشعار غير مقروء{% endblocktrans %}
+                    {% else %}
+                        {% trans "كل إشعاراتك مقروءة" %}
+                    {% endif %}
+                </p>
+            </div>
+
+            {% if unread_count > 0 %}
+            <form method="post" action="{% url 'appointments:mark_all_notifications_read' %}"
+                  class="flex-shrink-0">
+                {% csrf_token %}
+                <input type="hidden" name="context_role" value="PATIENT">
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit"
+                        class="inline-flex items-center gap-2 px-4 py-2 rounded-xl
+                               bg-primary-600 hover:bg-primary-700 active:scale-95
+                               text-white text-sm font-semibold transition-all shadow-sm">
+                    <i class="fa-solid fa-check-double text-xs"></i>
+                    {% trans "تحديد الكل كمقروء" %}
+                </button>
+            </form>
+            {% endif %}
         </div>
-
-        {% if unread_count > 0 %}
-        <form method="post" action="{% url 'appointments:mark_all_notifications_read' %}">
-            {% csrf_token %}
-            <button type="submit"
-                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold
-                       bg-primary-50 text-primary-700 hover:bg-primary-100
-                       dark:bg-primary-900/20 dark:text-primary-300 dark:hover:bg-primary-900/40
-                       border border-primary-200 dark:border-primary-700 transition-colors">
-                <i class="fa-solid fa-check-double text-xs"></i>
-                {% trans "تحديد الكل كمقروء" %}
-            </button>
-        </form>
-        {% endif %}
     </div>
 
-    <!-- Notification List -->
+    {# ── Stats strip ── #}
+    <div class="grid grid-cols-3 gap-3">
+
+        <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700
+                    shadow-sm px-4 py-3.5 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-700
+                        flex items-center justify-center flex-shrink-0">
+                <i class="fa-solid fa-inbox text-slate-500 dark:text-slate-400 text-sm"></i>
+            </div>
+            <div>
+                <p class="text-2xl font-bold text-gray-900 dark:text-white leading-none">{{ total_count }}</p>
+                <p class="text-xs text-gray-400 dark:text-slate-500 mt-1 font-medium">{% trans "إجمالي" %}</p>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700
+                    shadow-sm px-4 py-3.5 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900/40
+                        flex items-center justify-center flex-shrink-0">
+                <i class="fa-regular fa-bell text-primary-600 dark:text-primary-400 text-sm"></i>
+            </div>
+            <div>
+                <p class="text-2xl font-bold text-primary-600 dark:text-primary-400 leading-none">{{ unread_count }}</p>
+                <p class="text-xs text-gray-400 dark:text-slate-500 mt-1 font-medium">{% trans "غير مقروء" %}</p>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700
+                    shadow-sm px-4 py-3.5 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30
+                        flex items-center justify-center flex-shrink-0">
+                <i class="fa-solid fa-check text-emerald-600 dark:text-emerald-400 text-sm"></i>
+            </div>
+            <div>
+                <p class="text-2xl font-bold text-gray-900 dark:text-white leading-none">{{ read_count }}</p>
+                <p class="text-xs text-gray-400 dark:text-slate-500 mt-1 font-medium">{% trans "مقروء" %}</p>
+            </div>
+        </div>
+
+    </div>
+
+    {# ── Notification list ── #}
     {% if notifications %}
     <div class="space-y-3">
         {% for notif in notifications %}
-        <div class="glass-card p-4 flex gap-4 relative
-                    {% if not notif.is_read %}ring-2 ring-primary-400/60 bg-primary-50/40 dark:bg-primary-900/10{% endif %}
-                    transition-all hover:shadow-md">
 
-            <!-- Unread dot -->
-            {% if not notif.is_read %}
-            <div class="absolute top-4 left-4 w-2 h-2 rounded-full bg-primary-500 flex-shrink-0"></div>
+        {# Resolve icon + color classes based on type #}
+        {% if notif.notification_type == 'APPOINTMENT_BOOKED' %}
+            {% if notif.appointment and notif.appointment.status == 'PENDING' %}
+                {% with icon_class="fa-regular fa-clock" color_bg="bg-amber-100 dark:bg-amber-900/30" color_text="text-amber-600 dark:text-amber-400" badge_bg="bg-amber-50 dark:bg-amber-900/20" badge_text="text-amber-700 dark:text-amber-400" %}
+                {% include "appointments/partials/notif_card_doctor.html" %}
+                {% endwith %}
+            {% elif notif.appointment and notif.appointment.status == 'CANCELLED' %}
+                {% with icon_class="fa-regular fa-calendar-xmark" color_bg="bg-red-100 dark:bg-red-900/30" color_text="text-red-600 dark:text-red-400" badge_bg="bg-red-50 dark:bg-red-900/20" badge_text="text-red-700 dark:text-red-400" %}
+                {% include "appointments/partials/notif_card_doctor.html" %}
+                {% endwith %}
+            {% else %}
+                {% with icon_class="fa-regular fa-calendar-check" color_bg="bg-emerald-100 dark:bg-emerald-900/30" color_text="text-emerald-600 dark:text-emerald-400" badge_bg="bg-emerald-50 dark:bg-emerald-900/20" badge_text="text-emerald-700 dark:text-emerald-400" %}
+                {% include "appointments/partials/notif_card_doctor.html" %}
+                {% endwith %}
             {% endif %}
+        {% elif notif.notification_type == 'APPOINTMENT_CANCELLED' %}
+            {% with icon_class="fa-regular fa-calendar-xmark" color_bg="bg-red-100 dark:bg-red-900/30" color_text="text-red-600 dark:text-red-400" badge_bg="bg-red-50 dark:bg-red-900/20" badge_text="text-red-700 dark:text-red-400" %}
+            {% include "appointments/partials/notif_card_doctor.html" %}
+            {% endwith %}
+        {% elif notif.notification_type == 'APPOINTMENT_RESCHEDULED' %}
+            {% with icon_class="fa-solid fa-calendar-day" color_bg="bg-orange-100 dark:bg-orange-900/30" color_text="text-orange-600 dark:text-orange-400" badge_bg="bg-orange-50 dark:bg-orange-900/20" badge_text="text-orange-700 dark:text-orange-400" %}
+            {% include "appointments/partials/notif_card_doctor.html" %}
+            {% endwith %}
+        {% elif notif.notification_type == 'APPOINTMENT_EDITED' %}
+            {% with icon_class="fa-regular fa-calendar-pen" color_bg="bg-blue-100 dark:bg-blue-900/30" color_text="text-blue-600 dark:text-blue-400" badge_bg="bg-blue-50 dark:bg-blue-900/20" badge_text="text-blue-700 dark:text-blue-400" %}
+            {% include "appointments/partials/notif_card_doctor.html" %}
+            {% endwith %}
+        {% elif notif.notification_type == 'APPOINTMENT_REMINDER' %}
+            {% with icon_class="fa-regular fa-bell" color_bg="bg-amber-100 dark:bg-amber-900/30" color_text="text-amber-600 dark:text-amber-400" badge_bg="bg-amber-50 dark:bg-amber-900/20" badge_text="text-amber-700 dark:text-amber-400" %}
+            {% include "appointments/partials/notif_card_doctor.html" %}
+            {% endwith %}
+        {% elif notif.notification_type == 'APPOINTMENT_STATUS_CHANGED' %}
+            {% with icon_class="fa-solid fa-arrows-rotate" color_bg="bg-indigo-100 dark:bg-indigo-900/30" color_text="text-indigo-600 dark:text-indigo-400" badge_bg="bg-indigo-50 dark:bg-indigo-900/20" badge_text="text-indigo-700 dark:text-indigo-400" %}
+            {% include "appointments/partials/notif_card_doctor.html" %}
+            {% endwith %}
+        {% else %}
+            {% with icon_class="fa-solid fa-circle-info" color_bg="bg-violet-100 dark:bg-violet-900/30" color_text="text-violet-600 dark:text-violet-400" badge_bg="bg-violet-50 dark:bg-violet-900/20" badge_text="text-violet-700 dark:text-violet-400" %}
+            {% include "appointments/partials/notif_card_doctor.html" %}
+            {% endwith %}
+        {% endif %}
 
-            <!-- Icon -->
-            <div class="flex-shrink-0 mt-0.5">
-                {% if notif.notification_type == 'APPOINTMENT_BOOKED' %}
-                <div class="w-10 h-10 rounded-xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
-                    <i class="fa-regular fa-calendar-check text-green-600 dark:text-green-400 text-lg"></i>
-                </div>
-                {% elif notif.notification_type == 'APPOINTMENT_CANCELLED' %}
-                <div class="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
-                    <i class="fa-regular fa-calendar-xmark text-red-600 dark:text-red-400 text-lg"></i>
-                </div>
-                {% elif notif.notification_type == 'APPOINTMENT_RESCHEDULED' %}
-                <div class="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center">
-                    <i class="fa-solid fa-calendar-day text-orange-600 dark:text-orange-400 text-lg"></i>
-                </div>
-                {% elif notif.notification_type == 'APPOINTMENT_EDITED' %}
-                <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-                    <i class="fa-regular fa-calendar-pen text-blue-600 dark:text-blue-400 text-lg"></i>
-                </div>
-                {% elif notif.notification_type == 'APPOINTMENT_REMINDER' %}
-                <div class="w-10 h-10 rounded-xl bg-yellow-50 dark:bg-yellow-900/20 flex items-center justify-center">
-                    <i class="fa-regular fa-bell text-yellow-600 dark:text-yellow-400 text-lg"></i>
-                </div>
-                {% else %}
-                <div class="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">
-                    <i class="fa-solid fa-circle-info text-purple-600 dark:text-purple-400 text-lg"></i>
-                </div>
-                {% endif %}
-            </div>
-
-            <!-- Content -->
-            <div class="flex-grow min-w-0">
-                <div class="flex items-start justify-between gap-2 flex-wrap">
-                    <p class="font-bold text-gray-900 dark:text-white text-sm leading-snug
-                               {% if not notif.is_read %}text-primary-900 dark:text-primary-100{% endif %}">
-                        {% if notif.notification_type == 'APPOINTMENT_BOOKED' %}
-                        {% trans "تم تأكيد موعدك" %}
-                        {% elif notif.notification_type == 'APPOINTMENT_CANCELLED' %}
-                        {% trans "تم إلغاء موعدك" %}
-                        {% elif notif.notification_type == 'APPOINTMENT_RESCHEDULED' %}
-                        {% trans "تم تعديل موعدك" %}
-                        {% elif notif.notification_type == 'APPOINTMENT_EDITED' %}
-                        {% trans "تم تعديل تفاصيل موعدك" %}
-                        {% elif notif.notification_type == 'APPOINTMENT_REMINDER' %}
-                        {% trans "تذكير بموعدك" %}
-                        {% else %}
-                        {% trans "تحديث الموعد" %}
-                        {% endif %}
-                    </p>
-                    <span class="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap flex-shrink-0">
-                        {% blocktrans with when=notif.created_at|timesince %}{{ when }} مضت{% endblocktrans %}
-                    </span>
-                </div>
-
-                <p class="text-sm text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">
-                    {% if notif.appointment %}
-                    {% with apt=notif.appointment %}
-                    {% if notif.notification_type == 'APPOINTMENT_BOOKED' %}
-                    {% blocktrans with doctor=apt.doctor.name date=apt.appointment_date time=apt.appointment_time|time:"H:i" clinic=apt.clinic.name %}تم تأكيد موعدك مع د. {{ doctor }} بتاريخ {{ date }} الساعة {{ time }} في {{ clinic }}.{% endblocktrans %}
-                    {% elif notif.notification_type == 'APPOINTMENT_CANCELLED' %}
-                    {% blocktrans with doctor=apt.doctor.name date=apt.appointment_date time=apt.appointment_time|time:"H:i" clinic=apt.clinic.name %}تم إلغاء موعدك مع د. {{ doctor }} بتاريخ {{ date }} الساعة {{ time }} في {{ clinic }}.{% endblocktrans %}
-                    {% elif notif.notification_type == 'APPOINTMENT_RESCHEDULED' %}
-                    {% blocktrans with doctor=apt.doctor.name date=apt.appointment_date time=apt.appointment_time|time:"H:i" clinic=apt.clinic.name %}تم تعديل موعدك مع د. {{ doctor }} إلى {{ date }} الساعة {{ time }} في {{ clinic }}.{% endblocktrans %}
-                    {% elif notif.notification_type == 'APPOINTMENT_EDITED' %}
-                    {% blocktrans with doctor=apt.doctor.name date=apt.appointment_date time=apt.appointment_time|time:"H:i" clinic=apt.clinic.name %}تم تعديل تفاصيل موعدك مع د. {{ doctor }} بتاريخ {{ date }} الساعة {{ time }} في {{ clinic }}.{% endblocktrans %}
-                    {% elif notif.notification_type == 'APPOINTMENT_REMINDER' %}
-                    {% blocktrans with doctor=apt.doctor.name date=apt.appointment_date time=apt.appointment_time|time:"H:i" clinic=apt.clinic.name %}تذكير: لديك موعد مع د. {{ doctor }} بتاريخ {{ date }} الساعة {{ time }} في {{ clinic }}.{% endblocktrans %}
-                    {% else %}
-                    {% blocktrans with doctor=apt.doctor.name date=apt.appointment_date time=apt.appointment_time|time:"H:i" clinic=apt.clinic.name %}تم تحديث حالة موعدك مع د. {{ doctor }} بتاريخ {{ date }} الساعة {{ time }} في {{ clinic }}.{% endblocktrans %}
-                    {% endif %}
-                    {% endwith %}
-                    {% else %}
-                    {{ notif.message }}
-                    {% endif %}
-                </p>
-
-                <!-- Footer: link + mark-read -->
-                <div class="flex items-center gap-3 mt-3 flex-wrap">
-                    {% if notif.target_url %}
-                    <a href="{{ notif.target_url }}"
-                       class="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-600 dark:text-primary-400 hover:underline">
-                        <i class="fa-solid fa-arrow-{% if IS_RTL %}left{% else %}right{% endif %} text-[10px]"></i>
-                        {% trans "عرض الموعد" %}
-                    </a>
-                    {% endif %}
-
-                    {% if not notif.is_read %}
-                    <form method="post" action="{% url 'appointments:mark_notification_read' notif.pk %}">
-                        {% csrf_token %}
-                        <input type="hidden" name="next" value="{{ request.path }}">
-                        <button type="submit"
-                            class="inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700
-                                   dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
-                            <i class="fa-regular fa-circle-check text-xs"></i>
-                            {% trans "تحديد كمقروء" %}
-                        </button>
-                    </form>
-                    {% else %}
-                    <span class="inline-flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
-                        <i class="fa-solid fa-check text-[10px]"></i>
-                        {% trans "مقروء" %}
-                    </span>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
         {% endfor %}
     </div>
 
     {% else %}
-    <!-- Empty state -->
-    <div class="glass-card p-12 text-center">
-        <div class="w-16 h-16 rounded-full bg-gray-100 dark:bg-slate-700 flex items-center justify-center mx-auto mb-4">
-            <i class="fa-regular fa-bell-slash text-gray-400 dark:text-gray-500 text-2xl"></i>
+    {# ── Empty state ── #}
+    <div class="relative overflow-hidden rounded-2xl border border-gray-200 dark:border-slate-700
+                bg-white dark:bg-slate-800 shadow-sm p-16 text-center">
+        <div class="absolute inset-x-0 top-0 h-1
+                    bg-gradient-to-l from-primary-500 via-primary-400 to-secondary-500 opacity-60"></div>
+        <div class="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-700
+                    flex items-center justify-center mx-auto mb-4">
+            <i class="fa-regular fa-bell-slash text-2xl text-slate-400 dark:text-slate-500"></i>
         </div>
-        <h3 class="text-lg font-bold text-gray-700 dark:text-gray-300 mb-1">{% trans "لا توجد إشعارات بعد" %}</h3>
-        <p class="text-sm text-gray-500 dark:text-gray-400">{% trans "ستظهر هنا إشعارات مواعيدك عند وجودها." %}</p>
+        <h3 class="text-base font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+            {% trans "لا توجد إشعارات بعد" %}
+        </h3>
+        <p class="text-sm text-gray-500 dark:text-slate-400">
+            {% trans "ستظهر هنا إشعارات مواعيدك عند وجودها." %}
+        </p>
     </div>
     {% endif %}
 

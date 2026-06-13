@@ -81,7 +81,6 @@
         </a>
 
     </div>
-    </div>
 
     <!-- Recent Notifications Panel -->
     {% if recent_notifications %}
@@ -92,63 +91,45 @@
                 <i class="fa-regular fa-bell text-primary-500 text-sm"></i>
                 {% trans "آخر الإشعارات" %}
                 {% if unread_patient_notification_count > 0 %}
-                <span class="inline-flex items-center justify-center w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full">
-                    {{ unread_patient_notification_count }}
+                <span class="inline-flex items-center justify-center min-w-[20px] h-5 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full">
+                    {% if unread_patient_notification_count > 9 %}9+{% else %}{{ unread_patient_notification_count }}{% endif %}
                 </span>
                 {% endif %}
             </h2>
             <a href="{% url 'appointments:patient_notifications' %}"
-               class="text-xs font-semibold text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1">
+               class="text-xs font-semibold text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1 group">
                 {% trans "عرض الكل" %}
-                <i class="fa-solid {% if IS_RTL %}fa-arrow-left{% else %}fa-arrow-right{% endif %} text-[10px]"></i>
+                <i class="fa-solid {% if IS_RTL %}fa-arrow-left group-hover:-translate-x-0.5{% else %}fa-arrow-right group-hover:translate-x-0.5{% endif %} text-[10px] transition-transform"></i>
             </a>
         </div>
 
         <!-- Notification rows -->
         <ul class="divide-y divide-gray-50 dark:divide-slate-700/50">
             {% for notif in recent_notifications %}
-            <li class="flex items-start gap-3 px-5 py-3.5 hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors
-                        {% if not notif.is_read %}bg-primary-50/30 dark:bg-primary-900/10{% endif %}">
 
-                <!-- Colored dot -->
-                <div class="mt-1.5 flex-shrink-0">
-                    {% if not notif.is_read %}
-                    <span class="block w-2 h-2 rounded-full bg-primary-500"></span>
-                    {% else %}
-                    <span class="block w-2 h-2 rounded-full bg-gray-200 dark:bg-slate-600"></span>
-                    {% endif %}
-                </div>
+            {# Resolve icon + color classes based on type (compact tile) #}
+            {% if notif.notification_type == 'APPOINTMENT_BOOKED' %}
+                {% if notif.appointment and notif.appointment.status == 'PENDING' %}
+                    {% with icon_class="fa-regular fa-clock" color_bg="bg-amber-100 dark:bg-amber-900/30" color_text="text-amber-600 dark:text-amber-400" %}{% include "patients/partials/dashboard_notif_row.html" %}{% endwith %}
+                {% elif notif.appointment and notif.appointment.status == 'CANCELLED' %}
+                    {% with icon_class="fa-regular fa-calendar-xmark" color_bg="bg-red-100 dark:bg-red-900/30" color_text="text-red-600 dark:text-red-400" %}{% include "patients/partials/dashboard_notif_row.html" %}{% endwith %}
+                {% else %}
+                    {% with icon_class="fa-regular fa-calendar-check" color_bg="bg-emerald-100 dark:bg-emerald-900/30" color_text="text-emerald-600 dark:text-emerald-400" %}{% include "patients/partials/dashboard_notif_row.html" %}{% endwith %}
+                {% endif %}
+            {% elif notif.notification_type == 'APPOINTMENT_CANCELLED' %}
+                {% with icon_class="fa-regular fa-calendar-xmark" color_bg="bg-red-100 dark:bg-red-900/30" color_text="text-red-600 dark:text-red-400" %}{% include "patients/partials/dashboard_notif_row.html" %}{% endwith %}
+            {% elif notif.notification_type == 'APPOINTMENT_RESCHEDULED' %}
+                {% with icon_class="fa-solid fa-calendar-day" color_bg="bg-orange-100 dark:bg-orange-900/30" color_text="text-orange-600 dark:text-orange-400" %}{% include "patients/partials/dashboard_notif_row.html" %}{% endwith %}
+            {% elif notif.notification_type == 'APPOINTMENT_EDITED' %}
+                {% with icon_class="fa-regular fa-calendar-pen" color_bg="bg-blue-100 dark:bg-blue-900/30" color_text="text-blue-600 dark:text-blue-400" %}{% include "patients/partials/dashboard_notif_row.html" %}{% endwith %}
+            {% elif notif.notification_type == 'APPOINTMENT_REMINDER' %}
+                {% with icon_class="fa-regular fa-bell" color_bg="bg-amber-100 dark:bg-amber-900/30" color_text="text-amber-600 dark:text-amber-400" %}{% include "patients/partials/dashboard_notif_row.html" %}{% endwith %}
+            {% elif notif.notification_type == 'APPOINTMENT_STATUS_CHANGED' %}
+                {% with icon_class="fa-solid fa-arrows-rotate" color_bg="bg-indigo-100 dark:bg-indigo-900/30" color_text="text-indigo-600 dark:text-indigo-400" %}{% include "patients/partials/dashboard_notif_row.html" %}{% endwith %}
+            {% else %}
+                {% with icon_class="fa-solid fa-circle-info" color_bg="bg-violet-100 dark:bg-violet-900/30" color_text="text-violet-600 dark:text-violet-400" %}{% include "patients/partials/dashboard_notif_row.html" %}{% endwith %}
+            {% endif %}
 
-                <!-- Content -->
-                <div class="flex-grow min-w-0">
-                    <p class="text-sm font-semibold text-gray-900 dark:text-white truncate
-                               {% if not notif.is_read %}text-primary-900 dark:text-primary-100{% endif %}">
-                        {% if notif.notification_type == "APPOINTMENT_BOOKED" %}{% trans "تم تأكيد موعدك" %}
-                        {% elif notif.notification_type == "APPOINTMENT_CANCELLED" %}{% trans "تم إلغاء موعدك" %}
-                        {% elif notif.notification_type == "APPOINTMENT_RESCHEDULED" %}{% trans "تم تعديل موعدك" %}
-                        {% elif notif.notification_type == "APPOINTMENT_REMINDER" %}{% trans "تذكير بموعدك" %}
-                        {% else %}{{ notif.title }}{% endif %}
-                    </p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-                        {% if notif.appointment %}{% with apt=notif.appointment %}
-                            {% if notif.notification_type == "APPOINTMENT_BOOKED" %}
-                                {% blocktrans with doctor=apt.doctor.name date=apt.appointment_date time=apt.appointment_time|time:"H:i" clinic=apt.clinic.name %}تم تأكيد موعدك مع د. {{ doctor }} بتاريخ {{ date }} الساعة {{ time }} في {{ clinic }}.{% endblocktrans %}
-                            {% elif notif.notification_type == "APPOINTMENT_CANCELLED" %}
-                                {% blocktrans with doctor=apt.doctor.name date=apt.appointment_date time=apt.appointment_time|time:"H:i" clinic=apt.clinic.name %}تم إلغاء موعدك مع د. {{ doctor }} بتاريخ {{ date }} الساعة {{ time }} في {{ clinic }}.{% endblocktrans %}
-                            {% elif notif.notification_type == "APPOINTMENT_RESCHEDULED" %}
-                                {% blocktrans with doctor=apt.doctor.name date=apt.appointment_date time=apt.appointment_time|time:"H:i" clinic=apt.clinic.name %}تم تعديل موعدك مع د. {{ doctor }} إلى {{ date }} الساعة {{ time }} في {{ clinic }}.{% endblocktrans %}
-                            {% elif notif.notification_type == "APPOINTMENT_REMINDER" %}
-                                {% blocktrans with doctor=apt.doctor.name date=apt.appointment_date time=apt.appointment_time|time:"H:i" clinic=apt.clinic.name %}تذكير: لديك موعد مع د. {{ doctor }} بتاريخ {{ date }} الساعة {{ time }} في {{ clinic }}.{% endblocktrans %}
-                            {% else %}{{ notif.message }}{% endif %}
-                        {% endwith %}{% else %}{{ notif.message }}{% endif %}
-                    </p>
-                </div>
-
-                <!-- Time -->
-                <span class="text-[11px] text-gray-400 dark:text-gray-500 whitespace-nowrap flex-shrink-0 mt-1">
-                    {{ notif.created_at|timesince }}
-                </span>
-            </li>
             {% endfor %}
         </ul>
     </div>

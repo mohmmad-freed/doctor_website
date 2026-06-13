@@ -454,6 +454,19 @@ def notification_appointment_modal(request, appointment_id):
         ).prefetch_related("answers__question", "attachments"),
         id=appointment_id, clinic=clinic,
     )
+    # Opening the appointment from a notification marks that notification read
+    # (mirrors the patient/doctor "view appointment" link behaviour). The pk is
+    # passed as ?notif=<pk>; ownership is enforced via patient=request.user.
+    notif_pk = request.GET.get("notif")
+    if notif_pk:
+        from appointments.models import AppointmentNotification
+        AppointmentNotification.objects.filter(
+            pk=notif_pk,
+            patient=request.user,
+            context_role=AppointmentNotification.ContextRole.SECRETARY,
+            is_read=False,
+        ).update(is_read=True)
+
     profile = getattr(appointment.patient, "patient_profile", None)
     clinic_patient = ClinicPatient.objects.filter(
         clinic=clinic, patient=appointment.patient

@@ -1,0 +1,40 @@
+{% load i18n %}
+{% comment %}
+Compact recent-notification row for the patient home dashboard.
+Expects: notif, icon_class, color_bg, color_text (+ global IS_RTL, CLOCK_12H).
+Clicking the row marks it read, then lands on the appointments list.
+{% endcomment %}
+<li>
+    <a href="{% url 'appointments:open_notification' notif.pk %}"
+       class="flex items-start gap-3 px-5 py-3.5 transition-colors group
+              {% if not notif.is_read %}bg-primary-100 dark:bg-primary-900/40 hover:bg-primary-100 dark:hover:bg-primary-900/50{% else %}hover:bg-gray-50 dark:hover:bg-slate-700/30{% endif %}">
+
+        {# Type-colored icon tile #}
+        <div class="flex-shrink-0 w-9 h-9 rounded-xl {{ color_bg }} {{ color_text }}
+                    flex items-center justify-center text-sm
+                    {% if notif.is_read %}opacity-50 grayscale-[35%]{% endif %}">
+            <i class="{{ icon_class }}"></i>
+        </div>
+
+        {# Content #}
+        <div class="flex-grow min-w-0">
+            <p class="text-sm font-semibold truncate
+                      {% if notif.is_read %}text-gray-500 dark:text-slate-400{% else %}text-primary-900 dark:text-primary-100{% endif %}">
+                {{ notif.localized_title }}
+            </p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                {{ notif.localized_message|clock_text:CLOCK_12H }}
+            </p>
+        </div>
+
+        {# Unread marker + relative time #}
+        <div class="flex items-center gap-2 flex-shrink-0 mt-1">
+            {% if not notif.is_read %}
+            <span class="block w-2 h-2 rounded-full bg-primary-500"></span>
+            {% endif %}
+            <span class="text-[11px] text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                {{ notif.created_at|timesince }}
+            </span>
+        </div>
+    </a>
+</li>

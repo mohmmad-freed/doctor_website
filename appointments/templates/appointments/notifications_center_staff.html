@@ -16,13 +16,17 @@
         overflow: hidden;
     }
 
-    /* Hover state for unread cards picks up a slightly stronger tint. */
-    .notif-card--unread:hover {
-        background-color: rgb(250 232 255 / 0.95); /* primary-100 boost */
-    }
-    .dark .notif-card--unread:hover {
-        background-color: rgb(168 85 247 / 0.15); /* primary-500 wash */
-    }
+    /* Optimistic read state: applied client-side the moment "view appointment"
+       opens the modal, so the card flips to its read look without a reload.
+       The server also marks it read, so a refresh stays consistent. */
+    .notif-card.is-read { background-color: #f9fafb !important; border-color: #e5e7eb !important; }
+    .dark .notif-card.is-read { background-color: rgb(30 41 59 / 0.4) !important; border-color: rgb(51 65 85 / 0.6) !important; }
+    .notif-card.is-read .notif-card__bar { display: none !important; }
+    .notif-card.is-read .notif-icon { opacity: 0.5 !important; filter: grayscale(35%) !important; }
+    .notif-card.is-read .notif-title { color: #6b7280 !important; }
+    .dark .notif-card.is-read .notif-title { color: #94a3b8 !important; }
+    .notif-card.is-read .notif-read-form { display: none !important; }
+    .notif-card.is-read .notif-read-badge { display: inline-flex !important; }
 
     /* Staggered fade-in for the list items. */
     .notif-card {
@@ -59,7 +63,8 @@
                 <h1 class="text-xl font-bold text-gray-900 dark:text-white">
                     {% trans "مركز الإشعارات" %}
                 </h1>
-                <p class="text-sm text-gray-500 dark:text-slate-400 mt-0.5
+                <p id="notif-header-summary"
+                   class="text-sm text-gray-500 dark:text-slate-400 mt-0.5
                           [&_b]:font-bold [&_b]:text-gray-800 dark:[&_b]:text-gray-200">
                     {% if unread_count > 0 %}
                         {% blocktrans with count=unread_count %}لديك <b>{{ count }}</b> إشعار غير مقروء{% endblocktrans %}
@@ -71,7 +76,7 @@
 
             {% if unread_count > 0 %}
             <form method="post" action="{% url 'appointments:mark_all_notifications_read' %}"
-                  class="flex-shrink-0">
+                  id="notif-mark-all" class="flex-shrink-0">
                 {% csrf_token %}
                 <button type="submit"
                         class="inline-flex items-center gap-2 px-4 py-2 rounded-xl
@@ -107,7 +112,7 @@
                 <i class="fa-regular fa-bell text-primary-600 dark:text-primary-400 text-sm"></i>
             </div>
             <div>
-                <p class="text-2xl font-bold text-primary-600 dark:text-primary-400 leading-none">{{ unread_count }}</p>
+                <p id="notif-stat-unread" class="text-2xl font-bold text-primary-600 dark:text-primary-400 leading-none">{{ unread_count }}</p>
                 <p class="text-xs text-gray-400 dark:text-slate-500 mt-1 font-medium">{% trans "غير مقروء" %}</p>
             </div>
         </div>
@@ -119,7 +124,7 @@
                 <i class="fa-solid fa-check text-emerald-600 dark:text-emerald-400 text-sm"></i>
             </div>
             <div>
-                <p class="text-2xl font-bold text-gray-900 dark:text-white leading-none">{{ read_count }}</p>
+                <p id="notif-stat-read" class="text-2xl font-bold text-gray-900 dark:text-white leading-none">{{ read_count }}</p>
                 <p class="text-xs text-gray-400 dark:text-slate-500 mt-1 font-medium">{% trans "مقروء" %}</p>
             </div>
         </div>
@@ -198,4 +203,67 @@
 
 {# Modal mount point — secretary notifications inject the action modal here via HTMX #}
 <div id="notification-modal-root"></div>
+
+{% trans "كل إشعاراتك مقروءة" as all_read_text %}
+<script>
+(function () {
+    /* Keep the read/unread tallies in sync when a secretary opens an appointment
+       from an unread notification card. Opening the modal marks the notification
+       read server-side (via ?notif=), but that happens over HTMX with no reload,
+       so the header summary, stats strip, and sidebar bell badges would otherwise
+       stay stale until the page is refreshed. This mirrors the change client-side. */
+    var ALL_READ_TEXT = "{{ all_read_text|escapejs }}";
+
+    function setBadge(el, n) {
+        if (!el) return;
+        if (n > 0) {
+            el.textContent = n > 9 ? "9+" : String(n);
+            el.classList.remove("hidden");
+        } else {
+            el.classList.add("hidden");
+        }
+    }
+
+    window.notifCardOpened = function (btn) {
+        var card = btn.closest(".notif-card");
+        if (!card) return;
+
+        // Only adjust the tallies the first time an *unread* card is opened.
+        var wasUnread = card.classList.contains("notif-card--unread")
+                        && !card.classList.contains("is-read");
+        card.classList.add("is-read");
+        if (!wasUnread) return;
+
+        // ── Stats strip: one moves from unread → read ──
+        var unreadEl = document.getElementById("notif-stat-unread");
+        var readEl = document.getElementById("notif-stat-read");
+        var unread = Math.max(0, (parseInt(unreadEl && unreadEl.textContent, 10) || 0) - 1);
+        var read = (parseInt(readEl && readEl.textContent, 10) || 0) + 1;
+        if (unreadEl) unreadEl.textContent = unread;
+        if (readEl) readEl.textContent = read;
+
+        // ── Header summary line ──
+        var headerP = document.getElementById("notif-header-summary");
+        if (headerP) {
+            if (unread > 0) {
+                var b = headerP.querySelector("b");
+                if (b) b.textContent = unread;
+            } else {
+                headerP.textContent = ALL_READ_TEXT;
+            }
+        }
+
+        // ── "Mark all as read" button is meaningless once nothing is unread ──
+        if (unread === 0) {
+            var markAll = document.getElementById("notif-mark-all");
+            if (markAll) markAll.classList.add("hidden");
+        }
+
+        // ── Sidebar / mobile nav bell badges (same count source) ──
+        document.querySelectorAll(".js-sec-notif-badge").forEach(function (el) {
+            setBadge(el, unread);
+        });
+    };
+})();
+</script>
 {% endblock %}

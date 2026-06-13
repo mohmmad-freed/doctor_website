@@ -1240,6 +1240,60 @@ class NotificationAppointmentModalTests(SecretaryTestBase):
         self.assertNotContains(resp, f"/secretary/appointments/{appt.id}/cancel/")
         self.assertContains(resp, "ظهور حالة طارئة")
 
+    # ── Mark-as-read on open ──────────────────────────────────────────
+
+    def test_opening_modal_marks_notification_read(self):
+        """Opening the appointment modal with ?notif=<pk> marks that secretary
+        notification read (mirrors the patient 'view appointment' behaviour)."""
+        from appointments.models import AppointmentNotification
+        appt = self._make_appointment(status=Appointment.Status.PENDING)
+        notif = AppointmentNotification.objects.create(
+            patient=self.secretary_a,
+            appointment=appt,
+            notification_type=AppointmentNotification.Type.APPOINTMENT_BOOKED,
+            context_role=AppointmentNotification.ContextRole.SECRETARY,
+            title="حجز جديد", message="حجز جديد للمريض",
+        )
+        self.assertFalse(notif.is_read)
+        self._login_secretary()
+        resp = self.client.get(f"{self._modal_url(appt)}?notif={notif.pk}")
+        self.assertEqual(resp.status_code, 200)
+        notif.refresh_from_db()
+        self.assertTrue(notif.is_read)
+
+    def test_opening_modal_without_notif_param_marks_nothing(self):
+        """The bare modal URL (no ?notif) must not mark anything read."""
+        from appointments.models import AppointmentNotification
+        appt = self._make_appointment(status=Appointment.Status.PENDING)
+        notif = AppointmentNotification.objects.create(
+            patient=self.secretary_a,
+            appointment=appt,
+            notification_type=AppointmentNotification.Type.APPOINTMENT_BOOKED,
+            context_role=AppointmentNotification.ContextRole.SECRETARY,
+            title="x", message="y",
+        )
+        self._login_secretary()
+        self.client.get(self._modal_url(appt))
+        notif.refresh_from_db()
+        self.assertFalse(notif.is_read)
+
+    def test_opening_modal_cannot_mark_another_users_notification(self):
+        """Ownership-scoped: passing a notif pk owned by another secretary must
+        not mark it read."""
+        from appointments.models import AppointmentNotification
+        appt = self._make_appointment(status=Appointment.Status.PENDING)
+        other = AppointmentNotification.objects.create(
+            patient=self.secretary_b,
+            appointment=appt,
+            notification_type=AppointmentNotification.Type.APPOINTMENT_BOOKED,
+            context_role=AppointmentNotification.ContextRole.SECRETARY,
+            title="x", message="y",
+        )
+        self._login_secretary()  # secretary_a
+        self.client.get(f"{self._modal_url(appt)}?notif={other.pk}")
+        other.refresh_from_db()
+        self.assertFalse(other.is_read)
+
     # ── Permissions / isolation ───────────────────────────────────────
 
     def test_modal_forbidden_for_non_secretary(self):
@@ -1341,7 +1395,7 @@ class NotificationsModalUrlRoutingTests(SecretaryTestBase):
         self.assertIsNone(n.target_url)
         self.assertEqual(
             n.modal_url,
-            reverse("secretary:notification_appointment_modal", args=[appt.id]),
+            f"{reverse('secretary:notification_appointment_modal', args=[appt.id])}?notif={n.pk}",
         )
 
 

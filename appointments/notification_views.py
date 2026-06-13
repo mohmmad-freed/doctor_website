@@ -49,13 +49,19 @@ def _resolve_appointment_url(notification):
 
 
 def _resolve_modal_url(notification):
-    """Secretary notifications open an HTMX modal on the notifications page."""
+    """Secretary notifications open an HTMX modal on the notifications page.
+
+    The notification pk is passed so the modal view can mark it read on open
+    (mirrors the patient/doctor "view appointment" link going through
+    `open_notification`).
+    """
     if not notification.appointment_id:
         return None
     if notification.context_role != AppointmentNotification.ContextRole.SECRETARY:
         return None
     from django.urls import reverse
-    return reverse("secretary:notification_appointment_modal", args=[notification.appointment_id])
+    url = reverse("secretary:notification_appointment_modal", args=[notification.appointment_id])
+    return f"{url}?notif={notification.pk}"
 
 
 def _render_notifications(request, context_role, template, base_template):
@@ -69,9 +75,17 @@ def _render_notifications(request, context_role, template, base_template):
     unread_count = notifications_qs.filter(is_read=False).count()
     total_count = notifications_qs.count()
 
+    from django.urls import reverse
+
     notifications = list(notifications_qs)
     for notif in notifications:
-        notif.target_url = _resolve_appointment_url(notif)
+        # Route link-based notifications through `open_notification` so the
+        # notification is marked read when the user clicks "view appointment".
+        # Secretary notifications have no destination here (they open a modal).
+        dest = _resolve_appointment_url(notif)
+        notif.target_url = (
+            reverse("appointments:open_notification", args=[notif.pk]) if dest else None
+        )
         notif.modal_url = _resolve_modal_url(notif)
 
     context = {
@@ -147,6 +161,24 @@ def mark_notification_read(request, pk):
     if next_url:
         return redirect(next_url)
     return redirect("accounts:home")
+
+
+@login_required
+def open_notification(request, pk):
+    """
+    Mark a notification as read, then redirect to its appointment destination.
+
+    Used by the "view appointment" link so that opening a notification clears its
+    unread state. Ownership strictly enforced. Falls back to the home page if the
+    notification has no resolvable destination.
+    """
+    notif = get_object_or_404(AppointmentNotification, pk=pk, patient=request.user)
+    if not notif.is_read:
+        notif.is_read = True
+        notif.save(update_fields=["is_read"])
+
+    dest = _resolve_appointment_url(notif)
+    return redirect(dest or "accounts:home")
 
 
 @login_required
