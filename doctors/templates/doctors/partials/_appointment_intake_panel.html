@@ -1,0 +1,12 @@
+{% comment %}
+HTMX inline expander body: an appointment's submitted intake form, or a friendly
+empty-state when no form was submitted. Expects `intake_data` in context.
+{% endcomment %}
+{% if intake_data %}
+  {% include "doctors/partials/_intake_answers.html" %}
+{% else %}
+  <div class="flex items-center gap-2 px-5 py-4 text-gray-400 dark:text-gray-500">
+    <i class="fa-regular fa-file text-sm"></i>
+    <span class="text-sm">{% if IS_RTL %}لم يتم تقديم نموذج لهذا الموعد.{% else %}No form was submitted for this appointment.{% endif %}</span>
+  </div>
+{% endif %}

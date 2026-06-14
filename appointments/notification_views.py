@@ -39,7 +39,12 @@ def _resolve_appointment_url(notification):
     if notification.context_role == AppointmentNotification.ContextRole.PATIENT:
         return reverse("patients:my_appointments")
     if notification.context_role == AppointmentNotification.ContextRole.DOCTOR:
-        return reverse("doctors:appointments")
+        # Land the doctor on the patient-scoped overview for this exact appointment
+        # (instead of the unfiltered full appointments list).
+        return reverse(
+            "doctors:appointment_overview",
+            kwargs={"appointment_id": notification.appointment_id},
+        )
     if notification.context_role == AppointmentNotification.ContextRole.SECRETARY:
         return None
     if notification.context_role == AppointmentNotification.ContextRole.CLINIC_OWNER:

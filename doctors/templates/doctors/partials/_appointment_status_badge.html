@@ -1,0 +1,25 @@
+{% comment %}
+Appointment status badge (bilingual). Expects `status` (raw value, e.g. CONFIRMED).
+Pass `size="lg"` for the larger variant used on highlighted cards.
+{% endcomment %}
+{% with s=status|lower %}
+<span class="inline-flex items-center rounded-full font-semibold
+  {% if size == 'lg' %}px-3 py-1.5 text-sm{% else %}px-2.5 py-1 text-xs{% endif %}
+  {% if s == 'confirmed' %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300
+  {% elif s == 'pending' %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300
+  {% elif s == 'checked_in' %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300
+  {% elif s == 'in_progress' %}bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300
+  {% elif s == 'completed' %}bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300
+  {% elif s == 'cancelled' %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300
+  {% elif s == 'no_show' %}bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300
+  {% else %}bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300{% endif %}">
+  {% if s == 'confirmed' %}{% if IS_RTL %}مؤكد{% else %}Confirmed{% endif %}
+  {% elif s == 'pending' %}{% if IS_RTL %}قيد الانتظار{% else %}Pending{% endif %}
+  {% elif s == 'checked_in' %}{% if IS_RTL %}تم الوصول{% else %}Checked In{% endif %}
+  {% elif s == 'in_progress' %}{% if IS_RTL %}جارٍ{% else %}In Progress{% endif %}
+  {% elif s == 'completed' %}{% if IS_RTL %}مكتمل{% else %}Completed{% endif %}
+  {% elif s == 'cancelled' %}{% if IS_RTL %}ملغى{% else %}Cancelled{% endif %}
+  {% elif s == 'no_show' %}{% if IS_RTL %}غائب{% else %}No Show{% endif %}
+  {% else %}{{ status }}{% endif %}
+</span>
+{% endwith %}

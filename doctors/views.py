@@ -190,22 +190,12 @@ def appointments_list(request):
     })
 
 
-@login_required
-def appointment_detail(request, appointment_id):
-    """Single appointment view with patient info, intake answers, and status controls."""
-    user = request.user
-    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
-        from django.contrib import messages as _msg
-        from django.urls import reverse as _rev
-        _msg.error(request, "هذه الصفحة متاحة للأطباء فقط.")
-        return redirect(_rev("accounts:home"))
+# ── Appointment helpers (shared by appointment_detail + appointment_overview) ──
 
-    appointment = get_object_or_404(
-        Appointment,
-        id=appointment_id,
-        doctor=user,
-    )
-
+def build_appointment_intake_data(appointment):
+    """Merge an appointment's submitted text answers and file attachments into one
+    ordered list (per question). Returns a list of dicts:
+    ``{"question", "answer_text", "attachments"}`` sorted by question order."""
     from appointments.models import AppointmentAnswer, AppointmentAttachment
 
     intake_answers = (
@@ -218,7 +208,6 @@ def appointment_detail(request, appointment_id):
         .order_by("question__order", "file_group_date", "uploaded_at")
     )
 
-    # Merge text answers and file attachments into one ordered list per question
     _combined = {}
     for ans in intake_answers:
         _combined[ans.question_id] = {
@@ -236,66 +225,235 @@ def appointment_detail(request, appointment_id):
             }
         _combined[q_id]["attachments"].append(att)
 
-    intake_data = sorted(
+    return sorted(
         _combined.values(),
         key=lambda x: x["question"].order if x["question"] else 0,
     )
 
-    # Status transitions the doctor can trigger — as (value, label) tuples for template use
-    _TRANSITION_MAP = {
-        Appointment.Status.PENDING: [
-            Appointment.Status.CONFIRMED,
-            Appointment.Status.CANCELLED,
-        ],
-        Appointment.Status.CONFIRMED: [
-            Appointment.Status.CHECKED_IN,
-            Appointment.Status.CANCELLED,
-            Appointment.Status.NO_SHOW,
-        ],
-        Appointment.Status.CHECKED_IN: [Appointment.Status.IN_PROGRESS],
-        Appointment.Status.IN_PROGRESS: [Appointment.Status.COMPLETED],
-    }
-    raw_transitions = _TRANSITION_MAP.get(appointment.status, [])
-    # Build (value, human_label) tuples for the template
-    allowed_transitions = [(s.value, s.label) for s in raw_transitions]
-    # Keep a set of valid values for POST validation
-    valid_transition_values = {s.value for s in raw_transitions}
 
-    if request.method == "POST":
-        new_status = request.POST.get("status", "").strip()
-        notes = request.POST.get("notes", "").strip()
-        # Backend enforcement: only allow whitelisted transitions (ignore stale/tampered POSTs)
-        if new_status in valid_transition_values:
-            appointment.status = new_status
-            if notes:
-                appointment.notes = notes
-            appointment.save(update_fields=["status", "notes", "updated_at"])
+# Status transitions the doctor is allowed to trigger, keyed by current status.
+_STATUS_TRANSITION_MAP = {
+    Appointment.Status.PENDING: [
+        Appointment.Status.CONFIRMED,
+        Appointment.Status.CANCELLED,
+    ],
+    Appointment.Status.CONFIRMED: [
+        Appointment.Status.CHECKED_IN,
+        Appointment.Status.CANCELLED,
+        Appointment.Status.NO_SHOW,
+    ],
+    Appointment.Status.CHECKED_IN: [Appointment.Status.IN_PROGRESS],
+    Appointment.Status.IN_PROGRESS: [Appointment.Status.COMPLETED],
+}
 
-            # Notify patient when doctor cancels
-            if new_status == Appointment.Status.CANCELLED:
-                from django.db import transaction as _txn
-                from clinics.models import ClinicStaff as _CS
-                from appointments.services.appointment_notification_service import (
-                    notify_appointment_cancelled_by_staff,
-                )
-                doctor_staff = _CS.objects.filter(
-                    clinic=appointment.clinic, user=user, revoked_at__isnull=True
-                ).first()
-                _txn.on_commit(
-                    lambda: notify_appointment_cancelled_by_staff(appointment, doctor_staff)
-                )
 
-            from django.contrib import messages as _msg
-            _msg.success(request, "تم تحديث حالة الموعد.")
-            return redirect("doctors:appointment_detail", appointment_id=appointment_id)
-        elif new_status:
-            from django.contrib import messages as _msg
-            _msg.error(request, "هذا التحديث غير مسموح به.")
+def allowed_status_transitions(appointment):
+    """Return ``(allowed_transitions, valid_transition_values)`` for an appointment.
+
+    ``allowed_transitions`` is a list of (value, label) tuples for the template;
+    ``valid_transition_values`` is a set of allowed status values for POST validation.
+    """
+    raw_transitions = _STATUS_TRANSITION_MAP.get(appointment.status, [])
+    allowed = [(s.value, s.label) for s in raw_transitions]
+    valid_values = {s.value for s in raw_transitions}
+    return allowed, valid_values
+
+
+def apply_status_transition(request, appointment, user):
+    """Handle a doctor's status-change POST for an appointment.
+
+    Returns True when a valid transition was applied (the caller should redirect).
+    Enforces the whitelist server-side (ignoring stale/tampered POSTs) and notifies
+    the patient when the appointment is cancelled. Flash messages are bilingual.
+    """
+    from django.contrib import messages as _msg
+
+    _, valid_values = allowed_status_transitions(appointment)
+    new_status = request.POST.get("status", "").strip()
+    notes = request.POST.get("notes", "").strip()
+    is_rtl = getattr(request, "LANGUAGE_CODE", "ar") == "ar"
+
+    if new_status in valid_values:
+        appointment.status = new_status
+        if notes:
+            appointment.notes = notes
+        update_fields = ["status", "notes", "updated_at"]
+
+        # On check-in, stamp the arrival time and assign a queue position — mirroring
+        # the secretary check-in — so the patient surfaces correctly (with arrival
+        # time and proper ordering) in the secretary waiting-room queue.
+        if new_status == Appointment.Status.CHECKED_IN:
+            from django.utils import timezone as _tz
+            from secretary.services import _next_queue_priority
+            appointment.checked_in_at = _tz.now()
+            appointment.queue_priority = _next_queue_priority(
+                appointment.clinic_id, date.today()
+            )
+            update_fields += ["checked_in_at", "queue_priority"]
+
+        appointment.save(update_fields=update_fields)
+
+        # Notify patient when doctor cancels
+        if new_status == Appointment.Status.CANCELLED:
+            from django.db import transaction as _txn
+            from clinics.models import ClinicStaff as _CS
+            from appointments.services.appointment_notification_service import (
+                notify_appointment_cancelled_by_staff,
+            )
+            doctor_staff = _CS.objects.filter(
+                clinic=appointment.clinic, user=user, revoked_at__isnull=True
+            ).first()
+            _txn.on_commit(
+                lambda: notify_appointment_cancelled_by_staff(appointment, doctor_staff)
+            )
+
+        _msg.success(
+            request,
+            "تم تحديث حالة الموعد." if is_rtl else "Appointment status updated.",
+        )
+        return True
+
+    if new_status:
+        _msg.error(
+            request,
+            "هذا التحديث غير مسموح به." if is_rtl else "This status update is not allowed.",
+        )
+    return False
+
+
+def _validated_next(request):
+    """Return a safe internal ``next`` URL from the request, or None.
+
+    Lets the back/cancel buttons return to wherever the doctor came from
+    (e.g. the appointment overview page) instead of a hard-coded destination.
+    """
+    from django.utils.http import url_has_allowed_host_and_scheme
+
+    nxt = request.GET.get("next") or request.POST.get("next")
+    if nxt and url_has_allowed_host_and_scheme(
+        nxt, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        return nxt
+    return None
+
+
+@login_required
+def appointment_detail(request, appointment_id):
+    """Single appointment view with patient info, intake answers, and status controls."""
+    user = request.user
+    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
+        from django.contrib import messages as _msg
+        from django.urls import reverse as _rev
+        _msg.error(request, "هذه الصفحة متاحة للأطباء فقط.")
+        return redirect(_rev("accounts:home"))
+
+    appointment = get_object_or_404(Appointment, id=appointment_id, doctor=user)
+    next_url = _validated_next(request)
+
+    if request.method == "POST" and apply_status_transition(request, appointment, user):
+        target = reverse("doctors:appointment_detail", args=[appointment_id])
+        if next_url:
+            from django.utils.http import urlencode
+            target = f"{target}?{urlencode({'next': next_url})}"
+        return redirect(target)
+
+    intake_data = build_appointment_intake_data(appointment)
+    allowed_transitions, _ = allowed_status_transitions(appointment)
 
     return render(request, "doctors/appointment_detail.html", {
         "appointment": appointment,
         "intake_data": intake_data,
         "allowed_transitions": allowed_transitions,
+        "next_url": next_url,
+        "back_url": next_url or reverse("doctors:appointments"),
+    })
+
+
+@login_required
+def appointment_overview(request, appointment_id):
+    """Patient-scoped view of a single appointment.
+
+    Reached from the doctor notification center "view appointment" link. Shows the
+    patient's details, the notification's appointment highlighted (with its submitted
+    intake form and status-update controls), and a timeline of the patient's other
+    appointments with this doctor (upcoming + past) whose forms can be revealed inline.
+    """
+    user = request.user
+    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
+        from django.contrib import messages as _msg
+        from django.urls import reverse as _rev
+        _msg.error(request, "هذه الصفحة متاحة للأطباء فقط.")
+        return redirect(_rev("accounts:home"))
+
+    appointment = get_object_or_404(
+        Appointment.objects.select_related("patient", "clinic", "appointment_type"),
+        id=appointment_id,
+        doctor=user,
+    )
+
+    if request.method == "POST" and apply_status_transition(request, appointment, user):
+        return redirect("doctors:appointment_overview", appointment_id=appointment_id)
+
+    patient = appointment.patient
+    intake_data = build_appointment_intake_data(appointment)
+    allowed_transitions, _ = allowed_status_transitions(appointment)
+
+    # The patient's other appointments with this doctor, split into upcoming/past.
+    today = date.today()
+    active_statuses = [
+        Appointment.Status.PENDING,
+        Appointment.Status.CONFIRMED,
+        Appointment.Status.CHECKED_IN,
+        Appointment.Status.IN_PROGRESS,
+    ]
+    other_appts = (
+        Appointment.objects.filter(doctor=user, patient=patient)
+        .exclude(id=appointment_id)
+        .select_related("clinic", "appointment_type")
+    )
+    upcoming = list(
+        other_appts.filter(
+            appointment_date__gte=today, status__in=active_statuses
+        ).order_by("appointment_date", "appointment_time")
+    )
+    upcoming_ids = {a.id for a in upcoming}
+    past = list(
+        other_appts.exclude(id__in=upcoming_ids).order_by(
+            "-appointment_date", "-appointment_time"
+        )
+    )
+
+    # Patient age (mirrors _ws_access age computation).
+    profile = getattr(patient, "patient_profile", None)
+    age = None
+    if profile and profile.date_of_birth:
+        dob = profile.date_of_birth
+        age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+
+    return render(request, "doctors/appointment_overview.html", {
+        "appointment": appointment,
+        "patient": patient,
+        "profile": profile,
+        "age": age,
+        "intake_data": intake_data,
+        "allowed_transitions": allowed_transitions,
+        "upcoming": upcoming,
+        "past": past,
+    })
+
+
+@login_required
+def appointment_intake_partial(request, appointment_id):
+    """HTMX endpoint: render an appointment's submitted intake form (inline expander)."""
+    user = request.user
+    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden()
+
+    appointment = get_object_or_404(Appointment, id=appointment_id, doctor=user)
+    intake_data = build_appointment_intake_data(appointment)
+    return render(request, "doctors/partials/_appointment_intake_panel.html", {
+        "intake_data": intake_data,
     })
 
 

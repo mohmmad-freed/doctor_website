@@ -259,6 +259,179 @@ class DoctorAppointmentDetailTests(DoctorViewTestBase):
         appt.refresh_from_db()
         self.assertEqual(appt.notes, "Patient arrived on time.")
 
+    def test_back_url_follows_next_param(self):
+        """The back button returns to the page the doctor came from (the overview)."""
+        appt = self._make_appt(self.doctor_a, self.clinic_a, self.patient_a, self.appt_type_a)
+        overview = reverse("doctors:appointment_overview", args=[appt.id])
+        self.client.force_login(self.doctor_a)
+        resp = self.client.get(
+            reverse("doctors:appointment_detail", args=[appt.id]) + f"?next={overview}"
+        )
+        self.assertEqual(resp.context["back_url"], overview)
+        self.assertEqual(resp.context["next_url"], overview)
+
+    def test_back_url_defaults_to_list_without_next(self):
+        appt = self._make_appt(self.doctor_a, self.clinic_a, self.patient_a, self.appt_type_a)
+        self.client.force_login(self.doctor_a)
+        resp = self.client.get(reverse("doctors:appointment_detail", args=[appt.id]))
+        self.assertEqual(resp.context["back_url"], reverse("doctors:appointments"))
+        self.assertIsNone(resp.context["next_url"])
+
+    def test_back_url_rejects_external_next(self):
+        """An off-site next is ignored, falling back to the appointments list."""
+        appt = self._make_appt(self.doctor_a, self.clinic_a, self.patient_a, self.appt_type_a)
+        self.client.force_login(self.doctor_a)
+        resp = self.client.get(
+            reverse("doctors:appointment_detail", args=[appt.id]) + "?next=https://evil.example.com"
+        )
+        self.assertEqual(resp.context["back_url"], reverse("doctors:appointments"))
+        self.assertIsNone(resp.context["next_url"])
+
+    def test_status_post_preserves_next(self):
+        """After a status change the redirect keeps `next` so back still works."""
+        appt = self._make_appt(self.doctor_a, self.clinic_a, self.patient_a, self.appt_type_a)
+        overview = reverse("doctors:appointment_overview", args=[appt.id])
+        self.client.force_login(self.doctor_a)
+        resp = self.client.post(
+            reverse("doctors:appointment_detail", args=[appt.id]),
+            {"status": "CHECKED_IN", "notes": "", "next": overview},
+        )
+        self.assertIn("next=", resp.url)
+
+
+# ════════════════════════════════════════════════════════════════════
+#  7C-2b — Doctor Appointment Overview (patient-scoped notification target)
+# ════════════════════════════════════════════════════════════════════
+
+class DoctorAppointmentOverviewTests(DoctorViewTestBase):
+
+    def _make_appt_on(self, the_date, appt_time=time(9, 0),
+                      status=Appointment.Status.CONFIRMED, patient=None):
+        from patients.models import ClinicPatient
+        patient = patient or self.patient_a
+        ClinicPatient.objects.get_or_create(patient=patient, clinic=self.clinic_a)
+        return Appointment.objects.create(
+            patient=patient, clinic=self.clinic_a, doctor=self.doctor_a,
+            appointment_type=self.appt_type_a,
+            appointment_date=the_date, appointment_time=appt_time, status=status,
+        )
+
+    def test_requires_login(self):
+        appt = self._make_appt(self.doctor_a, self.clinic_a, self.patient_a, self.appt_type_a)
+        resp = self.client.get(reverse("doctors:appointment_overview", args=[appt.id]))
+        self.assertEqual(resp.status_code, 302)
+
+    def test_idor_another_doctors_appointment_returns_404(self):
+        appt_b = self._make_appt(self.doctor_b, self.clinic_b, self.patient_b, self.appt_type_b)
+        self.client.force_login(self.doctor_a)
+        resp = self.client.get(reverse("doctors:appointment_overview", args=[appt_b.id]))
+        self.assertEqual(resp.status_code, 404)
+
+    def test_renders_focused_appointment_and_patient(self):
+        appt = self._make_appt(self.doctor_a, self.clinic_a, self.patient_a, self.appt_type_a)
+        self.client.force_login(self.doctor_a)
+        resp = self.client.get(reverse("doctors:appointment_overview", args=[appt.id]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context["appointment"].id, appt.id)
+        self.assertEqual(resp.context["patient"].id, self.patient_a.id)
+
+    def test_splits_upcoming_and_past_excluding_focused(self):
+        focused = self._make_appt_on(self.next_monday, time(9, 0))
+        upcoming_other = self._make_appt_on(self.next_monday + timedelta(days=7), time(9, 0))
+        past_other = self._make_appt_on(
+            date.today() - timedelta(days=7), time(9, 0),
+            status=Appointment.Status.COMPLETED,
+        )
+        self.client.force_login(self.doctor_a)
+        resp = self.client.get(reverse("doctors:appointment_overview", args=[focused.id]))
+        upcoming_ids = [a.id for a in resp.context["upcoming"]]
+        past_ids = [a.id for a in resp.context["past"]]
+        self.assertEqual(upcoming_ids, [upcoming_other.id])
+        self.assertEqual(past_ids, [past_other.id])
+        # Focused appointment never appears in either timeline list.
+        self.assertNotIn(focused.id, upcoming_ids)
+        self.assertNotIn(focused.id, past_ids)
+
+    def test_only_this_patients_appointments_listed(self):
+        focused = self._make_appt_on(self.next_monday, time(9, 0), patient=self.patient_a)
+        other_patient_appt = self._make_appt_on(
+            self.next_monday, time(11, 0), patient=self.patient_b
+        )
+        self.client.force_login(self.doctor_a)
+        resp = self.client.get(reverse("doctors:appointment_overview", args=[focused.id]))
+        all_listed = [a.id for a in resp.context["upcoming"]] + [a.id for a in resp.context["past"]]
+        self.assertNotIn(other_patient_appt.id, all_listed)
+
+    def test_status_transition_updates_and_redirects(self):
+        appt = self._make_appt(self.doctor_a, self.clinic_a, self.patient_a, self.appt_type_a)
+        self.client.force_login(self.doctor_a)
+        resp = self.client.post(
+            reverse("doctors:appointment_overview", args=[appt.id]),
+            {"status": "CHECKED_IN", "notes": "Arrived."},
+        )
+        self.assertRedirects(
+            resp, reverse("doctors:appointment_overview", args=[appt.id]),
+            fetch_redirect_response=False,
+        )
+        appt.refresh_from_db()
+        self.assertEqual(appt.status, Appointment.Status.CHECKED_IN)
+        self.assertEqual(appt.notes, "Arrived.")
+
+    def test_tampered_status_value_rejected(self):
+        appt = self._make_appt(self.doctor_a, self.clinic_a, self.patient_a, self.appt_type_a)
+        self.client.force_login(self.doctor_a)
+        self.client.post(
+            reverse("doctors:appointment_overview", args=[appt.id]),
+            {"status": "FABRICATED", "notes": ""},
+        )
+        appt.refresh_from_db()
+        self.assertEqual(appt.status, Appointment.Status.CONFIRMED)
+
+    def test_check_in_stamps_arrival_time_and_queue_position(self):
+        """Checking in from the overview must set checked_in_at + queue_priority so the
+        patient appears with an arrival time in the secretary waiting-room queue."""
+        appt = self._make_appt(self.doctor_a, self.clinic_a, self.patient_a, self.appt_type_a)
+        self.assertIsNone(appt.checked_in_at)
+        self.client.force_login(self.doctor_a)
+        self.client.post(
+            reverse("doctors:appointment_overview", args=[appt.id]),
+            {"status": "CHECKED_IN", "notes": ""},
+        )
+        appt.refresh_from_db()
+        self.assertEqual(appt.status, Appointment.Status.CHECKED_IN)
+        self.assertIsNotNone(appt.checked_in_at)
+        self.assertIsNotNone(appt.queue_priority)
+
+    def test_intake_partial_returns_form_for_owner(self):
+        appt = self._make_appt(self.doctor_a, self.clinic_a, self.patient_a, self.appt_type_a)
+        self.client.force_login(self.doctor_a)
+        resp = self.client.get(reverse("doctors:appointment_intake_partial", args=[appt.id]))
+        self.assertEqual(resp.status_code, 200)
+
+    def test_intake_partial_idor_404(self):
+        appt_b = self._make_appt(self.doctor_b, self.clinic_b, self.patient_b, self.appt_type_b)
+        self.client.force_login(self.doctor_a)
+        resp = self.client.get(reverse("doctors:appointment_intake_partial", args=[appt_b.id]))
+        self.assertEqual(resp.status_code, 404)
+
+    def test_doctor_notification_link_redirects_to_overview(self):
+        """Opening a DOCTOR notification lands on the appointment overview page."""
+        from appointments.models import AppointmentNotification
+        appt = self._make_appt(self.doctor_a, self.clinic_a, self.patient_a, self.appt_type_a)
+        notif = AppointmentNotification.objects.create(
+            patient=self.doctor_a,
+            appointment=appt,
+            context_role=AppointmentNotification.ContextRole.DOCTOR,
+            notification_type=AppointmentNotification.Type.APPOINTMENT_BOOKED,
+            title="حجز جديد", message="msg",
+        )
+        self.client.force_login(self.doctor_a)
+        resp = self.client.get(reverse("appointments:open_notification", args=[notif.pk]))
+        self.assertRedirects(
+            resp, reverse("doctors:appointment_overview", args=[appt.id]),
+            fetch_redirect_response=False,
+        )
+
 
 # ════════════════════════════════════════════════════════════════════
 #  7C-3 — Doctor Patients List

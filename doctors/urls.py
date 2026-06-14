@@ -12,6 +12,16 @@ urlpatterns = [
         views.appointment_detail,
         name="appointment_detail",
     ),
+    path(
+        "appointments/<int:appointment_id>/overview/",
+        views.appointment_overview,
+        name="appointment_overview",
+    ),
+    path(
+        "appointments/<int:appointment_id>/intake/",
+        views.appointment_intake_partial,
+        name="appointment_intake_partial",
+    ),
     path("patients/", views.patients_list, name="patients"),
     # --- Patient Workspace ---
     path("patients/<int:patient_id>/", views.patient_workspace, name="patient_workspace"),
