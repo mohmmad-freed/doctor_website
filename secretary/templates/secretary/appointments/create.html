@@ -65,7 +65,7 @@
     {% endfor %}
   </div>
 
-  <form method="post" id="booking-form">
+  <form method="post" id="booking-form" enctype="multipart/form-data">
     {% csrf_token %}
     <input type="hidden" name="patient_id" id="hidden-patient-id" value="{{ prefill_patient_id }}">
     <input type="hidden" name="appointment_time" id="hidden-time">
@@ -314,6 +314,33 @@
         <div class="flex justify-between">
           <span class="text-gray-500 dark:text-gray-400">{% trans "الوقت" %}</span>
           <span class="font-mono font-bold text-primary-600 dark:text-primary-400" id="summary-datetime">—</span>
+        </div>
+      </div>
+
+      {# ── Optional doctor intake form ── #}
+      <div class="mb-5 rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden">
+        <label class="flex items-start gap-3 p-4 cursor-pointer bg-gray-50 dark:bg-slate-700/40">
+          <input type="checkbox" name="fill_intake" value="1" id="fill-intake-toggle"
+                 class="mt-0.5 w-4 h-4 text-primary-600 focus:ring-primary-500 rounded border-gray-300 dark:border-slate-500">
+          <span>
+            <span class="block text-sm font-semibold text-gray-800 dark:text-gray-100">
+              {% trans "تعبئة نموذج إدخال الطبيب (اختياري)" %}
+            </span>
+            <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              {% trans "يمكنك تعبئة نموذج الطبيب نيابةً عن المريض. كل الحقول اختيارية." %}
+            </span>
+          </span>
+        </label>
+        <div id="intake-form-section" class="hidden p-4 border-t border-gray-200 dark:border-slate-700">
+          <div id="intake-form-container"
+               hx-get="{% url 'appointments:htmx_intake_form' clinic.id %}?optional=1"
+               hx-trigger="intakeRefresh from:body"
+               hx-include="#doctor-select, #appt-type-container select"
+               hx-swap="innerHTML">
+            <p class="text-xs text-gray-400 dark:text-gray-500 text-center py-4">
+              {% trans "جارٍ تحميل النموذج..." %}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -618,6 +645,8 @@ function showTypeMeta(sel) {
       meta.classList.add('hidden');
     }
     triggerSlotRefresh();
+    // The intake form depends on doctor + appointment type — reload it if shown.
+    if (window.__reloadIntakeIfActive) window.__reloadIntakeIfActive();
   });
 }
 showTypeMeta(document.querySelector('#appt-type-container select'));
@@ -674,5 +703,30 @@ function updateSummary() {
 {% if prefill_patient_id %}
 document.getElementById('step1-next').disabled = false;
 {% endif %}
+
+// ── Optional doctor intake form ───────────────────────────────────────────────
+(function() {
+  var toggle = document.getElementById('fill-intake-toggle');
+  var section = document.getElementById('intake-form-section');
+  var container = document.getElementById('intake-form-container');
+  if (!toggle || !section || !container) return;
+
+  function loadIntake() { htmx.trigger(container, 'intakeRefresh'); }
+
+  toggle.addEventListener('change', function() {
+    if (toggle.checked) {
+      section.classList.remove('hidden');
+      loadIntake();
+    } else {
+      section.classList.add('hidden');
+    }
+  });
+
+  // Called from the appointment-type change handler: the form depends on
+  // doctor + type, so reload it whenever the selection changes (if it's shown).
+  window.__reloadIntakeIfActive = function() {
+    if (toggle.checked) loadIntake();
+  };
+})();
 </script>
 {% endblock %}

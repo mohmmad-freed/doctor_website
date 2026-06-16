@@ -3217,6 +3217,38 @@ def create_appointment(request):
                 messages.error(request, _("يرجى اختيار مريض أو إدخال رقم هاتف صحيح."))
                 return redirect("secretary:create_appointment")
 
+            # ── Optional doctor intake form (secretary may fill it on the patient's
+            # behalf). All fields are optional here; only file type/size limits are
+            # validated. Validate BEFORE booking so a file error doesn't create an
+            # orphaned appointment.
+            fill_intake = request.POST.get("fill_intake") == "1"
+            intake_questions, intake_answers, intake_files = [], {}, {}
+            if fill_intake:
+                from appointments.services.intake_service import (
+                    get_active_intake_template,
+                    collect_and_validate_intake,
+                    save_intake_answers,
+                )
+                _intake_template, intake_questions = get_active_intake_template(
+                    doctor_id, type_id
+                )
+                if intake_questions:
+                    intake_answers, intake_files, intake_errors = collect_and_validate_intake(
+                        request.POST, request.FILES, intake_questions, [],
+                        enforce_required=False,
+                    )
+                    if intake_errors:
+                        for err in intake_errors:
+                            messages.error(request, err)
+                        url = reverse("secretary:create_appointment")
+                        url += (
+                            f"?doctor_id={doctor_id}&date={date_str}"
+                            f"&time={time_str}&patient_id={patient.id}"
+                        )
+                        if post_return_to:
+                            url += f"&return_to={post_return_to}"
+                        return redirect(url)
+
             appointment = secretary_book_appointment(
                 patient=patient,
                 doctor_id=doctor_id,
@@ -3229,6 +3261,11 @@ def create_appointment(request):
                 status=Appointment.Status.CONFIRMED,
                 created_by=request.user,
             )
+
+            if fill_intake and intake_questions:
+                save_intake_answers(
+                    appointment, intake_questions, intake_answers, intake_files, request.user
+                )
 
             messages.success(request, _("تم حجز موعد %(name)s بنجاح.") % {"name": patient.name})
             detail_url = reverse("secretary:appointment_detail", kwargs={"appointment_id": appointment.id})

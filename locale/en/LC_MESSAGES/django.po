@@ -3586,3 +3586,16 @@ msgctxt "schedule"
 msgid "غير محدد"
 msgstr "Not set"
 
+
+# ── Secretary: optional doctor intake form ───────────────────────────────────
+msgid "تعبئة نموذج إدخال الطبيب (اختياري)"
+msgstr "Fill the doctor's intake form (optional)"
+
+msgid "يمكنك تعبئة نموذج الطبيب نيابةً عن المريض. كل الحقول اختيارية."
+msgstr "You can fill the doctor's form on the patient's behalf. All fields are optional."
+
+msgid "جارٍ تحميل النموذج..."
+msgstr "Loading form..."
+
+msgid "لا يوجد نموذج إدخال لهذا الطبيب."
+msgstr "This doctor has no intake form."

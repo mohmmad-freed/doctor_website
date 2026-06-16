@@ -16,9 +16,14 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils import timezone
 
-from appointments.models import Appointment, AppointmentType
+from appointments.models import Appointment, AppointmentType, AppointmentAnswer
 from clinics.models import Clinic, ClinicStaff, ClinicInvitation
-from doctors.models import DoctorAvailability, DoctorVerification
+from doctors.models import (
+    DoctorAvailability,
+    DoctorVerification,
+    DoctorIntakeFormTemplate,
+    DoctorIntakeQuestion,
+)
 
 User = get_user_model()
 
@@ -1613,3 +1618,144 @@ class TimeFormatPreferenceTests(SecretaryTestBase):
         msg = "Booked at 17:45."
         out = Template("{{ m|clock_text:False }}").render(Context({"m": msg}))
         self.assertIn("17:45", out)
+
+
+# ════════════════════════════════════════════════════════════════════
+#  Secretary optional intake form during booking
+# ════════════════════════════════════════════════════════════════════
+
+class SecretaryIntakeBookingTest(SecretaryTestBase):
+    """
+    The secretary can OPTIONALLY fill the doctor's intake form when booking on a
+    patient's behalf (opt-in toggle, all fields optional). Reuses the patient-side
+    intake machinery via `collect_and_validate_intake(enforce_required=False)` and
+    `save_intake_answers`.
+    """
+
+    def setUp(self):
+        super().setUp()
+        from django.core.files.uploadedfile import SimpleUploadedFile  # noqa: F401
+        self.SimpleUploadedFile = SimpleUploadedFile
+
+        # Generic template for doctor_a (applies to all appointment types).
+        self.template = DoctorIntakeFormTemplate.objects.create(
+            doctor=self.doctor_a,
+            appointment_type=None,
+            title="Intake",
+            title_ar="نموذج الإدخال",
+            show_reason_field=False,
+        )
+        self.q_text = DoctorIntakeQuestion.objects.create(
+            template=self.template,
+            question_text="Allergies?",
+            question_text_ar="هل لديك حساسية؟",
+            field_type=DoctorIntakeQuestion.FieldType.TEXT,
+            is_required=True,  # required for patients, but optional for the secretary
+            order=1,
+        )
+        self.q_file = DoctorIntakeQuestion.objects.create(
+            template=self.template,
+            question_text="Lab report",
+            question_text_ar="تقرير المختبر",
+            field_type=DoctorIntakeQuestion.FieldType.FILE,
+            is_required=False,
+            order=2,
+            allowed_extensions=["pdf"],
+            max_file_size_mb=5,
+        )
+        # No allowed_extensions → the global image+PDF baseline applies.
+        self.q_file_open = DoctorIntakeQuestion.objects.create(
+            template=self.template,
+            question_text="Birth certificate",
+            question_text_ar="شهادة الميلاد",
+            field_type=DoctorIntakeQuestion.FieldType.FILE,
+            is_required=False,
+            order=3,
+        )
+
+    def _post_data(self, **extra):
+        data = {
+            "patient_id": str(self.patient_a.id),
+            "doctor_id": str(self.doctor_a.id),
+            "appointment_type_id": str(self.appt_type_a.id),
+            "appointment_date": self.next_monday.strftime("%Y-%m-%d"),
+            "appointment_time": "09:00",
+            "reason": "visit",
+        }
+        data.update(extra)
+        return data
+
+    def test_fill_intake_saves_answers(self):
+        self.client.force_login(self.secretary_a)
+        self.client.post(
+            reverse("secretary:create_appointment"),
+            self._post_data(fill_intake="1", **{f"intake_{self.q_text.id}": "Penicillin"}),
+        )
+        appt = Appointment.objects.get(patient=self.patient_a, clinic=self.clinic_a)
+        answers = AppointmentAnswer.objects.filter(appointment=appt)
+        self.assertEqual(answers.count(), 1)
+        self.assertEqual(answers.first().question_id, self.q_text.id)
+        self.assertEqual(answers.first().answer_text, "Penicillin")
+
+    def test_no_toggle_skips_intake(self):
+        """Without the toggle, intake fields are ignored even if present in POST."""
+        self.client.force_login(self.secretary_a)
+        self.client.post(
+            reverse("secretary:create_appointment"),
+            self._post_data(**{f"intake_{self.q_text.id}": "Penicillin"}),
+        )
+        appt = Appointment.objects.get(patient=self.patient_a, clinic=self.clinic_a)
+        self.assertEqual(AppointmentAnswer.objects.filter(appointment=appt).count(), 0)
+
+    def test_required_field_not_enforced(self):
+        """Toggle on but the required question left blank → booking still succeeds."""
+        self.client.force_login(self.secretary_a)
+        resp = self.client.post(
+            reverse("secretary:create_appointment"),
+            self._post_data(fill_intake="1"),  # q_text intentionally omitted
+        )
+        appt = Appointment.objects.get(patient=self.patient_a, clinic=self.clinic_a)
+        self.assertRedirects(
+            resp,
+            reverse("secretary:appointment_detail", kwargs={"appointment_id": appt.id}),
+            fetch_redirect_response=False,
+        )
+        self.assertEqual(AppointmentAnswer.objects.filter(appointment=appt).count(), 0)
+
+    def test_bad_file_type_blocks_booking(self):
+        """A file outside the question's allowed_extensions blocks booking."""
+        self.client.force_login(self.secretary_a)
+        bad = self.SimpleUploadedFile("notes.txt", b"hello", content_type="text/plain")
+        resp = self.client.post(
+            reverse("secretary:create_appointment"),
+            self._post_data(fill_intake="1", **{f"intake_{self.q_file.id}": bad}),
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertFalse(Appointment.objects.filter(clinic=self.clinic_a).exists())
+
+    def test_exe_blocked_by_baseline_when_no_extensions_set(self):
+        """A question with no allowed_extensions still rejects .exe via the baseline."""
+        self.client.force_login(self.secretary_a)
+        exe = self.SimpleUploadedFile(
+            "installer.exe", b"MZ\x90\x00\x03\x00\x00\x00", content_type="application/octet-stream"
+        )
+        resp = self.client.post(
+            reverse("secretary:create_appointment"),
+            self._post_data(fill_intake="1", **{f"intake_{self.q_file_open.id}": exe}),
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertFalse(Appointment.objects.filter(clinic=self.clinic_a).exists())
+
+    def test_spoofed_extension_blocked_by_signature(self):
+        """An executable renamed to .pdf passes the extension check but the content
+        signature check rejects it."""
+        self.client.force_login(self.secretary_a)
+        fake = self.SimpleUploadedFile(
+            "evil.pdf", b"MZ\x90\x00\x03\x00\x00\x00\x04\x00", content_type="application/pdf"
+        )
+        resp = self.client.post(
+            reverse("secretary:create_appointment"),
+            self._post_data(fill_intake="1", **{f"intake_{self.q_file_open.id}": fake}),
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertFalse(Appointment.objects.filter(clinic=self.clinic_a).exists())

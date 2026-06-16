@@ -3,6 +3,45 @@ from datetime import datetime, date
 from appointments.models import AppointmentAttachment, AppointmentAnswer
 from doctors.models import DoctorIntakeFormTemplate, DoctorIntakeQuestion, DoctorIntakeRule
 
+
+def _intake_file_type_error(uploaded, question):
+    """
+    Return an Arabic error string if the uploaded file's type is not allowed for
+    this question, else None.
+
+    Policy:
+    - A file must match the question's ``allowed_extensions`` when the doctor set
+      them, otherwise the global image+PDF baseline
+      (``core.validators.file_validators.ALLOWED_EXTENSIONS``).
+    - The actual content bytes are also sniffed (``validate_file_signature``) so a
+      renamed executable (e.g. ``evil.exe`` → ``evil.pdf``) is still rejected even
+      though the extension looks fine.
+    """
+    from core.validators.file_validators import (
+        validate_file_signature,
+        ALLOWED_EXTENSIONS as BASELINE_FILE_EXTENSIONS,
+    )
+    from django.core.exceptions import ValidationError as DjangoValidationError
+
+    allowed = [
+        ext.lower().lstrip(".")
+        for ext in (question.allowed_extensions or BASELINE_FILE_EXTENSIONS)
+    ]
+    file_ext = uploaded.name.rsplit(".", 1)[-1].lower() if "." in uploaded.name else ""
+    if file_ext not in allowed:
+        return (
+            f'صيغة الملف "{uploaded.name}" في "{question.display_text}" غير مسموحة. '
+            f'الصيغ المسموحة: {", ".join(allowed)}.'
+        )
+    try:
+        validate_file_signature(uploaded)
+    except DjangoValidationError:
+        return (
+            f'محتوى الملف "{uploaded.name}" في "{question.display_text}" غير مدعوم. '
+            f'يُسمح بالصور وملفات PDF فقط.'
+        )
+    return None
+
 def get_active_intake_template(doctor_id, appointment_type_id=None):
     """
     Find the active intake form template for a doctor.
@@ -63,6 +102,63 @@ def get_rules_for_template(template):
     ]
 
 
+def order_questions_with_subquestions(questions, rules):
+    """
+    Reorder questions for display so each conditional "sub-question" sits
+    directly under the question that reveals it, instead of wherever its
+    ``order`` value happens to land it (often the end of the form).
+
+    A sub-question is the target of a SHOW rule; the source question is its
+    parent. Only SHOW rules move questions — HIDE rules don't reparent.
+    Nested sub-questions are followed depth-first, the original ``order`` is
+    preserved among siblings and among top-level questions, every question is
+    emitted exactly once, and cycles / dangling targets are guarded against.
+
+    ``rules`` is the list of dicts returned by :func:`get_rules_for_template`.
+    Returns a new list; the input is not mutated.
+    """
+    by_id = {q.id: q for q in questions}
+
+    children = {}        # parent_id -> [child_id, ...] (SHOW targets, original order)
+    child_ids = set()    # every question that is a SHOW target
+    for rule in rules:
+        if rule.get("action") != DoctorIntakeRule.Action.SHOW:
+            continue
+        src = rule.get("source_question_id")
+        tgt = rule.get("target_question_id")
+        if src not in by_id or tgt not in by_id or src == tgt:
+            continue
+        children.setdefault(src, [])
+        if tgt not in children[src]:
+            children[src].append(tgt)
+        child_ids.add(tgt)
+
+    ordered = []
+    emitted = set()
+
+    def emit(q):
+        if q.id in emitted:
+            return
+        emitted.add(q.id)
+        ordered.append(q)
+        for child_id in children.get(q.id, []):
+            child = by_id.get(child_id)
+            if child is not None:
+                emit(child)
+
+    # Top-level questions first (anything that isn't another question's sub-question),
+    # pulling each parent's sub-questions in right after it.
+    for q in questions:
+        if q.id not in child_ids:
+            emit(q)
+
+    # Safety net: emit any leftovers (dangling targets / cycles) in original order.
+    for q in questions:
+        emit(q)
+
+    return ordered
+
+
 def evaluate_rules_server_side(questions, answers_dict, rules):
     """
     Re-evaluate conditional rules server-side to determine which questions
@@ -113,7 +209,7 @@ def evaluate_rules_server_side(questions, answers_dict, rules):
     return visible
 
 
-def collect_and_validate_intake(post_data, files, questions, rules):
+def collect_and_validate_intake(post_data, files, questions, rules, enforce_required=True):
     """
     Collect answers from POST, validate required fields (respecting conditional rules),
     and validate file uploads (type + size).
@@ -122,6 +218,12 @@ def collect_and_validate_intake(post_data, files, questions, rules):
       FILE         → simple multi-file upload (name="intake_{q_id}")
       DATED_FILES  → date-grouped uploads, 7 groups × 5 files each
                      (name="intake_dfile_{q_id}_g{i}", date="intake_dfile_date_{q_id}_g{i}")
+
+    enforce_required:
+      When False, required-field checks are skipped entirely (all questions become
+      optional) while file type/size and group-date checks still apply. Used by the
+      secretary booking flow, where filling the intake form is optional. Defaults to
+      True so the patient flow keeps enforcing required fields.
 
     Returns: (answers_dict, file_data, errors)
       - answers_dict: {str(question_id): answer_text}
@@ -193,7 +295,7 @@ def collect_and_validate_intake(post_data, files, questions, rules):
         if q.field_type == DoctorIntakeQuestion.FieldType.FILE:
             uploaded_list = file_data.get(str(q.id), [])
 
-            if q.is_required and not uploaded_list:
+            if enforce_required and q.is_required and not uploaded_list:
                 errors.append(f'الحقل "{q.display_text}" مطلوب.')
                 continue
 
@@ -206,20 +308,15 @@ def collect_and_validate_intake(post_data, files, questions, rules):
                             f'({q.max_file_size_mb} ميغابايت). '
                             f'حجم الملف: {uploaded.size / (1024 * 1024):.1f} ميغابايت.'
                         )
-                if q.allowed_extensions:
-                    file_ext = uploaded.name.rsplit(".", 1)[-1].lower() if "." in uploaded.name else ""
-                    allowed = [ext.lower().lstrip(".") for ext in q.allowed_extensions]
-                    if file_ext not in allowed:
-                        errors.append(
-                            f'صيغة الملف "{uploaded.name}" في "{q.display_text}" غير مسموحة. '
-                            f'الصيغ المسموحة: {", ".join(allowed)}.'
-                        )
+                type_error = _intake_file_type_error(uploaded, q)
+                if type_error:
+                    errors.append(type_error)
 
         elif q.field_type == DoctorIntakeQuestion.FieldType.DATED_FILES:
             groups = file_data.get(str(q.id), [])
             all_files = [f for _, gf in groups for f in gf]
 
-            if q.is_required and not all_files:
+            if enforce_required and q.is_required and not all_files:
                 errors.append(f'الحقل "{q.display_text}" مطلوب.')
                 continue
 
@@ -262,16 +359,11 @@ def collect_and_validate_intake(post_data, files, questions, rules):
                             f'({q.max_file_size_mb} ميغابايت). '
                             f'حجم الملف: {uploaded.size / (1024 * 1024):.1f} ميغابايت.'
                         )
-                if q.allowed_extensions:
-                    file_ext = uploaded.name.rsplit(".", 1)[-1].lower() if "." in uploaded.name else ""
-                    allowed = [ext.lower().lstrip(".") for ext in q.allowed_extensions]
-                    if file_ext not in allowed:
-                        errors.append(
-                            f'صيغة الملف "{uploaded.name}" في "{q.display_text}" غير مسموحة. '
-                            f'الصيغ المسموحة: {", ".join(allowed)}.'
-                        )
+                type_error = _intake_file_type_error(uploaded, q)
+                if type_error:
+                    errors.append(type_error)
         else:
-            if q.is_required and not answers.get(str(q.id)):
+            if enforce_required and q.is_required and not answers.get(str(q.id)):
                 errors.append(f'الحقل "{q.display_text}" مطلوب.')
 
     # ── Global total file size check (FILE + DATED_FILES combined) ──

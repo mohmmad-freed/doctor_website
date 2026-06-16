@@ -4,19 +4,20 @@
     <!-- Form header -->
     <div class="flex items-center gap-2 pb-3 border-b border-gray-100 dark:border-slate-700">
         <i class="fa-solid fa-clipboard-list text-primary-500"></i>
-        <div>
-            <h3 class="font-bold text-gray-900 dark:text-white">{{ form_template.display_title }}</h3>
+        <div class="min-w-0 flex-1">
+            <h3 class="font-bold text-gray-900 dark:text-white" dir="auto">{{ form_template.display_title }}</h3>
             {% if form_template.description %}
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ form_template.description }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5" dir="auto">{{ form_template.description }}</p>
             {% endif %}
         </div>
     </div>
 
     {% for q in questions %}
-    <div class="space-y-2 intake-question" data-question-id="{{ q.id }}" id="question-{{ q.id }}">
+    {# dir="auto": each question renders in its own text direction (Arabic RTL, English LTR) regardless of UI language. #}
+    <div class="space-y-2 intake-question" data-question-id="{{ q.id }}" id="question-{{ q.id }}" dir="auto">
         <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
             {{ q.display_text }}
-            {% if q.is_required %}
+            {% if q.is_required and not optional_mode %}
             <span class="text-red-500 mr-1">*</span>
             {% else %}
             <span class="text-gray-400 text-xs font-normal">{% trans "(اختياري)" %}</span>
@@ -24,26 +25,26 @@
         </label>
 
         {% if q.help_text_content %}
-        <p class="text-xs text-gray-400 dark:text-gray-500">{{ q.help_text_content }}</p>
+        <p class="text-xs text-gray-400 dark:text-gray-500" dir="auto">{{ q.help_text_content }}</p>
         {% endif %}
 
         {% if q.field_type == "TEXT" %}
         <input type="text" name="intake_{{ q.id }}" placeholder="{{ q.placeholder }}"
                class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors text-sm"
-               {% if q.is_required %}required{% endif %}>
+               {% if q.is_required and not optional_mode %}required{% endif %}>
 
         {% elif q.field_type == "TEXTAREA" %}
         <textarea name="intake_{{ q.id }}" rows="3" placeholder="{{ q.placeholder }}"
                   class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors text-sm resize-none"
-                  {% if q.is_required %}required{% endif %}></textarea>
+                  {% if q.is_required and not optional_mode %}required{% endif %}></textarea>
 
         {% elif q.field_type == "SELECT" %}
         <select name="intake_{{ q.id }}" data-source-question="{{ q.id }}"
                 class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors text-sm"
-                {% if q.is_required %}required{% endif %}>
+                {% if q.is_required and not optional_mode %}required{% endif %}>
             <option value="">{% trans "-- اختر --" %}</option>
             {% for choice in q.choices %}
-            <option value="{{ choice }}">{{ choice }}</option>
+            <option value="{{ choice }}" dir="auto">{{ choice }}</option>
             {% endfor %}
         </select>
 
@@ -53,7 +54,7 @@
             <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-slate-600 hover:border-primary-300 dark:hover:border-primary-700 cursor-pointer transition-colors bg-white dark:bg-slate-700/50">
                 <input type="checkbox" name="intake_{{ q.id }}" value="{{ choice }}" data-source-question="{{ q.id }}"
                        class="w-4 h-4 text-primary-500 focus:ring-primary-500 rounded border-gray-300 dark:border-slate-500">
-                <span class="text-sm text-gray-800 dark:text-gray-200">{{ choice }}</span>
+                <span class="text-sm text-gray-800 dark:text-gray-200" dir="auto">{{ choice }}</span>
             </label>
             {% endfor %}
         </div>
@@ -63,7 +64,7 @@
             <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-slate-600 hover:border-primary-300 dark:hover:border-primary-700 cursor-pointer transition-colors bg-white dark:bg-slate-700/50 flex-1">
                 <input type="radio" name="intake_{{ q.id }}" value="نعم" data-source-question="{{ q.id }}"
                        class="w-4 h-4 text-primary-500 focus:ring-primary-500 border-gray-300 dark:border-slate-500"
-                       {% if q.is_required %}required{% endif %}>
+                       {% if q.is_required and not optional_mode %}required{% endif %}>
                 <span class="text-sm text-gray-800 dark:text-gray-200 font-medium">{% trans "نعم" %}</span>
             </label>
             <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-slate-600 hover:border-primary-300 dark:hover:border-primary-700 cursor-pointer transition-colors bg-white dark:bg-slate-700/50 flex-1">
@@ -76,27 +77,26 @@
         {% elif q.field_type == "DATE" %}
         <input type="date" name="intake_{{ q.id }}"
                class="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors text-sm"
-               {% if q.is_required %}required{% endif %}>
+               {% if q.is_required and not optional_mode %}required{% endif %}>
 
         {% elif q.field_type == "FILE" %}
+        {# No allowed_extensions → fall back to the image+PDF baseline (mirrors core.validators.file_validators.ALLOWED_EXTENSIONS). #}
         <div class="file-upload-container" data-question-id="{{ q.id }}"
              {% if q.max_file_size_mb %}data-max-size-mb="{{ q.max_file_size_mb }}"{% endif %}
-             {% if q.allowed_extensions %}data-allowed-ext="{{ q.allowed_extensions|join:"," }}"{% endif %}>
+             data-allowed-ext="{% if q.allowed_extensions %}{{ q.allowed_extensions|join:"," }}{% else %}jpg,jpeg,png,webp,gif,pdf{% endif %}">
             <label for="file_{{ q.id }}"
                    class="flex flex-col items-center justify-center w-full p-4 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg cursor-pointer hover:border-primary-400 dark:hover:border-primary-500 transition-colors bg-white dark:bg-slate-700/30">
                 <i class="fa-solid fa-cloud-arrow-up text-gray-400 dark:text-gray-500 text-2xl mb-2"></i>
                 <span class="text-sm text-gray-500 dark:text-gray-400">{% trans "اضغط لاختيار ملف" %}</span>
-                {% if q.allowed_extensions %}
-                <span class="text-xs text-gray-400 mt-1">{% trans "الصيغ المسموحة:" %} {{ q.allowed_extensions|join:", " }}</span>
-                {% endif %}
+                <span class="text-xs text-gray-400 mt-1">{% trans "الصيغ المسموحة:" %} {% if q.allowed_extensions %}{{ q.allowed_extensions|join:", " }}{% else %}JPG, PNG, WEBP, GIF, PDF{% endif %}</span>
                 {% if q.max_file_size_mb %}
                 <span class="text-xs text-gray-400">{% blocktrans with max_mb=q.max_file_size_mb %}الحد الأقصى: {{ max_mb }} ميغابايت{% endblocktrans %}</span>
                 {% endif %}
             </label>
             <input type="file" name="intake_{{ q.id }}" id="file_{{ q.id }}"
-                   {% if q.allowed_extensions %}accept="{% for ext in q.allowed_extensions %}.{{ ext }}{% if not forloop.last %},{% endif %}{% endfor %}"{% endif %}
+                   accept="{% if q.allowed_extensions %}{% for ext in q.allowed_extensions %}.{{ ext }}{% if not forloop.last %},{% endif %}{% endfor %}{% else %}image/*,.pdf{% endif %}"
                    class="hidden" multiple
-                   {% if q.is_required %}data-required="true"{% endif %}>
+                   {% if q.is_required and not optional_mode %}data-required="true"{% endif %}>
             <!-- File info / error shown by JS -->
             <div id="file-info-{{ q.id }}" class="mt-2 hidden">
                 <div class="flex items-center gap-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 p-2 rounded-lg text-sm file-success hidden">
@@ -131,7 +131,7 @@
     </div>
     {% endfor %}
 
-    {% if form_template.show_reason_field %}
+    {% if form_template.show_reason_field and not optional_mode %}
     <!-- Reason / medical description (controlled by template settings) -->
     <div class="pt-3 border-t border-gray-100 dark:border-slate-700">
         <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -322,6 +322,80 @@ var _DFW_TRANS = {
 })();
 </script>
 
+<!-- Simple FILE field: preview + type/size validation on change.
+     Lives in the partial so every booking flow (patient + secretary) shares it.
+     Bound once on document via a window guard, since the partial may be re-injected. -->
+<script>
+var _FILE_TRANS = {
+    invalidFormat: "{% trans 'صيغة غير مسموحة' %}",
+    allowed: "{% trans 'الصيغ المسموحة:' %}",
+    fileTooLarge: "{% trans 'حجم الملف كبير جداً' %}"
+};
+if (!window.__intakeFileHandlerInit) {
+    window.__intakeFileHandlerInit = true;
+    document.addEventListener('change', function(e) {
+        var input = e.target;
+        if (!input || input.type !== 'file') return;
+        var container = input.closest('.file-upload-container');
+        if (!container) return;
+
+        var qId = container.dataset.questionId;
+        var maxMb = container.dataset.maxSizeMb ? parseFloat(container.dataset.maxSizeMb) : null;
+        var allowedRaw = container.dataset.allowedExt || '';
+        var allowed = allowedRaw ? allowedRaw.split(',').map(function(x){ return x.trim().toLowerCase().replace(/^\./, ''); }) : [];
+
+        var infoDiv = document.getElementById('file-info-' + qId);
+        if (!infoDiv) return;
+        var successDiv = infoDiv.querySelector('.file-success');
+        var errorDiv = infoDiv.querySelector('.file-error');
+        var nameSpan = infoDiv.querySelector('.file-name');
+        var sizeSpan = infoDiv.querySelector('.file-size');
+        var errorMsg = infoDiv.querySelector('.error-msg');
+        var label = container.querySelector('label');
+
+        infoDiv.classList.add('hidden');
+        if (successDiv) successDiv.classList.add('hidden');
+        if (errorDiv) errorDiv.classList.add('hidden');
+        if (label) label.classList.remove('border-red-400','dark:border-red-500','border-green-400','dark:border-green-500');
+
+        if (!input.files || !input.files.length) return;
+
+        // Validate EVERY selected file (type + size); display the first one.
+        var files = Array.prototype.slice.call(input.files);
+        var errors = [];
+        var totalSize = 0;
+        files.forEach(function(file) {
+            totalSize += file.size;
+            if (allowed.length > 0) {
+                var ext = file.name.indexOf('.') >= 0 ? file.name.split('.').pop().toLowerCase() : '';
+                if (allowed.indexOf(ext) === -1) {
+                    errors.push(_FILE_TRANS.invalidFormat + ' (' + file.name + '). ' + _FILE_TRANS.allowed + ' ' + allowed.join(', '));
+                }
+            }
+            if (maxMb && file.size > maxMb * 1024 * 1024) {
+                errors.push(_FILE_TRANS.fileTooLarge + ' (' + file.name + ')');
+            }
+        });
+
+        infoDiv.classList.remove('hidden');
+        if (errors.length > 0) {
+            if (errorMsg) errorMsg.textContent = errors.join(' · ');
+            if (errorDiv) errorDiv.classList.remove('hidden');
+            if (label) label.classList.add('border-red-400','dark:border-red-500');
+            input.value = '';  // reject the selection so the bad file isn't submitted
+        } else {
+            var sizeTxt = totalSize < 1024 * 1024
+                ? (totalSize / 1024).toFixed(0) + ' KB'
+                : (totalSize / (1024 * 1024)).toFixed(1) + ' MB';
+            if (nameSpan) nameSpan.textContent = files[0].name + (files.length > 1 ? ' (+' + (files.length - 1) + ')' : '');
+            if (sizeSpan) sizeSpan.textContent = '(' + sizeTxt + ')';
+            if (successDiv) successDiv.classList.remove('hidden');
+            if (label) label.classList.add('border-green-400','dark:border-green-500');
+        }
+    });
+}
+</script>
+
 <!-- Conditional Rules (client-side) -->
 {% if rules_json and rules_json != "[]" %}
 <script>
@@ -373,6 +447,9 @@ var _DFW_TRANS = {
 {% endif %}
 
 {% elif no_form %}
+{% if optional_mode %}
+<p class="text-gray-400 dark:text-gray-500 text-sm">{% trans "لا يوجد نموذج إدخال لهذا الطبيب." %}</p>
+{% else %}
 <div>
     <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
         {% trans "وصف الحالة الطبية" %} <span class="text-gray-400 text-xs font-normal">{% trans "(اختياري)" %}</span>
@@ -382,6 +459,7 @@ var _DFW_TRANS = {
               class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors resize-none text-sm"></textarea>
     <p class="text-xs text-gray-400 mt-1">{% trans "الحد الأقصى 1000 حرف" %}</p>
 </div>
+{% endif %}
 
 {% else %}
 <p class="text-gray-400 dark:text-gray-500 text-sm">{% trans "اختر طبيباً ونوع الموعد لعرض النموذج." %}</p>

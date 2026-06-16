@@ -20,6 +20,7 @@ from appointments.services.intake_service import (
     collect_and_validate_intake,
     get_active_intake_template,
     get_rules_for_template,
+    order_questions_with_subquestions,
     save_intake_answers,
 )
 from clinics.models import Clinic
@@ -315,14 +316,25 @@ def load_intake_form(request, clinic_id):
     """
     doctor_id = request.GET.get("doctor_id")
     appointment_type_id = request.GET.get("appointment_type_id")
+    # optional=1 → secretary booking flow: all fields optional, partial hides its own
+    # reason field and suppresses required markers/attributes.
+    optional_mode = request.GET.get("optional") == "1"
 
     if not doctor_id:
-        return render(request, "appointments/partials/intake_form.html", {})
+        return render(
+            request,
+            "appointments/partials/intake_form.html",
+            {"optional_mode": optional_mode},
+        )
 
     template, questions = get_active_intake_template(doctor_id, appointment_type_id)
 
     if template and questions:
-        rules_json = json.dumps(get_rules_for_template(template), ensure_ascii=False)
+        rules = get_rules_for_template(template)
+        # Place each conditional sub-question directly under its parent question
+        # instead of wherever its `order` value lands it (often the form's end).
+        questions = order_questions_with_subquestions(questions, rules)
+        rules_json = json.dumps(rules, ensure_ascii=False)
         return render(
             request,
             "appointments/partials/intake_form.html",
@@ -330,13 +342,14 @@ def load_intake_form(request, clinic_id):
                 "form_template": template,
                 "questions": questions,
                 "rules_json": rules_json,
+                "optional_mode": optional_mode,
             },
         )
     else:
         return render(
             request,
             "appointments/partials/intake_form.html",
-            {"no_form": True},
+            {"no_form": True, "optional_mode": optional_mode},
         )
 
 
