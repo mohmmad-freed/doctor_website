@@ -11,7 +11,6 @@ urlpatterns = [
     path('appointments/', views.appointments_list, name='appointments'),
     path('appointments/create/', views.create_appointment, name='create_appointment'),
     path('appointments/walk-in/', views.register_walk_in, name='register_walk_in'),
-    path('appointments/<int:appointment_id>/', views.appointment_detail, name='appointment_detail'),
     path('appointments/<int:appointment_id>/edit/', views.edit_appointment, name='edit_appointment'),
     path('appointments/<int:appointment_id>/cancel/', views.cancel_appointment, name='cancel_appointment'),
     path('appointments/<int:appointment_id>/checkin/', views.checkin_appointment, name='checkin_appointment'),
@@ -19,7 +18,8 @@ urlpatterns = [
     path('appointments/<int:appointment_id>/accept-new-patient/', views.accept_new_patient_request, name='accept_new_patient_request'),
     path('appointments/<int:appointment_id>/reject-new-patient/', views.reject_new_patient_request, name='reject_new_patient_request'),
     path('appointments/<int:appointment_id>/register-new-patient-only/', views.register_new_patient_only, name='register_new_patient_only'),
-    path('appointments/<int:appointment_id>/notification-modal/', views.notification_appointment_modal, name='notification_appointment_modal'),
+    path('appointments/<int:appointment_id>/overview/', views.appointment_overview, name='appointment_overview'),
+    path('appointments/<int:appointment_id>/intake/', views.appointment_intake_partial, name='appointment_intake_partial'),
     path('appointments/<int:appointment_id>/remove-from-queue/', views.remove_from_queue, name='remove_from_queue'),
     path('calendar/', views.calendar_view, name='calendar'),
 

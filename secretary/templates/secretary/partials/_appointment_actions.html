@@ -1,0 +1,143 @@
+{% load i18n %}
+{% comment %}
+Status-aware secretary action controls for an appointment (extracted from the old
+notification modal). Expects `appointment` and `is_new_patient_request`. After any
+action the user is returned to the notifications center.
+{% endcomment %}
+{% if appointment.status == 'PENDING' %}
+  {% if is_new_patient_request %}
+  {# New unregistered patient: 3 options #}
+  <div class="bg-indigo-50 dark:bg-indigo-900/10 rounded-xl border border-indigo-200 dark:border-indigo-800 p-4">
+    <div class="flex items-start gap-2 mb-3">
+      <i class="fa-solid fa-user-plus text-indigo-500 mt-0.5"></i>
+      <p class="text-xs text-indigo-700 dark:text-indigo-300 leading-relaxed">
+        {% trans "هذا المريض غير مسجّل في العيادة. اختر أحد الإجراءات أدناه." %}
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <form method="post" action="{% url 'secretary:accept_new_patient_request' appointment.id %}" class="m-0">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'appointments:secretary_notifications' %}">
+        <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors">
+          <i class="fa-solid fa-user-check text-xs"></i> {% trans "قبول وتسجيل المريض" %}
+        </button>
+      </form>
+      <button type="button"
+              onclick="document.getElementById('register-only-panel').classList.toggle('hidden');document.getElementById('reject-panel').classList.add('hidden');"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors">
+        <i class="fa-solid fa-id-card text-xs"></i> {% trans "تسجيل المريض فقط" %}
+      </button>
+      <button type="button"
+              onclick="document.getElementById('reject-panel').classList.toggle('hidden');document.getElementById('register-only-panel').classList.add('hidden');"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 dark:border-red-900/40 bg-white dark:bg-slate-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-semibold transition-colors">
+        <i class="fa-solid fa-user-xmark text-xs"></i> {% trans "رفض الطلب" %}
+      </button>
+    </div>
+
+    {# Register-only inline panel #}
+    <div id="register-only-panel" class="hidden mt-4">
+      <form method="post" action="{% url 'secretary:register_new_patient_only' appointment.id %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'appointments:secretary_notifications' %}">
+        <p class="text-xs text-indigo-700 dark:text-indigo-300 mb-2 leading-relaxed">
+          {% trans "سيُسجَّل المريض في العيادة ويُلغى هذا الموعد." %}
+        </p>
+        <textarea name="cancellation_reason" rows="2"
+                  placeholder="{% trans 'سبب إلغاء الموعد (اختياري)...' %}"
+                  class="w-full text-sm rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none mb-2"></textarea>
+        <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors">
+          {% trans "تأكيد التسجيل وإلغاء الموعد" %}
+        </button>
+      </form>
+    </div>
+
+    {# Reject inline panel #}
+    <div id="reject-panel" class="hidden mt-4">
+      <form method="post" action="{% url 'secretary:reject_new_patient_request' appointment.id %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'appointments:secretary_notifications' %}">
+        <textarea name="cancellation_reason" rows="2"
+                  placeholder="{% trans 'سبب الرفض (اختياري)...' %}"
+                  class="w-full text-sm rounded-xl border border-red-200 dark:border-red-800 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-400 resize-none mb-2"></textarea>
+        <button type="submit" class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors">
+          {% trans "تأكيد الرفض" %}
+        </button>
+      </form>
+    </div>
+  </div>
+  {% else %}
+  {# PENDING + already-registered patient: Confirm | Reject #}
+  <div class="bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-200 dark:border-amber-800 p-4">
+    <div class="flex items-start gap-2 mb-3">
+      <i class="fa-solid fa-clock text-amber-500 mt-0.5"></i>
+      <p class="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
+        {% trans "طلب موعد بانتظار المراجعة." %}
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <form method="post" action="{% url 'secretary:update_appointment_status' appointment.id %}" class="m-0">
+        {% csrf_token %}
+        <input type="hidden" name="status" value="CONFIRMED">
+        <input type="hidden" name="next" value="{% url 'appointments:secretary_notifications' %}">
+        <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors">
+          <i class="fa-solid fa-check text-xs"></i> {% trans "قبول الموعد" %}
+        </button>
+      </form>
+      <button type="button"
+              onclick="document.getElementById('pending-reject-panel').classList.toggle('hidden');"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 dark:border-red-900/40 bg-white dark:bg-slate-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-semibold transition-colors">
+        <i class="fa-solid fa-xmark text-xs"></i> {% trans "رفض الموعد" %}
+      </button>
+    </div>
+
+    <div id="pending-reject-panel" class="hidden mt-4">
+      <form method="post" action="{% url 'secretary:cancel_appointment' appointment.id %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'appointments:secretary_notifications' %}">
+        <textarea name="cancellation_reason" rows="2" required
+                  placeholder="{% trans 'سبب الرفض...' %}"
+                  class="w-full text-sm rounded-xl border border-red-200 dark:border-red-800 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-400 resize-none mb-2"></textarea>
+        <button type="submit" class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors">
+          {% trans "تأكيد الرفض" %}
+        </button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+{% elif appointment.status == 'CONFIRMED' %}
+{# CONFIRMED: Reschedule | Cancel #}
+<div class="flex flex-wrap gap-2">
+  <a href="{% url 'secretary:edit_appointment' appointment.id %}"
+     class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 text-sm font-semibold transition-colors">
+    <i class="fa-solid fa-pen-to-square text-xs"></i> {% trans "إعادة جدولة" %}
+  </a>
+  <button type="button"
+          onclick="document.getElementById('confirmed-cancel-panel').classList.toggle('hidden');"
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 dark:border-red-900/40 bg-white dark:bg-slate-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-semibold transition-colors">
+    <i class="fa-solid fa-xmark text-xs"></i> {% trans "إلغاء الموعد" %}
+  </button>
+</div>
+
+<div id="confirmed-cancel-panel" class="hidden">
+  <form method="post" action="{% url 'secretary:cancel_appointment' appointment.id %}"
+        class="bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-200 dark:border-red-800 p-4">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{% url 'appointments:secretary_notifications' %}">
+    <p class="font-semibold text-red-700 dark:text-red-400 text-sm mb-2">{% trans "تأكيد إلغاء الموعد" %}</p>
+    <textarea name="cancellation_reason" rows="2" required
+              placeholder="{% trans 'يرجى ذكر سبب الإلغاء...' %}"
+              class="w-full text-sm rounded-xl border border-red-200 dark:border-red-800 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-400 resize-none mb-2"></textarea>
+    <div class="flex gap-2">
+      <button type="submit" class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors">
+        {% trans "تأكيد الإلغاء" %}
+      </button>
+      <button type="button"
+              onclick="document.getElementById('confirmed-cancel-panel').classList.add('hidden');"
+              class="px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-300 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+        {% trans "تراجع" %}
+      </button>
+    </div>
+  </form>
+</div>
+{% endif %}

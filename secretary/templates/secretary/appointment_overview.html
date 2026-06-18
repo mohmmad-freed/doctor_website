@@ -1,0 +1,226 @@
+{% extends "secretary/base_secretary.html" %}
+{% load i18n %}
+{% block title %}{% if IS_RTL %}نظرة عامة على الموعد{% else %}Appointment Overview{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 pt-5 pb-10">
+
+  {# ── Header ───────────────────────────────────────────────────────────── #}
+  <div class="flex items-start gap-4 mb-6">
+    <a href="{{ back_url }}"
+       class="mt-1 flex-shrink-0 w-9 h-9 rounded-full bg-gray-100 dark:bg-slate-700 hover:bg-primary-100 dark:hover:bg-primary-900/40 flex items-center justify-center transition-colors"
+       title="{% if IS_RTL %}رجوع{% else %}Back{% endif %}">
+      <i class="fa-solid fa-arrow-{% if IS_RTL %}right{% else %}left{% endif %} text-gray-500 dark:text-gray-300 text-sm"></i>
+    </a>
+    <div class="flex-1 min-w-0">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white leading-tight">{% if IS_RTL %}نظرة عامة على الموعد{% else %}Appointment Overview{% endif %}</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+        {% if IS_RTL %}سجل مواعيد المريض في العيادة{% else %}Patient's appointment history in this clinic{% endif %}
+      </p>
+    </div>
+  </div>
+
+  {# ── Patient details ──────────────────────────────────────────────────── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6 overflow-hidden">
+    <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+      <i class="fa-regular fa-user text-accent-500 text-sm"></i>
+      <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">{% if IS_RTL %}بيانات المريض{% else %}Patient Details{% endif %}</span>
+    </div>
+    <div class="p-5">
+      <div class="flex items-center gap-4">
+        <div class="w-14 h-14 rounded-full bg-accent-50 dark:bg-accent-500/10 flex items-center justify-center flex-shrink-0">
+          {% if profile and profile.avatar %}
+          <img src="{{ profile.avatar.url }}" alt="{{ patient.name }}" class="w-full h-full object-cover rounded-full">
+          {% else %}
+          <i class="fa-regular fa-user text-accent-600 dark:text-accent-500 text-xl"></i>
+          {% endif %}
+        </div>
+        <div class="min-w-0">
+          <p class="text-lg font-bold text-gray-900 dark:text-white leading-tight">{{ patient.name }}</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400 font-mono" dir="ltr">{{ patient.phone }}</p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap gap-2 mt-4">
+        {% if age is not None %}
+        <span class="inline-flex items-center gap-1.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-3 py-1.5 rounded-lg">
+          <i class="fa-solid fa-cake-candles text-gray-400 text-[11px]"></i>
+          {% if IS_RTL %}{{ age }} سنة{% else %}{{ age }} yrs{% endif %}
+        </span>
+        {% endif %}
+        {% if profile and profile.gender %}
+        <span class="inline-flex items-center gap-1.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-3 py-1.5 rounded-lg">
+          <i class="fa-solid fa-venus-mars text-gray-400 text-[11px]"></i>
+          {% if profile.gender == 'M' %}{% if IS_RTL %}ذكر{% else %}Male{% endif %}
+          {% elif profile.gender == 'F' %}{% if IS_RTL %}أنثى{% else %}Female{% endif %}
+          {% else %}{% if IS_RTL %}آخر{% else %}Other{% endif %}{% endif %}
+        </span>
+        {% endif %}
+        {% if profile and profile.blood_type %}
+        <span class="inline-flex items-center gap-1.5 text-xs font-medium bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 px-3 py-1.5 rounded-lg">
+          <i class="fa-solid fa-droplet text-[11px]"></i>
+          {{ profile.blood_type }}
+        </span>
+        {% endif %}
+      </div>
+
+      {% if profile and profile.allergies %}
+      <div class="mt-3 flex items-start gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-lg px-3 py-2">
+        <i class="fa-solid fa-triangle-exclamation text-amber-500 text-sm mt-0.5"></i>
+        <div class="min-w-0">
+          <p class="text-xs font-semibold text-amber-700 dark:text-amber-300">{% if IS_RTL %}الحساسية{% else %}Allergies{% endif %}</p>
+          <p class="text-sm text-amber-800 dark:text-amber-200">{{ profile.allergies }}</p>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── Focused appointment (highlighted — from the notification) ─────────── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-md border-2 border-primary-300 dark:border-primary-600/70 mb-7 overflow-hidden">
+    <div class="flex items-center justify-between gap-3 px-5 py-3 bg-primary-50 dark:bg-primary-900/30 border-b border-primary-100 dark:border-primary-800/60">
+      <span class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-primary-700 dark:text-primary-400">
+        <i class="fa-solid fa-calendar-check text-[11px]"></i>
+        {% if IS_RTL %}تفاصيل الموعد{% else %}Appointment Details{% endif %}
+      </span>
+      {% include "doctors/partials/_appointment_status_badge.html" with status=appointment.status size="lg" %}
+    </div>
+
+    {# Info grid #}
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-0 divide-y sm:divide-y-0 sm:divide-x divide-gray-100 dark:divide-gray-700">
+      <div class="p-5">
+        <p class="text-xs font-medium text-gray-400 dark:text-gray-500 mb-1">{% if IS_RTL %}العيادة{% else %}Clinic{% endif %}</p>
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-hospital text-primary-400 text-sm"></i>
+          <span class="font-semibold text-gray-800 dark:text-gray-100">{{ appointment.clinic.name }}</span>
+        </div>
+      </div>
+      <div class="p-5">
+        <p class="text-xs font-medium text-gray-400 dark:text-gray-500 mb-1">{% if IS_RTL %}الطبيب{% else %}Doctor{% endif %}</p>
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-user-doctor text-primary-400 text-sm"></i>
+          <span class="font-semibold text-gray-800 dark:text-gray-100">{% if appointment.doctor %}{% if IS_RTL %}د. {% else %}Dr. {% endif %}{{ appointment.doctor.name }}{% else %}&mdash;{% endif %}</span>
+        </div>
+      </div>
+      <div class="p-5 sm:col-span-2 border-t border-gray-100 dark:border-gray-700">
+        <p class="text-xs font-medium text-gray-400 dark:text-gray-500 mb-1">{% if IS_RTL %}نوع الموعد{% else %}Appointment Type{% endif %}</p>
+        <span class="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-700 dark:text-gray-200">
+          <i class="fa-regular fa-clipboard text-gray-400 text-xs"></i>
+          {% if appointment.appointment_type %}{{ appointment.appointment_type.display_name }}{% else %}&mdash;{% endif %}
+        </span>
+      </div>
+      <div class="p-5 sm:col-span-2 border-t border-gray-100 dark:border-gray-700">
+        <p class="text-xs font-medium text-gray-400 dark:text-gray-500 mb-2">{% if IS_RTL %}التاريخ والوقت{% else %}Date &amp; Time{% endif %}</p>
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-1.5 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 text-sm font-semibold px-3 py-1.5 rounded-lg">
+            <i class="fa-regular fa-calendar text-xs"></i>
+            {{ appointment.appointment_date|date:"d/m/Y" }}
+          </div>
+          <div class="flex items-center gap-1.5 bg-accent-50 dark:bg-accent-500/10 text-accent-600 dark:text-accent-500 text-sm font-semibold px-3 py-1.5 rounded-lg font-mono">
+            <i class="fa-regular fa-clock text-xs"></i>
+            {{ appointment.appointment_time|time:"H:i" }}
+          </div>
+        </div>
+      </div>
+      {% if appointment.reason %}
+      <div class="p-5 sm:col-span-2 border-t border-gray-100 dark:border-gray-700">
+        <p class="text-xs font-medium text-gray-400 dark:text-gray-500 mb-1">{% if IS_RTL %}سبب الزيارة{% else %}Reason for Visit{% endif %}</p>
+        <p class="text-gray-700 dark:text-gray-200">{{ appointment.reason }}</p>
+      </div>
+      {% endif %}
+    </div>
+
+    {# Intake form #}
+    <div class="border-t border-gray-100 dark:border-gray-700">
+      <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+        <i class="fa-solid fa-clipboard-list text-accent-500 text-sm"></i>
+        <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">{% if IS_RTL %}إجابات نموذج الاستقبال{% else %}Intake Form Answers{% endif %}</span>
+      </div>
+      {% include "doctors/partials/_appointment_intake_panel.html" %}
+    </div>
+
+    {# Internal secretary note (visible only to secretaries) #}
+    {% if appointment.secretary_note %}
+    <div class="border-t border-gray-100 dark:border-gray-700">
+      <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-accent-50/60 dark:bg-accent-500/10">
+        <i class="fa-solid fa-user-nurse text-accent-500 text-sm"></i>
+        <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">{% if IS_RTL %}ملاحظة السكرتارية (داخلية){% else %}Secretary note (internal){% endif %}</span>
+      </div>
+      <div class="px-5 py-4">
+        <p class="text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">{{ appointment.secretary_note }}</p>
+      </div>
+    </div>
+    {% endif %}
+
+    {# Note to the doctor (visible to doctor + secretaries) #}
+    {% if appointment.doctor_note %}
+    <div class="border-t border-gray-100 dark:border-gray-700">
+      <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-violet-50/60 dark:bg-violet-900/20">
+        <i class="fa-solid fa-user-doctor text-violet-500 text-sm"></i>
+        <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">{% if IS_RTL %}ملاحظة إلى الطبيب{% else %}Note to doctor{% endif %}</span>
+      </div>
+      <div class="px-5 py-4">
+        <p class="text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">{{ appointment.doctor_note }}</p>
+      </div>
+    </div>
+    {% endif %}
+
+    {# Cancellation reason #}
+    {% if appointment.status == 'CANCELLED' and appointment.cancellation_reason %}
+    <div class="border-t border-gray-100 dark:border-gray-700">
+      <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-red-50/70 dark:bg-red-900/20">
+        <i class="fa-solid fa-circle-xmark text-red-500 text-sm"></i>
+        <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">{% if IS_RTL %}سبب الإلغاء{% else %}Cancellation Reason{% endif %}</span>
+      </div>
+      <div class="px-5 py-4">
+        <p class="text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">{{ appointment.cancellation_reason }}</p>
+      </div>
+    </div>
+    {% endif %}
+
+    {# Status-aware action controls #}
+    {% if appointment.status == 'PENDING' or appointment.status == 'CONFIRMED' %}
+    <div class="border-t border-primary-100 dark:border-primary-800/60 bg-primary-50/40 dark:bg-primary-900/10 px-5 py-5">
+      {% include "secretary/partials/_appointment_actions.html" %}
+    </div>
+    {% endif %}
+  </div>
+
+  {# ── Upcoming appointments ────────────────────────────────────────────── #}
+  <div class="mb-7">
+    <div class="flex items-center gap-2 mb-3">
+      <i class="fa-regular fa-calendar-check text-emerald-500 text-sm"></i>
+      <h2 class="text-base font-bold text-gray-800 dark:text-gray-100">{% if IS_RTL %}المواعيد القادمة{% else %}Upcoming Appointments{% endif %}</h2>
+      <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">({{ upcoming|length }})</span>
+    </div>
+    {% if upcoming %}
+    <div class="space-y-3">
+      {% for appt in upcoming %}
+        {% include "secretary/partials/_appointment_timeline_item.html" %}
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm text-gray-400 dark:text-gray-500 px-1">{% if IS_RTL %}لا توجد مواعيد قادمة أخرى لهذا المريض في العيادة.{% else %}No other upcoming appointments for this patient in this clinic.{% endif %}</p>
+    {% endif %}
+  </div>
+
+  {# ── Past appointments ────────────────────────────────────────────────── #}
+  <div>
+    <div class="flex items-center gap-2 mb-3">
+      <i class="fa-solid fa-clock-rotate-left text-gray-400 text-sm"></i>
+      <h2 class="text-base font-bold text-gray-800 dark:text-gray-100">{% if IS_RTL %}المواعيد السابقة{% else %}Past Appointments{% endif %}</h2>
+      <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">({{ past|length }})</span>
+    </div>
+    {% if past %}
+    <div class="space-y-3">
+      {% for appt in past %}
+        {% include "secretary/partials/_appointment_timeline_item.html" %}
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm text-gray-400 dark:text-gray-500 px-1">{% if IS_RTL %}لا توجد مواعيد سابقة أخرى لهذا المريض في العيادة.{% else %}No other past appointments for this patient in this clinic.{% endif %}</p>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

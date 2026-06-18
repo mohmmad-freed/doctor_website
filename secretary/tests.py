@@ -385,11 +385,11 @@ class SecretaryAppointmentCRUDTests(SecretaryTestBase):
         })
         appt = Appointment.objects.get(patient=self.patient_a, clinic=self.clinic_a)
         self.assertEqual(appt.created_by, self.secretary_a)
-        # After booking, the view redirects to the new appointment's detail page
+        # After booking, the view redirects to the new appointment's overview page
         # so the secretary gets immediate confirmation of what they just booked.
         self.assertRedirects(
             resp,
-            reverse("secretary:appointment_detail", kwargs={"appointment_id": appt.id}),
+            reverse("secretary:appointment_overview", kwargs={"appointment_id": appt.id}),
             fetch_redirect_response=False,
         )
 
@@ -1216,34 +1216,34 @@ class EditAppointmentPreselectTests(SecretaryTestBase):
 
 
 # ════════════════════════════════════════════════════════════════════
-#  Notifications modal: view + actions (PENDING / CONFIRMED / CANCELLED)
+#  Appointment overview page: view + actions (PENDING / CONFIRMED / CANCELLED)
 # ════════════════════════════════════════════════════════════════════
 
-class NotificationAppointmentModalTests(SecretaryTestBase):
-    """The secretary notifications page's 'view appointment' button opens an
-    HTMX modal whose actions depend on the appointment's status and on whether
-    the patient is already a ClinicPatient."""
+class AppointmentOverviewTests(SecretaryTestBase):
+    """The secretary notifications page's 'view appointment' link navigates to a
+    patient-scoped overview page whose status-aware action controls depend on the
+    appointment's status and on whether the patient is already a ClinicPatient."""
 
     def _login_secretary(self):
         self.client.force_login(self.secretary_a)
 
-    def _modal_url(self, appt):
-        return reverse("secretary:notification_appointment_modal", args=[appt.id])
+    def _overview_url(self, appt):
+        return reverse("secretary:appointment_overview", args=[appt.id])
 
-    # ── Modal rendering ───────────────────────────────────────────────
+    # ── Page rendering ────────────────────────────────────────────────
 
-    def test_modal_renders_pending_new_patient_with_three_actions(self):
+    def test_overview_renders_pending_new_patient_with_three_actions(self):
         """PENDING + no ClinicPatient → 3 buttons (accept&register, register-only, reject)."""
         appt = self._make_appointment(status=Appointment.Status.PENDING)
         self._login_secretary()
-        resp = self.client.get(self._modal_url(appt))
+        resp = self.client.get(self._overview_url(appt))
         self.assertEqual(resp.status_code, 200)
         self.assertTrue(resp.context["is_new_patient_request"])
         self.assertContains(resp, f"/secretary/appointments/{appt.id}/accept-new-patient/")
         self.assertContains(resp, f"/secretary/appointments/{appt.id}/register-new-patient-only/")
         self.assertContains(resp, f"/secretary/appointments/{appt.id}/reject-new-patient/")
 
-    def test_modal_renders_pending_existing_patient_with_two_actions(self):
+    def test_overview_renders_pending_existing_patient_with_two_actions(self):
         """PENDING + existing ClinicPatient → confirm + reject only."""
         from patients.models import ClinicPatient
         ClinicPatient.objects.create(
@@ -1252,7 +1252,7 @@ class NotificationAppointmentModalTests(SecretaryTestBase):
         )
         appt = self._make_appointment(status=Appointment.Status.PENDING)
         self._login_secretary()
-        resp = self.client.get(self._modal_url(appt))
+        resp = self.client.get(self._overview_url(appt))
         self.assertEqual(resp.status_code, 200)
         self.assertFalse(resp.context["is_new_patient_request"])
         self.assertContains(resp, f"/secretary/appointments/{appt.id}/status/")   # confirm
@@ -1260,32 +1260,63 @@ class NotificationAppointmentModalTests(SecretaryTestBase):
         self.assertNotContains(resp, "/register-new-patient-only/")
         self.assertNotContains(resp, "/accept-new-patient/")
 
-    def test_modal_renders_confirmed_with_reschedule_and_cancel(self):
+    def test_overview_renders_confirmed_with_reschedule_and_cancel(self):
         appt = self._make_appointment(status=Appointment.Status.CONFIRMED)
         self._login_secretary()
-        resp = self.client.get(self._modal_url(appt))
+        resp = self.client.get(self._overview_url(appt))
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, f"/secretary/appointments/{appt.id}/edit/")    # reschedule link
         self.assertContains(resp, f"/secretary/appointments/{appt.id}/cancel/")  # cancel form
 
-    def test_modal_renders_cancelled_readonly_with_reason(self):
+    def test_overview_renders_cancelled_readonly_with_reason(self):
         appt = self._make_appointment(status=Appointment.Status.CANCELLED)
         appt.cancellation_reason = "ظهور حالة طارئة"
         appt.save(update_fields=["cancellation_reason"])
         self._login_secretary()
-        resp = self.client.get(self._modal_url(appt))
+        resp = self.client.get(self._overview_url(appt))
         self.assertEqual(resp.status_code, 200)
-        # No action endpoints in the body for CANCELLED.
+        # No action endpoints on the page for CANCELLED.
         self.assertNotContains(resp, f"/secretary/appointments/{appt.id}/edit/")
         self.assertNotContains(resp, f"/secretary/appointments/{appt.id}/status/")
         self.assertNotContains(resp, f"/secretary/appointments/{appt.id}/cancel/")
         self.assertContains(resp, "ظهور حالة طارئة")
 
-    # ── Mark-as-read on open ──────────────────────────────────────────
+    def test_overview_shows_booking_doctor_name(self):
+        """The focused appointment surfaces which doctor the patient booked with."""
+        appt = self._make_appointment(status=Appointment.Status.CONFIRMED)
+        self._login_secretary()
+        resp = self.client.get(self._overview_url(appt))
+        self.assertContains(resp, self.doctor_a.name)
 
-    def test_opening_modal_marks_notification_read(self):
-        """Opening the appointment modal with ?notif=<pk> marks that secretary
-        notification read (mirrors the patient 'view appointment' behaviour)."""
+    def test_overview_timeline_spans_all_doctors_in_clinic(self):
+        """The patient's other appointments in this clinic appear regardless of
+        which doctor they were booked with."""
+        focal = self._make_appointment(status=Appointment.Status.CONFIRMED)
+        # A second clinic-A appointment with a *different* doctor.
+        other_doctor = User.objects.create_user(
+            phone="0591100099", password="pass1234",
+            name="Dr. Other", role="DOCTOR", roles=["DOCTOR"],
+        )
+        ClinicStaff.objects.create(
+            clinic=self.clinic_a, user=other_doctor, role="DOCTOR", is_active=True,
+        )
+        other = Appointment.objects.create(
+            patient=self.patient_a, clinic=self.clinic_a, doctor=other_doctor,
+            appointment_type=self.appt_type_a,
+            appointment_date=self.next_monday + timedelta(days=7),
+            appointment_time=time(12, 0),
+            status=Appointment.Status.CONFIRMED, created_by=self.secretary_a,
+        )
+        self._login_secretary()
+        resp = self.client.get(self._overview_url(focal))
+        self.assertIn(other, resp.context["upcoming"])
+        self.assertContains(resp, "Dr. Other")
+
+    # ── Mark-as-read flow (via open_notification) ─────────────────────
+
+    def test_open_notification_marks_read_and_redirects_to_overview(self):
+        """The 'view appointment' link routes through open_notification, which
+        marks the notification read and redirects to the overview page."""
         from appointments.models import AppointmentNotification
         appt = self._make_appointment(status=Appointment.Status.PENDING)
         notif = AppointmentNotification.objects.create(
@@ -1297,13 +1328,14 @@ class NotificationAppointmentModalTests(SecretaryTestBase):
         )
         self.assertFalse(notif.is_read)
         self._login_secretary()
-        resp = self.client.get(f"{self._modal_url(appt)}?notif={notif.pk}")
-        self.assertEqual(resp.status_code, 200)
+        resp = self.client.get(reverse("appointments:open_notification", args=[notif.pk]))
+        self.assertRedirects(resp, self._overview_url(appt), fetch_redirect_response=False)
         notif.refresh_from_db()
         self.assertTrue(notif.is_read)
 
-    def test_opening_modal_without_notif_param_marks_nothing(self):
-        """The bare modal URL (no ?notif) must not mark anything read."""
+    def test_visiting_overview_does_not_mark_notifications_read(self):
+        """The overview page itself does not mark notifications read (that is
+        open_notification's job)."""
         from appointments.models import AppointmentNotification
         appt = self._make_appointment(status=Appointment.Status.PENDING)
         notif = AppointmentNotification.objects.create(
@@ -1314,13 +1346,13 @@ class NotificationAppointmentModalTests(SecretaryTestBase):
             title="x", message="y",
         )
         self._login_secretary()
-        self.client.get(self._modal_url(appt))
+        self.client.get(self._overview_url(appt))
         notif.refresh_from_db()
         self.assertFalse(notif.is_read)
 
-    def test_opening_modal_cannot_mark_another_users_notification(self):
-        """Ownership-scoped: passing a notif pk owned by another secretary must
-        not mark it read."""
+    def test_open_notification_cannot_mark_another_users_notification(self):
+        """Ownership-scoped: a notif pk owned by another secretary is a 404 and
+        stays unread."""
         from appointments.models import AppointmentNotification
         appt = self._make_appointment(status=Appointment.Status.PENDING)
         other = AppointmentNotification.objects.create(
@@ -1331,20 +1363,21 @@ class NotificationAppointmentModalTests(SecretaryTestBase):
             title="x", message="y",
         )
         self._login_secretary()  # secretary_a
-        self.client.get(f"{self._modal_url(appt)}?notif={other.pk}")
+        resp = self.client.get(reverse("appointments:open_notification", args=[other.pk]))
+        self.assertEqual(resp.status_code, 404)
         other.refresh_from_db()
         self.assertFalse(other.is_read)
 
     # ── Permissions / isolation ───────────────────────────────────────
 
-    def test_modal_forbidden_for_non_secretary(self):
+    def test_overview_forbidden_for_non_secretary(self):
         appt = self._make_appointment(status=Appointment.Status.PENDING)
         self.client.force_login(self.patient_a)
-        resp = self.client.get(self._modal_url(appt))
+        resp = self.client.get(self._overview_url(appt))
         self.assertEqual(resp.status_code, 403)
 
-    def test_modal_cross_clinic_404(self):
-        """Secretary A cannot open a modal for an appointment in clinic B."""
+    def test_overview_cross_clinic_404(self):
+        """Secretary A cannot open the overview for an appointment in clinic B."""
         appt_b = Appointment.objects.create(
             patient=self.patient_a, clinic=self.clinic_b, doctor=self.doctor_b,
             appointment_type=self.appt_type_b,
@@ -1352,7 +1385,7 @@ class NotificationAppointmentModalTests(SecretaryTestBase):
             status=Appointment.Status.PENDING, created_by=self.secretary_b,
         )
         self._login_secretary()
-        resp = self.client.get(self._modal_url(appt_b))
+        resp = self.client.get(self._overview_url(appt_b))
         self.assertEqual(resp.status_code, 404)
 
     # ── register_new_patient_only action ──────────────────────────────
@@ -1412,11 +1445,11 @@ class NotificationAppointmentModalTests(SecretaryTestBase):
         self.assertEqual(resp.status_code, 403)
 
 
-class NotificationsModalUrlRoutingTests(SecretaryTestBase):
-    """The notifications page itself must expose modal_url for secretary
-    notifications and NOT a legacy target_url that navigates away."""
+class NotificationUrlRoutingTests(SecretaryTestBase):
+    """The notifications page must expose a navigating target_url (routed through
+    open_notification) for secretary notifications, and no modal_url."""
 
-    def test_secretary_notification_has_modal_url_not_target_url(self):
+    def test_secretary_notification_has_target_url_not_modal_url(self):
         from appointments.models import AppointmentNotification
         appt = self._make_appointment(status=Appointment.Status.PENDING)
         AppointmentNotification.objects.create(
@@ -1433,10 +1466,10 @@ class NotificationsModalUrlRoutingTests(SecretaryTestBase):
         notifications = resp.context["notifications"]
         self.assertEqual(len(notifications), 1)
         n = notifications[0]
-        self.assertIsNone(n.target_url)
+        self.assertIsNone(n.modal_url)
         self.assertEqual(
-            n.modal_url,
-            f"{reverse('secretary:notification_appointment_modal', args=[appt.id])}?notif={n.pk}",
+            n.target_url,
+            reverse("appointments:open_notification", args=[n.pk]),
         )
 
 
@@ -1524,9 +1557,9 @@ class BookedNotificationVisualByStatusTests(SecretaryTestBase):
         self.assertContains(resp_after, "محجوز")
 
 
-class AppointmentDetailReturnToNotificationsTests(SecretaryTestBase):
-    """The 'Open full details page' link in the modal appends
-    ?return_to=notifications. The detail page's back link must honor it."""
+class AppointmentOverviewBackNavigationTests(SecretaryTestBase):
+    """The overview page's back button is context-aware via ?return_to=, and
+    defaults to the notification center when no param is given."""
 
     def _login_secretary(self):
         self.client.force_login(self.secretary_a)
@@ -1535,7 +1568,7 @@ class AppointmentDetailReturnToNotificationsTests(SecretaryTestBase):
         appt = self._make_appointment(status=Appointment.Status.CONFIRMED)
         self._login_secretary()
         resp = self.client.get(
-            reverse("secretary:appointment_detail", args=[appt.id])
+            reverse("secretary:appointment_overview", args=[appt.id])
             + "?return_to=notifications"
         )
         self.assertEqual(resp.status_code, 200)
@@ -1544,25 +1577,42 @@ class AppointmentDetailReturnToNotificationsTests(SecretaryTestBase):
             reverse("appointments:secretary_notifications"),
         )
 
-    def test_back_url_defaults_to_appointments_list_when_no_param(self):
+    def test_back_url_defaults_to_notifications_when_no_param(self):
         appt = self._make_appointment(status=Appointment.Status.CONFIRMED)
         self._login_secretary()
-        resp = self.client.get(reverse("secretary:appointment_detail", args=[appt.id]))
+        resp = self.client.get(reverse("secretary:appointment_overview", args=[appt.id]))
+        self.assertEqual(
+            resp.context["back_url"],
+            reverse("appointments:secretary_notifications"),
+        )
+
+    def test_back_url_returns_to_appointments_list(self):
+        appt = self._make_appointment(status=Appointment.Status.CONFIRMED)
+        self._login_secretary()
+        resp = self.client.get(
+            reverse("secretary:appointment_overview", args=[appt.id])
+            + "?return_to=appointments"
+        )
         self.assertEqual(
             resp.context["back_url"],
             reverse("secretary:appointments"),
         )
 
-    def test_modal_links_to_detail_page_with_return_to_notifications(self):
-        """The modal partial itself must render the link with the return_to param."""
-        appt = self._make_appointment(status=Appointment.Status.CONFIRMED)
+    def test_overview_timeline_links_to_overview_with_return_to_notifications(self):
+        """Each timeline card on the overview page links to the appointment
+        overview with the return_to param so its back button returns to notifications."""
+        focal = self._make_appointment(status=Appointment.Status.CONFIRMED)
+        other = self._make_appointment(
+            status=Appointment.Status.CONFIRMED,
+            appointment_date=self.next_monday + timedelta(days=7),
+        )
         self._login_secretary()
         resp = self.client.get(
-            reverse("secretary:notification_appointment_modal", args=[appt.id])
+            reverse("secretary:appointment_overview", args=[focal.id])
         )
         self.assertContains(
             resp,
-            reverse("secretary:appointment_detail", args=[appt.id]) + "?return_to=notifications",
+            reverse("secretary:appointment_overview", args=[other.id]) + "?return_to=notifications",
         )
 
 
@@ -1753,7 +1803,7 @@ class SecretaryIntakeBookingTest(SecretaryTestBase):
         appt = Appointment.objects.get(patient=self.patient_a, clinic=self.clinic_a)
         self.assertRedirects(
             resp,
-            reverse("secretary:appointment_detail", kwargs={"appointment_id": appt.id}),
+            reverse("secretary:appointment_overview", kwargs={"appointment_id": appt.id}),
             fetch_redirect_response=False,
         )
         self.assertEqual(AppointmentAnswer.objects.filter(appointment=appt).count(), 0)

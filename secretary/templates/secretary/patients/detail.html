@@ -180,7 +180,7 @@
           </a>
         </div>
         {% for appt in appointments %}
-        <a href="{% url 'secretary:appointment_detail' appt.id %}"
+        <a href="{% url 'secretary:appointment_overview' appt.id %}?return_to=patient"
            class="flex items-center gap-4 p-4 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700 hover:bg-purple-50/30 dark:hover:bg-purple-900/10 transition-colors group">
           {# Date block #}
           <div class="text-center flex-shrink-0 w-12">

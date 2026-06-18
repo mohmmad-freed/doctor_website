@@ -27,9 +27,6 @@ from appointments.models import AppointmentNotification
 def _resolve_appointment_url(notification):
     """
     Return the best URL to link a notification to based strictly on its context.
-
-    Secretary notifications return None here because they open an in-page modal
-    instead of navigating; `_render_notifications` sets `modal_url` for them.
     """
     if not notification.appointment_id:
         return None
@@ -46,27 +43,16 @@ def _resolve_appointment_url(notification):
             kwargs={"appointment_id": notification.appointment_id},
         )
     if notification.context_role == AppointmentNotification.ContextRole.SECRETARY:
-        return None
+        # Land the secretary on the patient-scoped overview for this appointment
+        # (clinic-wide patient timeline + action controls).
+        return reverse(
+            "secretary:appointment_overview",
+            kwargs={"appointment_id": notification.appointment_id},
+        )
     if notification.context_role == AppointmentNotification.ContextRole.CLINIC_OWNER:
         # Link back to the specific clinic's dashboard
         return reverse("clinics:my_clinic", kwargs={"clinic_id": notification.appointment.clinic_id})
     return None
-
-
-def _resolve_modal_url(notification):
-    """Secretary notifications open an HTMX modal on the notifications page.
-
-    The notification pk is passed so the modal view can mark it read on open
-    (mirrors the patient/doctor "view appointment" link going through
-    `open_notification`).
-    """
-    if not notification.appointment_id:
-        return None
-    if notification.context_role != AppointmentNotification.ContextRole.SECRETARY:
-        return None
-    from django.urls import reverse
-    url = reverse("secretary:notification_appointment_modal", args=[notification.appointment_id])
-    return f"{url}?notif={notification.pk}"
 
 
 def _render_notifications(request, context_role, template, base_template):
@@ -86,12 +72,11 @@ def _render_notifications(request, context_role, template, base_template):
     for notif in notifications:
         # Route link-based notifications through `open_notification` so the
         # notification is marked read when the user clicks "view appointment".
-        # Secretary notifications have no destination here (they open a modal).
         dest = _resolve_appointment_url(notif)
         notif.target_url = (
             reverse("appointments:open_notification", args=[notif.pk]) if dest else None
         )
-        notif.modal_url = _resolve_modal_url(notif)
+        notif.modal_url = None
 
     context = {
         "notifications": notifications,

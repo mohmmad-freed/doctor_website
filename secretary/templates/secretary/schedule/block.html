@@ -52,7 +52,7 @@
       <div class="flex items-center gap-3 text-xs">
         <span class="text-amber-600 dark:text-amber-400 font-mono">{{ appt.appointment_date|date:"Y/m/d" }} {{ appt.appointment_time|clock:CLOCK_12H }}</span>
         <span class="text-gray-700 dark:text-gray-300">{{ appt.patient.name }}</span>
-        <a href="{% url 'secretary:appointment_detail' appt.id %}"
+        <a href="{% url 'secretary:appointment_overview' appt.id %}?return_to=schedule"
            class="text-purple-600 dark:text-purple-400 hover:underline" target="_blank">
           {% trans "عرض" %} <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
         </a>

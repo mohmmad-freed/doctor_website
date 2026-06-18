@@ -386,63 +386,15 @@ def checkin_appointment(request, appointment_id):
 
 
 @login_required
-def appointment_detail(request, appointment_id):
-    """View appointment details."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+def appointment_overview(request, appointment_id):
+    """Patient-scoped overview of a single appointment for the secretary.
 
-    clinic = staff.clinic
-    appointment = get_object_or_404(
-        Appointment.objects.select_related("patient", "doctor", "appointment_type", "patient__patient_profile"),
-        id=appointment_id, clinic=clinic
-    )
-    profile = getattr(appointment.patient, "patient_profile", None)
-    clinic_patient = ClinicPatient.objects.filter(clinic=clinic, patient=appointment.patient).first()
-    is_new_patient_request = (
-        appointment.status == Appointment.Status.PENDING and clinic_patient is None
-    )
-
-    from secretary.services import get_valid_transitions
-
-    terminal_statuses = [
-        Appointment.Status.COMPLETED,
-        Appointment.Status.CANCELLED,
-        Appointment.Status.NO_SHOW,
-    ]
-    status_steps = ["PENDING", "CONFIRMED", "CHECKED_IN", "IN_PROGRESS", "COMPLETED"]
-    try:
-        current_step_index = status_steps.index(appointment.status)
-    except ValueError:
-        current_step_index = 0
-
-    _back_map = {
-        "schedule": reverse("secretary:doctor_schedule"),
-        "appointments": reverse("secretary:appointments"),
-        "dashboard": reverse("secretary:dashboard"),
-        "calendar": reverse("secretary:calendar") + "?restore=1",
-        "notifications": reverse("appointments:secretary_notifications"),
-    }
-    back_url = _back_map.get(request.GET.get("return_to", ""), reverse("secretary:appointments"))
-
-    return render(request, "secretary/appointment_detail.html", {
-        "clinic": clinic,
-        "appointment": appointment,
-        "profile": profile,
-        "clinic_patient": clinic_patient,
-        "is_new_patient_request": is_new_patient_request,
-        "terminal_statuses": terminal_statuses,
-        "valid_transitions": get_valid_transitions(appointment.status),
-        "status_steps": status_steps,
-        "current_step_index": current_step_index,
-        "back_url": back_url,
-    })
-
-
-@login_required
-def notification_appointment_modal(request, appointment_id):
-    """HTMX endpoint: return the appointment action modal partial for the secretary
-    notifications page. Status-aware: branches between pending/confirmed/cancelled/etc."""
+    Reached from the secretary notification center "view appointment" link. Shows the
+    patient's details, the notification's appointment highlighted (with its submitted
+    intake form and status-aware action controls), and a timeline of the patient's
+    other appointments in this clinic — with ANY doctor — split into upcoming + past,
+    each card showing the booking doctor so the secretary can tell them apart inline.
+    """
     staff = _require_secretary(request)
     if not staff:
         return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
@@ -454,37 +406,98 @@ def notification_appointment_modal(request, appointment_id):
         ).prefetch_related("answers__question", "attachments"),
         id=appointment_id, clinic=clinic,
     )
-    # Opening the appointment from a notification marks that notification read
-    # (mirrors the patient/doctor "view appointment" link behaviour). The pk is
-    # passed as ?notif=<pk>; ownership is enforced via patient=request.user.
-    notif_pk = request.GET.get("notif")
-    if notif_pk:
-        from appointments.models import AppointmentNotification
-        AppointmentNotification.objects.filter(
-            pk=notif_pk,
-            patient=request.user,
-            context_role=AppointmentNotification.ContextRole.SECRETARY,
-            is_read=False,
-        ).update(is_read=True)
 
-    profile = getattr(appointment.patient, "patient_profile", None)
+    patient = appointment.patient
+
+    from doctors.views import build_appointment_intake_data
+    intake_data = build_appointment_intake_data(appointment)
+
+    # The patient's other appointments in this clinic (any doctor), split upcoming/past.
+    today = date.today()
+    active_statuses = [
+        Appointment.Status.PENDING,
+        Appointment.Status.CONFIRMED,
+        Appointment.Status.CHECKED_IN,
+        Appointment.Status.IN_PROGRESS,
+    ]
+    other_appts = (
+        Appointment.objects.filter(clinic=clinic, patient=patient)
+        .exclude(id=appointment_id)
+        .select_related("doctor", "appointment_type")
+    )
+    upcoming = list(
+        other_appts.filter(
+            appointment_date__gte=today, status__in=active_statuses
+        ).order_by("appointment_date", "appointment_time")
+    )
+    upcoming_ids = {a.id for a in upcoming}
+    past = list(
+        other_appts.exclude(id__in=upcoming_ids).order_by(
+            "-appointment_date", "-appointment_time"
+        )
+    )
+
+    # Patient age.
+    profile = getattr(patient, "patient_profile", None)
+    age = None
+    if profile and profile.date_of_birth:
+        dob = profile.date_of_birth
+        age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+
+    # Action-control context (mirrors the notification modal this page replaces).
     clinic_patient = ClinicPatient.objects.filter(
-        clinic=clinic, patient=appointment.patient
+        clinic=clinic, patient=patient
     ).first()
     is_new_patient_request = (
         appointment.status == Appointment.Status.PENDING and clinic_patient is None
     )
-    terminal_statuses = [
-        Appointment.Status.COMPLETED,
-        Appointment.Status.CANCELLED,
-        Appointment.Status.NO_SHOW,
-    ]
-    return render(request, "secretary/_appointment_modal.html", {
+
+    # Context-aware back navigation: return the secretary to wherever they opened
+    # the overview from (defaults to the notification center, since notification
+    # links carry no return_to).
+    _back_map = {
+        "appointments": reverse("secretary:appointments"),
+        "schedule": reverse("secretary:doctor_schedule"),
+        "dashboard": reverse("secretary:dashboard"),
+        "calendar": reverse("secretary:calendar") + "?restore=1",
+        "waiting_room": reverse("secretary:waiting_room"),
+        "patient": reverse("secretary:patient_detail", args=[patient.id]),
+        "notifications": reverse("appointments:secretary_notifications"),
+    }
+    back_url = _back_map.get(
+        request.GET.get("return_to", ""),
+        reverse("appointments:secretary_notifications"),
+    )
+
+    return render(request, "secretary/appointment_overview.html", {
         "appointment": appointment,
+        "patient": patient,
         "profile": profile,
+        "age": age,
+        "intake_data": intake_data,
+        "upcoming": upcoming,
+        "past": past,
         "clinic_patient": clinic_patient,
         "is_new_patient_request": is_new_patient_request,
-        "terminal_statuses": terminal_statuses,
+        "back_url": back_url,
+    })
+
+
+@login_required
+def appointment_intake_partial(request, appointment_id):
+    """HTMX endpoint: render an appointment's submitted intake form (inline expander)
+    on the secretary appointment-overview timeline. Clinic-scoped."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+
+    appointment = get_object_or_404(
+        Appointment, id=appointment_id, clinic=staff.clinic
+    )
+    from doctors.views import build_appointment_intake_data
+    intake_data = build_appointment_intake_data(appointment)
+    return render(request, "doctors/partials/_appointment_intake_panel.html", {
+        "intake_data": intake_data,
     })
 
 
@@ -2282,7 +2295,7 @@ def appointments_json(request):
             "type": appt.appointment_type.display_name if appt.appointment_type else "",
             "status": appt.status,
             "status_label": appt.get_status_display(),
-            "url": f"/secretary/appointments/{appt.id}/",
+            "url": reverse("secretary:appointment_overview", kwargs={"appointment_id": appt.id}) + "?return_to=calendar",
             "time": appt.appointment_time.strftime("%H:%M"),
             "time_label": _clock(request, appt.appointment_time),
             "duration_minutes": duration,
@@ -3270,7 +3283,7 @@ def create_appointment(request):
                 )
 
             messages.success(request, _("تم حجز موعد %(name)s بنجاح.") % {"name": patient.name})
-            detail_url = reverse("secretary:appointment_detail", kwargs={"appointment_id": appointment.id})
+            detail_url = reverse("secretary:appointment_overview", kwargs={"appointment_id": appointment.id})
             if post_return_to:
                 detail_url += f"?return_to={post_return_to}"
             return redirect(detail_url)

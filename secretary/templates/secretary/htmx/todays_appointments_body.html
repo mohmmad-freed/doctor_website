@@ -54,7 +54,7 @@
                   </button>
                 </form>
                 {% endif %}
-                <a href="{% url 'secretary:appointment_detail' appt.id %}"
+                <a href="{% url 'secretary:appointment_overview' appt.id %}?return_to=dashboard"
                    aria-label="{% trans 'تفاصيل الموعد' %}"
                    class="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors" title="{% trans 'تفاصيل' %}">
                   <i class="fa-solid fa-eye text-xs"></i>
@@ -76,7 +76,7 @@
                 </form>
               </div>
               {% else %}
-              <a href="{% url 'secretary:appointment_detail' appt.id %}"
+              <a href="{% url 'secretary:appointment_overview' appt.id %}?return_to=dashboard"
                  class="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors" title="{% trans 'تفاصيل' %}">
                 <i class="fa-solid fa-eye text-xs"></i>
               </a>
