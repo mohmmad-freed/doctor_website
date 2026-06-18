@@ -179,4 +179,20 @@ def schedule_followup(
             created_by=doctor,
         )
 
+        # Notify the clinic's secretaries + owner after commit (in-app only),
+        # flagged as a doctor-initiated booking (forced via the doctor portal flow,
+        # not inferred from created_by). The booking doctor is excluded so they are
+        # not notified about their own action.
+        from appointments.models import AppointmentNotification
+        from appointments.services.appointment_notification_service import (
+            notify_staff_appointment_booked,
+        )
+        transaction.on_commit(
+            lambda: notify_staff_appointment_booked(
+                appointment,
+                exclude_user_ids=[doctor.id],
+                actor_role=AppointmentNotification.ActorRole.DOCTOR,
+            )
+        )
+
     return appointment

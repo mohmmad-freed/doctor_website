@@ -866,6 +866,16 @@ msgstr ""
 msgid "إشعار"
 msgstr ""
 
+# Actor badges — who triggered a notification
+msgid "بواسطة المريض"
+msgstr ""
+
+msgid "بواسطة السكرتيرة"
+msgstr ""
+
+msgid "بواسطة الطبيب"
+msgstr ""
+
 msgid "لديك <b>%(count)s</b> إشعار غير مقروء"
 msgstr ""
 
@@ -1819,4 +1829,26 @@ msgid "جارٍ تحميل النموذج..."
 msgstr ""
 
 msgid "لا يوجد نموذج إدخال لهذا الطبيب."
+msgstr ""
+
+# ── Appointment booking notes (secretary: doctor-facing + secretary-only) ──────
+msgid "ملاحظة للطبيب"
+msgstr ""
+
+msgid "ملاحظة خاصة بالسكرتارية"
+msgstr ""
+
+msgid "ملاحظات الطبيب"
+msgstr ""
+
+msgid "(اختياري) ملاحظة يطّلع عليها الطبيب..."
+msgstr ""
+
+msgid "(اختياري) ملاحظة تظهر للسكرتارية فقط..."
+msgstr ""
+
+msgid "ملاحظة يطّلع عليها الطبيب..."
+msgstr ""
+
+msgid "ملاحظة تظهر للسكرتارية فقط..."
 msgstr ""

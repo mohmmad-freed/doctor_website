@@ -277,6 +277,65 @@ class MarkAllReadTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn("/login", response["Location"])
 
+    def test_mark_all_read_is_scoped_to_context(self):
+        """A multi-role user (doctor + secretary) marking all read in one portal
+        must NOT mark the other portal's notifications read. Each portal keeps a
+        separate notification center."""
+        multi = make_user("0590000060", role="DOCTOR", name="Dr. Sec")
+        multi.roles = ["DOCTOR", "SECRETARY"]
+        multi.save(update_fields=["roles"])
+
+        doctor_notif = AppointmentNotification.objects.create(
+            patient=multi,
+            appointment=self.appointment,
+            context_role=AppointmentNotification.ContextRole.DOCTOR,
+            notification_type=AppointmentNotification.Type.APPOINTMENT_BOOKED,
+            title="حجز جديد",
+            message="msg",
+            is_read=False,
+        )
+        secretary_notif = AppointmentNotification.objects.create(
+            patient=multi,
+            appointment=self.appointment,
+            context_role=AppointmentNotification.ContextRole.SECRETARY,
+            notification_type=AppointmentNotification.Type.APPOINTMENT_BOOKED,
+            title="حجز جديد",
+            message="msg",
+            is_read=False,
+        )
+
+        self.client.force_login(multi)
+        response = self.client.post(
+            reverse("appointments:mark_all_notifications_read"),
+            {"context_role": AppointmentNotification.ContextRole.DOCTOR},
+        )
+        self.assertEqual(response.status_code, 302)
+
+        doctor_notif.refresh_from_db()
+        secretary_notif.refresh_from_db()
+        self.assertTrue(doctor_notif.is_read)
+        self.assertFalse(secretary_notif.is_read)
+
+    def test_staff_mark_all_form_carries_context_role(self):
+        """The shared staff notifications page must render the context_role hidden
+        input so 'mark all read' only affects the current portal."""
+        multi = make_user("0590000061", role="DOCTOR", name="Dr. Sec2")
+        multi.roles = ["DOCTOR", "SECRETARY"]
+        multi.save(update_fields=["roles"])
+        AppointmentNotification.objects.create(
+            patient=multi,
+            appointment=self.appointment,
+            context_role=AppointmentNotification.ContextRole.DOCTOR,
+            notification_type=AppointmentNotification.Type.APPOINTMENT_BOOKED,
+            title="حجز جديد",
+            message="msg",
+            is_read=False,
+        )
+        self.client.force_login(multi)
+        response = self.client.get(reverse("appointments:doctor_notifications"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="context_role" value="DOCTOR"')
+
 
 class NotificationLinkingTests(TestCase):
     """D. Notification center renders; target URL resolves for patients."""

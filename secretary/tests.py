@@ -614,6 +614,42 @@ class WalkInRegistrationTests(SecretaryTestBase):
                 created_by=self.secretary_a,
             )
 
+    def test_booking_persists_split_notes(self):
+        """Secretary booking stores a secretary-only note and a doctor-facing
+        note in separate fields, leaving the doctor's own `notes` empty."""
+        from secretary.services import secretary_book_appointment
+        appt = secretary_book_appointment(
+            patient=self.patient_a,
+            doctor_id=self.doctor_a.id,
+            clinic_id=self.clinic_a.id,
+            appointment_type_id=self.appt_type_a.id,
+            appointment_date=self.next_monday,
+            appointment_time=time(11, 0),
+            secretary_note="for secretaries only",
+            doctor_note="for the doctor",
+            created_by=self.secretary_a,
+        )
+        appt.refresh_from_db()
+        self.assertEqual(appt.secretary_note, "for secretaries only")
+        self.assertEqual(appt.doctor_note, "for the doctor")
+        self.assertEqual(appt.notes, "")
+
+    def test_walk_in_persists_split_notes(self):
+        from secretary.services import register_walk_in
+        appt = register_walk_in(
+            patient=self.patient_a,
+            doctor_id=self.doctor_a.id,
+            clinic_id=self.clinic_a.id,
+            appointment_type_id=self.appt_type_a.id,
+            created_by=self.secretary_a,
+            secretary_note="sec only",
+            doctor_note="doc note",
+        )
+        appt.refresh_from_db()
+        self.assertEqual(appt.secretary_note, "sec only")
+        self.assertEqual(appt.doctor_note, "doc note")
+        self.assertEqual(appt.notes, "")
+
     # ── View: register_walk_in ────────────────────────────────────────
 
     def test_walk_in_view_get_renders_template(self):

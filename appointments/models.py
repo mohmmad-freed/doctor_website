@@ -158,6 +158,16 @@ class Appointment(models.Model):
         help_text="Legacy JSON responses. New flow uses AppointmentAnswer records.",
     )
     notes = models.TextField(blank=True, help_text="Doctor's notes after appointment")
+    secretary_note = models.TextField(
+        blank=True,
+        default="",
+        help_text="Note visible only to secretaries (written by the secretary at booking).",
+    )
+    doctor_note = models.TextField(
+        blank=True,
+        default="",
+        help_text="Note from the secretary to the doctor (visible to the doctor + secretaries).",
+    )
     patient_edit_count = models.PositiveIntegerField(
         default=0,
         help_text="Number of times the patient has edited this appointment. Max 2.",
@@ -351,6 +361,11 @@ class AppointmentNotification(models.Model):
         SECRETARY = "SECRETARY", "Secretary Context"
         CLINIC_OWNER = "CLINIC_OWNER", "Clinic Owner Context"
 
+    class ActorRole(models.TextChoices):
+        PATIENT = "PATIENT", "Patient"
+        SECRETARY = "SECRETARY", "Secretary"
+        DOCTOR = "DOCTOR", "Doctor"
+
     patient = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -385,6 +400,21 @@ class AppointmentNotification(models.Model):
         blank=True,
         related_name="cancellation_notifications",
         help_text="ClinicStaff member who triggered this cancellation notification.",
+    )
+    actor_role = models.CharField(
+        max_length=20,
+        choices=ActorRole.choices,
+        blank=True,
+        default="",
+        help_text="Role of the person who triggered this notification (for the actor badge). "
+                  "Blank for automatic/system events (e.g. reminders).",
+    )
+    actor_name = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="Display name of the person who triggered this notification, denormalized at "
+                  "creation time so it survives appointment deletion.",
     )
     is_read = models.BooleanField(
         default=False,

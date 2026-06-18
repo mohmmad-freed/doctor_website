@@ -78,6 +78,8 @@
             <form method="post" action="{% url 'appointments:mark_all_notifications_read' %}"
                   id="notif-mark-all" class="flex-shrink-0">
                 {% csrf_token %}
+                <input type="hidden" name="context_role" value="{{ context_role }}">
+                <input type="hidden" name="next" value="{{ request.path }}">
                 <button type="submit"
                         class="inline-flex items-center gap-2 px-4 py-2 rounded-xl
                                bg-primary-600 hover:bg-primary-700 active:scale-95

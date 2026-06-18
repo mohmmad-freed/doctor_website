@@ -208,9 +208,21 @@
           <span class="text-gray-700 dark:text-gray-300 text-xs bg-gray-50 dark:bg-slate-700/50 rounded-lg px-3 py-2">{{ appointment.reason }}</span>
         </div>
         {% endif %}
+        {% if appointment.doctor_note %}
+        <div class="flex flex-col gap-1">
+          <span class="text-gray-500 dark:text-gray-400">{% trans "ملاحظة للطبيب" %}</span>
+          <span class="text-gray-700 dark:text-gray-300 text-xs bg-gray-50 dark:bg-slate-700/50 rounded-lg px-3 py-2">{{ appointment.doctor_note }}</span>
+        </div>
+        {% endif %}
+        {% if appointment.secretary_note %}
+        <div class="flex flex-col gap-1">
+          <span class="text-gray-500 dark:text-gray-400">{% trans "ملاحظة خاصة بالسكرتارية" %}</span>
+          <span class="text-gray-700 dark:text-gray-300 text-xs bg-violet-50 dark:bg-violet-900/20 rounded-lg px-3 py-2">{{ appointment.secretary_note }}</span>
+        </div>
+        {% endif %}
         {% if appointment.notes %}
         <div class="flex flex-col gap-1">
-          <span class="text-gray-500 dark:text-gray-400">{% trans "ملاحظات" %}</span>
+          <span class="text-gray-500 dark:text-gray-400">{% trans "ملاحظات الطبيب" %}</span>
           <span class="text-gray-700 dark:text-gray-300 text-xs bg-gray-50 dark:bg-slate-700/50 rounded-lg px-3 py-2">{{ appointment.notes }}</span>
         </div>
         {% endif %}

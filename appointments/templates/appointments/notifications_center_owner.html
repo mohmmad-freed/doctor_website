@@ -1,4 +1,5 @@
 {% extends 'accounts/base.html' %}
+{% load i18n %}
 
 {% block title %}مركز إشعارات العيادة{% endblock %}
 
@@ -100,6 +101,27 @@
                         {{ notif.created_at|timesince }} مضت
                     </span>
                 </div>
+
+                {# ── Actor badge: who triggered this (owner sees both secretary & doctor names) ── #}
+                {% if notif.actor_role %}
+                <div style="margin-top:0.45rem;">
+                    <span style="display:inline-flex;align-items:center;gap:0.3rem;padding:0.12rem 0.55rem;border-radius:999px;font-size:0.68rem;font-weight:700;
+                        {% if notif.actor_role == 'PATIENT' %}background:rgba(14,165,233,0.12);color:#0284c7;
+                        {% elif notif.actor_role == 'SECRETARY' %}background:rgba(139,92,246,0.12);color:#7c3aed;
+                        {% else %}background:rgba(20,184,166,0.12);color:#0d9488;{% endif %}">
+                        {% if notif.actor_role == 'PATIENT' %}
+                            <i class="fa-solid fa-user" style="font-size:0.62rem;opacity:0.85;"></i>{% trans "بواسطة المريض" %}
+                        {% elif notif.actor_role == 'SECRETARY' %}
+                            <i class="fa-solid fa-user-nurse" style="font-size:0.62rem;opacity:0.85;"></i>{% trans "بواسطة السكرتيرة" %}
+                        {% else %}
+                            <i class="fa-solid fa-user-doctor" style="font-size:0.62rem;opacity:0.85;"></i>{% trans "بواسطة الطبيب" %}
+                        {% endif %}
+                        {% if notif.actor_name and notif.actor_role != 'PATIENT' %}
+                            <span style="opacity:0.5;">·</span><bdi dir="auto" style="font-weight:600;">{{ notif.actor_name }}</bdi>
+                        {% endif %}
+                    </span>
+                </div>
+                {% endif %}
 
                 <p style="margin:0.35rem 0 0;font-size:0.84rem;color:var(--color-text-body);line-height:1.6;">
                     {{ notif.message }}

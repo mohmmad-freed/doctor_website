@@ -161,6 +161,8 @@ def secretary_book_appointment(
     appointment_time,
     reason: str = "",
     notes: str = "",
+    secretary_note: str = "",
+    doctor_note: str = "",
     status: str = Appointment.Status.CONFIRMED,
     created_by,
     is_walk_in: bool = False,
@@ -254,6 +256,8 @@ def secretary_book_appointment(
             status=status,
             reason=reason,
             notes=notes,
+            secretary_note=secretary_note,
+            doctor_note=doctor_note,
             created_by=created_by,
             is_walk_in=is_walk_in,
         )
@@ -261,11 +265,17 @@ def secretary_book_appointment(
         # Notify other clinic staff after commit (skip walk-ins — those are
         # already physically present and have their own queue UI).
         if not is_walk_in:
+            from appointments.models import AppointmentNotification
             from appointments.services.appointment_notification_service import (
                 notify_staff_appointment_booked,
             )
+            # Booked via the secretary portal → always flag as SECRETARY, even if
+            # the booking user also holds a doctor role / is the appointment's doctor.
             transaction.on_commit(
-                lambda: notify_staff_appointment_booked(appointment)
+                lambda: notify_staff_appointment_booked(
+                    appointment,
+                    actor_role=AppointmentNotification.ActorRole.SECRETARY,
+                )
             )
 
     return appointment
@@ -280,6 +290,8 @@ def register_walk_in(
     created_by,
     reason: str = "",
     notes: str = "",
+    secretary_note: str = "",
+    doctor_note: str = "",
     override_same_day_conflict: bool = False,
 ) -> "Appointment":
     """
@@ -343,6 +355,8 @@ def register_walk_in(
         appointment_time=now_time,
         reason=reason,
         notes=notes,
+        secretary_note=secretary_note,
+        doctor_note=doctor_note,
         status=Appointment.Status.CHECKED_IN,
         created_by=created_by,
         is_walk_in=True,

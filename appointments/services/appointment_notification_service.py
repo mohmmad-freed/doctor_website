@@ -20,11 +20,14 @@ logger = logging.getLogger(__name__)
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
 
-def _create_notification(patient, appointment, notification_type, title, message, cancelled_by_staff=None, context_role=None, title_en="", message_en=""):
+def _create_notification(patient, appointment, notification_type, title, message, cancelled_by_staff=None, context_role=None, title_en="", message_en="", actor_role="", actor_name=""):
     """
     Create and persist an in-app AppointmentNotification.
 
     Stored bilingually: Arabic in title/message, English in title_en/message_en.
+
+    The actor (who triggered the event) is denormalized via actor_role/actor_name
+    so the notification's actor badge survives appointment deletion.
 
     Returns the created notification, or None if creation fails.
     Failures are logged and never raised.
@@ -43,6 +46,8 @@ def _create_notification(patient, appointment, notification_type, title, message
             title_en=title_en,
             message_en=message_en,
             cancelled_by_staff=cancelled_by_staff,
+            actor_role=actor_role,
+            actor_name=actor_name,
             is_delivered=True,
         )
         logger.info(
@@ -67,6 +72,48 @@ def _doctor_names(appointment):
     if doc and doc.name:
         return f"د. {doc.name}", f"Dr. {doc.name}"
     return "الطبيب", "the doctor"
+
+
+def _actor_from_staff(clinic_staff):
+    """
+    Map a ClinicStaff member to an (actor_role, actor_name) pair for the
+    notification actor badge.
+
+    SECRETARY → SECRETARY; DOCTOR / MAIN_DOCTOR → DOCTOR. Returns ("", "") when
+    no staff member is supplied (e.g. an automatic/system transition).
+    """
+    if clinic_staff is None:
+        return "", ""
+    role = getattr(clinic_staff, "role", "")
+    user = getattr(clinic_staff, "user", None)
+    name = user.name if user else ""
+    if role == "SECRETARY":
+        return AppointmentNotification.ActorRole.SECRETARY, name
+    if role in ("DOCTOR", "MAIN_DOCTOR"):
+        return AppointmentNotification.ActorRole.DOCTOR, name
+    return "", ""
+
+
+def _actor_from_booking(appointment):
+    """
+    Derive (actor_role, actor_name) for a booking from appointment.created_by.
+
+    The patient who owns the appointment → PATIENT; the appointment's doctor →
+    DOCTOR; otherwise fall back to the creator's roles (SECRETARY, else
+    DOCTOR/MAIN_DOCTOR → DOCTOR). Returns ("", "") when created_by is unset.
+    """
+    creator = getattr(appointment, "created_by", None)
+    if creator is None:
+        return "", ""
+    if creator.id == appointment.patient_id:
+        return AppointmentNotification.ActorRole.PATIENT, creator.name
+    if appointment.doctor_id and creator.id == appointment.doctor_id:
+        return AppointmentNotification.ActorRole.DOCTOR, creator.name
+    if creator.has_role("SECRETARY"):
+        return AppointmentNotification.ActorRole.SECRETARY, creator.name
+    if creator.has_role("MAIN_DOCTOR") or creator.has_role("DOCTOR"):
+        return AppointmentNotification.ActorRole.DOCTOR, creator.name
+    return "", ""
 
 
 def _try_send_email(send_fn, *args, **kwargs):
@@ -128,6 +175,7 @@ def notify_appointment_booked(appointment):
                 f"at {time_str} at {clinic_name} has been confirmed."
             )
 
+        actor_role, actor_name = _actor_from_booking(appointment)
         notification = _create_notification(
             patient=patient,
             appointment=appointment,
@@ -136,6 +184,8 @@ def notify_appointment_booked(appointment):
             message=message,
             title_en=title_en,
             message_en=message_en,
+            actor_role=actor_role,
+            actor_name=actor_name,
         )
 
         if notification is None:
@@ -181,6 +231,7 @@ def notify_appointment_cancelled_by_staff(appointment, clinic_staff):
             f"at {time_str} at {clinic_name} has been cancelled."
         )
 
+        actor_role, actor_name = _actor_from_staff(clinic_staff)
         notification = _create_notification(
             patient=patient,
             appointment=appointment,
@@ -190,6 +241,8 @@ def notify_appointment_cancelled_by_staff(appointment, clinic_staff):
             cancelled_by_staff=clinic_staff,
             title_en=title_en,
             message_en=message_en,
+            actor_role=actor_role,
+            actor_name=actor_name,
         )
 
         if notification is None:
@@ -209,9 +262,12 @@ def notify_appointment_cancelled_by_staff(appointment, clinic_staff):
         logger.error("[NOTIFICATION] notify_appointment_cancelled_by_staff failed: %r", exc)
 
 
-def notify_appointment_rescheduled_by_staff(appointment, old_date, old_time):
+def notify_appointment_rescheduled_by_staff(appointment, old_date, old_time, clinic_staff=None):
     """
     Create in-app + email notification to patient when staff reschedules.
+
+    Pass the acting ClinicStaff to record the actor badge; when omitted the
+    notification shows no actor (backward compatible).
 
     Safe to call from transaction.on_commit().
     """
@@ -237,6 +293,7 @@ def notify_appointment_rescheduled_by_staff(appointment, old_date, old_time):
             f"New: {new_date_str} at {new_time_str}."
         )
 
+        actor_role, actor_name = _actor_from_staff(clinic_staff)
         notification = _create_notification(
             patient=patient,
             appointment=appointment,
@@ -245,6 +302,8 @@ def notify_appointment_rescheduled_by_staff(appointment, old_date, old_time):
             message=message,
             title_en=title_en,
             message_en=message_en,
+            actor_role=actor_role,
+            actor_name=actor_name,
         )
 
         if notification is None:
@@ -290,6 +349,9 @@ def notify_staff_patient_cancelled(appointment):
             f"{date_str} at {time_str}."
         )
 
+        actor_role = AppointmentNotification.ActorRole.PATIENT
+        actor_name = patient_name if appointment.patient else ""
+
         recipients = []
         if appointment.doctor_id:
             recipients.append((appointment.doctor_id, AppointmentNotification.ContextRole.DOCTOR))
@@ -317,6 +379,8 @@ def notify_staff_patient_cancelled(appointment):
                     message=message,
                     title_en=title_en,
                     message_en=message_en,
+                    actor_role=actor_role,
+                    actor_name=actor_name,
                     is_delivered=True,
                 )
             except Exception as exc:
@@ -358,6 +422,9 @@ def notify_staff_patient_edited(appointment, old_date, old_time, old_type):
             f"at {new_time_str}."
         )
 
+        actor_role = AppointmentNotification.ActorRole.PATIENT
+        actor_name = patient_name if appointment.patient else ""
+
         recipients = []
         if appointment.doctor_id:
             recipients.append((appointment.doctor_id, AppointmentNotification.ContextRole.DOCTOR))
@@ -383,6 +450,8 @@ def notify_staff_patient_edited(appointment, old_date, old_time, old_type):
                     message=message,
                     title_en=title_en,
                     message_en=message_en,
+                    actor_role=actor_role,
+                    actor_name=actor_name,
                     is_delivered=True,
                 )
             except Exception as exc:
@@ -459,12 +528,23 @@ def notify_appointment_reminder(appointment):
         logger.error("[NOTIFICATION] notify_appointment_reminder failed: %r", exc)
 
 
-def notify_staff_appointment_booked(appointment):
+def notify_staff_appointment_booked(appointment, exclude_user_ids=None, actor_role=None):
     """
     Notify doctor + secretaries + clinic owner (in-app only) when a new
     appointment is booked.
 
     Title/message differentiate between PENDING (needs review) and CONFIRMED.
+
+    Pass exclude_user_ids to skip specific recipients — e.g. a doctor booking
+    their own follow-up should not be notified about their own action.
+
+    Pass actor_role to force the actor flag from the booking *flow/portal* rather
+    than inferring it from created_by. This is required because created_by alone
+    is ambiguous for multi-role users (e.g. a doctor who is also a secretary,
+    booking via the secretary portal and selecting themselves as the doctor —
+    that must read as SECRETARY, not DOCTOR). The actor name is always taken from
+    created_by. When actor_role is omitted, the role is inferred via
+    _actor_from_booking().
 
     Safe to call from transaction.on_commit().
     """
@@ -503,6 +583,13 @@ def notify_staff_appointment_booked(appointment):
                 f"with {doctor_en} on {date_str} at {time_str}."
             )
 
+        if actor_role:
+            creator = getattr(appointment, "created_by", None)
+            actor_name = creator.name if creator else ""
+        else:
+            actor_role, actor_name = _actor_from_booking(appointment)
+        exclude = set(exclude_user_ids or [])
+
         recipients = []
         if appointment.doctor_id:
             recipients.append((appointment.doctor_id, AppointmentNotification.ContextRole.DOCTOR))
@@ -517,6 +604,8 @@ def notify_staff_appointment_booked(appointment):
             recipients.append((owner_id, AppointmentNotification.ContextRole.CLINIC_OWNER))
 
         for user_id, ctx_role in recipients:
+            if user_id in exclude:
+                continue
             try:
                 AppointmentNotification.objects.create(
                     patient_id=user_id,
@@ -527,6 +616,8 @@ def notify_staff_appointment_booked(appointment):
                     message=message,
                     title_en=title_en,
                     message_en=message_en,
+                    actor_role=actor_role,
+                    actor_name=actor_name,
                     is_delivered=True,
                 )
             except Exception as exc:
@@ -586,6 +677,7 @@ def notify_patient_status_changed(appointment, old_status, new_status, by_staff=
                 f"at {time_str} at {clinic_name} was updated to: {new_label}."
             )
 
+        actor_role, actor_name = _actor_from_staff(by_staff)
         notification = _create_notification(
             patient=patient,
             appointment=appointment,
@@ -595,6 +687,8 @@ def notify_patient_status_changed(appointment, old_status, new_status, by_staff=
             cancelled_by_staff=by_staff,
             title_en=title_en,
             message_en=message_en,
+            actor_role=actor_role,
+            actor_name=actor_name,
         )
 
         if notification is None:

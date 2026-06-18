@@ -2590,6 +2590,16 @@ msgstr "Status Update"
 msgid "إشعار"
 msgstr "Notification"
 
+# Actor badges — who triggered a notification
+msgid "بواسطة المريض"
+msgstr "By patient"
+
+msgid "بواسطة السكرتيرة"
+msgstr "By secretary"
+
+msgid "بواسطة الطبيب"
+msgstr "By doctor"
+
 msgid "لديك <b>%(count)s</b> إشعار غير مقروء"
 msgstr "You have <b>%(count)s</b> unread notifications"
 
@@ -3599,3 +3609,25 @@ msgstr "Loading form..."
 
 msgid "لا يوجد نموذج إدخال لهذا الطبيب."
 msgstr "This doctor has no intake form."
+
+# ── Appointment booking notes (secretary: doctor-facing + secretary-only) ──────
+msgid "ملاحظة للطبيب"
+msgstr "Note for the doctor"
+
+msgid "ملاحظة خاصة بالسكرتارية"
+msgstr "Secretary-only note"
+
+msgid "ملاحظات الطبيب"
+msgstr "Doctor Notes"
+
+msgid "(اختياري) ملاحظة يطّلع عليها الطبيب..."
+msgstr "(Optional) A note the doctor will see..."
+
+msgid "(اختياري) ملاحظة تظهر للسكرتارية فقط..."
+msgstr "(Optional) A note visible to secretaries only..."
+
+msgid "ملاحظة يطّلع عليها الطبيب..."
+msgstr "A note the doctor will see..."
+
+msgid "ملاحظة تظهر للسكرتارية فقط..."
+msgstr "A note visible to secretaries only..."

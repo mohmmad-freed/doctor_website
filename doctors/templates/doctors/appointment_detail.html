@@ -108,6 +108,18 @@
   </div>
   {% endif %}
 
+  {% if appointment.doctor_note %}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 mb-5 overflow-hidden">
+    <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-violet-50/60 dark:bg-violet-900/20">
+      <i class="fa-solid fa-user-nurse text-violet-500 text-sm"></i>
+      <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">{% if IS_RTL %}ملاحظة من السكرتارية{% else %}Note from secretary{% endif %}</span>
+    </div>
+    <div class="px-5 py-4">
+      <p class="text-gray-700 dark:text-gray-200 leading-relaxed">{{ appointment.doctor_note }}</p>
+    </div>
+  </div>
+  {% endif %}
+
   <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 mb-5 overflow-hidden">
     <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
       <i class="fa-solid fa-note-sticky text-amber-500 text-sm"></i>

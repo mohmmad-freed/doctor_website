@@ -3185,7 +3185,8 @@ def create_appointment(request):
             date_str = request.POST.get("appointment_date", "").strip()
             time_str = request.POST.get("appointment_time", "").strip()
             reason = request.POST.get("reason", "").strip()
-            notes_text = request.POST.get("notes", "").strip()
+            secretary_note_text = request.POST.get("secretary_note", "").strip()
+            doctor_note_text = request.POST.get("doctor_note", "").strip()
             post_return_to = request.POST.get("return_to", "").strip()
 
             if not all([doctor_id, type_id, date_str, time_str]):
@@ -3257,7 +3258,8 @@ def create_appointment(request):
                 appointment_date=appt_date,
                 appointment_time=appt_time,
                 reason=reason,
-                notes=notes_text,
+                secretary_note=secretary_note_text,
+                doctor_note=doctor_note_text,
                 status=Appointment.Status.CONFIRMED,
                 created_by=request.user,
             )
@@ -3328,7 +3330,8 @@ def register_walk_in(request):
             doctor_id = int(request.POST.get("doctor_id") or 0)
             type_id = int(request.POST.get("appointment_type_id") or 0)
             reason = request.POST.get("reason", "").strip()
-            notes_text = request.POST.get("notes", "").strip()
+            secretary_note_text = request.POST.get("secretary_note", "").strip()
+            doctor_note_text = request.POST.get("doctor_note", "").strip()
             override_same_day = request.POST.get("override_same_day_conflict") == "1"
 
             if not patient_id:
@@ -3357,7 +3360,8 @@ def register_walk_in(request):
                 appointment_type_id=type_id,
                 created_by=request.user,
                 reason=reason,
-                notes=notes_text,
+                secretary_note=secretary_note_text,
+                doctor_note=doctor_note_text,
                 override_same_day_conflict=override_same_day,
             )
 
@@ -3508,7 +3512,9 @@ def edit_appointment(request, appointment_id):
                     notify_appointment_rescheduled_by_staff,
                 )
                 _txn.on_commit(
-                    lambda: notify_appointment_rescheduled_by_staff(appointment, old_date, old_time)
+                    lambda: notify_appointment_rescheduled_by_staff(
+                        appointment, old_date, old_time, clinic_staff=staff
+                    )
                 )
 
             messages.success(request, _("تم تحديث الموعد بنجاح."))
