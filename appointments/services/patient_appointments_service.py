@@ -110,6 +110,7 @@ def _serialize_appointment(appointment):
         "appointment_time": appointment.appointment_time,
         "status": appointment.status,
         "status_display": appointment.get_status_display(),
+        "cancellation_reason": appointment.cancellation_reason,
         "can_edit": appointment.can_patient_edit,
         "edits_remaining": appointment.edits_remaining,
     }
@@ -243,7 +244,7 @@ _TERMINAL_STATUSES = (
 CANCELLATION_WINDOW_HOURS = 2
 
 
-def cancel_appointment(appointment_id, patient):
+def cancel_appointment(appointment_id, patient, cancellation_reason=""):
     """
     Cancel a patient's own appointment.
 
@@ -258,8 +259,9 @@ def cancel_appointment(appointment_id, patient):
       via transaction.on_commit to ensure notification fires only after DB commit.
 
     Args:
-        appointment_id: PK of the Appointment to cancel.
-        patient:        The User instance (role=PATIENT) making the request.
+        appointment_id:      PK of the Appointment to cancel.
+        patient:             The User instance (role=PATIENT) making the request.
+        cancellation_reason: Required, non-blank reason the patient is cancelling.
 
     Returns:
         True on success.
@@ -268,6 +270,7 @@ def cancel_appointment(appointment_id, patient):
         ValueError: Appointment not found / not owned by patient.
         ValueError: Appointment is already in a terminal state.
         ValueError: Cancellation window has passed.
+        ValueError: Cancellation reason is blank.
     """
     try:
         appointment = Appointment.objects.select_related(
@@ -278,6 +281,9 @@ def cancel_appointment(appointment_id, patient):
 
     if appointment.status in _TERMINAL_STATUSES:
         raise ValueError("لا يمكن إلغاء هذا الموعد.")
+
+    if not cancellation_reason.strip():
+        raise ValueError("يرجى ذكر سبب الإلغاء.")
 
     # ── Time-based cancellation policy ────────────────────────────────────
     if CANCELLATION_WINDOW_HOURS > 0:
@@ -295,7 +301,8 @@ def cancel_appointment(appointment_id, patient):
             )
 
     appointment.status = Appointment.Status.CANCELLED
-    appointment.save(update_fields=["status", "updated_at"])
+    appointment.cancellation_reason = cancellation_reason.strip()
+    appointment.save(update_fields=["status", "cancellation_reason", "updated_at"])
 
     # ── Notify doctor + secretaries after DB commit ───────────────────────
     transaction.on_commit(

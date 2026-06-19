@@ -346,8 +346,14 @@ def cancel_appointment_view(request, appointment_id):
     if request.method != "POST":
         return HttpResponseForbidden("Method not allowed.")
 
+    reason = request.POST.get("cancellation_reason", "").strip()
+
     try:
-        cancel_appointment(appointment_id=appointment_id, patient=request.user)
+        cancel_appointment(
+            appointment_id=appointment_id,
+            patient=request.user,
+            cancellation_reason=reason,
+        )
         messages.success(request, "تم إلغاء الموعد بنجاح.")
     except ValueError as exc:
         messages.error(request, str(exc))

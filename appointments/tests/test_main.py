@@ -1026,3 +1026,187 @@ class DoctorStatusMachineTest(NotificationServiceTestMixin, TestCase):
                 allowed, [],
                 f"Status {status} should have no outgoing transitions but got {allowed}",
             )
+
+
+class PatientCancellationReasonTest(TestCase):
+    """A patient must provide a non-blank cancellation reason to cancel."""
+
+    def setUp(self):
+        self.patient = User.objects.create_user(
+            phone="0593000001", password="testpass", name="Patient Sara", role="PATIENT"
+        )
+        self.main_doctor = User.objects.create_user(
+            phone="0593000002", password="testpass", name="Dr. Owner", role="MAIN_DOCTOR"
+        )
+        self.doctor = User.objects.create_user(
+            phone="0593000003", password="testpass", name="Dr. Lina", role="DOCTOR"
+        )
+        self.clinic = Clinic.objects.create(
+            name="Clinic R", address="Addr", phone="0591111114",
+            email="r@clinic.com", main_doctor=self.main_doctor,
+        )
+        self.appointment = Appointment.objects.create(
+            patient=self.patient, clinic=self.clinic, doctor=self.doctor,
+            appointment_date=date.today() + timedelta(days=3),
+            appointment_time=time(10, 0), status=Appointment.Status.CONFIRMED,
+        )
+
+    def test_service_rejects_blank_reason(self):
+        """cancel_appointment raises and leaves the appointment unchanged when reason is blank."""
+        from appointments.services.patient_appointments_service import cancel_appointment
+        with self.assertRaises(ValueError):
+            cancel_appointment(self.appointment.id, self.patient, cancellation_reason="   ")
+        self.appointment.refresh_from_db()
+        self.assertEqual(self.appointment.status, Appointment.Status.CONFIRMED)
+        self.assertEqual(self.appointment.cancellation_reason, "")
+
+    def test_service_stores_reason(self):
+        """cancel_appointment cancels and stores the trimmed reason."""
+        from appointments.services.patient_appointments_service import cancel_appointment
+        cancel_appointment(self.appointment.id, self.patient, cancellation_reason="  ظرف طارئ  ")
+        self.appointment.refresh_from_db()
+        self.assertEqual(self.appointment.status, Appointment.Status.CANCELLED)
+        self.assertEqual(self.appointment.cancellation_reason, "ظرف طارئ")
+
+    def test_view_without_reason_does_not_cancel(self):
+        """POSTing to the cancel view without a reason leaves the appointment confirmed."""
+        self.client.force_login(self.patient)
+        self.client.post(
+            reverse("patients:cancel_appointment", args=[self.appointment.id]), data={}
+        )
+        self.appointment.refresh_from_db()
+        self.assertEqual(self.appointment.status, Appointment.Status.CONFIRMED)
+
+
+class DoctorCancellationReasonTest(TestCase):
+    """A doctor must provide a non-blank cancellation reason to cancel."""
+
+    def setUp(self):
+        self.main_doctor = User.objects.create_user(
+            phone="0594000001", password="testpass", name="Dr. Owner", role="MAIN_DOCTOR"
+        )
+        self.doctor = User.objects.create_user(
+            phone="0594000002", password="testpass", name="Dr. Sami", role="DOCTOR"
+        )
+        self.patient = User.objects.create_user(
+            phone="0594000003", password="testpass", name="Patient Omar", role="PATIENT"
+        )
+        self.clinic = Clinic.objects.create(
+            name="Clinic D", address="Addr", phone="0591111115",
+            email="d@clinic.com", main_doctor=self.main_doctor,
+        )
+        self.appointment = Appointment.objects.create(
+            patient=self.patient, clinic=self.clinic, doctor=self.doctor,
+            appointment_date=date.today() + timedelta(days=3),
+            appointment_time=time(11, 0), status=Appointment.Status.CONFIRMED,
+        )
+
+    def _make_request(self, post_data):
+        from django.test import RequestFactory
+        from django.contrib.messages.storage.fallback import FallbackStorage
+        from django.contrib.sessions.middleware import SessionMiddleware
+        req = RequestFactory().post("/", data=post_data)
+        req.user = self.doctor
+        SessionMiddleware(lambda r: None).process_request(req)
+        req.session.save()
+        setattr(req, "_messages", FallbackStorage(req))
+        return req
+
+    def test_cancel_without_reason_blocked(self):
+        """apply_status_transition returns False and keeps status when CANCELLED has no reason."""
+        from doctors.views import apply_status_transition
+        req = self._make_request({"status": "CANCELLED", "notes": ""})
+        result = apply_status_transition(req, self.appointment, self.doctor)
+        self.assertFalse(result)
+        self.appointment.refresh_from_db()
+        self.assertEqual(self.appointment.status, Appointment.Status.CONFIRMED)
+        self.assertEqual(self.appointment.cancellation_reason, "")
+
+    def test_cancel_with_reason_stores(self):
+        """apply_status_transition cancels and stores the reason (kept separate from notes)."""
+        from doctors.views import apply_status_transition
+        req = self._make_request(
+            {"status": "CANCELLED", "notes": "ملاحظة طبية", "cancellation_reason": "الطبيب غير متاح"}
+        )
+        result = apply_status_transition(req, self.appointment, self.doctor)
+        self.assertTrue(result)
+        self.appointment.refresh_from_db()
+        self.assertEqual(self.appointment.status, Appointment.Status.CANCELLED)
+        self.assertEqual(self.appointment.cancellation_reason, "الطبيب غير متاح")
+        self.assertEqual(self.appointment.notes, "ملاحظة طبية")
+
+
+class DoctorCancellationNotifiesTest(TransactionTestCase):
+    """When a doctor cancels, BOTH the patient and the clinic secretaries are notified.
+
+    Uses TransactionTestCase so transaction.on_commit() callbacks (which fire the
+    notifications) run during the test, matching production behaviour.
+    """
+
+    def setUp(self):
+        from clinics.models import ClinicStaff
+        self.main_doctor = User.objects.create_user(
+            phone="0595000001", password="testpass", name="Dr. Owner", role="MAIN_DOCTOR"
+        )
+        self.doctor = User.objects.create_user(
+            phone="0595000002", password="testpass", name="Dr. Rana", role="DOCTOR"
+        )
+        self.secretary = User.objects.create_user(
+            phone="0595000003", password="testpass", name="Sec Hana", role="SECRETARY"
+        )
+        self.patient = User.objects.create_user(
+            phone="0595000004", password="testpass", name="Patient Nour", role="PATIENT"
+        )
+        self.clinic = Clinic.objects.create(
+            name="Clinic N", address="Addr", phone="0591111116",
+            email="n@clinic.com", main_doctor=self.main_doctor,
+        )
+        ClinicStaff.objects.create(
+            clinic=self.clinic, user=self.doctor, role="DOCTOR", added_by=self.main_doctor,
+        )
+        ClinicStaff.objects.create(
+            clinic=self.clinic, user=self.secretary, role="SECRETARY", added_by=self.main_doctor,
+        )
+        self.appointment = Appointment.objects.create(
+            patient=self.patient, clinic=self.clinic, doctor=self.doctor,
+            appointment_date=date.today() + timedelta(days=3),
+            appointment_time=time(9, 0), status=Appointment.Status.CONFIRMED,
+        )
+
+    def _make_request(self, post_data):
+        from django.test import RequestFactory
+        from django.contrib.messages.storage.fallback import FallbackStorage
+        from django.contrib.sessions.middleware import SessionMiddleware
+        req = RequestFactory().post("/", data=post_data)
+        req.user = self.doctor
+        SessionMiddleware(lambda r: None).process_request(req)
+        req.session.save()
+        setattr(req, "_messages", FallbackStorage(req))
+        return req
+
+    @patch("accounts.services.tweetsms.send_sms")
+    @patch("accounts.email_utils._send_email")
+    def test_cancel_notifies_patient_and_secretary(self, mock_email, mock_sms):
+        from doctors.views import apply_status_transition
+        from appointments.models import AppointmentNotification
+        req = self._make_request({"status": "CANCELLED", "cancellation_reason": "ظرف طارئ"})
+        result = apply_status_transition(req, self.appointment, self.doctor)
+        self.assertTrue(result)
+
+        patient_notif = AppointmentNotification.objects.filter(
+            patient=self.patient, appointment=self.appointment,
+            context_role=AppointmentNotification.ContextRole.PATIENT,
+            notification_type=AppointmentNotification.Type.APPOINTMENT_CANCELLED,
+        ).first()
+        self.assertIsNotNone(patient_notif, "Patient should be notified when the doctor cancels.")
+
+        secretary_notif = AppointmentNotification.objects.filter(
+            patient=self.secretary, appointment=self.appointment,
+            context_role=AppointmentNotification.ContextRole.SECRETARY,
+            notification_type=AppointmentNotification.Type.APPOINTMENT_CANCELLED,
+        ).first()
+        self.assertIsNotNone(secretary_notif, "Secretary should be notified when the doctor cancels.")
+        self.assertEqual(secretary_notif.actor_role, AppointmentNotification.ActorRole.DOCTOR)
+        # Both Arabic and English copies are stored on the secretary notification.
+        self.assertTrue(secretary_notif.title)
+        self.assertTrue(secretary_notif.title_en)
