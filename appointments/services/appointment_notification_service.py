@@ -262,6 +262,70 @@ def notify_appointment_cancelled_by_staff(appointment, clinic_staff):
         logger.error("[NOTIFICATION] notify_appointment_cancelled_by_staff failed: %r", exc)
 
 
+def notify_secretaries_appointment_cancelled_by_doctor(appointment, by_staff=None):
+    """
+    Notify the clinic's secretaries (in-app only) when a doctor cancels an
+    appointment.
+
+    The patient is notified separately via notify_appointment_cancelled_by_staff().
+    Clinic-owner notifications are intentionally not created here.
+
+    Safe to call from transaction.on_commit().
+    """
+    try:
+        from clinics.models import ClinicStaff
+
+        patient_name = appointment.patient.name if appointment.patient else "مريض"
+        doctor_ar, doctor_en = _doctor_names(appointment)
+        date_str = appointment.appointment_date.strftime("%Y-%m-%d")
+        time_str = appointment.appointment_time.strftime("%H:%M")
+
+        title = "إلغاء موعد من قبل الطبيب"
+        message = (
+            f"قام {doctor_ar} بإلغاء موعد المريض {patient_name} "
+            f"بتاريخ {date_str} الساعة {time_str}."
+        )
+        title_en = "Appointment Cancelled by Doctor"
+        message_en = (
+            f"{doctor_en} cancelled patient {patient_name}'s appointment "
+            f"on {date_str} at {time_str}."
+        )
+
+        actor_role, actor_name = _actor_from_staff(by_staff)
+        if not actor_role:
+            actor_role = AppointmentNotification.ActorRole.DOCTOR
+            actor_name = appointment.doctor.name if appointment.doctor else ""
+
+        secretary_ids = ClinicStaff.objects.filter(
+            clinic=appointment.clinic, role="SECRETARY", is_active=True,
+        ).values_list("user_id", flat=True)
+
+        for user_id in secretary_ids:
+            try:
+                AppointmentNotification.objects.create(
+                    patient_id=user_id,
+                    appointment=appointment,
+                    context_role=AppointmentNotification.ContextRole.SECRETARY,
+                    notification_type=AppointmentNotification.Type.APPOINTMENT_CANCELLED,
+                    title=title,
+                    message=message,
+                    title_en=title_en,
+                    message_en=message_en,
+                    actor_role=actor_role,
+                    actor_name=actor_name,
+                    is_delivered=True,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "[NOTIFICATION] Could not create doctor-cancel notification "
+                    "for secretary user_id=%s appointment_id=%s: %r",
+                    user_id, appointment.id, exc,
+                )
+
+    except Exception as exc:
+        logger.error("[NOTIFICATION] notify_secretaries_appointment_cancelled_by_doctor failed: %r", exc)
+
+
 def notify_appointment_rescheduled_by_staff(appointment, old_date, old_time, clinic_staff=None):
     """
     Create in-app + email notification to patient when staff reschedules.

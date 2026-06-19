@@ -271,13 +271,26 @@ def apply_status_transition(request, appointment, user):
     _, valid_values = allowed_status_transitions(appointment)
     new_status = request.POST.get("status", "").strip()
     notes = request.POST.get("notes", "").strip()
+    cancellation_reason = request.POST.get("cancellation_reason", "").strip()
     is_rtl = getattr(request, "LANGUAGE_CODE", "ar") == "ar"
 
     if new_status in valid_values:
+        # Cancelling requires a non-blank reason (visible to the patient + staff).
+        if new_status == Appointment.Status.CANCELLED and not cancellation_reason:
+            _msg.error(
+                request,
+                "يرجى ذكر سبب الإلغاء." if is_rtl else "Please provide a cancellation reason.",
+            )
+            return False
+
         appointment.status = new_status
         if notes:
             appointment.notes = notes
         update_fields = ["status", "notes", "updated_at"]
+
+        if new_status == Appointment.Status.CANCELLED:
+            appointment.cancellation_reason = cancellation_reason
+            update_fields.append("cancellation_reason")
 
         # On check-in, stamp the arrival time and assign a queue position — mirroring
         # the secretary check-in — so the patient surfaces correctly (with arrival
@@ -293,18 +306,24 @@ def apply_status_transition(request, appointment, user):
 
         appointment.save(update_fields=update_fields)
 
-        # Notify patient when doctor cancels
+        # Notify the patient AND the clinic secretaries when the doctor cancels.
         if new_status == Appointment.Status.CANCELLED:
             from django.db import transaction as _txn
             from clinics.models import ClinicStaff as _CS
             from appointments.services.appointment_notification_service import (
                 notify_appointment_cancelled_by_staff,
+                notify_secretaries_appointment_cancelled_by_doctor,
             )
             doctor_staff = _CS.objects.filter(
                 clinic=appointment.clinic, user=user, revoked_at__isnull=True
             ).first()
             _txn.on_commit(
                 lambda: notify_appointment_cancelled_by_staff(appointment, doctor_staff)
+            )
+            _txn.on_commit(
+                lambda: notify_secretaries_appointment_cancelled_by_doctor(
+                    appointment, doctor_staff
+                )
             )
 
         _msg.success(
@@ -358,12 +377,13 @@ def appointment_detail(request, appointment_id):
         return redirect(target)
 
     intake_data = build_appointment_intake_data(appointment)
-    allowed_transitions, _ = allowed_status_transitions(appointment)
+    allowed_transitions, valid_values = allowed_status_transitions(appointment)
 
     return render(request, "doctors/appointment_detail.html", {
         "appointment": appointment,
         "intake_data": intake_data,
         "allowed_transitions": allowed_transitions,
+        "can_cancel": Appointment.Status.CANCELLED in valid_values,
         "next_url": next_url,
         "back_url": next_url or reverse("doctors:appointments"),
     })
@@ -396,7 +416,7 @@ def appointment_overview(request, appointment_id):
 
     patient = appointment.patient
     intake_data = build_appointment_intake_data(appointment)
-    allowed_transitions, _ = allowed_status_transitions(appointment)
+    allowed_transitions, valid_values = allowed_status_transitions(appointment)
 
     # The patient's other appointments with this doctor, split into upcoming/past.
     today = date.today()
@@ -437,6 +457,7 @@ def appointment_overview(request, appointment_id):
         "age": age,
         "intake_data": intake_data,
         "allowed_transitions": allowed_transitions,
+        "can_cancel": Appointment.Status.CANCELLED in valid_values,
         "upcoming": upcoming,
         "past": past,
     })

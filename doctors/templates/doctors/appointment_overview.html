@@ -166,49 +166,43 @@
       </div>
     </div>
 
-    {# Status update controls #}
-    {% if allowed_transitions %}
-    <div class="border-t border-indigo-100 dark:border-indigo-800/60 bg-indigo-50/40 dark:bg-indigo-900/10">
-      <div class="flex items-center gap-2 px-5 py-3.5 border-b border-indigo-100 dark:border-indigo-800/60">
-        <i class="fa-solid fa-arrow-right-arrow-left text-indigo-500 text-sm"></i>
-        <span class="font-semibold text-indigo-700 dark:text-indigo-300 text-sm">{% if IS_RTL %}تحديث حالة الموعد{% else %}Update Appointment Status{% endif %}</span>
+    {# Cancellation reason — read-only, shown for cancelled appointments #}
+    {% if appointment.status == 'CANCELLED' and appointment.cancellation_reason %}
+    <div class="border-t border-gray-100 dark:border-gray-700">
+      <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-red-50/70 dark:bg-red-900/20">
+        <i class="fa-solid fa-circle-xmark text-red-500 text-sm"></i>
+        <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">{% if IS_RTL %}سبب الإلغاء{% else %}Cancellation Reason{% endif %}</span>
+      </div>
+      <div class="px-5 py-4">
+        <p class="text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">{{ appointment.cancellation_reason }}</p>
+      </div>
+    </div>
+    {% endif %}
+
+    {# Cancel appointment — the only status action available to the doctor here #}
+    {% if can_cancel %}
+    <div class="border-t border-red-100 dark:border-red-800/60 bg-red-50/40 dark:bg-red-900/10">
+      <div class="flex items-center gap-2 px-5 py-3.5 border-b border-red-100 dark:border-red-800/60">
+        <i class="fa-solid fa-circle-xmark text-red-500 text-sm"></i>
+        <span class="font-semibold text-red-700 dark:text-red-300 text-sm">{% if IS_RTL %}إلغاء الموعد{% else %}Cancel Appointment{% endif %}</span>
       </div>
       <div class="px-5 py-5">
         <form method="post" class="space-y-4">
           {% csrf_token %}
+          <input type="hidden" name="status" value="CANCELLED">
           <div>
             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
-              {% if IS_RTL %}الحالة الجديدة{% else %}New Status{% endif %} <span class="text-red-500">*</span>
+              {% if IS_RTL %}سبب الإلغاء{% else %}Cancellation Reason{% endif %} <span class="text-red-500">*</span>
             </label>
-            <select name="status" required
-                    class="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
-              {% for val, label in allowed_transitions %}
-              <option value="{{ val }}">
-                {% if val == 'CONFIRMED' %}{% if IS_RTL %}مؤكد{% else %}Confirmed{% endif %}
-                {% elif val == 'CHECKED_IN' %}{% if IS_RTL %}تم الوصول{% else %}Checked In{% endif %}
-                {% elif val == 'IN_PROGRESS' %}{% if IS_RTL %}جارٍ{% else %}In Progress{% endif %}
-                {% elif val == 'COMPLETED' %}{% if IS_RTL %}مكتمل{% else %}Completed{% endif %}
-                {% elif val == 'CANCELLED' %}{% if IS_RTL %}ملغى{% else %}Cancelled{% endif %}
-                {% elif val == 'NO_SHOW' %}{% if IS_RTL %}غائب{% else %}No Show{% endif %}
-                {% else %}{{ label }}{% endif %}
-              </option>
-              {% endfor %}
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
-              {% if IS_RTL %}ملاحظات الطبيب{% else %}Doctor Notes{% endif %}
-              <span class="text-xs font-normal text-gray-400 ms-1">({% if IS_RTL %}اختياري{% else %}Optional{% endif %})</span>
-            </label>
-            <textarea name="notes" rows="3"
-                      placeholder="{% if IS_RTL %}أضف أي ملاحظات طبية أو تعليمات للمريض...{% else %}Add any medical notes or instructions for the patient...{% endif %}"
-                      class="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none transition">{{ appointment.notes }}</textarea>
+            <textarea name="cancellation_reason" rows="3" required
+                      placeholder="{% if IS_RTL %}يرجى ذكر سبب الإلغاء...{% else %}Please provide a reason for cancelling...{% endif %}"
+                      class="w-full text-sm rounded-xl border border-red-300 dark:border-red-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-400 resize-none transition"></textarea>
           </div>
           <div class="pt-1">
             <button type="submit"
-                    class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all shadow-sm">
-              <i class="fa-solid fa-check text-xs"></i>
-              {% if IS_RTL %}تحديث الحالة{% else %}Update Status{% endif %}
+                    class="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 active:scale-95 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all shadow-sm">
+              <i class="fa-solid fa-xmark text-xs"></i>
+              {% if IS_RTL %}إلغاء الموعد{% else %}Cancel Appointment{% endif %}
             </button>
           </div>
         </form>
