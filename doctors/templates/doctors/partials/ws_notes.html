@@ -1138,6 +1138,8 @@ if (typeof orthoReadView === 'undefined') {
       {% if note.updated_at != note.created_at %}
       <p class="text-xs text-slate-400 dark:text-slate-500 italic">{% if IS_RTL %}تم التعديل{% else %}Edited{% endif %} {{ note.updated_at|date:"d M Y, H:i" }}</p>
       {% endif %}
+
+      {% include "doctors/partials/_note_addenda.html" with note=note %}
     </div>
   </div>
   {% endfor %}
