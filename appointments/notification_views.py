@@ -28,10 +28,23 @@ def _resolve_appointment_url(notification):
     """
     Return the best URL to link a notification to based strictly on its context.
     """
-    if not notification.appointment_id:
-        return None
-
     from django.urls import reverse
+
+    # Patient-scoped notifications (e.g. a profile note) have no appointment but
+    # carry subject_patient — route to that patient's profile in the right portal.
+    if not notification.appointment_id:
+        if notification.subject_patient_id:
+            if notification.context_role == AppointmentNotification.ContextRole.SECRETARY:
+                return reverse(
+                    "secretary:patient_detail",
+                    kwargs={"patient_id": notification.subject_patient_id},
+                )
+            if notification.context_role == AppointmentNotification.ContextRole.DOCTOR:
+                return reverse(
+                    "doctors:patient_workspace",
+                    kwargs={"patient_id": notification.subject_patient_id},
+                )
+        return None
 
     if notification.context_role == AppointmentNotification.ContextRole.PATIENT:
         return reverse("patients:my_appointments")
@@ -59,7 +72,7 @@ def _render_notifications(request, context_role, template, base_template):
     user = request.user
     notifications_qs = (
         AppointmentNotification.objects.filter(patient=user, context_role=context_role)
-        .select_related("appointment__clinic", "appointment__doctor")
+        .select_related("appointment__clinic", "appointment__doctor", "subject_patient")
         .order_by("-created_at")
     )
 

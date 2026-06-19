@@ -22,7 +22,24 @@ urlpatterns = [
         views.appointment_intake_partial,
         name="appointment_intake_partial",
     ),
+    path(
+        "appointments/<int:appointment_id>/notes/add/",
+        views.appointment_note_add,
+        name="appointment_note_add",
+    ),
+    path(
+        "appointments/<int:appointment_id>/notes/<int:note_id>/delete/",
+        views.appointment_note_delete,
+        name="appointment_note_delete",
+    ),
     path("patients/", views.patients_list, name="patients"),
+    # Patient-profile staff notes (private / for-secretaries) — distinct from ws_note_* (ClinicalNote).
+    path("patients/<int:patient_id>/staff-notes/add/", views.patient_note_add, name="patient_note_add"),
+    path(
+        "patients/<int:patient_id>/staff-notes/<int:note_id>/delete/",
+        views.patient_note_delete,
+        name="patient_note_delete",
+    ),
     # --- Patient Workspace ---
     path("patients/<int:patient_id>/", views.patient_workspace, name="patient_workspace"),
     path("patients/<int:patient_id>/notes/add/", views.ws_note_add, name="ws_note_add"),

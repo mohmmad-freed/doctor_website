@@ -169,6 +169,12 @@
         {% endif %}
       </div>
 
+      {# Authored staff notes (for the doctor / secretaries-only) #}
+      <div class="mt-6">
+        {% url 'secretary:patient_note_add' patient.id as patient_note_add_url %}
+        {% include "secretary/partials/_staff_notes_panel.html" with notes=patient_notes add_url=patient_note_add_url delete_url_name="secretary:patient_note_delete" delete_arg=patient.id id_prefix="pd-patient-notes" next_url=request.get_full_path panel_title_ar="ملاحظات خاصة" panel_title_en="Special notes" %}
+      </div>
+
       {# ══ Tab: Appointments ══ #}
       {% elif active_tab == 'appointments' %}
       <div class="space-y-3">

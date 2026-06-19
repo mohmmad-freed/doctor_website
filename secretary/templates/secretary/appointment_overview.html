@@ -76,6 +76,12 @@
     </div>
   </div>
 
+  {# ── Patient-profile notes (clinic-level, not tied to one appointment) ──── #}
+  <div class="mb-6">
+    {% url 'secretary:patient_note_add' patient.id as patient_note_add_url %}
+    {% include "secretary/partials/_staff_notes_panel.html" with notes=patient_notes add_url=patient_note_add_url delete_url_name="secretary:patient_note_delete" delete_arg=patient.id id_prefix="ov-patient-notes" next_url=request.get_full_path panel_title_ar="ملاحظات على ملف المريض" panel_title_en="Patient profile notes" %}
+  </div>
+
   {# ── Focused appointment (highlighted — from the notification) ─────────── #}
   <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-md border-2 border-primary-300 dark:border-primary-600/70 mb-7 overflow-hidden">
     <div class="flex items-center justify-between gap-3 px-5 py-3 bg-primary-50 dark:bg-primary-900/30 border-b border-primary-100 dark:border-primary-800/60">
@@ -184,6 +190,12 @@
       {% include "secretary/partials/_appointment_actions.html" %}
     </div>
     {% endif %}
+  </div>
+
+  {# ── Notes on this appointment (any status) ───────────────────────────── #}
+  <div id="staff-notes" class="mb-7 scroll-mt-6">
+    {% url 'secretary:appointment_note_add' appointment.id as appt_note_add_url %}
+    {% include "secretary/partials/_staff_notes_panel.html" with notes=appointment_notes add_url=appt_note_add_url delete_url_name="secretary:appointment_note_delete" delete_arg=appointment.id id_prefix="appt-notes" next_url=request.get_full_path panel_title_ar="ملاحظات على الموعد" panel_title_en="Appointment notes" %}
   </div>
 
   {# ── Upcoming appointments ────────────────────────────────────────────── #}

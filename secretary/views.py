@@ -5,6 +5,7 @@ from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
 from django.contrib import messages
+from django.db import transaction
 from django.db.models import F, Q, Sum
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.utils import timezone
@@ -12,7 +13,7 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
 from appointments.models import Appointment, AppointmentType
-from patients.models import ClinicPatient, PatientProfile
+from patients.models import ClinicPatient, PatientProfile, StaffNote
 from secretary.timefmt import format_clock
 
 User = get_user_model()
@@ -469,6 +470,20 @@ def appointment_overview(request, appointment_id):
         reverse("appointments:secretary_notifications"),
     )
 
+    # Authored staff notes — secretaries see doctor + secretary-only audiences, but never
+    # a doctor's private notes.
+    appointment_notes = list(
+        StaffNote.objects.filter(appointment=appointment)
+        .exclude(audience=StaffNote.Audience.DOCTOR_PRIVATE)
+        .select_related("author").order_by("-created_at")
+    )
+    patient_notes = list(
+        StaffNote.objects.filter(
+            clinic=clinic, patient=patient, appointment__isnull=True
+        ).exclude(audience=StaffNote.Audience.DOCTOR_PRIVATE)
+        .select_related("author").order_by("-created_at")
+    )
+
     return render(request, "secretary/appointment_overview.html", {
         "appointment": appointment,
         "patient": patient,
@@ -480,6 +495,8 @@ def appointment_overview(request, appointment_id):
         "clinic_patient": clinic_patient,
         "is_new_patient_request": is_new_patient_request,
         "back_url": back_url,
+        "appointment_notes": appointment_notes,
+        "patient_notes": patient_notes,
     })
 
 
@@ -2681,6 +2698,15 @@ def patient_detail(request, patient_id):
 
     active_tab = request.GET.get("tab", "info")
 
+    # Authored staff notes on the patient profile — secretaries see doctor + secretary-only
+    # audiences, but never a doctor's private notes.
+    patient_notes = list(
+        StaffNote.objects.filter(
+            clinic=clinic, patient=patient, appointment__isnull=True
+        ).exclude(audience=StaffNote.Audience.DOCTOR_PRIVATE)
+        .select_related("author").order_by("-created_at")
+    )
+
     from patients.models import PatientProfile as _PP
     blood_type_choices = _PP.BLOOD_TYPE_CHOICES
 
@@ -2705,6 +2731,7 @@ def patient_detail(request, patient_id):
         "active_tab": active_tab,
         "tab_list": tab_list,
         "blood_type_choices": blood_type_choices,
+        "patient_notes": patient_notes,
     })
 
 
@@ -3586,6 +3613,126 @@ def cancel_appointment(request, appointment_id):
     if next_url.startswith("/"):
         return redirect(next_url)
     return redirect("secretary:appointments")
+
+
+# ── Staff notes (secretary-authored notes on appointments / patient profiles) ──
+
+
+def _bilingual(ar, en):
+    """Pick AR/EN by the active language (avoids relying on compiled .po catalogs)."""
+    from django.utils.translation import get_language
+    lang = (get_language() or "ar").split("-")[0]
+    return en if lang.startswith("en") else ar
+
+
+def _safe_redirect(request, fallback):
+    """Redirect to POSTed ``next`` only when it is a local path; else ``fallback``."""
+    next_url = request.POST.get("next") or ""
+    if next_url.startswith("/"):
+        return redirect(next_url)
+    return redirect(fallback)
+
+
+def _add_staff_note(request, staff, patient, appointment):
+    """Validate + create a StaffNote, then queue its notification. Returns note or None.
+
+    ``appointment`` is None for a patient-profile note. Audience comes from POST
+    (DOCTOR or SECRETARY); body must be non-empty.
+    """
+    from appointments.services.appointment_notification_service import notify_staff_note
+
+    audience = (request.POST.get("audience") or "").strip().upper()
+    body = (request.POST.get("body") or "").strip()
+    if audience not in (StaffNote.Audience.DOCTOR, StaffNote.Audience.SECRETARY):
+        messages.error(request, _bilingual("نوع الملاحظة غير صالح.", "Invalid note type."))
+        return None
+    if not body:
+        messages.error(request, _bilingual("لا يمكن إضافة ملاحظة فارغة.", "Cannot add an empty note."))
+        return None
+
+    note = StaffNote.objects.create(
+        clinic=staff.clinic,
+        patient=patient,
+        appointment=appointment,
+        audience=audience,
+        body=body,
+        author=request.user,
+        author_name=request.user.name,
+        author_role="SECRETARY",
+    )
+    actor = request.user
+    transaction.on_commit(lambda: notify_staff_note(note, actor))
+    messages.success(request, _bilingual("تمت إضافة الملاحظة.", "Note added."))
+    return note
+
+
+@login_required
+@require_POST
+def appointment_note_add(request, appointment_id):
+    """Secretary adds a note (for the doctor or secretaries-only) to an appointment."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+    appointment = get_object_or_404(
+        Appointment.objects.select_related("patient", "doctor"),
+        id=appointment_id, clinic=staff.clinic,
+    )
+    _add_staff_note(request, staff, appointment.patient, appointment)
+    return _safe_redirect(
+        request,
+        reverse("secretary:appointment_overview", args=[appointment.id]) + "#staff-notes",
+    )
+
+
+@login_required
+@require_POST
+def appointment_note_delete(request, appointment_id, note_id):
+    """Secretary deletes her OWN appointment note."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+    note = get_object_or_404(
+        StaffNote, id=note_id, appointment_id=appointment_id, clinic=staff.clinic
+    )
+    if not note.can_delete(request.user):
+        return HttpResponseForbidden("لا يمكنك حذف ملاحظة كتبها شخص آخر.")
+    note.delete()
+    messages.success(request, _bilingual("تم حذف الملاحظة.", "Note deleted."))
+    return _safe_redirect(
+        request,
+        reverse("secretary:appointment_overview", args=[appointment_id]) + "#staff-notes",
+    )
+
+
+@login_required
+@require_POST
+def patient_note_add(request, patient_id):
+    """Secretary adds a note (for the doctor or secretaries-only) to a patient profile."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+    patient = get_object_or_404(User, id=patient_id)
+    get_object_or_404(ClinicPatient, clinic=staff.clinic, patient=patient)
+    _add_staff_note(request, staff, patient, None)
+    return _safe_redirect(request, reverse("secretary:patient_detail", args=[patient_id]))
+
+
+@login_required
+@require_POST
+def patient_note_delete(request, patient_id, note_id):
+    """Secretary deletes her OWN patient-profile note."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+    note = get_object_or_404(
+        StaffNote, id=note_id, patient_id=patient_id, clinic=staff.clinic,
+        appointment__isnull=True,
+    )
+    if not note.can_delete(request.user):
+        return HttpResponseForbidden("لا يمكنك حذف ملاحظة كتبها شخص آخر.")
+    note.delete()
+    messages.success(request, _bilingual("تم حذف الملاحظة.", "Note deleted."))
+    return _safe_redirect(request, reverse("secretary:patient_detail", args=[patient_id]))
 
 
 def _render_walkin_patient_appointments(request, staff, patient_id):

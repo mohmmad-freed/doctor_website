@@ -153,6 +153,88 @@ class ClinicalNote(models.Model):
         return f"Note by {self.doctor.name} for {self.patient.name} ({self.created_at.date()})"
 
 
+class StaffNote(models.Model):
+    """An authored administrative note written by clinic staff (e.g. a secretary).
+
+    Unlike the legacy single-value ``Appointment.secretary_note`` / ``doctor_note``
+    fields, every StaffNote records its author and timestamp so it can be listed and
+    individually deleted by its author.
+
+    Target:
+      - Appointment-scoped → ``appointment`` set (patient mirrors ``appointment.patient``).
+      - Patient-scoped      → ``appointment`` is None (a note on the patient profile).
+
+    Audience (mirrors the legacy note semantics):
+      - DOCTOR         → visible to the doctor AND secretaries.
+      - SECRETARY      → visible to secretaries only.
+      - DOCTOR_PRIVATE → visible to the authoring doctor only (private).
+
+    Author is denormalized (``author_name`` / ``author_role``) so the note survives
+    the author's deletion.
+    """
+
+    class Audience(models.TextChoices):
+        DOCTOR = "DOCTOR", "Doctor"          # visible to doctor + secretaries
+        SECRETARY = "SECRETARY", "Secretary"  # visible to secretaries only
+        DOCTOR_PRIVATE = "DOCTOR_PRIVATE", "Doctor (private)"  # authoring doctor only
+
+    clinic = models.ForeignKey(
+        "clinics.Clinic", on_delete=models.CASCADE, related_name="staff_notes"
+    )
+    patient = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="staff_notes_about",
+        help_text="The patient this note is about.",
+    )
+    appointment = models.ForeignKey(
+        "appointments.Appointment",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="staff_notes",
+        help_text="Set when the note is attached to a specific appointment; "
+                  "None for a patient-profile note.",
+    )
+    audience = models.CharField(max_length=20, choices=Audience.choices)
+    body = models.TextField()
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="staff_notes_authored",
+    )
+    author_name = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="Display name of the author, denormalized so the note survives "
+                  "the author's deletion.",
+    )
+    author_role = models.CharField(
+        max_length=20,
+        blank=True,
+        default="",
+        help_text="Role of the author at write time (e.g. SECRETARY).",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Staff Note"
+        verbose_name_plural = "Staff Notes"
+
+    def __str__(self):
+        scope = f"appt #{self.appointment_id}" if self.appointment_id else "patient"
+        return f"StaffNote ({self.audience}, {scope}) by {self.author_name}"
+
+    def can_delete(self, user):
+        """Only the author may delete their own note."""
+        return bool(user) and self.author_id == user.id
+
+
 class Order(models.Model):
     """Unified order: drug, lab, radiology, microbiology, or procedure."""
 

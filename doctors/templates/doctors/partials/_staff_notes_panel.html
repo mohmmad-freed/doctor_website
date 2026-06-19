@@ -1,0 +1,143 @@
+{% comment %}
+Reusable staff-notes panel for the DOCTOR portal (doctor-authored notes).
+
+The doctor can author two kinds of note — never a secretary-only note:
+  - Private note      (audience=DOCTOR_PRIVATE) → visible to the authoring doctor only.
+  - Note for secretaries (audience=DOCTOR)      → visible to himself + secretaries.
+
+Params:
+  notes            list of StaffNote (already audience-filtered for this doctor)
+  add_url          POST target for adding a note
+  delete_url_name  url name for deleting a note; called as {% url name delete_arg note.id %}
+  delete_arg       first arg for the delete url (appointment_id or patient_id)
+  id_prefix        unique string to namespace toggle element IDs (panel may appear twice on a page)
+  next_url         optional local path to return to after add/delete
+  panel_title_ar / panel_title_en   optional header text overrides
+{% endcomment %}
+<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+  <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+    <i class="fa-regular fa-note-sticky text-accent-500 text-sm"></i>
+    <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">
+      {% if panel_title_ar or panel_title_en %}{% if IS_RTL %}{{ panel_title_ar }}{% else %}{{ panel_title_en }}{% endif %}
+      {% else %}{% if IS_RTL %}ملاحظات{% else %}Notes{% endif %}{% endif %}
+    </span>
+  </div>
+
+  <div class="p-5">
+    {# ── Add buttons ── #}
+    <div class="flex flex-wrap gap-2">
+      <button type="button"
+              onclick="document.getElementById('{{ id_prefix }}-private-form').classList.toggle('hidden');document.getElementById('{{ id_prefix }}-secretary-form').classList.add('hidden');"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-amber-200 dark:border-amber-900/40 bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 text-sm font-semibold transition-colors">
+        <i class="fa-solid fa-lock text-xs"></i>
+        {% if IS_RTL %}ملاحظة خاصة{% else %}Private note{% endif %}
+      </button>
+      <button type="button"
+              onclick="document.getElementById('{{ id_prefix }}-secretary-form').classList.toggle('hidden');document.getElementById('{{ id_prefix }}-private-form').classList.add('hidden');"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-accent-200 dark:border-accent-900/40 bg-white dark:bg-slate-700 text-accent-600 dark:text-accent-500 hover:bg-accent-50 dark:hover:bg-accent-500/10 text-sm font-semibold transition-colors">
+        <i class="fa-solid fa-user-nurse text-xs"></i>
+        {% if IS_RTL %}ملاحظة للسكرتارية{% else %}Note for secretaries{% endif %}
+      </button>
+    </div>
+
+    {# ── Private-note form (hidden) ── #}
+    <div id="{{ id_prefix }}-private-form" class="hidden mt-3">
+      <form method="post" action="{{ add_url }}" class="bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-200 dark:border-amber-800 p-4">
+        {% csrf_token %}
+        <input type="hidden" name="audience" value="DOCTOR_PRIVATE">
+        {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+        <p class="font-semibold text-amber-700 dark:text-amber-300 text-sm mb-2">
+          {% if IS_RTL %}ملاحظة خاصة{% else %}Private note{% endif %}
+          <span class="font-normal text-amber-500 dark:text-amber-400">
+            · {% if IS_RTL %}تظهر لك أنت فقط{% else %}visible only to you{% endif %}
+          </span>
+        </p>
+        <textarea name="body" rows="3" required
+                  placeholder="{% if IS_RTL %}اكتب ملاحظة خاصة بك...{% else %}Write a private note for yourself...{% endif %}"
+                  class="w-full text-sm rounded-xl border border-amber-200 dark:border-amber-800 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none mb-2"></textarea>
+        <div class="flex gap-2">
+          <button type="submit" class="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold transition-colors">
+            {% if IS_RTL %}إضافة الملاحظة{% else %}Add note{% endif %}
+          </button>
+          <button type="button"
+                  onclick="document.getElementById('{{ id_prefix }}-private-form').classList.add('hidden');"
+                  class="px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-300 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+            {% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}
+          </button>
+        </div>
+      </form>
+    </div>
+
+    {# ── Note-for-secretaries form (hidden) ── #}
+    <div id="{{ id_prefix }}-secretary-form" class="hidden mt-3">
+      <form method="post" action="{{ add_url }}" class="bg-accent-50/60 dark:bg-accent-500/10 rounded-xl border border-accent-200 dark:border-accent-800 p-4">
+        {% csrf_token %}
+        <input type="hidden" name="audience" value="DOCTOR">
+        {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+        <p class="font-semibold text-accent-700 dark:text-accent-400 text-sm mb-2">
+          {% if IS_RTL %}ملاحظة للسكرتارية{% else %}Note for secretaries{% endif %}
+          <span class="font-normal text-accent-500">
+            · {% if IS_RTL %}تراها أنت والسكرتارية{% else %}visible to you &amp; the secretaries{% endif %}
+          </span>
+        </p>
+        <textarea name="body" rows="3" required
+                  placeholder="{% if IS_RTL %}اكتب ملاحظة للسكرتارية...{% else %}Write a note for the secretaries...{% endif %}"
+                  class="w-full text-sm rounded-xl border border-accent-200 dark:border-accent-800 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent-400 resize-none mb-2"></textarea>
+        <div class="flex gap-2">
+          <button type="submit" class="px-4 py-2 rounded-xl bg-accent-600 hover:bg-accent-700 text-white text-sm font-semibold transition-colors">
+            {% if IS_RTL %}إضافة الملاحظة{% else %}Add note{% endif %}
+          </button>
+          <button type="button"
+                  onclick="document.getElementById('{{ id_prefix }}-secretary-form').classList.add('hidden');"
+                  class="px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-300 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+            {% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}
+          </button>
+        </div>
+      </form>
+    </div>
+
+    {# ── Notes list ── #}
+    {% if notes %}
+    <ul class="mt-4 space-y-3">
+      {% for note in notes %}
+      <li class="rounded-xl border {% if note.audience == 'DOCTOR_PRIVATE' %}border-amber-200 dark:border-amber-800/60 bg-amber-50/40 dark:bg-amber-900/10{% else %}border-accent-200 dark:border-accent-800/60 bg-accent-50/40 dark:bg-accent-500/5{% endif %} px-4 py-3">
+        <div class="flex items-start justify-between gap-3">
+          <div class="flex items-center gap-2 flex-wrap">
+            {% if note.audience == 'DOCTOR_PRIVATE' %}
+            <span class="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">
+              <i class="fa-solid fa-lock text-[10px]"></i>
+              {% if IS_RTL %}خاصة بي{% else %}Private{% endif %}
+            </span>
+            {% else %}
+            <span class="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-accent-100 dark:bg-accent-500/20 text-accent-700 dark:text-accent-400">
+              <i class="fa-solid fa-user-nurse text-[10px]"></i>
+              {% if note.author_role == 'SECRETARY' %}{% if IS_RTL %}من السكرتارية{% else %}From secretary{% endif %}{% else %}{% if IS_RTL %}للسكرتارية{% else %}For secretaries{% endif %}{% endif %}
+            </span>
+            {% endif %}
+            <span class="text-xs font-semibold text-gray-600 dark:text-gray-300">{{ note.author_name }}</span>
+            <span class="text-xs text-gray-400 dark:text-gray-500">· {{ note.created_at|date:"d/m/Y H:i" }}</span>
+          </div>
+          {% if note.author_id == request.user.id %}
+          <form method="post" action="{% url delete_url_name delete_arg note.id %}" class="m-0 flex-shrink-0"
+                onsubmit="return confirm('{% if IS_RTL %}حذف هذه الملاحظة؟{% else %}Delete this note?{% endif %}');">
+            {% csrf_token %}
+            {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+            <button type="submit"
+                    class="text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                    title="{% if IS_RTL %}حذف{% else %}Delete{% endif %}">
+              <i class="fa-solid fa-trash-can text-xs"></i>
+            </button>
+          </form>
+          {% endif %}
+        </div>
+        <p class="mt-2 text-sm text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">{{ note.body }}</p>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="mt-4 text-sm text-gray-400 dark:text-gray-500 italic">
+      {% if IS_RTL %}لا توجد ملاحظات بعد.{% else %}No notes yet.{% endif %}
+    </p>
+    {% endif %}
+  </div>
+</div>

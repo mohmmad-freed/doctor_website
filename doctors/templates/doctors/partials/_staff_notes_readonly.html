@@ -1,0 +1,29 @@
+{% comment %}
+Read-only list of secretary-authored notes addressed to the doctor.
+
+Params:
+  notes      list of StaffNote (audience=DOCTOR)
+  title_ar / title_en   header text (optional; defaults below)
+Renders nothing when there are no notes.
+{% endcomment %}
+{% if notes %}
+<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-violet-200 dark:border-violet-800/60 overflow-hidden">
+  <div class="flex items-center gap-2 px-5 py-3.5 border-b border-violet-100 dark:border-violet-800/60 bg-violet-50/60 dark:bg-violet-900/20">
+    <i class="fa-solid fa-user-nurse text-violet-500 text-sm"></i>
+    <span class="font-semibold text-gray-700 dark:text-gray-200 text-sm">
+      {% if IS_RTL %}{{ title_ar|default:"ملاحظات من السكرتارية" }}{% else %}{{ title_en|default:"Notes from the secretary" }}{% endif %}
+    </span>
+  </div>
+  <ul class="p-5 space-y-3">
+    {% for note in notes %}
+    <li class="rounded-xl border border-violet-200 dark:border-violet-800/60 bg-violet-50/40 dark:bg-violet-900/10 px-4 py-3">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="text-xs font-semibold text-gray-600 dark:text-gray-300">{{ note.author_name }}</span>
+        <span class="text-xs text-gray-400 dark:text-gray-500">· {{ note.created_at|date:"d/m/Y H:i" }}</span>
+      </div>
+      <p class="mt-2 text-sm text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">{{ note.body }}</p>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}

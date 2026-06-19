@@ -354,6 +354,8 @@ class AppointmentNotification(models.Model):
         APPOINTMENT_REMINDER = "APPOINTMENT_REMINDER", "Appointment Reminder"
         APPOINTMENT_RESCHEDULED = "APPOINTMENT_RESCHEDULED", "Appointment Rescheduled"
         APPOINTMENT_STATUS_CHANGED = "APPOINTMENT_STATUS_CHANGED", "Appointment Status Changed"
+        STAFF_NOTE_FOR_DOCTOR = "STAFF_NOTE_FOR_DOCTOR", "Staff Note For Doctor"
+        STAFF_NOTE_FOR_SECRETARY = "STAFF_NOTE_FOR_SECRETARY", "Staff Note For Secretary"
 
     class ContextRole(models.TextChoices):
         PATIENT = "PATIENT", "Patient Context"
@@ -377,6 +379,15 @@ class AppointmentNotification(models.Model):
         null=True,
         blank=True,
         related_name="notifications",
+    )
+    subject_patient = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="subject_notifications",
+        help_text="Patient this notification is about, used to route patient-scoped "
+                  "notifications (e.g. a profile note) when there is no appointment.",
     )
     context_role = models.CharField(
         max_length=20,

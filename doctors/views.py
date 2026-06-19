@@ -4,7 +4,9 @@ from datetime import datetime, date
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
-from django.http import HttpResponse
+from django.db import transaction
+from django.http import HttpResponse, HttpResponseForbidden
+from django.views.decorators.http import require_POST
 
 from django.contrib import messages
 from django.urls import reverse
@@ -356,6 +358,180 @@ def _validated_next(request):
     return None
 
 
+def _appointment_doctor_notes(appointment, viewer=None):
+    """Staff notes on this appointment the doctor may see: doctor-audience notes
+    (visible to doctor + secretaries), plus the viewer's own private notes. Never
+    secretary-only notes — even ones the viewer authored via the secretary portal."""
+    from django.db.models import Q
+    from patients.models import StaffNote
+    visible = Q(audience=StaffNote.Audience.DOCTOR)
+    if viewer is not None:
+        visible |= Q(audience=StaffNote.Audience.DOCTOR_PRIVATE, author=viewer)
+    return list(
+        StaffNote.objects.filter(appointment=appointment)
+        .filter(visible)
+        .select_related("author").order_by("-created_at")
+    )
+
+
+def _patient_doctor_notes(patient, clinic_ids, viewer=None):
+    """Patient-profile staff notes (appointment is None) the doctor may see: doctor-audience
+    notes, plus the viewer's own private notes. Never secretary-only notes."""
+    from django.db.models import Q
+    from patients.models import StaffNote
+    visible = Q(audience=StaffNote.Audience.DOCTOR)
+    if viewer is not None:
+        visible |= Q(audience=StaffNote.Audience.DOCTOR_PRIVATE, author=viewer)
+    return list(
+        StaffNote.objects.filter(
+            patient=patient, clinic_id__in=clinic_ids, appointment__isnull=True
+        ).filter(visible).select_related("author").order_by("-created_at")
+    )
+
+
+def _staff_note_lang(ar, en):
+    """Pick AR/EN by the active language (avoids relying on compiled .po catalogs)."""
+    from django.utils.translation import get_language
+    lang = (get_language() or "ar").split("-")[0]
+    return en if lang.startswith("en") else ar
+
+
+def _is_doctor(user):
+    return user.has_role("DOCTOR") or user.has_role("MAIN_DOCTOR")
+
+
+@login_required
+@require_POST
+def appointment_note_add(request, appointment_id):
+    """Doctor adds a note (private to himself, or for himself + secretaries) on one of
+    their appointments. The doctor portal never authors secretary-only notes."""
+    from patients.models import StaffNote
+    from appointments.services.appointment_notification_service import notify_staff_note
+
+    user = request.user
+    if not _is_doctor(user):
+        return HttpResponseForbidden("هذه الصفحة متاحة للأطباء فقط.")
+    appointment = get_object_or_404(
+        Appointment.objects.select_related("patient", "clinic", "doctor"),
+        id=appointment_id, doctor=user,
+    )
+
+    audience = (request.POST.get("audience") or "").strip().upper()
+    body = (request.POST.get("body") or "").strip()
+    if audience not in (StaffNote.Audience.DOCTOR, StaffNote.Audience.DOCTOR_PRIVATE):
+        messages.error(request, _staff_note_lang("نوع الملاحظة غير صالح.", "Invalid note type."))
+    elif not body:
+        messages.error(request, _staff_note_lang("لا يمكن إضافة ملاحظة فارغة.", "Cannot add an empty note."))
+    else:
+        note = StaffNote.objects.create(
+            clinic=appointment.clinic,
+            patient=appointment.patient,
+            appointment=appointment,
+            audience=audience,
+            body=body,
+            author=user,
+            author_name=user.name,
+            author_role="DOCTOR",
+        )
+        transaction.on_commit(lambda: notify_staff_note(note, user))
+        messages.success(request, _staff_note_lang("تمت إضافة الملاحظة.", "Note added."))
+
+    return _doctor_note_redirect(request, appointment_id)
+
+
+@login_required
+@require_POST
+def appointment_note_delete(request, appointment_id, note_id):
+    """Doctor deletes their OWN note on one of their appointments."""
+    from patients.models import StaffNote
+
+    user = request.user
+    if not _is_doctor(user):
+        return HttpResponseForbidden("هذه الصفحة متاحة للأطباء فقط.")
+    # Ensure the appointment belongs to this doctor before touching the note.
+    get_object_or_404(Appointment, id=appointment_id, doctor=user)
+    note = get_object_or_404(StaffNote, id=note_id, appointment_id=appointment_id)
+    if not note.can_delete(user):
+        return HttpResponseForbidden("لا يمكنك حذف ملاحظة كتبها شخص آخر.")
+    note.delete()
+    messages.success(request, _staff_note_lang("تم حذف الملاحظة.", "Note deleted."))
+    return _doctor_note_redirect(request, appointment_id)
+
+
+def _doctor_note_redirect(request, appointment_id):
+    """Return to the POSTed local ``next`` (the detail/overview page), else the detail page."""
+    next_url = request.POST.get("next") or ""
+    if next_url.startswith("/"):
+        return redirect(next_url)
+    return redirect(reverse("doctors:appointment_detail", args=[appointment_id]) + "#staff-notes")
+
+
+def _doctor_profile_note_redirect(request, patient_id):
+    """Return to the POSTed local ``next`` (the workspace page), else the overview tab."""
+    next_url = request.POST.get("next") or ""
+    if next_url.startswith("/"):
+        return redirect(next_url)
+    return redirect(
+        reverse("doctors:patient_workspace", args=[patient_id]) + "?tab=overview#staff-notes"
+    )
+
+
+@login_required
+@require_POST
+def patient_note_add(request, patient_id):
+    """Doctor adds a patient-profile note (private to himself, or for himself + secretaries)."""
+    from patients.models import StaffNote
+    from appointments.services.appointment_notification_service import notify_staff_note
+
+    ctx = _ws_access(request, patient_id)
+    if ctx is None:
+        return HttpResponseForbidden("هذه الصفحة متاحة للأطباء فقط.")
+    user = ctx["doctor"]
+    patient = ctx["patient"]
+    clinic_id = ctx["shared_clinic_ids"][0]
+
+    audience = (request.POST.get("audience") or "").strip().upper()
+    body = (request.POST.get("body") or "").strip()
+    if audience not in (StaffNote.Audience.DOCTOR, StaffNote.Audience.DOCTOR_PRIVATE):
+        messages.error(request, _staff_note_lang("نوع الملاحظة غير صالح.", "Invalid note type."))
+    elif not body:
+        messages.error(request, _staff_note_lang("لا يمكن إضافة ملاحظة فارغة.", "Cannot add an empty note."))
+    else:
+        note = StaffNote.objects.create(
+            clinic_id=clinic_id,
+            patient=patient,
+            appointment=None,
+            audience=audience,
+            body=body,
+            author=user,
+            author_name=user.name,
+            author_role="DOCTOR",
+        )
+        transaction.on_commit(lambda: notify_staff_note(note, user))
+        messages.success(request, _staff_note_lang("تمت إضافة الملاحظة.", "Note added."))
+
+    return _doctor_profile_note_redirect(request, patient_id)
+
+
+@login_required
+@require_POST
+def patient_note_delete(request, patient_id, note_id):
+    """Doctor deletes their OWN patient-profile note."""
+    from patients.models import StaffNote
+
+    ctx = _ws_access(request, patient_id)
+    if ctx is None:
+        return HttpResponseForbidden("هذه الصفحة متاحة للأطباء فقط.")
+    note = get_object_or_404(
+        StaffNote, id=note_id, patient_id=patient_id, appointment__isnull=True
+    )
+    if not note.can_delete(ctx["doctor"]):
+        return HttpResponseForbidden("لا يمكنك حذف ملاحظة كتبها شخص آخر.")
+    note.delete()
+    messages.success(request, _staff_note_lang("تم حذف الملاحظة.", "Note deleted."))
+    return _doctor_profile_note_redirect(request, patient_id)
+
+
 @login_required
 def appointment_detail(request, appointment_id):
     """Single appointment view with patient info, intake answers, and status controls."""
@@ -386,6 +562,7 @@ def appointment_detail(request, appointment_id):
         "can_cancel": Appointment.Status.CANCELLED in valid_values,
         "next_url": next_url,
         "back_url": next_url or reverse("doctors:appointments"),
+        "staff_doctor_notes": _appointment_doctor_notes(appointment, viewer=user),
     })
 
 
@@ -460,6 +637,10 @@ def appointment_overview(request, appointment_id):
         "can_cancel": Appointment.Status.CANCELLED in valid_values,
         "upcoming": upcoming,
         "past": past,
+        "staff_doctor_notes": _appointment_doctor_notes(appointment, viewer=user),
+        "patient_staff_notes": _patient_doctor_notes(
+            patient, [appointment.clinic_id], viewer=user
+        ),
     })
 
 
@@ -1874,7 +2055,7 @@ def intake_rule_delete(request, template_id, rule_id):
 
 from patients.models import (
     ClinicalNote, Order, Prescription, PrescriptionItem, MedicalRecord,
-    ClinicPatient, PatientProfile,
+    ClinicPatient, PatientProfile, StaffNote,
 )
 
 
@@ -1957,7 +2138,7 @@ def patient_workspace(request, patient_id):
     cids = ctx["shared_clinic_ids"]
 
     if tab == "overview":
-        ctx.update(_ws_overview_data(patient, cids))
+        ctx.update(_ws_overview_data(patient, cids, viewer=ctx["doctor"]))
         ctx["active_note_sections"] = _get_active_note_sections(ctx["doctor"])
     elif tab == "notes":
         ctx.update(_ws_notes_data(patient, cids, request))
@@ -1984,7 +2165,7 @@ def patient_workspace(request, patient_id):
 
 # ── Tab data helpers ──────────────────────────────────────────────────────────
 
-def _ws_overview_data(patient, cids):
+def _ws_overview_data(patient, cids, viewer=None):
     all_notes = list(
         ClinicalNote.objects.filter(patient=patient, clinic_id__in=cids)
         .select_related("doctor", "clinic")
@@ -1992,6 +2173,10 @@ def _ws_overview_data(patient, cids):
     )
 
     _annotate_notes_with_labeled_extras(all_notes)
+
+    # Patient-profile staff notes the doctor may see: doctor-audience notes (shared with
+    # secretaries) + the viewer's own private notes. Never secretary-only notes.
+    staff_doctor_notes = _patient_doctor_notes(patient, cids, viewer=viewer)
 
     active_orders  = list(Order.objects.filter(patient=patient, clinic_id__in=cids, status=Order.Status.PENDING).select_related("doctor")[:8])
     latest_rx      = Prescription.objects.filter(patient=patient, clinic_id__in=cids, is_active=True).prefetch_related("items").first()
@@ -2014,6 +2199,7 @@ def _ws_overview_data(patient, cids):
 
     return {
         "all_notes":      all_notes,
+        "staff_doctor_notes": staff_doctor_notes,
         "active_orders":  active_orders,
         "latest_rx":      latest_rx,
         "recent_records": recent_records,

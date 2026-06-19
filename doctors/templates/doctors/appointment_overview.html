@@ -79,6 +79,12 @@
     </div>
   </div>
 
+  {# ── Notes on the patient profile — doctor can add (private / for secretaries) ── #}
+  <div class="mb-6">
+    {% url 'doctors:patient_note_add' patient.id as patient_note_add_url %}
+    {% include "doctors/partials/_staff_notes_panel.html" with notes=patient_staff_notes add_url=patient_note_add_url delete_url_name="doctors:patient_note_delete" delete_arg=patient.id id_prefix="doc-overview-patient-notes" next_url=request.get_full_path panel_title_ar="ملاحظات على ملف المريض" panel_title_en="Patient profile notes" %}
+  </div>
+
   {# ── Focused appointment (highlighted — from the notification) ─────────── #}
   <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-md border-2 border-indigo-300 dark:border-indigo-600/70 mb-7 overflow-hidden">
     <div class="flex items-center justify-between gap-3 px-5 py-3 bg-indigo-50 dark:bg-indigo-900/30 border-b border-indigo-100 dark:border-indigo-800/60">
@@ -187,7 +193,13 @@
         <span class="font-semibold text-red-700 dark:text-red-300 text-sm">{% if IS_RTL %}إلغاء الموعد{% else %}Cancel Appointment{% endif %}</span>
       </div>
       <div class="px-5 py-5">
-        <form method="post" class="space-y-4">
+        {# Reveal the reason field only after the doctor opts to cancel. #}
+        <button type="button"
+                onclick="document.getElementById('doc-ov-cancel-panel').classList.toggle('hidden');this.classList.add('hidden');"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 dark:border-red-900/40 bg-white dark:bg-slate-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-semibold transition-colors">
+          <i class="fa-solid fa-xmark text-xs"></i> {% if IS_RTL %}إلغاء الموعد{% else %}Cancel Appointment{% endif %}
+        </button>
+        <form id="doc-ov-cancel-panel" method="post" class="hidden space-y-4 mt-3">
           {% csrf_token %}
           <input type="hidden" name="status" value="CANCELLED">
           <div>
@@ -198,11 +210,16 @@
                       placeholder="{% if IS_RTL %}يرجى ذكر سبب الإلغاء...{% else %}Please provide a reason for cancelling...{% endif %}"
                       class="w-full text-sm rounded-xl border border-red-300 dark:border-red-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-400 resize-none transition"></textarea>
           </div>
-          <div class="pt-1">
+          <div class="pt-1 flex gap-2">
             <button type="submit"
                     class="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 active:scale-95 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all shadow-sm">
               <i class="fa-solid fa-xmark text-xs"></i>
-              {% if IS_RTL %}إلغاء الموعد{% else %}Cancel Appointment{% endif %}
+              {% if IS_RTL %}تأكيد الإلغاء{% else %}Confirm Cancellation{% endif %}
+            </button>
+            <button type="button"
+                    onclick="var f=document.getElementById('doc-ov-cancel-panel');f.classList.add('hidden');f.previousElementSibling.classList.remove('hidden');"
+                    class="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-300 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+              {% if IS_RTL %}تراجع{% else %}Back{% endif %}
             </button>
           </div>
         </form>
@@ -211,6 +228,11 @@
     {% endif %}
   </div>
 
+  {# ── Staff notes on this appointment — doctor can add (private / for secretaries) ── #}
+  <div id="staff-notes" class="mb-6 scroll-mt-6">
+    {% url 'doctors:appointment_note_add' appointment.id as appt_note_add_url %}
+    {% include "doctors/partials/_staff_notes_panel.html" with notes=staff_doctor_notes add_url=appt_note_add_url delete_url_name="doctors:appointment_note_delete" delete_arg=appointment.id id_prefix="doc-overview-notes" next_url=request.get_full_path panel_title_ar="ملاحظات على الموعد" panel_title_en="Appointment notes" %}
+  </div>
   {# ── Upcoming appointments ────────────────────────────────────────────── #}
   <div class="mb-7">
     <div class="flex items-center gap-2 mb-3">

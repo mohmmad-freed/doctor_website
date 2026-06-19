@@ -742,6 +742,12 @@
   <!-- ── Right column (1/3): Latest Rx + Recent Records + Active Orders ──────── -->
   <div class="space-y-4">
 
+    <!-- Patient-profile staff notes — doctor can add (private / for secretaries) -->
+    <div id="staff-notes" class="scroll-mt-6">
+      {% url 'doctors:patient_note_add' patient.id as patient_note_add_url %}
+      {% include "doctors/partials/_staff_notes_panel.html" with notes=staff_doctor_notes add_url=patient_note_add_url delete_url_name="doctors:patient_note_delete" delete_arg=patient.id id_prefix="ws-patient-notes" next_url=request.get_full_path panel_title_ar="ملاحظات على ملف المريض" panel_title_en="Patient profile notes" %}
+    </div>
+
     <!-- Active Prescriptions -->
     <div class="ws-card overflow-hidden">
       <div class="flex items-center justify-between px-4 py-3.5 border-b border-slate-100 dark:border-slate-700">

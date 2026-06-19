@@ -280,12 +280,12 @@ def notify_secretaries_appointment_cancelled_by_doctor(appointment, by_staff=Non
         date_str = appointment.appointment_date.strftime("%Y-%m-%d")
         time_str = appointment.appointment_time.strftime("%H:%M")
 
-        title = "إلغاء موعد من قبل الطبيب"
+        title = "تم إلغاء الموعد"
         message = (
             f"قام {doctor_ar} بإلغاء موعد المريض {patient_name} "
             f"بتاريخ {date_str} الساعة {time_str}."
         )
-        title_en = "Appointment Cancelled by Doctor"
+        title_en = "Appointment Cancelled"
         message_en = (
             f"{doctor_en} cancelled patient {patient_name}'s appointment "
             f"on {date_str} at {time_str}."
@@ -402,12 +402,12 @@ def notify_staff_patient_cancelled(appointment):
         date_str = appointment.appointment_date.strftime("%Y-%m-%d")
         time_str = appointment.appointment_time.strftime("%H:%M")
 
-        title = "إلغاء موعد من قبل المريض"
+        title = "تم إلغاء الموعد"
         message = (
             f"قام المريض {patient_name} بإلغاء موعده "
             f"بتاريخ {date_str} الساعة {time_str}."
         )
-        title_en = "Appointment Cancelled by Patient"
+        title_en = "Appointment Cancelled"
         message_en = (
             f"Patient {patient_name} cancelled their appointment on "
             f"{date_str} at {time_str}."
@@ -778,3 +778,141 @@ def notify_patient_status_changed(appointment, old_status, new_status, by_staff=
 
     except Exception as exc:
         logger.error("[NOTIFICATION] notify_patient_status_changed failed: %r", exc)
+
+
+def notify_staff_note(note, actor_user):
+    """
+    Notify the right audience (in-app only) when staff adds a StaffNote.
+
+    The author may be a secretary OR a doctor (note.author_role). The notification
+    title is neutral ("New Note") — who wrote it is shown by the actor badge, not
+    repeated in the title.
+
+    Audience rules:
+      - DOCTOR_PRIVATE note → nobody (visible to the authoring doctor only).
+      - SECRETARY note → all active secretaries of the clinic EXCEPT the author.
+      - DOCTOR note (the doctor↔secretary shared channel) → notify the *other* party:
+          * authored by a secretary → the appointment's doctor, or (patient-scoped) the
+            patient's *treating* doctors (the author is not excluded, so a secretary's
+            doctor-note still reaches the doctor even when one person holds both roles).
+          * authored by a doctor → all active secretaries EXCEPT the author (it's the
+            doctor's "note for secretaries").
+
+    Each notification carries subject_patient so patient-scoped notes (no appointment)
+    can still route to the patient profile.
+
+    Safe to call from transaction.on_commit(). Failures are logged, never raised.
+    """
+    try:
+        from appointments.models import Appointment
+        from clinics.models import ClinicStaff
+
+        clinic = note.clinic
+        appointment = note.appointment  # may be None
+        patient = note.patient
+        author_id = actor_user.id if actor_user else note.author_id
+        actor_name = actor_user.name if actor_user else (note.author_name or "")
+        author_is_doctor = note.author_role == "DOCTOR"
+        actor_role = (
+            AppointmentNotification.ActorRole.DOCTOR if author_is_doctor
+            else AppointmentNotification.ActorRole.SECRETARY
+        )
+        patient_name = patient.name if patient else "المريض"
+
+        # Private doctor notes are visible only to their author → notify nobody.
+        if note.audience == note.Audience.DOCTOR_PRIVATE:
+            return
+
+        if note.audience == note.Audience.SECRETARY:
+            context_role = AppointmentNotification.ContextRole.SECRETARY
+            notification_type = AppointmentNotification.Type.STAFF_NOTE_FOR_SECRETARY
+            title = "ملاحظة داخلية جديدة"
+            message = (
+                f"أضاف {actor_name} ملاحظة للسكرتارية بخصوص المريض {patient_name}."
+            )
+            title_en = "New Internal Note"
+            message_en = (
+                f"{actor_name} added a secretaries-only note about patient {patient_name}."
+            )
+            recipient_ids = list(
+                ClinicStaff.objects.filter(
+                    clinic=clinic, role="SECRETARY", is_active=True,
+                ).values_list("user_id", flat=True)
+            )
+            exclude_author = True  # don't notify the author of their own internal note
+        elif author_is_doctor:
+            # DOCTOR audience written by a doctor = a "note for secretaries" → notify them.
+            context_role = AppointmentNotification.ContextRole.SECRETARY
+            notification_type = AppointmentNotification.Type.STAFF_NOTE_FOR_SECRETARY
+            title = "ملاحظة جديدة للسكرتارية"
+            message = (
+                f"أضاف {actor_name} ملاحظة للسكرتارية بخصوص المريض {patient_name}."
+            )
+            title_en = "New Note for Secretaries"
+            message_en = (
+                f"{actor_name} added a note for the secretaries about patient {patient_name}."
+            )
+            recipient_ids = list(
+                ClinicStaff.objects.filter(
+                    clinic=clinic, role="SECRETARY", is_active=True,
+                ).values_list("user_id", flat=True)
+            )
+            # Don't exclude the author: a multi-role doctor-secretary (e.g. a sole-operator
+            # MAIN_DOCTOR who also runs reception) must still receive this in their SECRETARY
+            # context — it's a different portal. Mirrors the secretary→doctor branch below.
+            exclude_author = False
+        else:
+            # DOCTOR audience written by a secretary = a note for the doctor.
+            context_role = AppointmentNotification.ContextRole.DOCTOR
+            notification_type = AppointmentNotification.Type.STAFF_NOTE_FOR_DOCTOR
+            title = "ملاحظة جديدة"
+            message = (
+                f"أضاف {actor_name} ملاحظة بخصوص المريض {patient_name}."
+            )
+            title_en = "New Note"
+            message_en = (
+                f"{actor_name} added a note about patient {patient_name}."
+            )
+            if appointment is not None and appointment.doctor_id:
+                recipient_ids = [appointment.doctor_id]
+            else:
+                # Patient-scoped: notify the patient's treating doctors at this clinic.
+                recipient_ids = list(
+                    Appointment.objects.filter(
+                        clinic=clinic, patient=patient, doctor__isnull=False,
+                    ).values_list("doctor_id", flat=True).distinct()
+                )
+            # A secretary's doctor-note must reach the doctor (even if multi-role same user).
+            exclude_author = False
+
+        seen = set()
+        for user_id in recipient_ids:
+            if user_id in seen:
+                continue
+            seen.add(user_id)
+            if exclude_author and author_id is not None and user_id == author_id:
+                continue
+            try:
+                AppointmentNotification.objects.create(
+                    patient_id=user_id,
+                    appointment=appointment,
+                    subject_patient=patient,
+                    context_role=context_role,
+                    notification_type=notification_type,
+                    title=title,
+                    message=message,
+                    title_en=title_en,
+                    message_en=message_en,
+                    actor_role=actor_role,
+                    actor_name=actor_name,
+                    is_delivered=True,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "[NOTIFICATION] Could not create staff-note notification "
+                    "for user_id=%s note_id=%s: %r",
+                    user_id, getattr(note, "id", None), exc,
+                )
+
+    except Exception as exc:
+        logger.error("[NOTIFICATION] notify_staff_note failed: %r", exc)

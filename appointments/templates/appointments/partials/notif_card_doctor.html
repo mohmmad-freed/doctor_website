@@ -47,6 +47,7 @@
                         {% elif notif.notification_type == 'APPOINTMENT_EDITED' %}{% trans "معدّل" %}
                         {% elif notif.notification_type == 'APPOINTMENT_REMINDER' %}{% trans "تذكير" %}
                         {% elif notif.notification_type == 'APPOINTMENT_STATUS_CHANGED' %}{% trans "تحديث الحالة" %}
+                        {% elif notif.notification_type == 'STAFF_NOTE_FOR_DOCTOR' or notif.notification_type == 'STAFF_NOTE_FOR_SECRETARY' %}{% if IS_RTL %}ملاحظة{% else %}Note{% endif %}
                         {% else %}{% trans "إشعار" %}
                         {% endif %}
                     </span>
@@ -135,7 +136,7 @@
                           text-primary-600 dark:text-primary-400
                           hover:text-primary-700 dark:hover:text-primary-300
                           transition-colors group">
-                    {% trans "عرض الموعد" %}
+                    {% if not notif.appointment and notif.subject_patient %}{% trans "عرض ملف المريض" %}{% else %}{% trans "عرض الموعد" %}{% endif %}
                     <i class="fa-solid {% if IS_RTL %}fa-arrow-left{% else %}fa-arrow-right{% endif %}
                               text-[10px] transition-transform
                               {% if IS_RTL %}group-hover:-translate-x-0.5{% else %}group-hover:translate-x-0.5{% endif %}"></i>
