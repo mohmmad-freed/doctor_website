@@ -134,7 +134,7 @@
 
         /* ── Mobile glass nav ─────────────────────── */
         .mobile-nav-glass {
-            position: fixed; bottom: 20px; left: 50%;
+            position: fixed; bottom: calc(20px + env(safe-area-inset-bottom, 0px) + var(--vv-overlap, 0px)); left: 50%;
             transform: translateX(-50%);
             width: 92%; max-width: 420px; height: 64px;
             background: rgba(255,255,255,0.8);
@@ -280,10 +280,71 @@
         .dark .lang-toggle-btn:hover { border-color: #818cf8; color: #818cf8; }
     </style>
 
-    <!-- Dark-mode pre-script (no FOUC) -->
+    <!-- ── Collapsible / drawer sidebar ─────────────── -->
+    <style>
+        #sidebar { transition: transform .28s cubic-bezier(.4,0,.2,1); will-change: transform; }
+        #contentWrap { transition: margin .28s cubic-bezier(.4,0,.2,1); }
+
+        /* Mobile: off-canvas drawer */
+        @media (max-width: 767px) {
+            [dir="ltr"] #sidebar { transform: translateX(-100%); }
+            [dir="rtl"] #sidebar { transform: translateX(100%); }
+            .sidebar-open #sidebar { transform: translateX(0) !important; box-shadow: 0 0 50px rgba(0,0,0,.28); }
+            .sidebar-open .mobile-nav-glass { display: none; }
+        }
+
+        /* Desktop: collapsible */
+        @media (min-width: 768px) {
+            #sidebar { transform: translateX(0); }
+            [dir="ltr"].sidebar-collapsed #sidebar { transform: translateX(-100%); }
+            [dir="rtl"].sidebar-collapsed #sidebar { transform: translateX(100%); }
+            .sidebar-collapsed #contentWrap { margin-inline-start: 0 !important; }
+            #sidebarReopen { display: none; }
+            .sidebar-collapsed #sidebarReopen { display: flex; }
+        }
+
+        /* Backdrop (mobile drawer) */
+        #sidebarBackdrop {
+            position: fixed; inset: 0; z-index: 45;
+            background: rgba(15,23,42,.45);
+            -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+            opacity: 0; visibility: hidden;
+            transition: opacity .25s ease, visibility .25s ease;
+        }
+        .sidebar-open #sidebarBackdrop { opacity: 1; visibility: visible; }
+        @media (min-width: 768px) { #sidebarBackdrop { display: none !important; } }
+
+        /* Collapse / close button inside sidebar header */
+        .sidebar-toggle-btn {
+            width: 32px; height: 32px; border-radius: 9px;
+            display: flex; align-items: center; justify-content: center;
+            color: #94a3b8; background: transparent; border: none; cursor: pointer;
+            transition: background .15s, color .15s; flex-shrink: 0;
+        }
+        .sidebar-toggle-btn:hover { background: #f1f5f9; color: #4f46e5; }
+        .dark .sidebar-toggle-btn:hover { background: rgba(99,102,241,.1); color: #818cf8; }
+        [dir="rtl"] .sidebar-toggle-btn i,
+        [dir="rtl"] #sidebarReopen i { transform: scaleX(-1); }
+
+        /* Floating re-open button (desktop, when collapsed) */
+        #sidebarReopen {
+            position: fixed; top: 14px; inset-inline-start: 14px; z-index: 45;
+            width: 42px; height: 42px; border-radius: 12px;
+            display: none; align-items: center; justify-content: center;
+            background: #fff; color: #4f46e5;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 4px 14px rgba(0,0,0,.1);
+            cursor: pointer; transition: transform .15s, box-shadow .15s;
+        }
+        #sidebarReopen:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,.15); }
+        .dark #sidebarReopen { background: #1e293b; border-color: #334155; color: #818cf8; }
+    </style>
+
+    <!-- Dark-mode + sidebar pre-script (no FOUC) -->
     <script>
         const _t = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
         if (_t === 'dark') document.documentElement.classList.add('dark');
+        if (localStorage.getItem('sidebar_collapsed') !== '0') document.documentElement.classList.add('sidebar-collapsed');
     </script>
 
     <link rel="stylesheet" href="{% static 'accounts/css/loader.css' %}">
@@ -306,12 +367,20 @@
         </div>
     </div>
 
+    <!-- Mobile drawer backdrop -->
+    <div id="sidebarBackdrop" onclick="closeSidebarMobile()"></div>
+
+    <!-- Floating re-open button (desktop, shown when collapsed) -->
+    <button id="sidebarReopen" onclick="expandSidebar()" aria-label="{% trans 'فتح القائمة' %}" title="{% trans 'فتح القائمة' %}">
+        <i class="fa-solid fa-bars-staggered"></i>
+    </button>
+
     <!-- ═══════════════ SIDEBAR ═══════════════ -->
     <aside id="sidebar"
-           class="hidden md:flex fixed inset-y-0 start-0 w-64 flex-col
+           class="flex fixed inset-y-0 start-0 w-64 flex-col
                   bg-white dark:bg-slate-900
                   border-e border-gray-200 dark:border-slate-700
-                  z-40">
+                  z-50">
 
             <!-- Logo -->
             <div class="flex items-center gap-2.5 h-16 px-5 border-b border-gray-100 dark:border-slate-700 flex-shrink-0">
@@ -322,6 +391,9 @@
                     <span class="font-bold text-base text-gray-900 dark:text-white tracking-tight">MedPortal</span>
                     <span class="text-[10px] font-semibold text-primary-600 dark:text-primary-400 uppercase tracking-wider">{% trans "بوابة الأطباء" %}</span>
                 </div>
+                <button class="sidebar-toggle-btn ms-auto" onclick="toggleSidebarFromHeader()" aria-label="{% trans 'طي القائمة' %}" title="{% trans 'طي القائمة' %}">
+                    <i class="fa-solid fa-angles-left"></i>
+                </button>
             </div>
 
             <!-- Nav links (scrollable) -->
@@ -489,11 +561,14 @@
         </aside>
 
     <!-- ═══════════════ PAGE CONTENT ═══════════════ -->
-    <div class="md:ms-64">
+    <div id="contentWrap" class="md:ms-64">
 
             <!-- Mobile top bar -->
             <header class="md:hidden sticky top-0 z-30 h-14 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-gray-200 dark:border-slate-700 flex items-center justify-between px-4">
                 <div class="flex items-center gap-2">
+                    <button onclick="openSidebarMobile()" class="inline-flex items-center justify-center w-9 h-9 -ms-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors" aria-label="{% trans 'فتح القائمة' %}">
+                        <i class="fa-solid fa-bars text-lg"></i>
+                    </button>
                     <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white text-xs">
                         <i class="fa-solid fa-stethoscope"></i>
                     </div>
@@ -590,6 +665,32 @@
 
     <!-- ═══════════════ SCRIPTS ═══════════════ -->
     <script>
+        // ── Sidebar open / close ──────────────────────────────
+        const _isDesktop = () => window.matchMedia('(min-width: 768px)').matches;
+        function openSidebarMobile()  { document.documentElement.classList.add('sidebar-open'); }
+        function closeSidebarMobile() { document.documentElement.classList.remove('sidebar-open'); }
+        function collapseSidebar() {
+            document.documentElement.classList.add('sidebar-collapsed');
+            localStorage.setItem('sidebar_collapsed', '1');
+        }
+        function expandSidebar() {
+            document.documentElement.classList.remove('sidebar-collapsed');
+            localStorage.setItem('sidebar_collapsed', '0');
+        }
+        // Header button: collapses on desktop, closes drawer on mobile
+        function toggleSidebarFromHeader() {
+            if (_isDesktop()) collapseSidebar();
+            else closeSidebarMobile();
+        }
+        // Close mobile drawer when a nav link is tapped, and on Escape
+        document.addEventListener('DOMContentLoaded', () => {
+            const sb = document.getElementById('sidebar');
+            if (sb) sb.querySelectorAll('a[href]').forEach(a => {
+                a.addEventListener('click', () => { if (!_isDesktop()) closeSidebarMobile(); });
+            });
+        });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSidebarMobile(); });
+
         // Theme toggle (sidebar desktop)
         document.addEventListener('DOMContentLoaded', () => {
             const isDark = document.documentElement.classList.contains('dark');
@@ -766,6 +867,24 @@
         });
 
     })();
+    </script>
+
+    <!-- Keep the mobile bottom nav pinned above the browser's dynamic toolbar -->
+    <script>
+        (function () {
+            var nav = document.querySelector('.mobile-nav-glass');
+            var vv = window.visualViewport;
+            if (!nav || !vv) return;
+            function update() {
+                var overlap = window.innerHeight - vv.height - vv.offsetTop;
+                if (overlap < 0) overlap = 0;
+                nav.style.setProperty('--vv-overlap', overlap + 'px');
+            }
+            vv.addEventListener('resize', update);
+            vv.addEventListener('scroll', update);
+            window.addEventListener('orientationchange', update);
+            update();
+        })();
     </script>
 
     {% block scripts %}{% endblock %}
