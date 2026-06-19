@@ -45,6 +45,7 @@ urlpatterns = [
     path("patients/<int:patient_id>/notes/add/", views.ws_note_add, name="ws_note_add"),
     path("patients/<int:patient_id>/notes/<int:note_id>/edit/", views.ws_note_edit, name="ws_note_edit"),
     path("patients/<int:patient_id>/notes/<int:note_id>/delete/", views.ws_note_delete, name="ws_note_delete"),
+    path("patients/<int:patient_id>/notes/<int:note_id>/addendum/", views.ws_note_addendum_add, name="ws_note_addendum_add"),
     path("patients/<int:patient_id>/orders/add/", views.ws_order_add, name="ws_order_add"),
     path("patients/<int:patient_id>/orders/<int:order_id>/update/", views.ws_order_update, name="ws_order_update"),
     path("patients/<int:patient_id>/orders/<int:order_id>/edit/", views.ws_order_edit, name="ws_order_edit"),

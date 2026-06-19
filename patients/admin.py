@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     PatientProfile, ClinicPatient,
-    ClinicalNote, Order, Prescription, PrescriptionItem, MedicalRecord,
+    ClinicalNote, ClinicalNoteAddendum, Order, Prescription, PrescriptionItem, MedicalRecord,
     StaffNote,
 )
 
@@ -53,6 +53,14 @@ class StaffNoteAdmin(admin.ModelAdmin):
     search_fields = ['patient__name', 'author_name', 'body']
     raw_id_fields = ['patient', 'clinic', 'appointment', 'author']
     readonly_fields = ['created_at', 'updated_at']
+
+
+@admin.register(ClinicalNoteAddendum)
+class ClinicalNoteAddendumAdmin(admin.ModelAdmin):
+    list_display = ['note', 'doctor', 'created_at']
+    search_fields = ['note__patient__name', 'doctor__name', 'text']
+    raw_id_fields = ['note', 'doctor']
+    readonly_fields = ['created_at']
 
 
 @admin.register(Order)

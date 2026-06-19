@@ -2054,8 +2054,8 @@ def intake_rule_delete(request, template_id, rule_id):
 # ══════════════════════════════════════════════════════════════════════════════
 
 from patients.models import (
-    ClinicalNote, Order, Prescription, PrescriptionItem, MedicalRecord,
-    ClinicPatient, PatientProfile, StaffNote,
+    ClinicalNote, ClinicalNoteAddendum, Order, Prescription, PrescriptionItem, MedicalRecord,
+    ClinicPatient, PatientProfile,
 )
 
 
@@ -2169,6 +2169,7 @@ def _ws_overview_data(patient, cids, viewer=None):
     all_notes = list(
         ClinicalNote.objects.filter(patient=patient, clinic_id__in=cids)
         .select_related("doctor", "clinic")
+        .prefetch_related("addenda__doctor")
         .order_by("-created_at")
     )
 
@@ -2210,7 +2211,11 @@ def _ws_overview_data(patient, cids, viewer=None):
 
 def _ws_notes_data(patient, cids, request):
     from django.core.paginator import Paginator
-    qs = ClinicalNote.objects.filter(patient=patient, clinic_id__in=cids).select_related("doctor", "clinic")
+    qs = (
+        ClinicalNote.objects.filter(patient=patient, clinic_id__in=cids)
+        .select_related("doctor", "clinic")
+        .prefetch_related("addenda__doctor")
+    )
     paginator = Paginator(qs, 10)
     notes_page = paginator.get_page(request.GET.get("notes_page", 1))
 
@@ -2350,6 +2355,39 @@ def ws_note_delete(request, patient_id, note_id):
         ctx.update(_ws_notes_data(ctx["patient"], ctx["shared_clinic_ids"], request))
         ctx["active_note_sections"] = _get_active_note_sections(ctx["doctor"])
         return render(request, "doctors/partials/ws_notes.html", ctx)
+
+    return redirect("doctors:patient_workspace", patient_id=patient_id)
+
+
+@login_required
+def ws_note_addendum_add(request, patient_id, note_id):
+    """Append an addendum to an existing note. Any doctor sharing a clinic with
+    the patient may add one (not just the note's author). Returns the updated
+    per-note addenda fragment so the rest of the page/panel stays intact."""
+    ctx = _ws_access(request, patient_id)
+    if ctx is None:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden()
+
+    # Note must belong to the patient and a clinic shared with this doctor.
+    note = get_object_or_404(
+        ClinicalNote,
+        pk=note_id,
+        patient_id=patient_id,
+        clinic_id__in=ctx["shared_clinic_ids"],
+    )
+
+    if request.method == "POST":
+        text = request.POST.get("addendum_text", "").strip()
+        if text:
+            ClinicalNoteAddendum.objects.create(
+                note=note, doctor=ctx["doctor"], text=text
+            )
+        return render(
+            request,
+            "doctors/partials/_note_addenda.html",
+            {"note": note, "patient": ctx["patient"], "doctor": ctx["doctor"]},
+        )
 
     return redirect("doctors:patient_workspace", patient_id=patient_id)
 

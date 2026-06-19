@@ -235,6 +235,34 @@ class StaffNote(models.Model):
         return bool(user) and self.author_id == user.id
 
 
+class ClinicalNoteAddendum(models.Model):
+    """Append-only addendum attached to a saved ClinicalNote.
+
+    The original note is never modified — addenda preserve a clear audit trail
+    of who added what and when. Any doctor with access to the patient may add an
+    addendum (each is attributed to its author).
+    """
+
+    note = models.ForeignKey(
+        ClinicalNote, on_delete=models.CASCADE, related_name="addenda"
+    )
+    doctor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="authored_addenda",
+    )
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+        verbose_name = "Clinical Note Addendum"
+        verbose_name_plural = "Clinical Note Addenda"
+
+    def __str__(self):
+        return f"Addendum by {self.doctor.name} on note #{self.note_id}"
+
+
 class Order(models.Model):
     """Unified order: drug, lab, radiology, microbiology, or procedure."""
 

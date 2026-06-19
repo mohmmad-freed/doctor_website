@@ -132,7 +132,7 @@
         /* Mobile Nav Glass Island */
         .mobile-nav-glass {
             position: fixed;
-            bottom: 24px;
+            bottom: calc(24px + env(safe-area-inset-bottom, 0px) + var(--vv-overlap, 0px));
             left: 50%;
             transform: translateX(-50%);
             width: 92%;
@@ -262,7 +262,7 @@
                         class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white">
                         <i class="fa-solid fa-heart-pulse"></i>
                     </div>
-                    <span class="font-bold text-xl text-gray-900 dark:text-white tracking-tight">{% trans "منصتي الطبية" %}</span>
+                    <span class="font-bold text-xl text-gray-900 dark:text-white tracking-tight hidden sm:inline-block">{% trans "منصتي الطبية" %}</span>
                     <span
                         class="text-xs bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 px-2 py-0.5 rounded-full mr-2 hidden sm:inline-block">{% trans "بوابة المرضى" %}</span>
                 </div>
@@ -343,7 +343,7 @@
                             <i class="fa-solid fa-chevron-down text-gray-400 pum-chevron" style="font-size:0.6rem;transition:transform 0.2s;"></i>
                         </button>
 
-                        <div class="pum-dropdown hidden absolute start-0 top-full mt-2 w-56 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden">
+                        <div class="pum-dropdown hidden absolute end-0 top-full mt-2 w-56 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden">
                             <!-- Header -->
                             <div class="flex items-center gap-2.5 px-3.5 py-3 bg-gray-50 dark:bg-slate-700/50">
                                 <div class="w-9 h-9 rounded-full overflow-hidden flex-shrink-0">
@@ -409,7 +409,7 @@
     </nav>
 
     <!-- Main Content -->
-    <main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-32 md:py-8">
+    <main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-40 md:py-8">
         <!-- Alerts/Messages -->
         {% if messages %}
         <div class="mb-6 space-y-2 max-w-3xl mx-auto">
@@ -474,7 +474,7 @@
 
     <!-- Footer -->
     <footer
-        class="bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 py-6 mt-auto transition-colors duration-300">
+        class="hidden md:block bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 py-6 mt-auto transition-colors duration-300">
         <div class="container mx-auto px-4 text-center text-sm text-gray-500 dark:text-gray-400">
             &copy; {% now "Y" %} {% trans "منصتي الطبية. جميع الحقوق محفوظة." %}
         </div>
@@ -547,6 +547,26 @@
                 bar.classList.remove('active');
                 skel.classList.remove('active');
             });
+        })();
+    </script>
+
+    <!-- Keep the mobile bottom nav pinned above the browser's dynamic toolbar -->
+    <script>
+        (function () {
+            var nav = document.querySelector('.mobile-nav-glass');
+            var vv = window.visualViewport;
+            if (!nav || !vv) return; // older browsers fall back to plain fixed positioning
+            function update() {
+                // How much of the layout viewport is hidden at the bottom
+                // (browser URL bar, on-screen keyboard, pinch-zoom offset, …)
+                var overlap = window.innerHeight - vv.height - vv.offsetTop;
+                if (overlap < 0) overlap = 0;
+                nav.style.setProperty('--vv-overlap', overlap + 'px');
+            }
+            vv.addEventListener('resize', update);
+            vv.addEventListener('scroll', update);
+            window.addEventListener('orientationchange', update);
+            update();
         })();
     </script>
 
