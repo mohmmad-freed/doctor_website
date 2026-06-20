@@ -189,16 +189,51 @@ def open_notification(request, pk):
 def mark_all_notifications_read(request):
     """Mark every unread notification for the context as read."""
     context_role = request.POST.get("context_role")
-    
+
     qs = AppointmentNotification.objects.filter(patient=request.user, is_read=False)
     if context_role:
         qs = qs.filter(context_role=context_role)
-        
+
     updated = qs.update(is_read=True)
 
     if updated:
         messages.success(request, _("تم تحديد جميع الإشعارات كمقروءة."))
-        
+
+    next_url = request.POST.get("next") or request.META.get("HTTP_REFERER", "")
+    if next_url:
+        return redirect(next_url)
+    return redirect("accounts:home")
+
+
+@login_required
+@require_POST
+def delete_notifications(request):
+    """
+    Hard-delete notifications for the current context. Ownership strictly enforced.
+
+    One endpoint serves all three delete actions, distinguished by ``mode``:
+    - ``"read"``     — delete every read notification for the context.
+    - ``"selected"`` — delete the notifications whose ids are POSTed in ``ids``
+                       (a single-item list for the per-card trash button, or many
+                       for the multi-select bulk action).
+    """
+    context_role = request.POST.get("context_role")
+    mode = request.POST.get("mode")
+
+    qs = AppointmentNotification.objects.filter(patient=request.user)
+    if context_role:
+        qs = qs.filter(context_role=context_role)
+
+    if mode == "read":
+        qs = qs.filter(is_read=True)
+    else:  # "selected"
+        qs = qs.filter(pk__in=request.POST.getlist("ids"))
+
+    deleted, _unused = qs.delete()
+
+    if deleted:
+        messages.success(request, _("تم حذف الإشعارات المحددة."))
+
     next_url = request.POST.get("next") or request.META.get("HTTP_REFERER", "")
     if next_url:
         return redirect(next_url)

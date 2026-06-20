@@ -1,120 +1,212 @@
 {% extends 'accounts/base.html' %}
 {% load i18n %}
 
-{% block title %}مركز إشعارات العيادة{% endblock %}
+{% block title %}{% trans "مركز الإشعارات" %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Clinic-owner notification center — mirrors the doctor/secretary/patient
+       design, but built on the owner portal's CSS-variable system (no Tailwind
+       under accounts/base.html). Hooks (#notif-select-all, .notif-select,
+       #notif-delete-selected, #notif-delete-read, #notif-bulk-form) are shared
+       with notif_bulk_script.html. */
+    .onc-wrap { max-width: 760px; margin: 0 auto; padding: 2rem 1rem 5rem; }
+    .onc-card { background: var(--color-surface-card); border: 1.5px solid var(--color-surface-border); border-radius: 16px; }
+
+    .onc-header { position: relative; overflow: hidden; padding: 1.5rem; }
+    .onc-header::before {
+        content: ""; position: absolute; inset-inline: 0; top: 0; height: 4px;
+        background: linear-gradient(90deg, var(--color-primary-500), var(--color-primary-600));
+    }
+    .onc-sub { margin: 0.3rem 0 0; font-size: 0.85rem; color: var(--color-text-muted); }
+    .onc-sub b { color: var(--color-primary-500); font-weight: 700; }
+
+    .onc-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-top: 1.25rem; }
+    .onc-stat { display: flex; align-items: center; gap: 0.7rem; padding: 0.85rem 1rem; }
+    .onc-stat__num { font-size: 1.5rem; font-weight: 800; line-height: 1; color: var(--color-text-main); }
+    .onc-stat__lbl { font-size: 0.72rem; color: var(--color-text-muted); margin-top: 0.3rem; font-weight: 600; }
+
+    .onc-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.25rem; }
+    .onc-checklabel { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 600; color: var(--color-text-body); cursor: pointer; user-select: none; }
+    /* Themed selection checkbox — surface tint instead of glaring white; follows
+       the owner portal's CSS-variable theme (adapts to light/dark automatically). */
+    .onc-check { -webkit-appearance: none; appearance: none; width: 17px; height: 17px; margin: 0; border-radius: 5px; border: 1.5px solid var(--color-surface-border); background: var(--color-surface-ground); cursor: pointer; position: relative; flex-shrink: 0; transition: background 0.15s, border-color 0.15s; }
+    .onc-check:hover { border-color: var(--color-primary-500); }
+    .onc-check:checked, .onc-check:indeterminate { background: var(--color-primary-600); border-color: var(--color-primary-600); }
+    .onc-check:checked::after { content: ""; position: absolute; left: 50%; top: 46%; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0; transform: translate(-50%, -50%) rotate(45deg); }
+    .onc-check:indeterminate::after { content: ""; position: absolute; left: 50%; top: 50%; width: 8px; height: 2px; background: #fff; transform: translate(-50%, -50%); }
+
+    .onc-btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 0.9rem; border-radius: 10px; font-size: 0.82rem; font-weight: 700; cursor: pointer; border: 1.5px solid transparent; transition: background 0.15s, transform 0.15s, opacity 0.15s; }
+    .onc-btn:active { transform: scale(0.97); }
+    .onc-btn--primary { background: var(--color-primary-600); color: #fff; }
+    .onc-btn--primary:hover { background: var(--color-primary-600); background: color-mix(in srgb, var(--color-primary-600) 82%, #000); }
+    .onc-btn--danger { background: #dc2626; color: #fff; }
+    .onc-btn--danger:hover { background: #b91c1c; }
+    .onc-btn--danger:disabled { opacity: 0.4; pointer-events: none; }
+    .onc-btn--danger-outline { background: transparent; border-color: rgba(220, 38, 38, 0.35); color: #dc2626; }
+    .onc-btn--danger-outline:hover { background: rgba(220, 38, 38, 0.08); }
+    .onc-btn--ghost { background: none; border: none; padding: 0; font-size: 0.76rem; font-weight: 600; color: var(--color-text-muted); cursor: pointer; transition: color 0.15s; }
+    .onc-btn--ghost:hover { color: var(--color-text-main); }
+    .onc-btn--ghost-danger:hover { color: #dc2626; }
+
+    .onc-list { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1.25rem; }
+    /* Read = neutral, de-emphasized card. Unread = primary-tinted background +
+       primary border + accent bar + strong title. Mirrors the secretary portal's
+       read/unread hierarchy, derived from the owner theme tokens (light + dark). */
+    .onc-notif { position: relative; overflow: hidden; display: flex; gap: 0.9rem; padding: 1.1rem 1.25rem; border-radius: 14px; background: var(--color-surface-card); border: 1.5px solid var(--color-surface-border); transition: box-shadow 0.15s, transform 0.15s; }
+    .onc-notif:hover { box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06); transform: translateY(-1px); }
+    .onc-notif--unread {
+        background: var(--color-surface-card);
+        background: color-mix(in srgb, var(--color-primary-500) 12%, var(--color-surface-card));
+        border-color: var(--color-primary-500);
+        border-color: color-mix(in srgb, var(--color-primary-500) 45%, var(--color-surface-border));
+    }
+    .onc-notif__bar { position: absolute; inset-block: 0; inset-inline-start: 0; width: 5px; background: linear-gradient(to bottom, var(--color-primary-500), var(--color-primary-600)); }
+    .onc-icon { flex-shrink: 0; width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .onc-title { margin: 0; font-size: 0.9rem; font-weight: 700; line-height: 1.4; color: var(--color-text-body); }
+    .onc-notif--unread .onc-title { color: var(--color-text-main); }
+    .onc-msg { margin: 0.35rem 0 0; font-size: 0.84rem; color: var(--color-text-body); line-height: 1.6; }
+    .onc-actor { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.12rem 0.55rem; border-radius: 999px; font-size: 0.68rem; font-weight: 700; }
+    .onc-foot { display: flex; align-items: center; gap: 0.85rem; margin-top: 0.75rem; flex-wrap: wrap; padding-top: 0.6rem; border-top: 1px solid var(--color-surface-border); }
+</style>
+{% endblock %}
 
 {% block content %}
-<div style="max-width:720px;margin:0 auto;padding:2rem 1rem 5rem;">
+<div class="onc-wrap">
 
-    <!-- Header -->
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.75rem;">
-        <div>
-            <h1 style="font-size:1.5rem;font-weight:800;color:var(--color-text-main);display:flex;align-items:center;gap:0.5rem;margin:0;">
-                <span style="width:38px;height:38px;border-radius:12px;background:rgba(0,120,212,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i class="fa-regular fa-bell" style="color:var(--color-primary-500);font-size:1.05rem;"></i>
-                </span>
-                مركز إشعارات العيادة
-            </h1>
-            <p style="font-size:0.85rem;color:var(--color-text-muted);margin:0.4rem 0 0 3rem;">
-                {% if unread_count > 0 %}
-                لديك <strong style="color:var(--color-primary-500);font-weight:700;">{{ unread_count }}</strong> إشعار غير مقروء
-                {% else %}
-                كل إشعاراتك مقروءة ✓
-                {% endif %}
-            </p>
+    {# ── Header card ── #}
+    <div class="onc-card onc-header">
+        <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+            <span class="onc-icon" style="width:48px;height:48px;border-radius:14px;background:rgba(0,120,212,0.1);color:var(--color-primary-500);">
+                <i class="fa-regular fa-bell" style="font-size:1.25rem;"></i>
+            </span>
+            <div style="flex:1;min-width:0;">
+                <h1 style="margin:0;font-size:1.35rem;font-weight:800;color:var(--color-text-main);">
+                    {% trans "مركز الإشعارات" %}
+                </h1>
+                <p class="onc-sub">
+                    {% if unread_count > 0 %}
+                        {% blocktrans with count=unread_count %}لديك <b>{{ count }}</b> إشعار غير مقروء{% endblocktrans %}
+                    {% else %}
+                        {% trans "كل إشعاراتك مقروءة" %}
+                    {% endif %}
+                </p>
+            </div>
+
+            {% if unread_count > 0 %}
+            <form method="post" action="{% url 'appointments:mark_all_notifications_read' %}" style="margin:0;">
+                {% csrf_token %}
+                <input type="hidden" name="context_role" value="CLINIC_OWNER">
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit" class="onc-btn onc-btn--primary">
+                    <i class="fa-solid fa-check-double" style="font-size:0.75rem;"></i>
+                    {% trans "تحديد الكل كمقروء" %}
+                </button>
+            </form>
+            {% endif %}
         </div>
 
-        {% if unread_count > 0 %}
-        <form method="post" action="{% url 'appointments:mark_all_notifications_read' %}">
-            {% csrf_token %}
-            <input type="hidden" name="context_role" value="CLINIC_OWNER">
-            <input type="hidden" name="next" value="{{ request.path }}">
-            <button type="submit"
-                style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.55rem 1.1rem;
-                       border-radius:10px;font-size:0.82rem;font-weight:700;border:1.5px solid var(--color-primary-200);
-                       background:rgba(0,120,212,0.05);color:var(--color-primary-600);cursor:pointer;
-                       transition:background 0.15s,transform 0.15s;"
-                onmouseover="this.style.background='rgba(0,120,212,0.12)'"
-                onmouseout="this.style.background='rgba(0,120,212,0.05)'"
-                onmousedown="this.style.transform='scale(0.97)'"
-                onmouseup="this.style.transform='none'">
-                <i class="fa-solid fa-check-double" style="font-size:0.75rem;"></i>
-                تحديد الكل كمقروء
-            </button>
-        </form>
+        {# ── Stats strip ── #}
+        <div class="onc-stats">
+            <div class="onc-card onc-stat">
+                <span class="onc-icon" style="width:40px;height:40px;border-radius:11px;font-size:0.9rem;background:var(--color-surface-ground);color:var(--color-text-muted);"><i class="fa-solid fa-inbox"></i></span>
+                <div><div class="onc-stat__num">{{ total_count }}</div><div class="onc-stat__lbl">{% trans "إجمالي" %}</div></div>
+            </div>
+            <div class="onc-card onc-stat">
+                <span class="onc-icon" style="width:40px;height:40px;border-radius:11px;font-size:0.9rem;background:rgba(0,120,212,0.1);color:var(--color-primary-500);"><i class="fa-regular fa-bell"></i></span>
+                <div><div class="onc-stat__num" style="color:var(--color-primary-500);">{{ unread_count }}</div><div class="onc-stat__lbl">{% trans "غير مقروء" %}</div></div>
+            </div>
+            <div class="onc-card onc-stat">
+                <span class="onc-icon" style="width:40px;height:40px;border-radius:11px;font-size:0.9rem;background:rgba(16,185,129,0.12);color:#10b981;"><i class="fa-solid fa-check"></i></span>
+                <div><div class="onc-stat__num">{{ read_count }}</div><div class="onc-stat__lbl">{% trans "مقروء" %}</div></div>
+            </div>
+        </div>
+    </div>
+
+    {% if notifications %}
+
+    {# ── Bulk toolbar (same hooks as the shared selection script) ── #}
+    <div class="onc-toolbar">
+        <label class="onc-checklabel">
+            <input type="checkbox" id="notif-select-all" class="onc-check">
+            {% trans "تحديد الكل" %}
+        </label>
+        <span style="flex:1;"></span>
+        <button type="button" id="notif-delete-selected" class="onc-btn onc-btn--danger" disabled>
+            <i class="fa-regular fa-trash-can" style="font-size:0.75rem;"></i>
+            <span data-label-base="{% trans 'حذف المحدد' %}">{% trans "حذف المحدد" %}</span>
+        </button>
+        {% if read_count > 0 %}
+        <button type="button" id="notif-delete-read" class="onc-btn onc-btn--danger-outline">
+            <i class="fa-solid fa-broom" style="font-size:0.75rem;"></i>
+            {% trans "حذف الكل المقروء" %}
+        </button>
         {% endif %}
     </div>
 
-    <!-- Notification List -->
-    {% if notifications %}
-    <div style="display:flex;flex-direction:column;gap:0.75rem;">
-        {% for notif in notifications %}
-        <div style="background:var(--color-surface-card);border:1.5px solid {% if not notif.is_read %}var(--color-primary-300){% else %}var(--color-surface-border){% endif %};
-                    border-radius:14px;padding:1.1rem 1.25rem;display:flex;gap:1rem;position:relative;
-                    {% if not notif.is_read %}box-shadow:0 0 0 2px rgba(0,120,212,0.08);background:rgba(0,120,212,0.02);{% endif %}
-                    transition:box-shadow 0.15s,transform 0.15s;"
-             onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.06)';this.style.transform='translateY(-1px)'"
-             onmouseout="this.style.boxShadow='{% if not notif.is_read %}0 0 0 2px rgba(0,120,212,0.08){% else %}none{% endif %}';this.style.transform='none'">
+    <form method="post" action="{% url 'appointments:delete_notifications' %}" id="notif-bulk-form" style="display:none;">
+        {% csrf_token %}
+        <input type="hidden" name="context_role" value="CLINIC_OWNER">
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <input type="hidden" name="mode" value="selected">
+    </form>
 
-            <!-- Unread dot -->
-            {% if not notif.is_read %}
-            <div style="position:absolute;top:14px;right:14px;width:8px;height:8px;border-radius:50%;background:var(--color-primary-500);"></div>
+    {# ── Notification list ── #}
+    <div class="onc-list">
+        {% for notif in notifications %}
+        <div class="onc-notif{% if not notif.is_read %} onc-notif--unread{% endif %}">
+            {% if not notif.is_read %}<span class="onc-notif__bar"></span>{% endif %}
+
+            {# ── Selection checkbox (gathered by notif_bulk_script.js) ── #}
+            <label style="display:flex;align-items:flex-start;flex-shrink:0;padding-top:2px;cursor:pointer;" title="{% trans 'تحديد' %}">
+                <input type="checkbox" class="notif-select onc-check" value="{{ notif.pk }}" aria-label="{% trans 'تحديد الإشعار' %}">
+            </label>
+
+            {# ── Icon by type ── #}
+            {% if notif.notification_type == 'APPOINTMENT_BOOKED' %}
+                {% if notif.appointment and notif.appointment.status == 'PENDING' %}
+                <span class="onc-icon" style="background:rgba(245,158,11,0.12);color:#d97706;"><i class="fa-regular fa-clock"></i></span>
+                {% elif notif.appointment and notif.appointment.status == 'CANCELLED' %}
+                <span class="onc-icon" style="background:rgba(239,68,68,0.1);color:#ef4444;"><i class="fa-regular fa-calendar-xmark"></i></span>
+                {% else %}
+                <span class="onc-icon" style="background:rgba(16,185,129,0.1);color:#10b981;"><i class="fa-regular fa-calendar-check"></i></span>
+                {% endif %}
+            {% elif notif.notification_type == 'APPOINTMENT_CANCELLED' %}
+            <span class="onc-icon" style="background:rgba(239,68,68,0.1);color:#ef4444;"><i class="fa-regular fa-calendar-xmark"></i></span>
+            {% elif notif.notification_type == 'APPOINTMENT_RESCHEDULED' %}
+            <span class="onc-icon" style="background:rgba(249,115,22,0.1);color:#f97316;"><i class="fa-solid fa-calendar-day"></i></span>
+            {% elif notif.notification_type == 'APPOINTMENT_EDITED' %}
+            <span class="onc-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;"><i class="fa-regular fa-pen-to-square"></i></span>
+            {% elif notif.notification_type == 'APPOINTMENT_REMINDER' %}
+            <span class="onc-icon" style="background:rgba(245,158,11,0.1);color:#f59e0b;"><i class="fa-regular fa-bell"></i></span>
+            {% elif notif.notification_type == 'APPOINTMENT_STATUS_CHANGED' %}
+            <span class="onc-icon" style="background:rgba(99,102,241,0.1);color:#6366f1;"><i class="fa-solid fa-arrows-rotate"></i></span>
+            {% elif notif.notification_type == 'STAFF_NOTE_FOR_DOCTOR' or notif.notification_type == 'STAFF_NOTE_FOR_SECRETARY' %}
+            <span class="onc-icon" style="background:rgba(124,58,237,0.1);color:#7c3aed;"><i class="fa-solid fa-note-sticky"></i></span>
+            {% else %}
+            <span class="onc-icon" style="background:rgba(124,58,237,0.1);color:#7c3aed;"><i class="fa-solid fa-circle-info"></i></span>
             {% endif %}
 
-            <!-- Icon -->
-            <div style="flex-shrink:0;margin-top:2px;">
-                {% if notif.notification_type == 'APPOINTMENT_BOOKED' %}
-                <div style="width:42px;height:42px;border-radius:12px;background:rgba(16,185,129,0.1);display:flex;align-items:center;justify-content:center;">
-                    <i class="fa-regular fa-calendar-check" style="color:#10b981;font-size:1.1rem;"></i>
-                </div>
-                {% elif notif.notification_type == 'APPOINTMENT_CANCELLED' %}
-                <div style="width:42px;height:42px;border-radius:12px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;">
-                    <i class="fa-regular fa-calendar-xmark" style="color:#ef4444;font-size:1.1rem;"></i>
-                </div>
-                {% elif notif.notification_type == 'APPOINTMENT_RESCHEDULED' %}
-                <div style="width:42px;height:42px;border-radius:12px;background:rgba(249,115,22,0.1);display:flex;align-items:center;justify-content:center;">
-                    <i class="fa-solid fa-calendar-day" style="color:#f97316;font-size:1.1rem;"></i>
-                </div>
-                {% elif notif.notification_type == 'APPOINTMENT_EDITED' %}
-                <div style="width:42px;height:42px;border-radius:12px;background:rgba(59,130,246,0.1);display:flex;align-items:center;justify-content:center;">
-                    <i class="fa-regular fa-pen-to-square" style="color:#3b82f6;font-size:1.1rem;"></i>
-                </div>
-                {% elif notif.notification_type == 'APPOINTMENT_REMINDER' %}
-                <div style="width:42px;height:42px;border-radius:12px;background:rgba(245,158,11,0.1);display:flex;align-items:center;justify-content:center;">
-                    <i class="fa-regular fa-bell" style="color:#f59e0b;font-size:1.1rem;"></i>
-                </div>
-                {% else %}
-                <div style="width:42px;height:42px;border-radius:12px;background:rgba(124,58,237,0.1);display:flex;align-items:center;justify-content:center;">
-                    <i class="fa-solid fa-circle-info" style="color:#7c3aed;font-size:1.1rem;"></i>
-                </div>
-                {% endif %}
-            </div>
-
-            <!-- Content -->
+            {# ── Content ── #}
             <div style="flex:1;min-width:0;">
                 <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;">
-                    <p style="margin:0;font-size:0.9rem;font-weight:700;color:var(--color-text-main);line-height:1.4;
-                              {% if not notif.is_read %}color:var(--color-primary-700);{% endif %}">
-                        {{ notif.title }}
-                    </p>
-                    <span style="font-size:0.72rem;color:var(--color-text-muted);white-space:nowrap;flex-shrink:0;">
-                        {{ notif.created_at|timesince }} مضت
+                    <p class="onc-title">{{ notif.localized_title }}</p>
+                    <span style="font-size:0.72rem;color:var(--color-text-muted);white-space:nowrap;flex-shrink:0;"
+                          title="{{ notif.created_at|date:'Y-m-d' }} {{ notif.created_at|clock:CLOCK_12H }}">
+                        {{ notif.created_at|timesince }}
                     </span>
                 </div>
 
-                {# ── Actor badge: who triggered this (owner sees both secretary & doctor names) ── #}
+                {# ── Actor badge: who triggered this (owner sees secretary & doctor names) ── #}
                 {% if notif.actor_role %}
                 <div style="margin-top:0.45rem;">
-                    <span style="display:inline-flex;align-items:center;gap:0.3rem;padding:0.12rem 0.55rem;border-radius:999px;font-size:0.68rem;font-weight:700;
-                        {% if notif.actor_role == 'PATIENT' %}background:rgba(14,165,233,0.12);color:#0284c7;
-                        {% elif notif.actor_role == 'SECRETARY' %}background:rgba(139,92,246,0.12);color:#7c3aed;
-                        {% else %}background:rgba(20,184,166,0.12);color:#0d9488;{% endif %}">
+                    <span class="onc-actor" style="{% if notif.actor_role == 'PATIENT' %}background:rgba(14,165,233,0.12);color:#0284c7;{% elif notif.actor_role == 'SECRETARY' %}background:rgba(139,92,246,0.12);color:#7c3aed;{% else %}background:rgba(20,184,166,0.12);color:#0d9488;{% endif %}">
                         {% if notif.actor_role == 'PATIENT' %}
-                            <i class="fa-solid fa-user" style="font-size:0.62rem;opacity:0.85;"></i>{% trans "بواسطة المريض" %}
+                            <i class="fa-solid fa-user" style="font-size:0.62rem;"></i>{% trans "بواسطة المريض" %}
                         {% elif notif.actor_role == 'SECRETARY' %}
-                            <i class="fa-solid fa-user-nurse" style="font-size:0.62rem;opacity:0.85;"></i>{% trans "بواسطة السكرتيرة" %}
+                            <i class="fa-solid fa-user-nurse" style="font-size:0.62rem;"></i>{% trans "بواسطة السكرتيرة" %}
                         {% else %}
-                            <i class="fa-solid fa-user-doctor" style="font-size:0.62rem;opacity:0.85;"></i>{% trans "بواسطة الطبيب" %}
+                            <i class="fa-solid fa-user-doctor" style="font-size:0.62rem;"></i>{% trans "بواسطة الطبيب" %}
                         {% endif %}
                         {% if notif.actor_name and notif.actor_role != 'PATIENT' %}
                             <span style="opacity:0.5;">·</span><bdi dir="auto" style="font-weight:600;">{{ notif.actor_name }}</bdi>
@@ -123,19 +215,14 @@
                 </div>
                 {% endif %}
 
-                <p style="margin:0.35rem 0 0;font-size:0.84rem;color:var(--color-text-body);line-height:1.6;">
-                    {{ notif.message }}
-                </p>
+                <p class="onc-msg">{{ notif.localized_message|clock_text:CLOCK_12H }}</p>
 
-                <!-- Footer: link + mark-read -->
-                <div style="display:flex;align-items:center;gap:0.85rem;margin-top:0.75rem;flex-wrap:wrap;">
+                {# ── Footer: link · mark-read · delete ── #}
+                <div class="onc-foot">
                     {% if notif.target_url %}
-                    <a href="{{ notif.target_url }}"
-                       style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.78rem;font-weight:700;color:var(--color-primary-500);text-decoration:none;"
-                       onmouseover="this.style.textDecoration='underline'"
-                       onmouseout="this.style.textDecoration='none'">
-                        <i class="fa-solid fa-arrow-left" style="font-size:0.6rem;"></i>
-                        عرض التفاصيل
+                    <a href="{{ notif.target_url }}" style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.78rem;font-weight:700;color:var(--color-primary-500);text-decoration:none;">
+                        <i class="fa-solid {% if IS_RTL %}fa-arrow-left{% else %}fa-arrow-right{% endif %}" style="font-size:0.6rem;"></i>
+                        {% if not notif.appointment and notif.subject_patient %}{% trans "عرض ملف المريض" %}{% else %}{% trans "عرض التفاصيل" %}{% endif %}
                     </a>
                     {% endif %}
 
@@ -143,22 +230,31 @@
                     <form method="post" action="{% url 'appointments:mark_notification_read' notif.pk %}" style="margin:0;">
                         {% csrf_token %}
                         <input type="hidden" name="next" value="{{ request.path }}">
-                        <button type="submit"
-                            style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.76rem;font-weight:600;
-                                   color:var(--color-text-muted);background:none;border:none;cursor:pointer;padding:0;
-                                   transition:color 0.15s;"
-                            onmouseover="this.style.color='var(--color-text-main)'"
-                            onmouseout="this.style.color='var(--color-text-muted)'">
+                        <button type="submit" class="onc-btn--ghost">
                             <i class="fa-regular fa-circle-check" style="font-size:0.72rem;"></i>
-                            تحديد كمقروء
+                            {% trans "تحديد كمقروء" %}
                         </button>
                     </form>
                     {% else %}
                     <span style="display:inline-flex;align-items:center;gap:0.25rem;font-size:0.74rem;color:var(--color-text-muted);">
-                        <i class="fa-solid fa-check" style="font-size:0.6rem;"></i>
-                        مقروء
+                        <i class="fa-solid fa-check" style="font-size:0.6rem;color:#10b981;"></i>
+                        {% trans "مقروء" %}
                     </span>
                     {% endif %}
+
+                    {# Per-card delete (hard delete) #}
+                    <form method="post" action="{% url 'appointments:delete_notifications' %}"
+                          style="margin:0;margin-inline-start:auto;">
+                        {% csrf_token %}
+                        <input type="hidden" name="mode" value="selected">
+                        <input type="hidden" name="ids" value="{{ notif.pk }}">
+                        <input type="hidden" name="context_role" value="CLINIC_OWNER">
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <button type="submit" class="onc-btn--ghost onc-btn--ghost-danger">
+                            <i class="fa-regular fa-trash-can" style="font-size:0.72rem;"></i>
+                            {% trans "حذف" %}
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -166,15 +262,19 @@
     </div>
 
     {% else %}
-    <!-- Empty state -->
-    <div style="background:var(--color-surface-card);border:1.5px solid var(--color-surface-border);border-radius:16px;padding:3.5rem 2rem;text-align:center;">
+    {# ── Empty state ── #}
+    <div class="onc-card" style="padding:3.5rem 2rem;text-align:center;margin-top:1.25rem;">
         <div style="width:64px;height:64px;border-radius:50%;background:var(--color-surface-ground);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
-            <i class="fa-regular fa-bell-slash" style="font-size:1.5rem;color:var(--color-text-muted);opacity:0.5;"></i>
+            <i class="fa-regular fa-bell-slash" style="font-size:1.5rem;color:var(--color-text-muted);"></i>
         </div>
-        <h3 style="font-size:1.05rem;font-weight:700;color:var(--color-text-body);margin:0 0 0.35rem;">لا توجد إشعارات بعد</h3>
-        <p style="font-size:0.85rem;color:var(--color-text-muted);margin:0;">ستظهر هنا إشعارات العيادة عند وجودها.</p>
+        <h3 style="font-size:1.05rem;font-weight:700;color:var(--color-text-body);margin:0 0 0.35rem;">{% trans "لا توجد إشعارات بعد" %}</h3>
+        <p style="font-size:0.85rem;color:var(--color-text-muted);margin:0;">{% trans "ستظهر هنا إشعارات العيادة عند وجودها." %}</p>
     </div>
     {% endif %}
 
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{% include "appointments/partials/notif_bulk_script.html" %}
 {% endblock %}

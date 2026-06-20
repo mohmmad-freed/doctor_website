@@ -1,9 +1,9 @@
 # English translations
 msgid ""
 msgstr ""
+"Language: en\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: en\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 # ── Common ───────────────────────────────────────────────────────────────────
@@ -2253,12 +2253,8 @@ msgstr "Required — write the reason for removal..."
 msgid "هذا المريض موجود بالفعل في طابور الانتظار كحضور مباشر."
 msgstr "This patient is already in the walk-in queue."
 
-msgid ""
-"لهذا المريض موعد محجوز اليوم. يرجى إلغاؤه أو تأكيد التسجيل كحضور مباشر "
-"إضافي."
-msgstr ""
-"This patient has a booked appointment today. Please cancel it, or confirm "
-"the additional walk-in registration."
+msgid "لهذا المريض موعد محجوز اليوم. يرجى إلغاؤه أو تأكيد التسجيل كحضور مباشر إضافي."
+msgstr "This patient has a booked appointment today. Please cancel it, or confirm the additional walk-in registration."
 
 msgid "لا يمكن حجز موعد للطبيب مع نفسه. الرجاء اختيار طبيب آخر."
 msgstr "A doctor cannot be booked as their own patient. Please pick a different doctor."
@@ -3596,7 +3592,6 @@ msgctxt "schedule"
 msgid "غير محدد"
 msgstr "Not set"
 
-
 # ── Secretary: optional doctor intake form ───────────────────────────────────
 msgid "تعبئة نموذج إدخال الطبيب (اختياري)"
 msgstr "Fill the doctor's intake form (optional)"
@@ -3889,3 +3884,24 @@ msgstr "Bank card"
 
 msgid "تحويل بنكي"
 msgstr "Bank transfer"
+
+msgid "حذف المحدد"
+msgstr "Delete selected"
+
+msgid "تحديد الكل"
+msgstr "Select all"
+
+msgid "حذف الكل المقروء"
+msgstr "Delete all read"
+
+msgid "تحديد"
+msgstr "Select"
+
+msgid "تحديد الإشعار"
+msgstr "Select notification"
+
+msgid "تم حذف الإشعارات المحددة."
+msgstr "Selected notifications deleted."
+
+msgid "ستظهر هنا إشعارات العيادة عند وجودها."
+msgstr "Clinic notifications will appear here when available."

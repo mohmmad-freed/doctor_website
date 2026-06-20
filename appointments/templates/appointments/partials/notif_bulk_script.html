@@ -1,0 +1,87 @@
+{% comment %}
+Selection + bulk-delete behaviour for the notification centers.
+Style-agnostic: it touches only shared hooks (.notif-select, #notif-select-all,
+#notif-delete-selected, #notif-delete-read, #notif-bulk-form), so the same script
+drives both the Tailwind centers (doctor/secretary/patient) and the CSS-var owner center.
+{% endcomment %}
+<script>
+(function () {
+    var form = document.getElementById("notif-bulk-form");
+    if (!form) return;
+
+    var selectAll = document.getElementById("notif-select-all");
+    var delSelected = document.getElementById("notif-delete-selected");
+    var delRead = document.getElementById("notif-delete-read");
+
+    function boxes() {
+        return Array.prototype.slice.call(document.querySelectorAll(".notif-select"));
+    }
+    function checkedBoxes() {
+        return boxes().filter(function (b) { return b.checked; });
+    }
+
+    function refresh() {
+        var all = boxes();
+        var n = checkedBoxes().length;
+
+        if (delSelected) {
+            delSelected.disabled = n === 0;
+            var label = delSelected.querySelector("[data-label-base]");
+            if (label) {
+                var base = label.getAttribute("data-label-base");
+                label.textContent = n > 0 ? base + " (" + n + ")" : base;
+            }
+        }
+        if (selectAll) {
+            selectAll.checked = n > 0 && n === all.length;
+            selectAll.indeterminate = n > 0 && n < all.length;
+        }
+    }
+
+    if (selectAll) {
+        selectAll.addEventListener("change", function () {
+            boxes().forEach(function (b) { b.checked = selectAll.checked; });
+            refresh();
+        });
+    }
+
+    // Delegated so it works regardless of which center rendered the checkboxes.
+    document.addEventListener("change", function (e) {
+        if (e.target && e.target.classList && e.target.classList.contains("notif-select")) {
+            refresh();
+        }
+    });
+
+    function submit(mode, ids) {
+        var modeInput = form.querySelector("input[name=mode]");
+        if (modeInput) modeInput.value = mode;
+        // Clear ids injected by a previous attempt, then add the current selection.
+        form.querySelectorAll("input.notif-bulk-id").forEach(function (el) { el.remove(); });
+        (ids || []).forEach(function (id) {
+            var input = document.createElement("input");
+            input.type = "hidden";
+            input.name = "ids";
+            input.value = id;
+            input.className = "notif-bulk-id";
+            form.appendChild(input);
+        });
+        form.submit();
+    }
+
+    if (delSelected) {
+        delSelected.addEventListener("click", function () {
+            var checked = checkedBoxes();
+            if (!checked.length) return;
+            submit("selected", checked.map(function (b) { return b.value; }));
+        });
+    }
+
+    if (delRead) {
+        delRead.addEventListener("click", function () {
+            submit("read", []);
+        });
+    }
+
+    refresh();
+})();
+</script>

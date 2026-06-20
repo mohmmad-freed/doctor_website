@@ -40,6 +40,11 @@ urlpatterns = [
         notification_views.mark_all_notifications_read,
         name="mark_all_notifications_read",
     ),
+    path(
+        "notifications/delete/",
+        notification_views.delete_notifications,
+        name="delete_notifications",
+    ),
 
     # --- Template Views (Patient-facing) ---
     path(

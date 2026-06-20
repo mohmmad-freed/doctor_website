@@ -22,7 +22,6 @@
     .notif-card.is-read { background-color: #f9fafb !important; border-color: #e5e7eb !important; }
     .dark .notif-card.is-read { background-color: rgb(30 41 59 / 0.4) !important; border-color: rgb(51 65 85 / 0.6) !important; }
     .notif-card.is-read .notif-card__bar { display: none !important; }
-    .notif-card.is-read .notif-icon { opacity: 0.5 !important; filter: grayscale(35%) !important; }
     .notif-card.is-read .notif-title { color: #6b7280 !important; }
     .dark .notif-card.is-read .notif-title { color: #94a3b8 !important; }
     .notif-card.is-read .notif-read-form { display: none !important; }
@@ -135,6 +134,7 @@
 
     {# ── Notification list ── #}
     {% if notifications %}
+    {% include "appointments/partials/notif_bulk_toolbar.html" %}
     <div class="space-y-3">
         {% for notif in notifications %}
 
@@ -272,4 +272,5 @@
     };
 })();
 </script>
+{% include "appointments/partials/notif_bulk_script.html" %}
 {% endblock %}

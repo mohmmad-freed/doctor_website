@@ -2069,3 +2069,131 @@ class BillingTest(SecretaryTestBase):
         # Debts page
         resp = self.client.get(reverse("secretary:patient_debts"))
         self.assertContains(resp, "Patients with outstanding balances")
+
+
+class DeleteNotificationTests(SecretaryTestBase):
+    """Hard-delete endpoint: individual, multi-select, all-read; ownership +
+    context isolation enforced exactly like mark-all-read."""
+
+    def _notif(self, user, *, context_role, is_read=False, title="N"):
+        from appointments.models import AppointmentNotification
+        return AppointmentNotification.objects.create(
+            patient=user,
+            notification_type=AppointmentNotification.Type.APPOINTMENT_BOOKED,
+            context_role=context_role,
+            title=title,
+            message="msg",
+            is_read=is_read,
+        )
+
+    def setUp(self):
+        super().setUp()
+        from appointments.models import AppointmentNotification
+        self.Notif = AppointmentNotification
+        self.url = reverse("appointments:delete_notifications")
+        self.client.force_login(self.secretary_a)
+
+    def test_individual_delete_removes_only_that_row(self):
+        keep = self._notif(self.secretary_a, context_role=self.Notif.ContextRole.SECRETARY)
+        gone = self._notif(self.secretary_a, context_role=self.Notif.ContextRole.SECRETARY)
+        self.client.post(self.url, {
+            "mode": "selected",
+            "ids": [gone.pk],
+            "context_role": self.Notif.ContextRole.SECRETARY,
+        })
+        self.assertTrue(self.Notif.objects.filter(pk=keep.pk).exists())
+        self.assertFalse(self.Notif.objects.filter(pk=gone.pk).exists())
+
+    def test_multi_select_delete(self):
+        a = self._notif(self.secretary_a, context_role=self.Notif.ContextRole.SECRETARY)
+        b = self._notif(self.secretary_a, context_role=self.Notif.ContextRole.SECRETARY)
+        c = self._notif(self.secretary_a, context_role=self.Notif.ContextRole.SECRETARY)
+        self.client.post(self.url, {
+            "mode": "selected",
+            "ids": [a.pk, b.pk],
+            "context_role": self.Notif.ContextRole.SECRETARY,
+        })
+        self.assertFalse(self.Notif.objects.filter(pk__in=[a.pk, b.pk]).exists())
+        self.assertTrue(self.Notif.objects.filter(pk=c.pk).exists())
+
+    def test_delete_all_read_keeps_unread(self):
+        read1 = self._notif(self.secretary_a, context_role=self.Notif.ContextRole.SECRETARY, is_read=True)
+        read2 = self._notif(self.secretary_a, context_role=self.Notif.ContextRole.SECRETARY, is_read=True)
+        unread = self._notif(self.secretary_a, context_role=self.Notif.ContextRole.SECRETARY, is_read=False)
+        self.client.post(self.url, {
+            "mode": "read",
+            "context_role": self.Notif.ContextRole.SECRETARY,
+        })
+        self.assertFalse(self.Notif.objects.filter(pk__in=[read1.pk, read2.pk]).exists())
+        self.assertTrue(self.Notif.objects.filter(pk=unread.pk).exists())
+
+    def test_delete_is_scoped_to_context(self):
+        """Deleting in the SECRETARY portal must not touch the same user's
+        notifications scoped to another portal, even if their id is POSTed."""
+        sec = self._notif(self.secretary_a, context_role=self.Notif.ContextRole.SECRETARY)
+        owner = self._notif(self.secretary_a, context_role=self.Notif.ContextRole.CLINIC_OWNER)
+        self.client.post(self.url, {
+            "mode": "selected",
+            "ids": [sec.pk, owner.pk],
+            "context_role": self.Notif.ContextRole.SECRETARY,
+        })
+        self.assertFalse(self.Notif.objects.filter(pk=sec.pk).exists())
+        self.assertTrue(self.Notif.objects.filter(pk=owner.pk).exists())
+
+    def test_cannot_delete_another_users_notification(self):
+        mine = self._notif(self.secretary_a, context_role=self.Notif.ContextRole.SECRETARY)
+        other = self._notif(self.main_doctor_a, context_role=self.Notif.ContextRole.SECRETARY)
+        self.client.post(self.url, {
+            "mode": "selected",
+            "ids": [mine.pk, other.pk],
+            "context_role": self.Notif.ContextRole.SECRETARY,
+        })
+        self.assertFalse(self.Notif.objects.filter(pk=mine.pk).exists())
+        self.assertTrue(self.Notif.objects.filter(pk=other.pk).exists())
+
+    def test_delete_requires_post(self):
+        n = self._notif(self.secretary_a, context_role=self.Notif.ContextRole.SECRETARY)
+        resp = self.client.get(self.url)
+        self.assertEqual(resp.status_code, 405)
+        self.assertTrue(self.Notif.objects.filter(pk=n.pk).exists())
+
+
+class OwnerNotificationCenterRenderTests(SecretaryTestBase):
+    """The rewritten clinic-owner notification center renders with the modern
+    layout and the delete controls, and stays bilingual."""
+
+    def _owner_notif(self, **kw):
+        from appointments.models import AppointmentNotification
+        return AppointmentNotification.objects.create(
+            patient=self.main_doctor_a,
+            notification_type=AppointmentNotification.Type.APPOINTMENT_BOOKED,
+            context_role=AppointmentNotification.ContextRole.CLINIC_OWNER,
+            title="OWNER_NOTIF_TITLE",
+            message="OWNER_NOTIF_MSG",
+            **kw,
+        )
+
+    def test_owner_center_renders_with_delete_controls(self):
+        self._owner_notif()
+        self._owner_notif(is_read=True)
+        self.client.force_login(self.main_doctor_a)
+        resp = self.client.get(reverse("appointments:clinic_owner_notifications"))
+        self.assertEqual(resp.status_code, 200)
+        # Modern layout markers + delete UI hooks shared with the JS partial.
+        self.assertContains(resp, "onc-notif")
+        self.assertContains(resp, 'id="notif-select-all"')
+        self.assertContains(resp, "notif-select")
+        self.assertContains(resp, 'id="notif-bulk-form"')
+        self.assertContains(resp, reverse("appointments:delete_notifications"))
+        # Old inline layout must be gone.
+        self.assertNotContains(resp, "max-width:720px")
+
+    def test_owner_center_translates_to_english(self):
+        self._owner_notif()
+        self.main_doctor_a.preferred_language = "en"
+        self.main_doctor_a.save(update_fields=["preferred_language"])
+        self.client.force_login(self.main_doctor_a)
+        resp = self.client.get(reverse("appointments:clinic_owner_notifications"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Select all")
+        self.assertContains(resp, "Delete selected")
