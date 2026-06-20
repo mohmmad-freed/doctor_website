@@ -230,9 +230,20 @@ class StaffNote(models.Model):
         scope = f"appt #{self.appointment_id}" if self.appointment_id else "patient"
         return f"StaffNote ({self.audience}, {scope}) by {self.author_name}"
 
-    def can_delete(self, user):
-        """Only the author may delete their own note."""
-        return bool(user) and self.author_id == user.id
+    def can_delete(self, user, context_role):
+        """Deletable only by the author, and only from the portal it was authored in.
+
+        ``context_role`` is the role of the portal issuing the delete ("DOCTOR" or
+        "SECRETARY"). Because ``author_role`` records which portal wrote the note, this
+        prevents a multi-role user (DOCTOR + SECRETARY) from deleting, via one portal, a
+        note they authored from the other — and stops either side from deleting the
+        other side's notes.
+        """
+        return (
+            bool(user)
+            and self.author_id == user.id
+            and self.author_role == context_role
+        )
 
 
 class ClinicalNoteAddendum(models.Model):

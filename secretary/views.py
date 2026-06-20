@@ -3687,14 +3687,18 @@ def appointment_note_add(request, appointment_id):
 @login_required
 @require_POST
 def appointment_note_delete(request, appointment_id, note_id):
-    """Secretary deletes her OWN appointment note."""
+    """Secretary deletes her OWN appointment note.
+
+    Scoped to secretary-visible notes (never a doctor's private note, so no existence
+    oracle); deletion is allowed only for notes authored from the secretary portal."""
     staff = _require_secretary(request)
     if not staff:
         return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
     note = get_object_or_404(
-        StaffNote, id=note_id, appointment_id=appointment_id, clinic=staff.clinic
+        StaffNote.objects.exclude(audience=StaffNote.Audience.DOCTOR_PRIVATE),
+        id=note_id, appointment_id=appointment_id, clinic=staff.clinic,
     )
-    if not note.can_delete(request.user):
+    if not note.can_delete(request.user, "SECRETARY"):
         return HttpResponseForbidden("لا يمكنك حذف ملاحظة كتبها شخص آخر.")
     note.delete()
     messages.success(request, _bilingual("تم حذف الملاحظة.", "Note deleted."))
@@ -3720,15 +3724,19 @@ def patient_note_add(request, patient_id):
 @login_required
 @require_POST
 def patient_note_delete(request, patient_id, note_id):
-    """Secretary deletes her OWN patient-profile note."""
+    """Secretary deletes her OWN patient-profile note.
+
+    Scoped to secretary-visible notes (never a doctor's private note); deletion is
+    allowed only for notes authored from the secretary portal."""
     staff = _require_secretary(request)
     if not staff:
         return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
     note = get_object_or_404(
-        StaffNote, id=note_id, patient_id=patient_id, clinic=staff.clinic,
+        StaffNote.objects.exclude(audience=StaffNote.Audience.DOCTOR_PRIVATE),
+        id=note_id, patient_id=patient_id, clinic=staff.clinic,
         appointment__isnull=True,
     )
-    if not note.can_delete(request.user):
+    if not note.can_delete(request.user, "SECRETARY"):
         return HttpResponseForbidden("لا يمكنك حذف ملاحظة كتبها شخص آخر.")
     note.delete()
     messages.success(request, _bilingual("تم حذف الملاحظة.", "Note deleted."))

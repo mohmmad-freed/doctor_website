@@ -442,7 +442,12 @@ def appointment_note_add(request, appointment_id):
 @login_required
 @require_POST
 def appointment_note_delete(request, appointment_id, note_id):
-    """Doctor deletes their OWN note on one of their appointments."""
+    """Doctor deletes their OWN note on one of their appointments.
+
+    The lookup is scoped to doctor-visible notes so the endpoint can never reference a
+    secretary-only note (no 403-vs-404 existence oracle), and deletion is allowed only
+    for notes authored from the doctor portal (``can_delete(..., "DOCTOR")``)."""
+    from django.db.models import Q
     from patients.models import StaffNote
 
     user = request.user
@@ -450,8 +455,13 @@ def appointment_note_delete(request, appointment_id, note_id):
         return HttpResponseForbidden("هذه الصفحة متاحة للأطباء فقط.")
     # Ensure the appointment belongs to this doctor before touching the note.
     get_object_or_404(Appointment, id=appointment_id, doctor=user)
-    note = get_object_or_404(StaffNote, id=note_id, appointment_id=appointment_id)
-    if not note.can_delete(user):
+    visible = Q(audience=StaffNote.Audience.DOCTOR) | Q(
+        audience=StaffNote.Audience.DOCTOR_PRIVATE, author=user
+    )
+    note = get_object_or_404(
+        StaffNote.objects.filter(visible), id=note_id, appointment_id=appointment_id
+    )
+    if not note.can_delete(user, "DOCTOR"):
         return HttpResponseForbidden("لا يمكنك حذف ملاحظة كتبها شخص آخر.")
     note.delete()
     messages.success(request, _staff_note_lang("تم حذف الملاحظة.", "Note deleted."))
@@ -516,16 +526,25 @@ def patient_note_add(request, patient_id):
 @login_required
 @require_POST
 def patient_note_delete(request, patient_id, note_id):
-    """Doctor deletes their OWN patient-profile note."""
+    """Doctor deletes their OWN patient-profile note.
+
+    Scoped to doctor-visible notes (no secretary-only existence oracle); deletion is
+    allowed only for notes authored from the doctor portal."""
+    from django.db.models import Q
     from patients.models import StaffNote
 
     ctx = _ws_access(request, patient_id)
     if ctx is None:
         return HttpResponseForbidden("هذه الصفحة متاحة للأطباء فقط.")
-    note = get_object_or_404(
-        StaffNote, id=note_id, patient_id=patient_id, appointment__isnull=True
+    doctor = ctx["doctor"]
+    visible = Q(audience=StaffNote.Audience.DOCTOR) | Q(
+        audience=StaffNote.Audience.DOCTOR_PRIVATE, author=doctor
     )
-    if not note.can_delete(ctx["doctor"]):
+    note = get_object_or_404(
+        StaffNote.objects.filter(visible),
+        id=note_id, patient_id=patient_id, appointment__isnull=True,
+    )
+    if not note.can_delete(doctor, "DOCTOR"):
         return HttpResponseForbidden("لا يمكنك حذف ملاحظة كتبها شخص آخر.")
     note.delete()
     messages.success(request, _staff_note_lang("تم حذف الملاحظة.", "Note deleted."))

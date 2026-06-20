@@ -113,7 +113,8 @@ Params:
             <span class="text-xs font-semibold text-gray-600 dark:text-gray-300">{{ note.author_name }}</span>
             <span class="text-xs text-gray-400 dark:text-gray-500">· {{ note.created_at|date:"d/m/Y H:i" }}</span>
           </div>
-          {% if note.author_id == request.user.id %}
+          {# Only the author may delete, and only notes authored from this (secretary) portal. #}
+          {% if note.author_id == request.user.id and note.author_role == 'SECRETARY' %}
           <form method="post" action="{% url delete_url_name delete_arg note.id %}" class="m-0 flex-shrink-0"
                 onsubmit="return confirm('{% if IS_RTL %}حذف هذه الملاحظة؟{% else %}Delete this note?{% endif %}');">
             {% csrf_token %}

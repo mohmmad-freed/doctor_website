@@ -477,3 +477,130 @@ class DoctorProfileNoteTests(_BaseFixture):
         )
         self.assertEqual(resp2.status_code, 302)
         self.assertFalse(StaffNote.objects.filter(id=own.id).exists())
+
+
+# ── H. can_delete unit matrix ─────────────────────────────────────────────────
+
+
+class CanDeleteUnitTests(_BaseFixture):
+
+    def test_requires_author_and_matching_portal_role(self):
+        note = self._note(StaffNote.Audience.DOCTOR, appointment=self.appointment,
+                          author=self.secretary, author_role="SECRETARY")
+        self.assertTrue(note.can_delete(self.secretary, "SECRETARY"))    # author + same portal
+        self.assertFalse(note.can_delete(self.secretary, "DOCTOR"))      # author + wrong portal
+        self.assertFalse(note.can_delete(self.secretary2, "SECRETARY"))  # non-author
+        self.assertFalse(note.can_delete(None, "SECRETARY"))             # no user
+
+
+# ── I. Cross-portal delete isolation (multi-role users + existence oracle) ────
+
+
+class CrossPortalDeleteTests(_BaseFixture):
+    """A note may be deleted only from the portal it was authored in. Covers the
+    multi-role (DOCTOR + SECRETARY) user who is both the author and able to reach both
+    portals — the exact gap that author-only deletion left open."""
+
+    def setUp(self):
+        super().setUp()
+        # One person who is BOTH a doctor and a secretary at the clinic.
+        self.multi = make_user("0590002010", role="DOCTOR", name="د. مزدوج")
+        self.multi.roles = ["DOCTOR", "SECRETARY"]
+        self.multi.save(update_fields=["roles"])
+        ClinicStaff.objects.create(
+            clinic=self.clinic, user=self.multi, role="SECRETARY", is_active=True
+        )
+        # An appointment where the multi-role user is the treating doctor.
+        self.multi_appt = Appointment.objects.create(
+            patient=self.patient, clinic=self.clinic, doctor=self.multi,
+            appointment_type=self.apt_type, appointment_date=date(2030, 2, 20),
+            appointment_time=time(11, 0), status=Appointment.Status.CONFIRMED,
+            created_by=self.multi,
+        )
+
+    # — appointment-scoped —
+
+    def test_secretary_authored_appt_note_blocked_in_doctor_portal(self):
+        note = self._note(StaffNote.Audience.DOCTOR, appointment=self.multi_appt,
+                          author=self.multi, author_role="SECRETARY")
+        self.client.force_login(self.multi)
+        blocked = self.client.post(
+            reverse("doctors:appointment_note_delete", args=[self.multi_appt.id, note.id])
+        )
+        self.assertEqual(blocked.status_code, 403)
+        self.assertTrue(StaffNote.objects.filter(id=note.id).exists())
+        # ...but the authoring (secretary) portal still deletes it.
+        allowed = self.client.post(
+            reverse("secretary:appointment_note_delete", args=[self.multi_appt.id, note.id])
+        )
+        self.assertEqual(allowed.status_code, 302)
+        self.assertFalse(StaffNote.objects.filter(id=note.id).exists())
+
+    def test_doctor_authored_appt_note_blocked_in_secretary_portal(self):
+        note = self._note(StaffNote.Audience.DOCTOR, appointment=self.multi_appt,
+                          author=self.multi, author_role="DOCTOR")
+        self.client.force_login(self.multi)
+        blocked = self.client.post(
+            reverse("secretary:appointment_note_delete", args=[self.multi_appt.id, note.id])
+        )
+        self.assertEqual(blocked.status_code, 403)
+        self.assertTrue(StaffNote.objects.filter(id=note.id).exists())
+        allowed = self.client.post(
+            reverse("doctors:appointment_note_delete", args=[self.multi_appt.id, note.id])
+        )
+        self.assertEqual(allowed.status_code, 302)
+        self.assertFalse(StaffNote.objects.filter(id=note.id).exists())
+
+    # — patient-profile-scoped —
+
+    def test_secretary_authored_profile_note_blocked_in_doctor_portal(self):
+        note = self._note(StaffNote.Audience.DOCTOR, appointment=None,
+                          author=self.multi, author_role="SECRETARY")
+        self.client.force_login(self.multi)
+        blocked = self.client.post(
+            reverse("doctors:patient_note_delete", args=[self.patient.id, note.id])
+        )
+        self.assertEqual(blocked.status_code, 403)
+        self.assertTrue(StaffNote.objects.filter(id=note.id).exists())
+        allowed = self.client.post(
+            reverse("secretary:patient_note_delete", args=[self.patient.id, note.id])
+        )
+        self.assertEqual(allowed.status_code, 302)
+        self.assertFalse(StaffNote.objects.filter(id=note.id).exists())
+
+    def test_doctor_authored_profile_note_blocked_in_secretary_portal(self):
+        note = self._note(StaffNote.Audience.DOCTOR, appointment=None,
+                          author=self.multi, author_role="DOCTOR")
+        self.client.force_login(self.multi)
+        blocked = self.client.post(
+            reverse("secretary:patient_note_delete", args=[self.patient.id, note.id])
+        )
+        self.assertEqual(blocked.status_code, 403)
+        self.assertTrue(StaffNote.objects.filter(id=note.id).exists())
+        allowed = self.client.post(
+            reverse("doctors:patient_note_delete", args=[self.patient.id, note.id])
+        )
+        self.assertEqual(allowed.status_code, 302)
+        self.assertFalse(StaffNote.objects.filter(id=note.id).exists())
+
+    # — existence-oracle hardening: a hidden note returns 404, not 403 —
+
+    def test_doctor_delete_endpoint_hides_secretary_only_note(self):
+        note = self._note(StaffNote.Audience.SECRETARY, appointment=self.appointment,
+                          author=self.secretary)
+        self.client.force_login(self.doctor)
+        resp = self.client.post(
+            reverse("doctors:appointment_note_delete", args=[self.appointment.id, note.id])
+        )
+        self.assertEqual(resp.status_code, 404)
+        self.assertTrue(StaffNote.objects.filter(id=note.id).exists())
+
+    def test_secretary_delete_endpoint_hides_doctor_private_note(self):
+        note = self._note(StaffNote.Audience.DOCTOR_PRIVATE, appointment=self.appointment,
+                          author=self.doctor, author_role="DOCTOR")
+        self.client.force_login(self.secretary)
+        resp = self.client.post(
+            reverse("secretary:appointment_note_delete", args=[self.appointment.id, note.id])
+        )
+        self.assertEqual(resp.status_code, 404)
+        self.assertTrue(StaffNote.objects.filter(id=note.id).exists())
