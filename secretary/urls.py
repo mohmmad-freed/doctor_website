@@ -51,6 +51,13 @@ urlpatterns = [
     # --- Billing ---
     path('billing/', views.billing_invoices, name='billing_invoices'),
     path('billing/daily-summary/', views.daily_summary, name='daily_summary'),
+    path('billing/debts/', views.patient_debts, name='patient_debts'),
+    path('billing/appointment/<int:appointment_id>/start/', views.start_billing, name='start_billing'),
+    path('billing/invoice/<int:invoice_id>/', views.invoice_detail, name='invoice_detail'),
+    path('billing/invoice/<int:invoice_id>/charges/add/', views.invoice_add_charge, name='invoice_add_charge'),
+    path('billing/invoice/<int:invoice_id>/charges/<int:item_id>/delete/', views.invoice_remove_charge, name='invoice_remove_charge'),
+    path('billing/invoice/<int:invoice_id>/payment/', views.invoice_record_payment, name='invoice_record_payment'),
+    path('htmx/patient-debt/', views.patient_debt_badge_htmx, name='patient_debt_badge_htmx'),
 
     # --- Reports ---
     path('reports/', views.reports_index, name='reports_index'),

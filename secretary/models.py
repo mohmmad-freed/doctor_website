@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.utils.translation import gettext_lazy as _lazy
 from clinics.models import Clinic
 
 
@@ -25,12 +26,12 @@ class Invoice(models.Model):
     """
 
     class Status(models.TextChoices):
-        DRAFT = "DRAFT", "مسودة"
-        ISSUED = "ISSUED", "صادرة"
-        PAID = "PAID", "مدفوعة"
-        PARTIAL = "PARTIAL", "مدفوعة جزئياً"
-        CANCELLED = "CANCELLED", "ملغاة"
-        REFUNDED = "REFUNDED", "مستردة"
+        DRAFT = "DRAFT", _lazy("مسودة")
+        ISSUED = "ISSUED", _lazy("صادرة")
+        PAID = "PAID", _lazy("مدفوعة")
+        PARTIAL = "PARTIAL", _lazy("مدفوعة جزئياً")
+        CANCELLED = "CANCELLED", _lazy("ملغاة")
+        REFUNDED = "REFUNDED", _lazy("مستردة")
 
     clinic = models.ForeignKey(
         Clinic,
@@ -214,10 +215,10 @@ class Payment(models.Model):
     """
 
     class Method(models.TextChoices):
-        CASH = "CASH", "نقدي"
-        CARD = "CARD", "بطاقة بنكية"
-        TRANSFER = "TRANSFER", "تحويل بنكي"
-        OTHER = "OTHER", "أخرى"
+        CASH = "CASH", _lazy("نقدي")
+        CARD = "CARD", _lazy("بطاقة بنكية")
+        TRANSFER = "TRANSFER", _lazy("تحويل بنكي")
+        OTHER = "OTHER", _lazy("أخرى")
 
     invoice = models.ForeignKey(
         Invoice,

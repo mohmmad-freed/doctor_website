@@ -3631,3 +3631,261 @@ msgstr "A note the doctor will see..."
 
 msgid "ملاحظة تظهر للسكرتارية فقط..."
 msgstr "A note visible to secretaries only..."
+
+msgid "الفواتير والمحاسبة"
+msgstr "Invoices & Accounting"
+
+msgid "إدارة فواتير المرضى والمدفوعات والديون."
+msgstr "Manage patient invoices, payments, and debts."
+
+msgid "المرضى المدينون"
+msgstr "Patients in debt"
+
+msgid "إجمالي الفوترة"
+msgstr "Total billed"
+
+msgid "المُحصّل"
+msgstr "Collected"
+
+msgid "المتبقي (ديون)"
+msgstr "Outstanding (debt)"
+
+msgid "مفتوحة"
+msgstr "Open"
+
+msgid "غير مسددة"
+msgstr "Unpaid"
+
+msgid "مسددة"
+msgstr "Paid"
+
+msgid "بحث بالاسم أو الهاتف أو رقم الفاتورة"
+msgstr "Search by name, phone, or invoice no."
+
+msgid "رقم الفاتورة"
+msgstr "Invoice no."
+
+msgid "المتبقي"
+msgstr "Remaining"
+
+msgid "لا توجد فواتير."
+msgstr "No invoices."
+
+msgid "العودة إلى الفواتير"
+msgstr "Back to invoices"
+
+msgid "جلسة مفتوحة"
+msgstr "Open session"
+
+msgid "مغلقة"
+msgstr "Closed"
+
+msgid "المتبقي على هذه الفاتورة"
+msgstr "Remaining on this invoice"
+
+msgid "لدى هذا المريض ديون سابقة على فواتير أخرى:"
+msgstr "This patient has prior debt on other invoices:"
+
+msgid "الرسوم"
+msgstr "Charges"
+
+msgid "لا يمكن التعديل بعد اكتمال الموعد"
+msgstr "Cannot edit after the appointment is completed"
+
+msgid "حذف هذا البند؟"
+msgstr "Delete this item?"
+
+msgid "لا توجد رسوم بعد."
+msgstr "No charges yet."
+
+msgid "إضافة سريعة:"
+msgstr "Quick add:"
+
+msgid "رسوم حقنة"
+msgstr "Injection fee"
+
+msgid "حقنة"
+msgstr "Injection"
+
+msgid "رسوم فحص"
+msgstr "Examination fee"
+
+msgid "فحص"
+msgstr "Examination"
+
+msgid "مستلزمات"
+msgstr "Supplies"
+
+msgid "تسجيل دفعة"
+msgstr "Record payment"
+
+msgid "الحد الأقصى المسموح به (إجمالي مستحقات المريض):"
+msgstr "Maximum allowed (patient's total dues):"
+
+msgid "أيّ مبلغ يتجاوز هذه الفاتورة يُسدَّد تلقائياً من أقدم الديون."
+msgstr "Any amount above this invoice is automatically applied to the oldest debts."
+
+msgid "تأكيد الدفعة"
+msgstr "Confirm payment"
+
+msgid "لا توجد مستحقات على هذا المريض."
+msgstr "This patient has no outstanding dues."
+
+msgid "سجل المدفوعات"
+msgstr "Payment history"
+
+msgid "المرضى ذوو الأرصدة المستحقة"
+msgstr "Patients with outstanding balances"
+
+msgid "إجمالي الديون"
+msgstr "Total debt"
+
+msgid "المبلغ المستحق"
+msgstr "Amount due"
+
+msgid "لا يوجد مرضى عليهم ديون."
+msgstr "No patients have debts."
+
+msgid "ملخص المقبوضات"
+msgstr "Receipts summary"
+
+msgid "إجمالي المُحصّل"
+msgstr "Total collected"
+
+msgid "دفعة"
+msgstr "payments"
+
+msgid "المدفوعات"
+msgstr "Payments"
+
+msgid "الطريقة"
+msgstr "Method"
+
+msgid "لا توجد مدفوعات في هذا اليوم."
+msgstr "No payments on this day."
+
+msgid "دين"
+msgstr "Debt"
+
+msgid "دين مستحق"
+msgstr "Outstanding debt"
+
+msgid "هذا المريض عليه دين مستحق:"
+msgstr "This patient has an outstanding debt:"
+
+msgid "عرض الفاتورة"
+msgstr "View invoice"
+
+msgid "الفاتورة"
+msgstr "Invoice"
+
+msgid "بدء الفوترة"
+msgstr "Start billing"
+
+msgid "فوترة"
+msgstr "Billing"
+
+msgid "متبقٍ"
+msgstr "Remaining"
+
+msgid "لا يمكن بدء الفوترة إلا عندما يكون المريض في غرفة الانتظار."
+msgstr "Billing can only start when the patient is in the waiting room."
+
+msgid "تعذّر إنشاء رقم فاتورة فريد. يرجى المحاولة مرة أخرى."
+msgstr "Could not generate a unique invoice number. Please try again."
+
+msgid "لا يمكن تعديل الرسوم بعد إغلاق جلسة الفوترة."
+msgstr "Charges cannot be modified after the billing session is closed."
+
+msgid "يرجى إدخال وصف للرسوم."
+msgstr "Please enter a description for the charge."
+
+msgid "الكمية يجب أن تكون 1 على الأقل."
+msgstr "Quantity must be at least 1."
+
+msgid "سعر الوحدة غير صالح."
+msgstr "Invalid unit price."
+
+msgid "قيمة مالية غير صالحة."
+msgstr "Invalid monetary value."
+
+msgid "يجب إدخال مبلغ أكبر من صفر."
+msgstr "Amount must be greater than zero."
+
+msgid "المبلغ المُدخل يتجاوز إجمالي المستحقات على المريض (الحد الأقصى ₪%(max)s)."
+msgstr "The amount exceeds the patient's total dues (maximum ₪%(max)s)."
+
+msgid "سداد دين سابق"
+msgstr "Prior debt repayment"
+
+msgid "الوصف"
+msgstr "Description"
+
+msgid "مثال: رسوم حقنة"
+msgstr "e.g. injection fee"
+
+msgid "الكمية"
+msgstr "Quantity"
+
+msgid "سعر الوحدة"
+msgstr "Unit price"
+
+msgid "المبلغ المدفوع"
+msgstr "Amount paid"
+
+msgid "طريقة الدفع"
+msgstr "Payment method"
+
+msgid "مرجع (اختياري)"
+msgstr "Reference (optional)"
+
+msgid "رقم العملية / آخر 4 أرقام البطاقة"
+msgstr "Transaction no. / last 4 card digits"
+
+msgid "تفصيل الدفعة"
+msgstr "Payment breakdown"
+
+msgid "مثال: كشف 50، حقنة 25، سداد دين 75"
+msgstr "e.g. consultation 50, injection 25, debt repayment 75"
+
+msgid "المبلغ يتجاوز إجمالي المستحقات على المريض (الحد الأقصى ₪%(max)s)."
+msgstr "The amount exceeds the patient's total dues (maximum ₪%(max)s)."
+
+msgid "تمت إضافة الرسوم."
+msgstr "Charge added."
+
+msgid "بيانات الرسوم غير صالحة."
+msgstr "Invalid charge data."
+
+msgid "تم حذف الرسوم."
+msgstr "Charge removed."
+
+msgid "تم تسجيل الدفعة بنجاح."
+msgstr "Payment recorded successfully."
+
+msgid "بيانات الدفعة غير صالحة."
+msgstr "Invalid payment data."
+
+msgid "مسودة"
+msgstr "Draft"
+
+msgid "صادرة"
+msgstr "Issued"
+
+msgid "مدفوعة"
+msgstr "Paid"
+
+msgid "مدفوعة جزئياً"
+msgstr "Partially paid"
+
+msgid "مستردة"
+msgstr "Refunded"
+
+msgid "نقدي"
+msgstr "Cash"
+
+msgid "بطاقة بنكية"
+msgstr "Bank card"
+
+msgid "تحويل بنكي"
+msgstr "Bank transfer"

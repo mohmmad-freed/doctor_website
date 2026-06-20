@@ -1,0 +1,184 @@
+{% extends "secretary/base_secretary.html" %}
+{% load i18n %}
+{% block title %}{% trans "فاتورة" %} {{ invoice.invoice_number }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-5">
+
+  <!-- Back -->
+  <a href="{% url 'secretary:billing_invoices' %}" data-back
+     class="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
+    <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %}"></i>
+    {% trans "العودة إلى الفواتير" %}
+  </a>
+
+  <!-- Header card -->
+  <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <h1 class="text-xl font-bold text-gray-900 dark:text-white font-mono">{{ invoice.invoice_number }}</h1>
+          {% include "secretary/billing/_invoice_status.html" %}
+          {% if editable %}
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+            <i class="fa-solid fa-circle-dot text-[9px]"></i>{% trans "جلسة مفتوحة" %}
+          </span>
+          {% else %}
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-gray-200 text-gray-600 dark:bg-slate-700 dark:text-slate-300">
+            <i class="fa-solid fa-lock text-[9px]"></i>{% trans "مغلقة" %}
+          </span>
+          {% endif %}
+        </div>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <a href="{% url 'secretary:patient_detail' invoice.patient.id %}?tab=billing" class="font-semibold text-primary-600 dark:text-primary-400 hover:underline">{{ invoice.patient.name }}</a>
+          {% if invoice.appointment %}
+          · <a href="{% url 'secretary:appointment_overview' invoice.appointment.id %}" class="hover:underline">{% trans "الموعد" %} {{ invoice.appointment.appointment_date|date:"Y-m-d" }}</a>
+          {% endif %}
+        </p>
+      </div>
+      <div class="text-end">
+        <p class="text-xs text-gray-400">{% trans "المتبقي على هذه الفاتورة" %}</p>
+        <p class="text-2xl font-extrabold {% if invoice.balance_due > 0 %}text-red-600 dark:text-red-400{% else %}text-emerald-600 dark:text-emerald-400{% endif %}">₪{{ invoice.balance_due|floatformat:2 }}</p>
+      </div>
+    </div>
+
+    {% if other_debt > 0 %}
+    <div class="mt-3 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm font-semibold flex items-center gap-2">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      {% trans "لدى هذا المريض ديون سابقة على فواتير أخرى:" %} ₪{{ other_debt|floatformat:2 }}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Charges -->
+  <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 overflow-hidden">
+    <div class="px-5 py-3 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
+      <h2 class="font-bold text-gray-900 dark:text-white flex items-center gap-2"><i class="fa-solid fa-list-ul text-primary-500"></i>{% trans "الرسوم" %}</h2>
+      {% if not editable %}<span class="text-xs text-gray-400"><i class="fa-solid fa-lock"></i> {% trans "لا يمكن التعديل بعد اكتمال الموعد" %}</span>{% endif %}
+    </div>
+
+    <table class="w-full text-sm">
+      <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
+        {% for item in items %}
+        <tr>
+          <td class="px-5 py-3 text-gray-900 dark:text-white font-medium">{{ item.description }}</td>
+          <td class="px-3 py-3 text-gray-500 dark:text-gray-400 text-center whitespace-nowrap">{{ item.quantity }} × ₪{{ item.unit_price|floatformat:2 }}</td>
+          <td class="px-3 py-3 text-end font-semibold text-gray-900 dark:text-white whitespace-nowrap">₪{{ item.total|floatformat:2 }}</td>
+          <td class="px-3 py-3 text-end w-10">
+            {% if editable %}
+            <form method="post" action="{% url 'secretary:invoice_remove_charge' invoice.id item.id %}" onsubmit="return confirm('{% trans "حذف هذا البند؟" %}');">
+              {% csrf_token %}
+              <button type="submit" class="text-gray-300 hover:text-red-500 transition-colors" title="{% trans 'حذف' %}"><i class="fa-solid fa-trash-can"></i></button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" class="px-5 py-8 text-center text-gray-400">{% trans "لا توجد رسوم بعد." %}</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot class="bg-gray-50 dark:bg-slate-900/40 font-bold text-gray-900 dark:text-white">
+        <tr>
+          <td class="px-5 py-3" colspan="2">{% trans "الإجمالي" %}</td>
+          <td class="px-3 py-3 text-end">₪{{ invoice.total|floatformat:2 }}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+
+    {% if editable %}
+    <!-- Add charge -->
+    <div class="px-5 py-4 border-t border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-900/20">
+      <div class="flex flex-wrap gap-2 mb-3">
+        <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 self-center">{% trans "إضافة سريعة:" %}</span>
+        <button type="button" onclick="presetCharge('{% trans "رسوم حقنة" %}')" class="px-3 py-1 rounded-lg text-xs font-bold bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-200 hover:border-primary-400">{% trans "حقنة" %}</button>
+        <button type="button" onclick="presetCharge('{% trans "رسوم فحص" %}')" class="px-3 py-1 rounded-lg text-xs font-bold bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-200 hover:border-primary-400">{% trans "فحص" %}</button>
+        <button type="button" onclick="presetCharge('{% trans "مستلزمات" %}')" class="px-3 py-1 rounded-lg text-xs font-bold bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-200 hover:border-primary-400">{% trans "مستلزمات" %}</button>
+        <button type="button" onclick="presetCharge('')" class="px-3 py-1 rounded-lg text-xs font-bold bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-200 hover:border-primary-400">{% trans "أخرى" %}</button>
+      </div>
+      <form method="post" action="{% url 'secretary:invoice_add_charge' invoice.id %}" class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+        {% csrf_token %}
+        <div class="sm:col-span-6">{{ charge_form.description }}</div>
+        <div class="sm:col-span-2">{{ charge_form.quantity }}</div>
+        <div class="sm:col-span-2">{{ charge_form.unit_price }}</div>
+        <div class="sm:col-span-2">
+          <button type="submit" class="w-full px-4 py-2 rounded-xl bg-primary-600 text-white text-sm font-bold hover:bg-primary-700 transition-colors">
+            <i class="fa-solid fa-plus"></i> {% trans "إضافة" %}
+          </button>
+        </div>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Payment -->
+  <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5">
+    <h2 class="font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-1"><i class="fa-solid fa-money-bill-wave text-emerald-500"></i>{% trans "تسجيل دفعة" %}</h2>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+      {% trans "الحد الأقصى المسموح به (إجمالي مستحقات المريض):" %}
+      <span class="font-bold text-gray-900 dark:text-white">₪{{ max_payable|floatformat:2 }}</span>
+    </p>
+
+    {% if max_payable > 0 %}
+    <form method="post" action="{% url 'secretary:invoice_record_payment' invoice.id %}" class="space-y-3">
+      {% csrf_token %}
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">{{ payment_form.amount.label }}</label>
+          {{ payment_form.amount }}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">{{ payment_form.method.label }}</label>
+          {{ payment_form.method }}
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">{{ payment_form.reference.label }}</label>
+        {{ payment_form.reference }}
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">{{ payment_form.breakdown.label }}</label>
+        {{ payment_form.breakdown }}
+        <p class="text-[11px] text-gray-400 mt-1">{% trans "أيّ مبلغ يتجاوز هذه الفاتورة يُسدَّد تلقائياً من أقدم الديون." %}</p>
+      </div>
+      <button type="submit" class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 transition-colors">
+        <i class="fa-solid fa-check"></i> {% trans "تأكيد الدفعة" %}
+      </button>
+    </form>
+    {% else %}
+    <p class="text-sm text-gray-400 py-2"><i class="fa-solid fa-circle-check text-emerald-500"></i> {% trans "لا توجد مستحقات على هذا المريض." %}</p>
+    {% endif %}
+  </div>
+
+  <!-- Payment history -->
+  {% if payments %}
+  <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 overflow-hidden">
+    <div class="px-5 py-3 border-b border-gray-100 dark:border-slate-700">
+      <h2 class="font-bold text-gray-900 dark:text-white flex items-center gap-2"><i class="fa-solid fa-clock-rotate-left text-gray-400"></i>{% trans "سجل المدفوعات" %}</h2>
+    </div>
+    <table class="w-full text-sm">
+      <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
+        {% for p in payments %}
+        <tr>
+          <td class="px-5 py-3 font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">₪{{ p.amount|floatformat:2 }}</td>
+          <td class="px-3 py-3 text-gray-500 dark:text-gray-400">{{ p.get_method_display }}</td>
+          <td class="px-3 py-3 text-gray-500 dark:text-gray-400">{% if p.notes %}{{ p.notes }}{% endif %}</td>
+          <td class="px-5 py-3 text-end text-gray-400 whitespace-nowrap">{{ p.received_at|date:"Y-m-d H:i" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+  function presetCharge(desc) {
+    var el = document.getElementById('id_description');
+    if (el) { el.value = desc; el.focus(); }
+    var price = document.getElementById('id_unit_price');
+    if (price) price.focus();
+  }
+</script>
+{% endblock %}

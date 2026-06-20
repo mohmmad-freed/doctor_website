@@ -25,6 +25,7 @@
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-2 flex-wrap">
           <span class="font-semibold text-gray-900 dark:text-gray-100 truncate">{{ appt.patient.name }}</span>
+          {% include "secretary/billing/_debt_badge.html" with amount=entry.debt %}
           {% if appt.is_walk_in %}
           <span title="{% trans 'هذا المريض لم يحجز موعداً مسبقاً' %}"
                 class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-[10px] font-bold uppercase tracking-wide">
@@ -64,6 +65,25 @@
 
     {# Actions #}
     <div class="flex items-center gap-1 flex-shrink-0">
+      {# Billing: open the session (CHECKED_IN) or view it once started #}
+      {% if entry.open_invoice %}
+      <a href="{% url 'secretary:invoice_detail' entry.open_invoice.id %}"
+         title="{% trans 'عرض الفاتورة' %}"
+         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300 text-xs font-semibold transition-colors">
+        <i class="fa-solid fa-file-invoice-dollar text-xs"></i> {% trans "الفاتورة" %}
+      </a>
+      {% else %}
+      <form method="post" action="{% url 'secretary:start_billing' appt.id %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button type="submit"
+                title="{% trans 'بدء الفوترة' %}"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-700 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 text-emerald-700 dark:text-emerald-300 text-xs font-semibold transition-colors">
+          <i class="fa-solid fa-receipt text-xs"></i> {% trans "فوترة" %}
+        </button>
+      </form>
+      {% endif %}
+
       {# Call / send to doctor → IN_PROGRESS via status update #}
       <form method="post"
             action="{% url 'secretary:update_appointment_status' appt.id %}"

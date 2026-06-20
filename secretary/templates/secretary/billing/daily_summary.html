@@ -1,0 +1,72 @@
+{% extends "secretary/base_secretary.html" %}
+{% load i18n %}
+{% block title %}{% trans "الملخص اليومي" %}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-5">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+      <i class="fa-solid fa-cash-register text-primary-500"></i>
+      {% trans "ملخص المقبوضات" %}
+    </h1>
+    <form method="get" class="flex items-center gap-2">
+      <input type="date" name="date" value="{{ day|date:'Y-m-d' }}"
+             onchange="this.form.submit()"
+             class="px-3 py-2 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-slate-800 dark:border-slate-700 dark:text-white text-sm">
+    </form>
+  </div>
+
+  <!-- Total -->
+  <div class="bg-gradient-to-l from-emerald-500 to-emerald-600 rounded-2xl p-6 text-white">
+    <p class="text-sm font-semibold opacity-90">{% trans "إجمالي المُحصّل" %} — {{ day|date:"Y-m-d" }}</p>
+    <p class="text-4xl font-extrabold mt-1">₪{{ total_collected|floatformat:2 }}</p>
+  </div>
+
+  <!-- By method -->
+  {% if by_method %}
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    {% for m in by_method %}
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4">
+      <p class="text-xs font-semibold text-gray-500 dark:text-gray-400">{{ m.label }}</p>
+      <p class="text-xl font-extrabold text-gray-900 dark:text-white mt-1">₪{{ m.total|floatformat:2 }}</p>
+      <p class="text-[11px] text-gray-400">{{ m.count }} {% trans "دفعة" %}</p>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Payments table -->
+  <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 overflow-hidden">
+    <div class="px-5 py-3 border-b border-gray-100 dark:border-slate-700">
+      <h2 class="font-bold text-gray-900 dark:text-white">{% trans "المدفوعات" %}</h2>
+    </div>
+    <div class="overflow-x-auto dark-scrollbar">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-slate-900/50 text-gray-500 dark:text-gray-400 text-xs uppercase">
+          <tr>
+            <th class="text-start font-semibold px-5 py-3">{% trans "الوقت" %}</th>
+            <th class="text-start font-semibold px-5 py-3">{% trans "المريض" %}</th>
+            <th class="text-start font-semibold px-5 py-3">{% trans "الطريقة" %}</th>
+            <th class="text-end font-semibold px-5 py-3">{% trans "المبلغ" %}</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
+          {% for p in payments %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/40 transition-colors cursor-pointer"
+              onclick="window.location='{% url 'secretary:invoice_detail' p.invoice_id %}'">
+            <td class="px-5 py-3 text-gray-400 whitespace-nowrap">{{ p.received_at|date:"H:i" }}</td>
+            <td class="px-5 py-3 font-semibold text-gray-900 dark:text-white">{{ p.invoice.patient.name }}</td>
+            <td class="px-5 py-3 text-gray-500 dark:text-gray-400">{{ p.get_method_display }}</td>
+            <td class="px-5 py-3 text-end font-bold text-emerald-600 dark:text-emerald-400">₪{{ p.amount|floatformat:2 }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="px-5 py-12 text-center text-gray-400">{% trans "لا توجد مدفوعات في هذا اليوم." %}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

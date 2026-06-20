@@ -1,0 +1,1 @@
+{% load i18n %}{% if amount %}<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" title="{% trans 'دين مستحق' %}"><i class="fa-solid fa-triangle-exclamation text-[10px]"></i>{% trans "دين" %} ₪{{ amount|floatformat:2 }}</span>{% endif %}

@@ -1845,3 +1845,227 @@ class SecretaryIntakeBookingTest(SecretaryTestBase):
         )
         self.assertEqual(resp.status_code, 302)
         self.assertFalse(Appointment.objects.filter(clinic=self.clinic_a).exists())
+
+
+# ════════════════════════════════════════════════════════════════════
+#  Billing / Accounting
+# ════════════════════════════════════════════════════════════════════
+
+class BillingTest(SecretaryTestBase):
+    """Billing session lifecycle, charges, payments (overpayment + FIFO), debts."""
+
+    def _checked_in(self, appointment_time=time(10, 0)):
+        return self._make_appointment(
+            status=Appointment.Status.CHECKED_IN, appointment_time=appointment_time,
+        )
+
+    # ── Session lifecycle ────────────────────────────────────────────
+
+    def test_open_session_requires_checked_in(self):
+        from secretary import billing
+        appt = self._make_appointment(status=Appointment.Status.CONFIRMED)
+        with self.assertRaises(billing.BillingError):
+            billing.open_billing_session(appt, by_user=self.secretary_a)
+
+    def test_open_session_seeds_consultation_fee(self):
+        from secretary import billing
+        appt = self._checked_in()
+        inv = billing.open_billing_session(appt, by_user=self.secretary_a)
+        self.assertEqual(inv.items.count(), 1)
+        self.assertEqual(inv.total, Decimal("50.00"))
+        self.assertEqual(inv.balance_due, Decimal("50.00"))
+        self.assertEqual(inv.appointment_id, appt.id)
+
+    def test_open_session_is_idempotent(self):
+        from secretary import billing
+        appt = self._checked_in()
+        inv1 = billing.open_billing_session(appt, by_user=self.secretary_a)
+        inv2 = billing.open_billing_session(appt, by_user=self.secretary_a)
+        self.assertEqual(inv1.id, inv2.id)
+
+    # ── Charges ──────────────────────────────────────────────────────
+
+    def test_add_and_remove_charge_recomputes_total(self):
+        from secretary import billing
+        appt = self._checked_in()
+        inv = billing.open_billing_session(appt, by_user=self.secretary_a)
+        billing.add_charge(inv, description="حقنة", quantity=2, unit_price=Decimal("25.00"))
+        inv.refresh_from_db()
+        self.assertEqual(inv.total, Decimal("100.00"))  # 50 + 2*25
+        # Remove the consultation seed → only the injection remains.
+        consult = inv.items.filter(description="General").first()
+        billing.remove_charge(consult)
+        inv.refresh_from_db()
+        self.assertEqual(inv.total, Decimal("50.00"))
+
+    def test_charges_lock_after_completed(self):
+        from secretary import billing
+        from secretary.models import Invoice
+        appt = self._checked_in()
+        inv = billing.open_billing_session(appt, by_user=self.secretary_a)
+        # Complete the appointment → invoice locks (DRAFT → ISSUED).
+        appt.status = Appointment.Status.COMPLETED
+        appt.save(update_fields=["status"])
+        billing.on_appointment_status_changed(appt, Appointment.Status.COMPLETED)
+        inv.refresh_from_db()
+        self.assertEqual(inv.status, Invoice.Status.ISSUED)
+        self.assertFalse(billing.is_editable(inv))
+        with self.assertRaises(billing.BillingError):
+            billing.add_charge(inv, description="late", quantity=1, unit_price=Decimal("10.00"))
+
+    def test_auto_void_on_cancel(self):
+        from secretary import billing
+        from secretary.models import Invoice
+        appt = self._checked_in()
+        inv = billing.open_billing_session(appt, by_user=self.secretary_a)
+        appt.status = Appointment.Status.CANCELLED
+        appt.save(update_fields=["status"])
+        billing.on_appointment_status_changed(appt, Appointment.Status.CANCELLED)
+        inv.refresh_from_db()
+        self.assertEqual(inv.status, Invoice.Status.CANCELLED)
+
+    # ── Payments ─────────────────────────────────────────────────────
+
+    def test_partial_then_full_payment(self):
+        from secretary import billing
+        from secretary.models import Invoice
+        appt = self._checked_in()
+        inv = billing.open_billing_session(appt, by_user=self.secretary_a)
+        billing.record_payment(primary_invoice=inv, amount=Decimal("30.00"),
+                               method="CASH", breakdown="دفعة أولى", by_user=self.secretary_a)
+        inv.refresh_from_db()
+        self.assertEqual(inv.status, Invoice.Status.PARTIAL)
+        self.assertEqual(inv.balance_due, Decimal("20.00"))
+        billing.record_payment(primary_invoice=inv, amount=Decimal("20.00"),
+                               method="CASH", by_user=self.secretary_a)
+        inv.refresh_from_db()
+        self.assertEqual(inv.status, Invoice.Status.PAID)
+        self.assertEqual(inv.balance_due, Decimal("0.00"))
+
+    def test_overpayment_is_rejected(self):
+        from secretary import billing
+        from secretary.models import Payment
+        appt = self._checked_in()
+        inv = billing.open_billing_session(appt, by_user=self.secretary_a)
+        with self.assertRaises(billing.BillingError):
+            billing.record_payment(primary_invoice=inv, amount=Decimal("50.01"),
+                                   method="CASH", by_user=self.secretary_a)
+        self.assertEqual(Payment.objects.count(), 0)
+
+    def test_payment_settles_old_debt_fifo(self):
+        from secretary import billing
+        from secretary.models import Invoice
+        # Old invoice → debt of 50 (completed, unpaid).
+        old_appt = self._checked_in(appointment_time=time(9, 0))
+        old_inv = billing.open_billing_session(old_appt, by_user=self.secretary_a)
+        old_appt.status = Appointment.Status.COMPLETED
+        old_appt.save(update_fields=["status"])
+        billing.on_appointment_status_changed(old_appt, Appointment.Status.COMPLETED)
+
+        # New session → 50.
+        new_appt = self._checked_in(appointment_time=time(11, 0))
+        new_inv = billing.open_billing_session(new_appt, by_user=self.secretary_a)
+
+        self.assertEqual(billing.patient_outstanding(self.clinic_a, self.patient_a), Decimal("100.00"))
+
+        # Pay 70: 50 → current session, 20 → oldest debt (FIFO).
+        billing.record_payment(primary_invoice=new_inv, amount=Decimal("70.00"),
+                               method="CASH", breakdown="كشف + سداد دين", by_user=self.secretary_a)
+        new_inv.refresh_from_db()
+        old_inv.refresh_from_db()
+        self.assertEqual(new_inv.balance_due, Decimal("0.00"))
+        self.assertEqual(new_inv.status, Invoice.Status.PAID)
+        self.assertEqual(old_inv.balance_due, Decimal("30.00"))  # 50 - 20
+
+    def test_patient_outstanding_excludes_cancelled(self):
+        from secretary import billing
+        appt = self._checked_in()
+        inv = billing.open_billing_session(appt, by_user=self.secretary_a)
+        self.assertEqual(billing.patient_outstanding(self.clinic_a, self.patient_a), Decimal("50.00"))
+        appt.status = Appointment.Status.CANCELLED
+        appt.save(update_fields=["status"])
+        billing.on_appointment_status_changed(appt, Appointment.Status.CANCELLED)
+        self.assertEqual(billing.patient_outstanding(self.clinic_a, self.patient_a), Decimal("0.00"))
+
+    # ── Views ────────────────────────────────────────────────────────
+
+    def test_start_billing_view_creates_invoice(self):
+        from secretary.models import Invoice
+        appt = self._checked_in()
+        self.client.force_login(self.secretary_a)
+        resp = self.client.post(reverse("secretary:start_billing", args=[appt.id]))
+        self.assertEqual(resp.status_code, 302)
+        inv = Invoice.objects.get(appointment=appt)
+        self.assertIn(reverse("secretary:invoice_detail", args=[inv.id]), resp.url)
+
+    def test_invoice_detail_clinic_isolation(self):
+        from secretary import billing
+        appt = self._checked_in()
+        inv = billing.open_billing_session(appt, by_user=self.secretary_a)
+        self.client.force_login(self.secretary_b)
+        resp = self.client.get(reverse("secretary:invoice_detail", args=[inv.id]))
+        self.assertEqual(resp.status_code, 404)
+
+    def test_record_payment_view_blocks_overpayment(self):
+        from secretary import billing
+        from secretary.models import Payment
+        appt = self._checked_in()
+        inv = billing.open_billing_session(appt, by_user=self.secretary_a)
+        self.client.force_login(self.secretary_a)
+        resp = self.client.post(
+            reverse("secretary:invoice_record_payment", args=[inv.id]),
+            {"amount": "999.00", "method": "CASH", "breakdown": ""},
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(Payment.objects.count(), 0)
+        inv.refresh_from_db()
+        self.assertEqual(inv.balance_due, Decimal("50.00"))
+
+    def test_debts_page_lists_patient(self):
+        from secretary import billing
+        appt = self._checked_in()
+        billing.open_billing_session(appt, by_user=self.secretary_a)
+        self.client.force_login(self.secretary_a)
+        resp = self.client.get(reverse("secretary:patient_debts"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, self.patient_a.name)
+
+    def test_debt_badge_htmx_shows_amount(self):
+        from secretary import billing
+        appt = self._checked_in()
+        billing.open_billing_session(appt, by_user=self.secretary_a)
+        self.client.force_login(self.secretary_a)
+        resp = self.client.get(
+            reverse("secretary:patient_debt_badge_htmx"),
+            {"patient_id": self.patient_a.id},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "دين مستحق")  # banner shown
+        self.assertContains(resp, "50")          # amount (locale may use , or .)
+
+    # ── Bilingual (English) rendering ────────────────────────────────
+
+    def test_billing_pages_render_in_english(self):
+        """With preferred_language=en, billing UI + status labels are English."""
+        from secretary import billing
+        self.secretary_a.preferred_language = "en"
+        self.secretary_a.save(update_fields=["preferred_language"])
+        appt = self._checked_in()
+        inv = billing.open_billing_session(appt, by_user=self.secretary_a)
+        self.client.force_login(self.secretary_a)
+
+        # Dashboard
+        resp = self.client.get(reverse("secretary:billing_invoices"))
+        self.assertContains(resp, "Accounting")
+        self.assertContains(resp, "Patients in debt")
+
+        # Invoice detail — translated UI strings + status label, no Arabic source
+        resp = self.client.get(reverse("secretary:invoice_detail", args=[inv.id]))
+        self.assertContains(resp, "Record payment")
+        self.assertContains(resp, "Charges")
+        self.assertContains(resp, "Draft")          # Invoice.Status label
+        self.assertNotContains(resp, "الرسوم")      # Arabic msgid must be translated away
+
+        # Debts page
+        resp = self.client.get(reverse("secretary:patient_debts"))
+        self.assertContains(resp, "Patients with outstanding balances")

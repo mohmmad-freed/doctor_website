@@ -1,0 +1,105 @@
+{% extends "secretary/base_secretary.html" %}
+{% load i18n %}
+{% block title %}{% trans "الفواتير" %}{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+        <i class="fa-solid fa-file-invoice-dollar text-primary-500"></i>
+        {% trans "الفواتير والمحاسبة" %}
+      </h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{% trans "إدارة فواتير المرضى والمدفوعات والديون." %}</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="{% url 'secretary:patient_debts' %}"
+         class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800 text-sm font-bold hover:bg-red-100 transition-colors">
+        <i class="fa-solid fa-hand-holding-dollar"></i>
+        {% trans "المرضى المدينون" %}
+        {% if debtors_count %}<span class="min-w-[20px] h-5 px-1 bg-red-600 text-white text-[10px] rounded-full flex items-center justify-center">{{ debtors_count }}</span>{% endif %}
+      </a>
+      <a href="{% url 'secretary:daily_summary' %}"
+         class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white text-gray-700 border border-gray-200 dark:bg-slate-800 dark:text-gray-200 dark:border-slate-700 text-sm font-bold hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+        <i class="fa-solid fa-cash-register"></i>
+        {% trans "الملخص اليومي" %}
+      </a>
+    </div>
+  </div>
+
+  <!-- Stat cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5">
+      <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{% trans "إجمالي الفوترة" %}</p>
+      <p class="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">₪{{ totals.billed|default:0|floatformat:2 }}</p>
+    </div>
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5">
+      <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{% trans "المُحصّل" %}</p>
+      <p class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">₪{{ totals.collected|default:0|floatformat:2 }}</p>
+    </div>
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5">
+      <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{% trans "المتبقي (ديون)" %}</p>
+      <p class="text-2xl font-extrabold text-red-600 dark:text-red-400 mt-1">₪{{ totals.outstanding|default:0|floatformat:2 }}</p>
+    </div>
+  </div>
+
+  <!-- Filters + search -->
+  <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4">
+    <form method="get" class="flex flex-wrap items-center gap-3">
+      <div class="inline-flex items-center gap-1 bg-gray-100 dark:bg-slate-900 rounded-xl p-1">
+        <a href="?filter=all{% if q %}&q={{ q }}{% endif %}" class="filter-pill {% if filter == 'all' %}filter-pill-active{% endif %}">{% trans "الكل" %}</a>
+        <a href="?filter=open{% if q %}&q={{ q }}{% endif %}" class="filter-pill {% if filter == 'open' %}filter-pill-active{% endif %}">{% trans "مفتوحة" %}</a>
+        <a href="?filter=unpaid{% if q %}&q={{ q }}{% endif %}" class="filter-pill {% if filter == 'unpaid' %}filter-pill-active{% endif %}">{% trans "غير مسددة" %}</a>
+        <a href="?filter=paid{% if q %}&q={{ q }}{% endif %}" class="filter-pill {% if filter == 'paid' %}filter-pill-active{% endif %}">{% trans "مسددة" %}</a>
+      </div>
+      <div class="flex-1 min-w-[200px]">
+        <input type="hidden" name="filter" value="{{ filter }}">
+        <input type="text" name="q" value="{{ q }}" placeholder="{% trans 'بحث بالاسم أو الهاتف أو رقم الفاتورة' %}"
+               class="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-slate-900 dark:border-slate-700 dark:text-white text-sm">
+      </div>
+      <button type="submit" class="px-4 py-2 rounded-xl bg-primary-600 text-white text-sm font-bold hover:bg-primary-700 transition-colors">
+        <i class="fa-solid fa-magnifying-glass"></i>
+      </button>
+    </form>
+  </div>
+
+  <!-- Invoice list -->
+  <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 overflow-hidden">
+    <div class="overflow-x-auto dark-scrollbar">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-slate-900/50 text-gray-500 dark:text-gray-400 text-xs uppercase">
+          <tr>
+            <th class="text-start font-semibold px-4 py-3">{% trans "رقم الفاتورة" %}</th>
+            <th class="text-start font-semibold px-4 py-3">{% trans "المريض" %}</th>
+            <th class="text-start font-semibold px-4 py-3">{% trans "التاريخ" %}</th>
+            <th class="text-end font-semibold px-4 py-3">{% trans "الإجمالي" %}</th>
+            <th class="text-end font-semibold px-4 py-3">{% trans "المتبقي" %}</th>
+            <th class="text-center font-semibold px-4 py-3">{% trans "الحالة" %}</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
+          {% for invoice in invoices %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/40 transition-colors cursor-pointer"
+              onclick="window.location='{% url 'secretary:invoice_detail' invoice.id %}'">
+            <td class="px-4 py-3 font-mono text-xs text-gray-700 dark:text-gray-300">{{ invoice.invoice_number }}</td>
+            <td class="px-4 py-3 font-semibold text-gray-900 dark:text-white">{{ invoice.patient.name }}</td>
+            <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ invoice.created_at|date:"Y-m-d" }}</td>
+            <td class="px-4 py-3 text-end font-semibold text-gray-900 dark:text-white">₪{{ invoice.total|floatformat:2 }}</td>
+            <td class="px-4 py-3 text-end font-bold {% if invoice.balance_due > 0 %}text-red-600 dark:text-red-400{% else %}text-gray-400{% endif %}">₪{{ invoice.balance_due|floatformat:2 }}</td>
+            <td class="px-4 py-3 text-center">{% include "secretary/billing/_invoice_status.html" %}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="px-4 py-12 text-center text-gray-400">
+            <i class="fa-solid fa-file-invoice text-3xl mb-2 block opacity-40"></i>
+            {% trans "لا توجد فواتير." %}
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

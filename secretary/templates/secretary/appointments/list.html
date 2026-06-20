@@ -105,6 +105,7 @@
             </td>
             <td class="px-5 py-3 font-semibold text-gray-800 dark:text-gray-100 max-w-[160px]">
               <span class="block truncate" title="{{ appt.patient.name }}">{{ appt.patient.name }}</span>
+              {% include "secretary/billing/_debt_badge.html" with amount=appt.debt %}
             </td>
             <td class="px-5 py-3 text-gray-600 dark:text-gray-300 hidden sm:table-cell max-w-[140px]">
               <span class="block truncate">{{ appt.doctor.name|default:"—" }}</span>

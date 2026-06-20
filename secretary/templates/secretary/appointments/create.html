@@ -91,6 +91,9 @@
           </div>
         </div>
 
+        {# Outstanding-debt warning for the selected patient #}
+        <div id="patient-debt-banner">{% include "secretary/billing/_debt_banner.html" with amount=prefill_patient_debt %}</div>
+
         {# Search input #}
         <div id="patient-search-section">
           <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
@@ -545,7 +548,18 @@ function selectPatient(id, name, phone) {
   document.getElementById('patient-search-results').classList.add('hidden');
 
   syncDoctorPatientGuard();
+  loadPatientDebt(id);
   document.getElementById('step1-next').disabled = false;
+}
+
+// Load the outstanding-debt warning banner for a patient (empty id clears it).
+function loadPatientDebt(id) {
+  var el = document.getElementById('patient-debt-banner');
+  if (!el) return;
+  if (!id) { el.innerHTML = ''; return; }
+  htmx.ajax('GET',
+    "{% url 'secretary:patient_debt_badge_htmx' %}?patient_id=" + encodeURIComponent(id),
+    {target: '#patient-debt-banner', swap: 'innerHTML'});
 }
 
 function clearPatient() {
@@ -553,6 +567,7 @@ function clearPatient() {
   document.getElementById('hidden-patient-id').value = '';
   document.getElementById('selected-patient-card').classList.add('hidden');
   document.getElementById('patient-search-section').classList.remove('hidden');
+  loadPatientDebt('');
   document.getElementById('step1-next').disabled = true;
   var input = document.getElementById('patient-search-input');
   input.value = '';

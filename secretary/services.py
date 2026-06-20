@@ -127,6 +127,11 @@ def transition_appointment_status(
 
     appointment.save(update_fields=update_fields)
 
+    # Keep any open billing session in lockstep with the appointment: lock charges
+    # on COMPLETED, auto-void an untouched session on CANCELLED/NO_SHOW. Never raises.
+    from secretary import billing
+    billing.on_appointment_status_changed(appointment, new_status)
+
     # Notify the patient that their appointment status changed.
     # Cancellations are intentionally skipped here — callers handle them via
     # the dedicated notify_appointment_cancelled_by_staff() which records

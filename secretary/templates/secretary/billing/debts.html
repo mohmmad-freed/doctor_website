@@ -1,0 +1,61 @@
+{% extends "secretary/base_secretary.html" %}
+{% load i18n %}
+{% block title %}{% trans "المرضى المدينون" %}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-5">
+
+  <a href="{% url 'secretary:billing_invoices' %}" data-back
+     class="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
+    <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %}"></i>
+    {% trans "العودة إلى الفواتير" %}
+  </a>
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+      <i class="fa-solid fa-hand-holding-dollar text-red-500"></i>
+      {% trans "المرضى ذوو الأرصدة المستحقة" %}
+    </h1>
+    <div class="text-end">
+      <p class="text-xs text-gray-400">{% trans "إجمالي الديون" %}</p>
+      <p class="text-xl font-extrabold text-red-600 dark:text-red-400">₪{{ grand_total|floatformat:2 }}</p>
+    </div>
+  </div>
+
+  <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 overflow-hidden">
+    <div class="overflow-x-auto dark-scrollbar">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-slate-900/50 text-gray-500 dark:text-gray-400 text-xs uppercase">
+          <tr>
+            <th class="text-start font-semibold px-5 py-3">{% trans "المريض" %}</th>
+            <th class="text-start font-semibold px-5 py-3">{% trans "الهاتف" %}</th>
+            <th class="text-end font-semibold px-5 py-3">{% trans "المبلغ المستحق" %}</th>
+            <th class="px-5 py-3"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
+          {% for d in debtors %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/40 transition-colors">
+            <td class="px-5 py-3 font-semibold text-gray-900 dark:text-white">{{ d.patient__name }}</td>
+            <td class="px-5 py-3 text-gray-500 dark:text-gray-400" dir="ltr">{{ d.patient__phone }}</td>
+            <td class="px-5 py-3 text-end font-bold text-red-600 dark:text-red-400">₪{{ d.total_due|floatformat:2 }}</td>
+            <td class="px-5 py-3 text-end">
+              <a href="{% url 'secretary:patient_detail' d.patient_id %}?tab=billing"
+                 class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-300 text-xs font-bold hover:bg-primary-100 transition-colors">
+                <i class="fa-solid fa-receipt"></i> {% trans "الفواتير" %}
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="px-5 py-12 text-center text-gray-400">
+            <i class="fa-solid fa-circle-check text-3xl mb-2 block text-emerald-400 opacity-60"></i>
+            {% trans "لا يوجد مرضى عليهم ديون." %}
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

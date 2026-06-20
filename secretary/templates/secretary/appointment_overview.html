@@ -76,6 +76,42 @@
     </div>
   </div>
 
+  {# ── Billing: outstanding debt + session entry point ────────────────────── #}
+  {% if patient_debt or open_invoice or appointment.status == 'CHECKED_IN' %}
+  <div class="mb-6 flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 px-5 py-4">
+    <div class="min-w-0">
+      {% if patient_debt %}
+      <p class="text-sm font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        {% if IS_RTL %}دين مستحق على المريض:{% else %}Outstanding debt:{% endif %} ₪{{ patient_debt|floatformat:2 }}
+      </p>
+      {% else %}
+      <p class="text-sm font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2">
+        <i class="fa-solid fa-file-invoice-dollar text-primary-500"></i>
+        {% if IS_RTL %}الفوترة{% else %}Billing{% endif %}
+      </p>
+      {% endif %}
+    </div>
+    <div class="flex-shrink-0">
+      {% if open_invoice %}
+      <a href="{% url 'secretary:invoice_detail' open_invoice.id %}"
+         class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300 text-sm font-bold transition-colors">
+        <i class="fa-solid fa-file-invoice-dollar"></i> {% if IS_RTL %}عرض الفاتورة{% else %}View invoice{% endif %}
+      </a>
+      {% elif appointment.status == 'CHECKED_IN' %}
+      <form method="post" action="{% url 'secretary:start_billing' appointment.id %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button type="submit"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-sm font-bold transition-colors">
+          <i class="fa-solid fa-receipt"></i> {% if IS_RTL %}بدء الفوترة{% else %}Start billing{% endif %}
+        </button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
   {# ── Patient-profile notes (clinic-level, not tied to one appointment) ──── #}
   <div class="mb-6">
     {% url 'secretary:patient_note_add' patient.id as patient_note_add_url %}

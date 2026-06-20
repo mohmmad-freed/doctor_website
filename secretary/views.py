@@ -484,6 +484,11 @@ def appointment_overview(request, appointment_id):
         .select_related("author").order_by("-created_at")
     )
 
+    # Billing: outstanding debt + any open session for this appointment.
+    from secretary import billing
+    patient_debt = billing.patient_outstanding(clinic, patient)
+    open_invoice = billing.get_open_invoice(appointment)
+
     return render(request, "secretary/appointment_overview.html", {
         "appointment": appointment,
         "patient": patient,
@@ -497,6 +502,8 @@ def appointment_overview(request, appointment_id):
         "back_url": back_url,
         "appointment_notes": appointment_notes,
         "patient_notes": patient_notes,
+        "patient_debt": patient_debt,
+        "open_invoice": open_invoice,
     })
 
 
@@ -680,16 +687,30 @@ def waiting_room(request):
         if checkedin_list else 0
     )
 
+    # Billing: per-patient debt badge + the open invoice (if any) for each
+    # checked-in row, so the board can show "بدء الفوترة" vs "عرض الفاتورة".
+    from secretary import billing
+    confirmed_list = list(confirmed_qs)
+    debt_map = billing.debt_map(
+        clinic,
+        [a.patient_id for a in confirmed_list] + [e["appt"].patient_id for e in checkedin_list],
+    )
+    inv_map = billing.open_invoice_map(clinic, [e["appt"].id for e in checkedin_list])
+    for e in checkedin_list:
+        e["open_invoice"] = inv_map.get(e["appt"].id)
+        e["debt"] = debt_map.get(e["appt"].patient_id)
+
     return render(request, "secretary/waiting_room/board.html", {
         "clinic": clinic,
         "today": today,
-        "confirmed_list": list(confirmed_qs),
+        "confirmed_list": confirmed_list,
         "checkedin_list": checkedin_list,
         "doctors": doctors,
         "doctor_filter": doctor_filter,
         "confirmed_q": confirmed_q,
         "total_waiting": total_waiting,
         "avg_wait": avg_wait,
+        "debt_map": debt_map,
     })
 
 
@@ -838,6 +859,14 @@ def waiting_room_checkedin_htmx(request):
             ),
         })
 
+    # Billing: open invoice + outstanding-debt badge per checked-in patient.
+    from secretary import billing
+    inv_map = billing.open_invoice_map(clinic, [e["appt"].id for e in checkedin_list])
+    debts = billing.debt_map(clinic, [e["appt"].patient_id for e in checkedin_list])
+    for e in checkedin_list:
+        e["open_invoice"] = inv_map.get(e["appt"].id)
+        e["debt"] = debts.get(e["appt"].patient_id)
+
     return render(request, "secretary/htmx/waiting_room_checkedin_rows.html", {
         "checkedin_list": checkedin_list,
         "clinic": clinic,
@@ -975,18 +1004,281 @@ def calendar_view(request):
 
 @login_required
 def billing_invoices(request):
+    """Billing dashboard: clinic invoices with a status filter + patient search."""
     staff = _require_secretary(request)
     if not staff:
         return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
-    return render(request, "secretary/coming_soon.html", {"title": "الفواتير", "clinic": staff.clinic})
+
+    from secretary.models import Invoice
+    from secretary import billing
+
+    clinic = staff.clinic
+    void_statuses = [Invoice.Status.CANCELLED, Invoice.Status.REFUNDED]
+    flt = request.GET.get("filter", "all")
+    q = request.GET.get("q", "").strip()
+
+    invoices = (
+        Invoice.objects.filter(clinic=clinic)
+        .select_related("patient", "appointment")
+        .order_by("-created_at")
+    )
+    if flt == "open":
+        invoices = invoices.filter(status__in=[Invoice.Status.DRAFT, Invoice.Status.PARTIAL])
+    elif flt == "unpaid":
+        invoices = invoices.filter(balance_due__gt=0).exclude(status__in=void_statuses)
+    elif flt == "paid":
+        invoices = invoices.filter(status=Invoice.Status.PAID)
+    if q:
+        invoices = invoices.filter(
+            Q(patient__name__icontains=q)
+            | Q(patient__phone__icontains=q)
+            | Q(invoice_number__icontains=q)
+        )
+
+    invoices = list(invoices[:200])
+
+    totals = (
+        Invoice.objects.filter(clinic=clinic)
+        .exclude(status__in=void_statuses)
+        .aggregate(billed=Sum("total"), collected=Sum("amount_paid"), outstanding=Sum("balance_due"))
+    )
+    debtors_count = billing.patient_debtors(clinic).count()
+
+    return render(request, "secretary/billing/dashboard.html", {
+        "clinic": clinic,
+        "invoices": invoices,
+        "filter": flt,
+        "q": q,
+        "totals": totals,
+        "debtors_count": debtors_count,
+    })
 
 
 @login_required
 def daily_summary(request):
+    """Today's collected payments — overall total and a breakdown by method."""
     staff = _require_secretary(request)
     if not staff:
         return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
-    return render(request, "secretary/coming_soon.html", {"title": "الملخص اليومي", "clinic": staff.clinic})
+
+    from django.db.models import Count
+    from secretary.models import Payment
+
+    clinic = staff.clinic
+    day_str = request.GET.get("date", "")
+    try:
+        day = datetime.strptime(day_str, "%Y-%m-%d").date() if day_str else date.today()
+    except ValueError:
+        day = date.today()
+
+    payments = (
+        Payment.objects.filter(clinic=clinic, received_at__date=day)
+        .select_related("invoice", "invoice__patient", "received_by")
+        .order_by("-received_at")
+    )
+    method_labels = dict(Payment.Method.choices)
+    by_method = [
+        {
+            "method": row["method"],
+            "label": method_labels.get(row["method"], row["method"]),
+            "total": row["total"],
+            "count": row["count"],
+        }
+        for row in payments.values("method").annotate(
+            total=Sum("amount"), count=Count("id")
+        ).order_by("-total")
+    ]
+    total_collected = payments.aggregate(s=Sum("amount"))["s"] or 0
+
+    return render(request, "secretary/billing/daily_summary.html", {
+        "clinic": clinic,
+        "day": day,
+        "payments": list(payments[:300]),
+        "by_method": by_method,
+        "total_collected": total_collected,
+    })
+
+
+@login_required
+@require_POST
+def start_billing(request, appointment_id):
+    """Open a billing session for a checked-in patient and go to the invoice."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+
+    from secretary import billing
+
+    appointment = get_object_or_404(
+        Appointment.objects.select_related("patient", "appointment_type", "clinic"),
+        id=appointment_id, clinic=staff.clinic,
+    )
+    try:
+        invoice = billing.open_billing_session(appointment, by_user=request.user)
+    except billing.BillingError as e:
+        messages.error(request, e.message)
+        next_url = request.POST.get("next") or request.META.get("HTTP_REFERER")
+        if next_url and next_url.startswith("/"):
+            return redirect(next_url)
+        return redirect("secretary:waiting_room")
+    return redirect("secretary:invoice_detail", invoice_id=invoice.id)
+
+
+@login_required
+def invoice_detail(request, invoice_id):
+    """The billing-session screen: line items, add-charge + payment forms, history."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+
+    from secretary.models import Invoice
+    from secretary import billing
+    from secretary.forms import ChargeForm, PaymentForm
+
+    clinic = staff.clinic
+    invoice = get_object_or_404(
+        Invoice.objects.select_related("patient", "appointment", "created_by"),
+        id=invoice_id, clinic=clinic,
+    )
+    max_payable = billing.patient_outstanding(clinic, invoice.patient)
+    other_debt = billing.patient_outstanding(clinic, invoice.patient, exclude_invoice=invoice)
+
+    return render(request, "secretary/billing/invoice_detail.html", {
+        "clinic": clinic,
+        "invoice": invoice,
+        "items": list(invoice.items.all()),
+        "payments": list(invoice.payments.select_related("received_by").all()),
+        "editable": billing.is_editable(invoice),
+        "max_payable": max_payable,
+        "other_debt": other_debt,
+        "charge_form": ChargeForm(),
+        "payment_form": PaymentForm(max_payable=max_payable),
+    })
+
+
+@login_required
+@require_POST
+def invoice_add_charge(request, invoice_id):
+    """Add a charge (line item) to an open invoice."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+
+    from secretary.models import Invoice
+    from secretary import billing
+    from secretary.forms import ChargeForm
+
+    invoice = get_object_or_404(Invoice, id=invoice_id, clinic=staff.clinic)
+    form = ChargeForm(request.POST)
+    if form.is_valid():
+        try:
+            billing.add_charge(
+                invoice,
+                description=form.cleaned_data["description"],
+                quantity=form.cleaned_data["quantity"],
+                unit_price=form.cleaned_data["unit_price"],
+            )
+            messages.success(request, _("تمت إضافة الرسوم."))
+        except billing.BillingError as e:
+            messages.error(request, e.message)
+    else:
+        messages.error(request, _("بيانات الرسوم غير صالحة."))
+    return redirect("secretary:invoice_detail", invoice_id=invoice.id)
+
+
+@login_required
+@require_POST
+def invoice_remove_charge(request, invoice_id, item_id):
+    """Remove a charge from an open invoice."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+
+    from secretary.models import Invoice, InvoiceItem
+    from secretary import billing
+
+    invoice = get_object_or_404(Invoice, id=invoice_id, clinic=staff.clinic)
+    item = get_object_or_404(InvoiceItem, id=item_id, invoice=invoice)
+    try:
+        billing.remove_charge(item)
+        messages.success(request, _("تم حذف الرسوم."))
+    except billing.BillingError as e:
+        messages.error(request, e.message)
+    return redirect("secretary:invoice_detail", invoice_id=invoice.id)
+
+
+@login_required
+@require_POST
+def invoice_record_payment(request, invoice_id):
+    """Record a payment against an invoice (overpayment-guarded, FIFO debt settle)."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+
+    from secretary.models import Invoice
+    from secretary import billing
+    from secretary.forms import PaymentForm
+
+    invoice = get_object_or_404(Invoice, id=invoice_id, clinic=staff.clinic)
+    max_payable = billing.patient_outstanding(staff.clinic, invoice.patient)
+    form = PaymentForm(request.POST, max_payable=max_payable)
+    if form.is_valid():
+        try:
+            billing.record_payment(
+                primary_invoice=invoice,
+                amount=form.cleaned_data["amount"],
+                method=form.cleaned_data["method"],
+                reference=form.cleaned_data.get("reference", ""),
+                breakdown=form.cleaned_data.get("breakdown", ""),
+                by_user=request.user,
+            )
+            messages.success(request, _("تم تسجيل الدفعة بنجاح."))
+        except billing.BillingError as e:
+            messages.error(request, e.message)
+    else:
+        err = next(iter(form.errors.values()))[0] if form.errors else _("بيانات الدفعة غير صالحة.")
+        messages.error(request, err)
+    return redirect("secretary:invoice_detail", invoice_id=invoice.id)
+
+
+@login_required
+def patient_debts(request):
+    """Page listing every patient with an outstanding balance and the amount owed."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+
+    from decimal import Decimal
+    from secretary import billing
+
+    clinic = staff.clinic
+    debtors = list(billing.patient_debtors(clinic))
+    grand_total = sum((d["total_due"] for d in debtors), Decimal("0.00"))
+    return render(request, "secretary/billing/debts.html", {
+        "clinic": clinic,
+        "debtors": debtors,
+        "grand_total": grand_total,
+    })
+
+
+@login_required
+def patient_debt_badge_htmx(request):
+    """HTMX: outstanding-debt warning banner for a selected patient (booking form)."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden()
+
+    from secretary import billing
+
+    amount = None
+    patient_id = request.GET.get("patient_id")
+    if patient_id:
+        try:
+            patient = User.objects.get(id=patient_id)
+            amount = billing.patient_outstanding(staff.clinic, patient)
+        except (User.DoesNotExist, ValueError):
+            amount = None
+    return render(request, "secretary/billing/_debt_banner.html", {"amount": amount})
 
 
 @login_required
@@ -2679,14 +2971,19 @@ def patient_detail(request, patient_id):
     # Billing — optional; Invoice model may not exist in all deployments
     invoices = []
     balance_due_total = 0
+    total_paid = 0
     try:
         from secretary.models import Invoice
         invoices = list(Invoice.objects.filter(
             clinic=clinic, patient=patient
         ).order_by("-created_at"))
-        balance_due_total = Invoice.objects.filter(
+        agg = Invoice.objects.filter(
             clinic=clinic, patient=patient
-        ).aggregate(total=Sum("balance_due"))["total"] or 0
+        ).exclude(status__in=[Invoice.Status.CANCELLED, Invoice.Status.REFUNDED]).aggregate(
+            balance=Sum("balance_due"), paid=Sum("amount_paid")
+        )
+        balance_due_total = agg["balance"] or 0
+        total_paid = agg["paid"] or 0
     except ImportError:
         pass  # Billing module not installed
 
@@ -2727,6 +3024,7 @@ def patient_detail(request, patient_id):
         "medical_records": medical_records,
         "invoices": invoices,
         "balance_due_total": balance_due_total,
+        "total_paid": total_paid,
         "terminal_statuses": terminal_statuses,
         "active_tab": active_tab,
         "tab_list": tab_list,
@@ -3170,6 +3468,13 @@ def appointments_list(request):
         Appointment.Status.CANCELLED,
         Appointment.Status.NO_SHOW,
     ]
+
+    # Outstanding-debt badge per patient (one aggregate query for the whole page).
+    from secretary import billing
+    debt_map = billing.debt_map(clinic, [a.patient_id for a in page.object_list])
+    for a in page.object_list:
+        a.debt = debt_map.get(a.patient_id)
+
     return render(request, "secretary/appointments/list.html", {
         "clinic": clinic,
         "page_obj": page,
@@ -3183,6 +3488,7 @@ def appointments_list(request):
         "doctor_users": doctor_users,
         "terminal_statuses": terminal_statuses,
         "total_count": paginator.count,
+        "debt_map": debt_map,
     })
 
 
@@ -3327,6 +3633,17 @@ def create_appointment(request):
         appointment_types = AppointmentType.objects.filter(clinic=clinic, is_active=True)
     today_str = date.today().isoformat()
 
+    # If a patient is pre-selected, surface any outstanding debt up front.
+    prefill_patient_debt = None
+    if prefill_patient_id:
+        from secretary import billing
+        try:
+            prefill_patient_debt = billing.patient_outstanding(
+                clinic, User.objects.get(id=prefill_patient_id)
+            )
+        except (User.DoesNotExist, ValueError):
+            prefill_patient_debt = None
+
     return render(request, "secretary/appointments/create.html", {
         "clinic": clinic,
         "doctor_users": doctor_users,
@@ -3338,6 +3655,7 @@ def create_appointment(request):
         "prefill_doctor_id": prefill_doctor_id,
         "return_to": return_to,
         "steps": [(_("المريض"), 1), (_("الموعد"), 2), (_("التأكيد"), 3)],
+        "prefill_patient_debt": prefill_patient_debt,
     })
 
 

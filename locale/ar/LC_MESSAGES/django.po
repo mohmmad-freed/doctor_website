@@ -1852,3 +1852,270 @@ msgstr ""
 
 msgid "ملاحظة تظهر للسكرتارية فقط..."
 msgstr ""
+
+msgid "الفواتير والمحاسبة"
+msgstr ""
+
+msgid "إدارة فواتير المرضى والمدفوعات والديون."
+msgstr ""
+
+msgid "المرضى المدينون"
+msgstr ""
+
+msgid "إجمالي الفوترة"
+msgstr ""
+
+msgid "المُحصّل"
+msgstr ""
+
+msgid "المتبقي (ديون)"
+msgstr ""
+
+msgid "مفتوحة"
+msgstr ""
+
+msgid "غير مسددة"
+msgstr ""
+
+msgid "مسددة"
+msgstr ""
+
+msgid "بحث بالاسم أو الهاتف أو رقم الفاتورة"
+msgstr ""
+
+msgid "رقم الفاتورة"
+msgstr ""
+
+msgid "المتبقي"
+msgstr ""
+
+msgid "لا توجد فواتير."
+msgstr ""
+
+msgid "فاتورة"
+msgstr ""
+
+msgid "العودة إلى الفواتير"
+msgstr ""
+
+msgid "جلسة مفتوحة"
+msgstr ""
+
+msgid "مغلقة"
+msgstr ""
+
+msgid "المتبقي على هذه الفاتورة"
+msgstr ""
+
+msgid "لدى هذا المريض ديون سابقة على فواتير أخرى:"
+msgstr ""
+
+msgid "الرسوم"
+msgstr ""
+
+msgid "لا يمكن التعديل بعد اكتمال الموعد"
+msgstr ""
+
+msgid "حذف هذا البند؟"
+msgstr ""
+
+msgid "لا توجد رسوم بعد."
+msgstr ""
+
+msgid "إضافة سريعة:"
+msgstr ""
+
+msgid "رسوم حقنة"
+msgstr ""
+
+msgid "حقنة"
+msgstr ""
+
+msgid "رسوم فحص"
+msgstr ""
+
+msgid "فحص"
+msgstr ""
+
+msgid "مستلزمات"
+msgstr ""
+
+msgid "تسجيل دفعة"
+msgstr ""
+
+msgid "الحد الأقصى المسموح به (إجمالي مستحقات المريض):"
+msgstr ""
+
+msgid "أيّ مبلغ يتجاوز هذه الفاتورة يُسدَّد تلقائياً من أقدم الديون."
+msgstr ""
+
+msgid "تأكيد الدفعة"
+msgstr ""
+
+msgid "لا توجد مستحقات على هذا المريض."
+msgstr ""
+
+msgid "سجل المدفوعات"
+msgstr ""
+
+msgid "المرضى ذوو الأرصدة المستحقة"
+msgstr ""
+
+msgid "إجمالي الديون"
+msgstr ""
+
+msgid "المبلغ المستحق"
+msgstr ""
+
+msgid "لا يوجد مرضى عليهم ديون."
+msgstr ""
+
+msgid "ملخص المقبوضات"
+msgstr ""
+
+msgid "إجمالي المُحصّل"
+msgstr ""
+
+msgid "دفعة"
+msgstr ""
+
+msgid "المدفوعات"
+msgstr ""
+
+msgid "الطريقة"
+msgstr ""
+
+msgid "لا توجد مدفوعات في هذا اليوم."
+msgstr ""
+
+msgid "دين"
+msgstr ""
+
+msgid "دين مستحق"
+msgstr ""
+
+msgid "هذا المريض عليه دين مستحق:"
+msgstr ""
+
+msgid "عرض الفاتورة"
+msgstr ""
+
+msgid "الفاتورة"
+msgstr ""
+
+msgid "بدء الفوترة"
+msgstr ""
+
+msgid "فوترة"
+msgstr ""
+
+msgid "متبقٍ"
+msgstr ""
+
+msgid "لا يمكن بدء الفوترة إلا عندما يكون المريض في غرفة الانتظار."
+msgstr ""
+
+msgid "تعذّر إنشاء رقم فاتورة فريد. يرجى المحاولة مرة أخرى."
+msgstr ""
+
+msgid "لا يمكن تعديل الرسوم بعد إغلاق جلسة الفوترة."
+msgstr ""
+
+msgid "يرجى إدخال وصف للرسوم."
+msgstr ""
+
+msgid "الكمية يجب أن تكون 1 على الأقل."
+msgstr ""
+
+msgid "سعر الوحدة غير صالح."
+msgstr ""
+
+msgid "قيمة مالية غير صالحة."
+msgstr ""
+
+msgid "يجب إدخال مبلغ أكبر من صفر."
+msgstr ""
+
+msgid "المبلغ المُدخل يتجاوز إجمالي المستحقات على المريض (الحد الأقصى ₪%(max)s)."
+msgstr ""
+
+msgid "سداد دين سابق"
+msgstr ""
+
+msgid "الوصف"
+msgstr ""
+
+msgid "مثال: رسوم حقنة"
+msgstr ""
+
+msgid "الكمية"
+msgstr ""
+
+msgid "سعر الوحدة"
+msgstr ""
+
+msgid "المبلغ المدفوع"
+msgstr ""
+
+msgid "طريقة الدفع"
+msgstr ""
+
+msgid "مرجع (اختياري)"
+msgstr ""
+
+msgid "رقم العملية / آخر 4 أرقام البطاقة"
+msgstr ""
+
+msgid "تفصيل الدفعة"
+msgstr ""
+
+msgid "مثال: كشف 50، حقنة 25، سداد دين 75"
+msgstr ""
+
+msgid "المبلغ يتجاوز إجمالي المستحقات على المريض (الحد الأقصى ₪%(max)s)."
+msgstr ""
+
+msgid "تمت إضافة الرسوم."
+msgstr ""
+
+msgid "بيانات الرسوم غير صالحة."
+msgstr ""
+
+msgid "تم حذف الرسوم."
+msgstr ""
+
+msgid "تم تسجيل الدفعة بنجاح."
+msgstr ""
+
+msgid "بيانات الدفعة غير صالحة."
+msgstr ""
+
+msgid "مسودة"
+msgstr ""
+
+msgid "صادرة"
+msgstr ""
+
+msgid "مدفوعة"
+msgstr ""
+
+msgid "مدفوعة جزئياً"
+msgstr ""
+
+msgid "ملغاة"
+msgstr ""
+
+msgid "مستردة"
+msgstr ""
+
+msgid "نقدي"
+msgstr ""
+
+msgid "بطاقة بنكية"
+msgstr ""
+
+msgid "تحويل بنكي"
+msgstr ""
+
+msgid "أخرى"
+msgstr ""

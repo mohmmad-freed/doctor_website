@@ -1,0 +1,7 @@
+{% load i18n %}
+{% if amount %}
+<div class="p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 flex items-center gap-2 text-sm font-semibold">
+  <i class="fa-solid fa-circle-exclamation"></i>
+  <span>{% trans "هذا المريض عليه دين مستحق:" %} <span class="font-extrabold">₪{{ amount|floatformat:2 }}</span></span>
+</div>
+{% endif %}
