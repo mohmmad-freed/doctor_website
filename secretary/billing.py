@@ -187,12 +187,12 @@ def patient_debtors(clinic):
 def open_billing_session(appointment, by_user):
     """Open a billing session (Invoice) for a checked-in patient.
 
-    Guards that the patient is in the waiting room and that no open session
-    already exists. Seeds the consultation fee from the appointment type.
-    Idempotent: returns the existing open invoice if there is one.
+    Guards that the patient is present in the clinic (CHECKED_IN or IN_PROGRESS)
+    and that no open session already exists. Seeds the consultation fee from the
+    appointment type. Idempotent: returns the existing open invoice if there is one.
     """
-    if appointment.status != Appointment.Status.CHECKED_IN:
-        raise BillingError(_("لا يمكن بدء الفوترة إلا عندما يكون المريض في غرفة الانتظار."))
+    if appointment.status not in _OPEN_APPT_STATUSES:
+        raise BillingError(_("لا يمكن بدء الفوترة إلا أثناء وجود المريض في العيادة (الانتظار أو مع الطبيب)."))
 
     existing = get_open_invoice(appointment)
     if existing is not None:

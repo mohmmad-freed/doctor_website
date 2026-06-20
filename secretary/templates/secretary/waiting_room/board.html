@@ -73,7 +73,7 @@
     </div>
   </div>
 
-  {# ── Two-column board ── #}
+  {# ── Top board: Confirmed → Waiting (the "With the doctor" panel sits full-width below) ── #}
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
     {# ── Column A: CONFIRMED (arriving soon) ── #}
@@ -167,6 +167,31 @@
     </div>
 
   </div>{# end grid #}
+
+  {# ── With the doctor (IN_PROGRESS): full-width panel below the board ── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col">
+    <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-purple-400 inline-block"></span>
+        <h2 class="font-semibold text-gray-900 dark:text-white text-sm">{% trans "مع الطبيب" %}</h2>
+        <span class="text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
+          {{ total_in_progress }}
+        </span>
+      </div>
+      <span class="text-xs text-gray-400 dark:text-gray-500">
+        <i class="fa-solid fa-stethoscope me-1"></i>{% trans "جلسة جارية" %}
+      </span>
+    </div>
+
+    <div id="inprogress-column"
+         class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 p-4 max-h-[50vh] overflow-y-auto"
+         hx-get="{% url 'secretary:waiting_room_inprogress_htmx' %}"
+         hx-include="#confirmed-doctor-filter"
+         hx-trigger="every 30s"
+         hx-swap="innerHTML">
+      {% include "secretary/htmx/waiting_room_inprogress_rows.html" with inprogress_list=inprogress_list clinic=clinic %}
+    </div>
+  </div>
 
 </div>
 

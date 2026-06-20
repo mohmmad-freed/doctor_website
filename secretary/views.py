@@ -647,9 +647,21 @@ def waiting_room(request):
         .order_by(F("queue_priority").asc(nulls_last=True), "checked_in_at")
     )
 
+    # Column C: IN_PROGRESS today (with the doctor — out of the queue, still billable)
+    inprogress_qs = (
+        Appointment.objects.filter(
+            clinic=clinic,
+            appointment_date=today,
+            status=Appointment.Status.IN_PROGRESS,
+        )
+        .select_related("patient", "doctor", "appointment_type")
+        .order_by("checked_in_at")
+    )
+
     if doctor_filter:
         confirmed_qs = confirmed_qs.filter(doctor_id=doctor_filter)
         checkedin_qs = checkedin_qs.filter(doctor_id=doctor_filter)
+        inprogress_qs = inprogress_qs.filter(doctor_id=doctor_filter)
 
     confirmed_qs = _filter_confirmed_by_query(confirmed_qs, confirmed_q)
 
@@ -687,17 +699,31 @@ def waiting_room(request):
         if checkedin_list else 0
     )
 
+    # Patients with the doctor (IN_PROGRESS) — out of the queue but still on the
+    # board so billing can continue and the visit can be closed out.
+    inprogress_list = [{"appt": appt} for appt in inprogress_qs]
+
     # Billing: per-patient debt badge + the open invoice (if any) for each
-    # checked-in row, so the board can show "بدء الفوترة" vs "عرض الفاتورة".
+    # checked-in / in-progress row, so the board can show "بدء الفوترة" vs "عرض الفاتورة".
     from secretary import billing
     confirmed_list = list(confirmed_qs)
     debt_map = billing.debt_map(
         clinic,
-        [a.patient_id for a in confirmed_list] + [e["appt"].patient_id for e in checkedin_list],
+        [a.patient_id for a in confirmed_list]
+        + [e["appt"].patient_id for e in checkedin_list]
+        + [e["appt"].patient_id for e in inprogress_list],
     )
-    inv_map = billing.open_invoice_map(clinic, [e["appt"].id for e in checkedin_list])
+    inv_map = billing.open_invoice_map(
+        clinic,
+        [e["appt"].id for e in checkedin_list] + [e["appt"].id for e in inprogress_list],
+    )
     for e in checkedin_list:
         e["open_invoice"] = inv_map.get(e["appt"].id)
+        e["debt"] = debt_map.get(e["appt"].patient_id)
+    for e in inprogress_list:
+        inv = inv_map.get(e["appt"].id)
+        e["open_invoice"] = inv
+        e["balance"] = inv.balance_due if inv else None
         e["debt"] = debt_map.get(e["appt"].patient_id)
 
     return render(request, "secretary/waiting_room/board.html", {
@@ -705,10 +731,12 @@ def waiting_room(request):
         "today": today,
         "confirmed_list": confirmed_list,
         "checkedin_list": checkedin_list,
+        "inprogress_list": inprogress_list,
         "doctors": doctors,
         "doctor_filter": doctor_filter,
         "confirmed_q": confirmed_q,
         "total_waiting": total_waiting,
+        "total_in_progress": len(inprogress_list),
         "avg_wait": avg_wait,
         "debt_map": debt_map,
     })
@@ -869,6 +897,48 @@ def waiting_room_checkedin_htmx(request):
 
     return render(request, "secretary/htmx/waiting_room_checkedin_rows.html", {
         "checkedin_list": checkedin_list,
+        "clinic": clinic,
+    })
+
+
+@login_required
+def waiting_room_inprogress_htmx(request):
+    """HTMX polling endpoint — refreshes the IN_PROGRESS ("with the doctor") column every 30s."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden()
+
+    clinic = staff.clinic
+    _sweep_clinic_no_shows(clinic)
+    today = date.today()
+    doctor_filter = request.GET.get("doctor_id", "")
+
+    qs = (
+        Appointment.objects.filter(
+            clinic=clinic,
+            appointment_date=today,
+            status=Appointment.Status.IN_PROGRESS,
+        )
+        .select_related("patient", "doctor", "appointment_type")
+        .order_by("checked_in_at")
+    )
+    if doctor_filter:
+        qs = qs.filter(doctor_id=doctor_filter)
+
+    inprogress_list = [{"appt": appt} for appt in qs]
+
+    # Billing: open invoice (with balance) + outstanding-debt badge per patient.
+    from secretary import billing
+    inv_map = billing.open_invoice_map(clinic, [e["appt"].id for e in inprogress_list])
+    debts = billing.debt_map(clinic, [e["appt"].patient_id for e in inprogress_list])
+    for e in inprogress_list:
+        inv = inv_map.get(e["appt"].id)
+        e["open_invoice"] = inv
+        e["balance"] = inv.balance_due if inv else None
+        e["debt"] = debts.get(e["appt"].patient_id)
+
+    return render(request, "secretary/htmx/waiting_room_inprogress_rows.html", {
+        "inprogress_list": inprogress_list,
         "clinic": clinic,
     })
 

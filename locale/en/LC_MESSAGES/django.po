@@ -3905,3 +3905,28 @@ msgstr "Selected notifications deleted."
 
 msgid "ستظهر هنا إشعارات العيادة عند وجودها."
 msgstr "Clinic notifications will appear here when available."
+
+# ── Waiting room: "with the doctor" stage + close-out ─────────────────────────
+msgid "مع الطبيب"
+msgstr "With the doctor"
+
+msgid "جلسة جارية"
+msgstr "In session"
+
+msgid "إنهاء"
+msgstr "Finish"
+
+msgid "إنهاء الزيارة وإغلاق الفاتورة"
+msgstr "Complete visit & close invoice"
+
+msgid "ما زال على المريض رصيد مستحق. هل تريد إنهاء الزيارة وإغلاق الفاتورة؟"
+msgstr "The patient still has an outstanding balance. Complete the visit and close the invoice?"
+
+msgid "لا أحد مع الطبيب حالياً"
+msgstr "No one is with the doctor right now"
+
+msgid "إنهاء الزيارة يغلق الفاتورة ويمنع تعديل الرسوم. أي رصيد متبقٍّ يبقى ديناً مستحقاً."
+msgstr "Completing the visit closes the invoice and prevents editing charges. Any remaining balance stays as outstanding debt."
+
+msgid "لا يمكن بدء الفوترة إلا أثناء وجود المريض في العيادة (الانتظار أو مع الطبيب)."
+msgstr "Billing can only be started while the patient is in the clinic (waiting or with the doctor)."

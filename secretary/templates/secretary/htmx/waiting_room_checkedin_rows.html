@@ -84,14 +84,12 @@
       </form>
       {% endif %}
 
-      {# Call / send to doctor → IN_PROGRESS via status update #}
+      {# Call → IN_PROGRESS. Plain POST + redirect so the row moves to the "with the doctor" column. #}
       <form method="post"
-            action="{% url 'secretary:update_appointment_status' appt.id %}"
-            hx-post="{% url 'secretary:update_appointment_status' appt.id %}"
-            hx-target="#checkedin-row-{{ appt.id }}"
-            hx-swap="outerHTML">
+            action="{% url 'secretary:update_appointment_status' appt.id %}">
         {% csrf_token %}
         <input type="hidden" name="new_status" value="IN_PROGRESS">
+        <input type="hidden" name="next" value="{% url 'secretary:waiting_room' %}">
         <button type="submit"
                 title="{% trans 'استدعاء المريض' %}"
                 class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold shadow-sm transition-colors">

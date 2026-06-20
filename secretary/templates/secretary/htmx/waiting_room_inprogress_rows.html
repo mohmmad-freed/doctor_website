@@ -1,0 +1,93 @@
+{% load static i18n %}
+{# HTMX partial — Column C: IN_PROGRESS today (with the doctor); still billable, closed from here. #}
+{% for entry in inprogress_list %}
+{% with appt=entry.appt %}
+<div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/40 dark:bg-gray-900/30 p-4 transition-colors"
+     id="inprogress-row-{{ appt.id }}"
+     data-appt-id="{{ appt.id }}">
+
+  {# Patient + meta #}
+  <div class="flex items-start gap-3 min-w-0">
+    <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300">
+      <i class="fa-solid fa-user-doctor text-xs"></i>
+    </div>
+
+    <div class="min-w-0 flex-1">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="font-semibold text-gray-900 dark:text-gray-100 truncate">{{ appt.patient.name }}</span>
+        {% include "secretary/billing/_debt_badge.html" with amount=entry.debt %}
+        {% if appt.is_walk_in %}
+        <span title="{% trans 'هذا المريض لم يحجز موعداً مسبقاً' %}"
+              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-[10px] font-bold uppercase tracking-wide">
+          <i class="fa-solid fa-person-walking-arrow-right text-[9px]"></i>
+          {% trans "حضور مباشر" %}
+        </span>
+        {% endif %}
+      </div>
+      <div class="flex items-center gap-2 mt-0.5 text-xs text-gray-500 dark:text-gray-400 flex-wrap">
+        <span>{% trans "د." %} {{ appt.doctor.name|default:"—" }}</span>
+        {% if appt.appointment_type %}
+        <span class="text-gray-300 dark:text-gray-600">·</span>
+        <span>{{ appt.appointment_type.display_name }}</span>
+        {% endif %}
+        {% if entry.open_invoice and entry.balance > 0 %}
+        <span class="text-gray-300 dark:text-gray-600">·</span>
+        <span class="inline-flex items-center gap-1 text-red-600 dark:text-red-400 font-semibold">
+          <i class="fa-solid fa-circle-exclamation text-[10px]"></i>
+          {% trans "متبقٍ" %} ₪{{ entry.balance|floatformat:2 }}
+        </span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# Actions: billing · finish · details #}
+  <div class="flex items-center gap-2 mt-3">
+    {# Billing: open the session or view the (still-open) invoice #}
+    {% if entry.open_invoice %}
+    <a href="{% url 'secretary:invoice_detail' entry.open_invoice.id %}"
+       title="{% trans 'عرض الفاتورة' %}"
+       class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300 text-xs font-semibold transition-colors">
+      <i class="fa-solid fa-file-invoice-dollar text-xs"></i> {% trans "الفاتورة" %}
+    </a>
+    {% else %}
+    <form method="post" action="{% url 'secretary:start_billing' appt.id %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{% url 'secretary:waiting_room' %}">
+      <button type="submit"
+              title="{% trans 'بدء الفوترة' %}"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-700 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 text-emerald-700 dark:text-emerald-300 text-xs font-semibold transition-colors">
+        <i class="fa-solid fa-receipt text-xs"></i> {% trans "فوترة" %}
+      </button>
+    </form>
+    {% endif %}
+
+    {# Finish the visit → COMPLETED (locks the invoice). Quick-confirm if a balance is owed. #}
+    <form method="post"
+          action="{% url 'secretary:update_appointment_status' appt.id %}"
+          {% if entry.balance and entry.balance > 0 %}onsubmit="return confirm('{% trans "ما زال على المريض رصيد مستحق. هل تريد إنهاء الزيارة وإغلاق الفاتورة؟" %}');"{% endif %}>
+      {% csrf_token %}
+      <input type="hidden" name="new_status" value="COMPLETED">
+      <input type="hidden" name="next" value="{% url 'secretary:waiting_room' %}">
+      <button type="submit"
+              title="{% trans 'إنهاء الزيارة وإغلاق الفاتورة' %}"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-colors">
+        <i class="fa-solid fa-circle-check text-xs"></i> {% trans "إنهاء" %}
+      </button>
+    </form>
+
+    <a href="{% url 'secretary:appointment_overview' appt.id %}?return_to=waiting_room"
+       title="{% trans 'تفاصيل' %}"
+       class="p-1.5 rounded-lg text-gray-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors ms-auto">
+      <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+    </a>
+  </div>
+
+</div>
+{% endwith %}
+{% empty %}
+<div class="col-span-full px-5 py-6 flex flex-col items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
+  <i class="fa-solid fa-user-doctor text-2xl opacity-40"></i>
+  <p>{% trans "لا أحد مع الطبيب حالياً" %}</p>
+</div>
+{% endfor %}
