@@ -3837,6 +3837,9 @@ msgstr "Reference (optional)"
 msgid "رقم العملية / آخر 4 أرقام البطاقة"
 msgstr "Transaction no. / last 4 card digits"
 
+msgid "للدفع بالبطاقة: أدخل آخر 4 أرقام من البطاقة. للتحويل البنكي: أدخل رقم العملية أو المرجع. يُستخدم للتحقق من الدفعة لاحقاً."
+msgstr "Card payment: enter the last 4 digits of the card. Bank transfer: enter the transaction or reference number. Used to verify the payment later."
+
 msgid "تفصيل الدفعة"
 msgstr "Payment breakdown"
 
@@ -3956,3 +3959,21 @@ msgstr "Back to the appointment"
 
 msgid "إنهاء الزيارة"
 msgstr "End the visit"
+
+msgid "الديون"
+msgstr "Debt"
+
+msgid "تسديد الديون"
+msgstr "Clear debts"
+
+msgid "لا توجد ديون مستحقة على هذا المريض."
+msgstr "This patient has no outstanding debt."
+
+msgid "تم تسجيل الدفعة وتسديد الديون."
+msgstr "Payment recorded and debts settled."
+
+msgid "تعذّر تسجيل الدفعة. تحقق من المبلغ."
+msgstr "Could not record the payment. Check the amount."
+
+msgid "يُسدَّد المبلغ من أقدم الديون أولاً."
+msgstr "The amount is applied to the oldest debts first."

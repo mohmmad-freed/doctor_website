@@ -60,6 +60,7 @@ class PaymentForm(forms.Form):
         max_length=100,
         required=False,
         label=_("مرجع (اختياري)"),
+        help_text=_("للدفع بالبطاقة: أدخل آخر 4 أرقام من البطاقة. للتحويل البنكي: أدخل رقم العملية أو المرجع. يُستخدم للتحقق من الدفعة لاحقاً."),
         widget=forms.TextInput(attrs={
             "class": _INPUT,
             "placeholder": _("رقم العملية / آخر 4 أرقام البطاقة"),

@@ -263,16 +263,51 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-2">
           <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-700">
             <div class="text-xs text-gray-400 dark:text-gray-500 mb-1">{% trans "إجمالي الفواتير" %}</div>
-            <div class="text-xl font-bold text-gray-900 dark:text-white">{{ invoices.count }}</div>
+            <div class="text-xl font-bold text-gray-900 dark:text-white">{{ invoices_count }}</div>
           </div>
           <div class="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800">
             <div class="text-xs text-emerald-600 dark:text-emerald-400 mb-1">{% trans "إجمالي المدفوع" %}</div>
             <div class="text-xl font-bold text-emerald-700 dark:text-emerald-300">₪ {{ total_paid|default:0|floatformat:2 }}</div>
           </div>
           <div class="p-4 rounded-xl {% if balance_due_total > 0 %}bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800{% else %}bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-700{% endif %}">
-            <div class="text-xs {% if balance_due_total > 0 %}text-red-600 dark:text-red-400{% else %}text-gray-400 dark:text-gray-500{% endif %} mb-1">{% trans "رصيد مستحق" %}</div>
+            <div class="text-xs {% if balance_due_total > 0 %}text-red-600 dark:text-red-400{% else %}text-gray-400 dark:text-gray-500{% endif %} mb-1">{% trans "الديون" %}</div>
             <div class="text-xl font-bold {% if balance_due_total > 0 %}text-red-700 dark:text-red-300{% else %}text-gray-900 dark:text-white{% endif %}">₪ {{ balance_due_total|default:"0" }}</div>
           </div>
+        </div>
+
+        {# Clear the patient's debts (FIFO, oldest first) — shown only when something is owed #}
+        {% if balance_due_total > 0 and payment_form %}
+        <div class="p-4 rounded-xl border border-red-100 dark:border-red-800 bg-red-50/60 dark:bg-red-900/15">
+          <h3 class="font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
+            <i class="fa-solid fa-hand-holding-dollar text-red-500"></i>{% trans "تسديد الديون" %}
+          </h3>
+          <form method="post" action="{% url 'secretary:patient_pay_debt' patient.id %}"
+                class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-start">
+            {% csrf_token %}
+            <div class="sm:col-span-5">
+              <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">{{ payment_form.amount.label }}</label>
+              {{ payment_form.amount }}
+            </div>
+            <div class="sm:col-span-4">
+              <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">{{ payment_form.method.label }}</label>
+              {{ payment_form.method }}
+            </div>
+            <div class="sm:col-span-3 flex items-end h-full">
+              <button type="submit" class="w-full px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 transition-colors">
+                <i class="fa-solid fa-check"></i> {% trans "تسديد الديون" %}
+              </button>
+            </div>
+          </form>
+          <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-2">{% trans "يُسدَّد المبلغ من أقدم الديون أولاً." %}</p>
+        </div>
+        {% endif %}
+
+        {# Status filter #}
+        <div class="inline-flex items-center gap-1 bg-gray-100 dark:bg-slate-900 rounded-xl p-1">
+          <a href="?tab=billing&inv_status=all" class="filter-pill {% if inv_filter == 'all' %}filter-pill-active{% endif %}">{% trans "الكل" %}</a>
+          <a href="?tab=billing&inv_status=open" class="filter-pill {% if inv_filter == 'open' %}filter-pill-active{% endif %}">{% trans "مفتوحة" %}</a>
+          <a href="?tab=billing&inv_status=unpaid" class="filter-pill {% if inv_filter == 'unpaid' %}filter-pill-active{% endif %}">{% trans "غير مسددة" %}</a>
+          <a href="?tab=billing&inv_status=paid" class="filter-pill {% if inv_filter == 'paid' %}filter-pill-active{% endif %}">{% trans "مسددة" %}</a>
         </div>
 
         {# Invoice list #}

@@ -2983,20 +2983,40 @@ def patient_detail(request, patient_id):
 
     # Billing — optional; Invoice model may not exist in all deployments
     invoices = []
+    invoices_count = 0
     balance_due_total = 0
     total_paid = 0
+    inv_filter = request.GET.get("inv_status", "all")
+    payment_form = None
     try:
         from secretary.models import Invoice
-        invoices = list(Invoice.objects.filter(
-            clinic=clinic, patient=patient
-        ).order_by("-created_at"))
-        agg = Invoice.objects.filter(
-            clinic=clinic, patient=patient
-        ).exclude(status__in=[Invoice.Status.CANCELLED, Invoice.Status.REFUNDED]).aggregate(
+        from secretary.forms import PaymentForm
+
+        void_statuses = [Invoice.Status.CANCELLED, Invoice.Status.REFUNDED]
+        base_qs = Invoice.objects.filter(clinic=clinic, patient=patient)
+
+        # Summary totals always reflect the whole patient (independent of the filter).
+        invoices_count = base_qs.count()
+        agg = base_qs.exclude(status__in=void_statuses).aggregate(
             balance=Sum("balance_due"), paid=Sum("amount_paid")
         )
         balance_due_total = agg["balance"] or 0
         total_paid = agg["paid"] or 0
+
+        # The listed invoices follow the status filter.
+        list_qs = base_qs.order_by("-created_at")
+        if inv_filter == "open":
+            list_qs = list_qs.filter(status__in=[Invoice.Status.DRAFT, Invoice.Status.PARTIAL])
+        elif inv_filter == "unpaid":
+            list_qs = list_qs.filter(balance_due__gt=0).exclude(status__in=void_statuses)
+        elif inv_filter == "paid":
+            list_qs = list_qs.filter(status=Invoice.Status.PAID)
+        invoices = list(list_qs)
+
+        # Clear-debts form: prefilled to the full outstanding amount and capped to it.
+        payment_form = PaymentForm(
+            initial={"amount": balance_due_total}, max_payable=balance_due_total
+        )
     except ImportError:
         pass  # Billing module not installed
 
@@ -3036,6 +3056,9 @@ def patient_detail(request, patient_id):
         "appointments": appointments,
         "medical_records": medical_records,
         "invoices": invoices,
+        "invoices_count": invoices_count,
+        "inv_filter": inv_filter,
+        "payment_form": payment_form,
         "balance_due_total": balance_due_total,
         "total_paid": total_paid,
         "terminal_statuses": terminal_statuses,
@@ -3044,6 +3067,59 @@ def patient_detail(request, patient_id):
         "blood_type_choices": blood_type_choices,
         "patient_notes": patient_notes,
     })
+
+
+@login_required
+@require_POST
+def patient_pay_debt(request, patient_id):
+    """Settle a patient's outstanding debts in one go (FIFO, oldest debt first)."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+
+    from secretary.models import Invoice
+    from secretary import billing
+    from secretary.forms import PaymentForm
+
+    clinic = staff.clinic
+    patient = get_object_or_404(User, id=patient_id)
+    # Must be registered in this clinic
+    get_object_or_404(ClinicPatient, clinic=clinic, patient=patient)
+
+    redirect_url = reverse("secretary:patient_detail", args=[patient_id]) + "?tab=billing"
+
+    outstanding = billing.patient_outstanding(clinic, patient)
+    if outstanding <= 0:
+        messages.info(request, _("لا توجد ديون مستحقة على هذا المريض."))
+        return redirect(redirect_url)
+
+    form = PaymentForm(request.POST, max_payable=outstanding)
+    if not form.is_valid():
+        messages.error(request, _("تعذّر تسجيل الدفعة. تحقق من المبلغ."))
+        return redirect(redirect_url)
+
+    # Oldest non-void invoice that still carries a balance leads the FIFO settlement.
+    primary = (
+        Invoice.objects.filter(clinic=clinic, patient=patient, balance_due__gt=0)
+        .exclude(status__in=[Invoice.Status.CANCELLED, Invoice.Status.REFUNDED])
+        .order_by("created_at")
+        .first()
+    )
+    if primary is None:
+        messages.info(request, _("لا توجد ديون مستحقة على هذا المريض."))
+        return redirect(redirect_url)
+
+    try:
+        billing.record_payment(
+            primary_invoice=primary,
+            amount=form.cleaned_data["amount"],
+            method=form.cleaned_data["method"],
+            by_user=request.user,
+        )
+        messages.success(request, _("تم تسجيل الدفعة وتسديد الديون."))
+    except billing.BillingError as e:
+        messages.error(request, e.message)
+    return redirect(redirect_url)
 
 
 @login_required
