@@ -231,17 +231,6 @@ def dashboard(request):
         and now.time() <= a.appointment_time <= cutoff.time()
     ]
 
-    # Revenue today from payments — optional billing module
-    revenue_today = None
-    try:
-        from secretary.models import Payment
-        result = Payment.objects.filter(
-            clinic=clinic, received_at__date=today
-        ).aggregate(total=Sum("amount"))
-        revenue_today = result["total"] or 0
-    except ImportError:
-        pass  # Billing module not installed
-
     # Recent activity (appointment notifications for this clinic)
     recent_activity = []
     try:
@@ -303,7 +292,6 @@ def dashboard(request):
         "stat_cancelled": stat_cancelled,
         "waiting_count": waiting_count,
         "upcoming_2h": upcoming_2h,
-        "revenue_today": revenue_today,
         "recent_activity": recent_activity,
         "terminal_statuses": terminal_statuses,
         "unread_secretary_notification_count": unread_secretary_notification_count,
@@ -1110,7 +1098,7 @@ def billing_invoices(request):
     totals = (
         Invoice.objects.filter(clinic=clinic)
         .exclude(status__in=void_statuses)
-        .aggregate(billed=Sum("total"), collected=Sum("amount_paid"), outstanding=Sum("balance_due"))
+        .aggregate(outstanding=Sum("balance_due"))
     )
     debtors_count = billing.patient_debtors(clinic).count()
 
@@ -1121,51 +1109,6 @@ def billing_invoices(request):
         "q": q,
         "totals": totals,
         "debtors_count": debtors_count,
-    })
-
-
-@login_required
-def daily_summary(request):
-    """Today's collected payments — overall total and a breakdown by method."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
-
-    from django.db.models import Count
-    from secretary.models import Payment
-
-    clinic = staff.clinic
-    day_str = request.GET.get("date", "")
-    try:
-        day = datetime.strptime(day_str, "%Y-%m-%d").date() if day_str else date.today()
-    except ValueError:
-        day = date.today()
-
-    payments = (
-        Payment.objects.filter(clinic=clinic, received_at__date=day)
-        .select_related("invoice", "invoice__patient", "received_by")
-        .order_by("-received_at")
-    )
-    method_labels = dict(Payment.Method.choices)
-    by_method = [
-        {
-            "method": row["method"],
-            "label": method_labels.get(row["method"], row["method"]),
-            "total": row["total"],
-            "count": row["count"],
-        }
-        for row in payments.values("method").annotate(
-            total=Sum("amount"), count=Count("id")
-        ).order_by("-total")
-    ]
-    total_collected = payments.aggregate(s=Sum("amount"))["s"] or 0
-
-    return render(request, "secretary/billing/daily_summary.html", {
-        "clinic": clinic,
-        "day": day,
-        "payments": list(payments[:300]),
-        "by_method": by_method,
-        "total_collected": total_collected,
     })
 
 

@@ -2119,3 +2119,16 @@ msgstr ""
 
 msgid "أخرى"
 msgstr ""
+
+# ── Secretary dashboard stat-card tooltips ──
+msgid "إجمالي مواعيد اليوم بجميع حالاتها"
+msgstr ""
+
+msgid "طلبات حجز بانتظار مراجعتك وتأكيدها"
+msgstr ""
+
+msgid "مواعيد اكتملت زيارتها اليوم"
+msgstr ""
+
+msgid "مواعيد أُلغيت اليوم"
+msgstr ""

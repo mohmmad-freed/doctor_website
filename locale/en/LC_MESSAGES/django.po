@@ -3930,3 +3930,16 @@ msgstr "Completing the visit closes the invoice and prevents editing charges. An
 
 msgid "لا يمكن بدء الفوترة إلا أثناء وجود المريض في العيادة (الانتظار أو مع الطبيب)."
 msgstr "Billing can only be started while the patient is in the clinic (waiting or with the doctor)."
+
+# ── Secretary dashboard stat-card tooltips ──
+msgid "إجمالي مواعيد اليوم بجميع حالاتها"
+msgstr "All of today's appointments, across every status."
+
+msgid "طلبات حجز بانتظار مراجعتك وتأكيدها"
+msgstr "Booking requests awaiting your review and confirmation."
+
+msgid "مواعيد اكتملت زيارتها اليوم"
+msgstr "Visits that have been completed today."
+
+msgid "مواعيد أُلغيت اليوم"
+msgstr "Appointments that were cancelled today."

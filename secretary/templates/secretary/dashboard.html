@@ -43,6 +43,59 @@
   @media (prefers-reduced-motion: reduce) {
     .activity-card { transition: none; }
   }
+
+  /* ── Stat-card hover/focus tooltips ── */
+  .stat-card { position: relative; cursor: default; outline: none; }
+  .stat-tip {
+    position: absolute;
+    top: calc(100% + 9px);
+    left: 50%;
+    transform: translateX(-50%) translateY(-4px);
+    z-index: 40;
+    width: max-content;
+    max-width: 190px;
+    padding: 7px 10px;
+    border-radius: 9px;
+    background: #0f172a;            /* slate-900 */
+    color: #e2e8f0;                /* slate-200 */
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.45;
+    text-align: center;
+    white-space: normal;
+    box-shadow: 0 10px 24px -8px rgba(0,0,0,.5);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 150ms ease, transform 150ms ease;
+  }
+  .stat-tip::after {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-bottom-color: #0f172a;
+  }
+  /* Dark mode: lift the tooltip off the dark page so body + arrow stay visible */
+  .dark .stat-tip {
+    background: #334155;            /* slate-700 */
+    color: #f1f5f9;                /* slate-100 */
+  }
+  .dark .stat-tip::after {
+    border-bottom-color: #334155;
+  }
+  .stat-card:hover .stat-tip,
+  .stat-card:focus-visible .stat-tip,
+  .stat-card:focus-within .stat-tip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .stat-tip { transition: none; }
+  }
 </style>
 {% endblock %}
 
@@ -92,59 +145,44 @@
   {# ── Blocked patients banner (dismissible) ── #}
   {% include "secretary/partials/blocked_banner.html" with blocked_count=blocked_count dismissible=True %}
 
-  {# ── Stats row (6 cards) ── #}
-  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+  {# ── Stats row (4 cards) ── #}
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
 
-    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 flex flex-col items-center text-center">
+    <div class="stat-card bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 flex flex-col items-center text-center"
+         tabindex="0" aria-describedby="tip-total">
       <span class="text-2xl font-bold text-gray-900 dark:text-white">{{ stat_total }}</span>
       <span class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
         <i class="fa-regular fa-calendar"></i> {% trans "مجموع اليوم" %}
       </span>
+      <span id="tip-total" role="tooltip" class="stat-tip">{% trans "إجمالي مواعيد اليوم بجميع حالاتها" %}</span>
     </div>
 
-    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 flex flex-col items-center text-center">
+    <div class="stat-card bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 flex flex-col items-center text-center"
+         tabindex="0" aria-describedby="tip-pending">
       <span class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{{ stat_pending }}</span>
       <span class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
-        <i class="fa-regular fa-clock"></i> {% trans "في الانتظار" %}
+        <i class="fa-regular fa-clock"></i> {% trans "قيد الانتظار" %}
       </span>
+      <span id="tip-pending" role="tooltip" class="stat-tip">{% trans "طلبات حجز بانتظار مراجعتك وتأكيدها" %}</span>
     </div>
 
-    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 flex flex-col items-center text-center">
-      <span class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ stat_checked_in }}</span>
-      <span class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
-        <i class="fa-solid fa-door-open"></i> {% trans "وصل" %}
-      </span>
-    </div>
-
-    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 flex flex-col items-center text-center">
-      <span class="text-2xl font-bold text-primary-600 dark:text-primary-400">{{ stat_in_progress }}</span>
-      <span class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
-        <i class="fa-solid fa-spinner fa-spin"></i> {% trans "جارٍ" %}
-      </span>
-    </div>
-
-    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 flex flex-col items-center text-center">
+    <div class="stat-card bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 flex flex-col items-center text-center"
+         tabindex="0" aria-describedby="tip-completed">
       <span class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ stat_completed }}</span>
       <span class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
         <i class="fa-solid fa-circle-check"></i> {% trans "مكتمل" %}
       </span>
+      <span id="tip-completed" role="tooltip" class="stat-tip">{% trans "مواعيد اكتملت زيارتها اليوم" %}</span>
     </div>
 
-    {% if revenue_today is not None %}
-    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 flex flex-col items-center text-center">
-      <span class="text-2xl font-bold text-teal-600 dark:text-teal-400">₪{{ revenue_today|floatformat:0 }}</span>
-      <span class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
-        <i class="fa-solid fa-coins"></i> {% trans "إيرادات" %}
-      </span>
-    </div>
-    {% else %}
-    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 flex flex-col items-center text-center">
+    <div class="stat-card bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-4 flex flex-col items-center text-center"
+         tabindex="0" aria-describedby="tip-cancelled">
       <span class="text-2xl font-bold text-red-500 dark:text-red-400">{{ stat_cancelled }}</span>
       <span class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
         <i class="fa-solid fa-xmark"></i> {% trans "ملغى" %}
       </span>
+      <span id="tip-cancelled" role="tooltip" class="stat-tip">{% trans "مواعيد أُلغيت اليوم" %}</span>
     </div>
-    {% endif %}
   </div>
 
   {# ── Two-column layout: main content + side panel ── #}

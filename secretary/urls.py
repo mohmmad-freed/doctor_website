@@ -51,7 +51,6 @@ urlpatterns = [
 
     # --- Billing ---
     path('billing/', views.billing_invoices, name='billing_invoices'),
-    path('billing/daily-summary/', views.daily_summary, name='daily_summary'),
     path('billing/debts/', views.patient_debts, name='patient_debts'),
     path('billing/appointment/<int:appointment_id>/start/', views.start_billing, name='start_billing'),
     path('billing/invoice/<int:invoice_id>/', views.invoice_detail, name='invoice_detail'),
