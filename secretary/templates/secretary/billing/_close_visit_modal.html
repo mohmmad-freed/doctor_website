@@ -1,0 +1,68 @@
+{% load i18n %}
+{% comment %}
+Themed confirm dialog for closing out a visit with an outstanding balance.
+Replaces the native window.confirm(). Triggered by any [data-close-visit-confirm]
+button; on confirm it submits that button's parent form (which already carries its
+own action, csrf, new_status=COMPLETED and next). Body-level event delegation so it
+keeps working for HTMX-swapped rows (e.g. the waiting-room in-progress column).
+{% endcomment %}
+<div id="close-visit-modal"
+     class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 w-full max-w-sm p-6 space-y-4">
+    <div class="flex items-center gap-3">
+      <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </span>
+      <h3 class="font-bold text-gray-900 dark:text-white">{% trans "إنهاء الزيارة" %}</h3>
+    </div>
+    <p class="text-sm text-gray-600 dark:text-gray-300">
+      {% trans "ما زال على المريض رصيد مستحق. هل تريد إنهاء الزيارة وإغلاق الفاتورة؟" %}
+    </p>
+    <div class="flex items-center justify-end gap-3">
+      <button type="button" id="close-visit-cancel"
+              class="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+        {% trans "إلغاء" %}
+      </button>
+      <button type="button" id="close-visit-confirm"
+              class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors">
+        {% trans "إنهاء الزيارة وإغلاق الفاتورة" %}
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var modal = document.getElementById('close-visit-modal');
+    var confirmBtn = document.getElementById('close-visit-confirm');
+    var cancelBtn = document.getElementById('close-visit-cancel');
+    var pendingForm = null;
+
+    function openModal() {
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+    function closeModal() {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      pendingForm = null;
+    }
+
+    // Delegation: works for buttons re-rendered by HTMX swaps.
+    document.body.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-close-visit-confirm]');
+      if (!btn) return;
+      e.preventDefault();
+      pendingForm = btn.closest('form');
+      openModal();
+    });
+
+    confirmBtn.addEventListener('click', function () {
+      if (pendingForm) pendingForm.submit();
+    });
+    cancelBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', function (e) {
+      if (e.target === this) closeModal();
+    });
+  })();
+</script>

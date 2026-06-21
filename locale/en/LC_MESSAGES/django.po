@@ -3943,3 +3943,16 @@ msgstr "Visits that have been completed today."
 
 msgid "مواعيد أُلغيت اليوم"
 msgstr "Appointments that were cancelled today."
+
+# ── Secretary billing: invoice back-link labels & close-visit modal ──
+msgid "العودة إلى غرفة الانتظار"
+msgstr "Back to the waiting room"
+
+msgid "العودة إلى ملف المريض"
+msgstr "Back to patient file"
+
+msgid "العودة إلى الموعد"
+msgstr "Back to the appointment"
+
+msgid "إنهاء الزيارة"
+msgstr "End the visit"

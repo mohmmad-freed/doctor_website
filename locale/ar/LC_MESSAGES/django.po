@@ -2132,3 +2132,16 @@ msgstr ""
 
 msgid "مواعيد أُلغيت اليوم"
 msgstr ""
+
+# ── Secretary billing: invoice back-link labels & close-visit modal ──
+msgid "العودة إلى غرفة الانتظار"
+msgstr ""
+
+msgid "العودة إلى ملف المريض"
+msgstr ""
+
+msgid "العودة إلى الموعد"
+msgstr ""
+
+msgid "إنهاء الزيارة"
+msgstr ""

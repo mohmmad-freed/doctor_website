@@ -5,11 +5,15 @@
 {% block content %}
 <div class="max-w-4xl mx-auto space-y-5">
 
-  <!-- Back -->
-  <a href="{% url 'secretary:billing_invoices' %}" data-back
+  <!-- Back (label follows the page the user came from; navigation is history.back via data-back) -->
+  <a href="{% url 'secretary:billing_invoices' %}" data-back id="invoice-back-link"
+     data-label-default="{% trans 'العودة إلى الفواتير' %}"
+     data-label-waiting="{% trans 'العودة إلى غرفة الانتظار' %}"
+     data-label-patient="{% trans 'العودة إلى ملف المريض' %}"
+     data-label-appointment="{% trans 'العودة إلى الموعد' %}"
      class="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
     <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %}"></i>
-    {% trans "العودة إلى الفواتير" %}
+    <span id="invoice-back-label">{% trans "العودة إلى الفواتير" %}</span>
   </a>
 
   <!-- Header card -->
@@ -56,12 +60,12 @@
         <i class="fa-solid fa-circle-info"></i>
         {% trans "إنهاء الزيارة يغلق الفاتورة ويمنع تعديل الرسوم. أي رصيد متبقٍّ يبقى ديناً مستحقاً." %}
       </p>
-      <form method="post" action="{% url 'secretary:update_appointment_status' invoice.appointment.id %}"
-            {% if invoice.balance_due > 0 %}onsubmit="return confirm('{% trans "ما زال على المريض رصيد مستحق. هل تريد إنهاء الزيارة وإغلاق الفاتورة؟" %}');"{% endif %}>
+      <form method="post" action="{% url 'secretary:update_appointment_status' invoice.appointment.id %}">
         {% csrf_token %}
         <input type="hidden" name="new_status" value="COMPLETED">
         <input type="hidden" name="next" value="{% url 'secretary:invoice_detail' invoice.id %}">
-        <button type="submit"
+        <button type="{% if invoice.balance_due > 0 %}button{% else %}submit{% endif %}"
+                {% if invoice.balance_due > 0 %}data-close-visit-confirm{% endif %}
                 class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 transition-colors shadow-sm">
           <i class="fa-solid fa-circle-check"></i> {% trans "إنهاء الزيارة وإغلاق الفاتورة" %}
         </button>
@@ -81,7 +85,7 @@
       <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
         {% for item in items %}
         <tr>
-          <td class="px-5 py-3 text-gray-900 dark:text-white font-medium">{{ item.description }}</td>
+          <td class="px-5 py-3 text-gray-900 dark:text-white font-medium">{% if item.appointment_type %}{{ item.appointment_type.display_name }}{% else %}{{ item.description }}{% endif %}</td>
           <td class="px-3 py-3 text-gray-500 dark:text-gray-400 text-center whitespace-nowrap">{{ item.quantity }} × ₪{{ item.unit_price|floatformat:2 }}</td>
           <td class="px-3 py-3 text-end font-semibold text-gray-900 dark:text-white whitespace-nowrap">₪{{ item.total|floatformat:2 }}</td>
           <td class="px-3 py-3 text-end w-10">
@@ -193,6 +197,8 @@
 
 </div>
 
+{% include "secretary/billing/_close_visit_modal.html" %}
+
 <script>
   function presetCharge(desc) {
     var el = document.getElementById('id_description');
@@ -200,5 +206,26 @@
     var price = document.getElementById('id_unit_price');
     if (price) price.focus();
   }
+
+  // Make the back-link label match where the user actually came from (navigation
+  // itself is handled by the shared data-back handler in base_secretary.html).
+  (function () {
+    var ref = document.referrer;
+    if (!ref || ref.indexOf(window.location.origin) !== 0) return;
+    var link = document.getElementById('invoice-back-link');
+    var label = document.getElementById('invoice-back-label');
+    if (!link || !label) return;
+    var path;
+    try { path = new URL(ref).pathname; } catch (e) { return; }
+    var text = null;
+    if (path.indexOf('/waiting-room') !== -1) {
+      text = link.dataset.labelWaiting;
+    } else if (path.indexOf('/overview') !== -1 && path.indexOf('/appointments/') !== -1) {
+      text = link.dataset.labelAppointment;
+    } else if (path.indexOf('/patients/') !== -1) {
+      text = link.dataset.labelPatient;
+    }
+    if (text) label.textContent = text;
+  })();
 </script>
 {% endblock %}

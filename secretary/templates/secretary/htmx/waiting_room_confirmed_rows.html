@@ -47,7 +47,7 @@
 <div class="px-5 py-10 flex flex-col items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
   <i class="fa-solid fa-calendar-check text-2xl opacity-40"></i>
   <p>{% trans "لا توجد مواعيد مؤكدة اليوم" %}</p>
-  <a href="{% url 'secretary:create_appointment' %}"
+  <a href="{% url 'secretary:create_appointment' %}?return_to=waiting_room&date={% now 'Y-m-d' %}"
      class="text-purple-600 dark:text-purple-400 hover:underline text-xs font-medium">
     {% trans "إضافة موعد" %}
   </a>

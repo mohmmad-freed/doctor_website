@@ -62,14 +62,14 @@
     </form>
     {% endif %}
 
-    {# Finish the visit → COMPLETED (locks the invoice). Quick-confirm if a balance is owed. #}
+    {# Finish the visit → COMPLETED (locks the invoice). Themed confirm if a balance is owed. #}
     <form method="post"
-          action="{% url 'secretary:update_appointment_status' appt.id %}"
-          {% if entry.balance and entry.balance > 0 %}onsubmit="return confirm('{% trans "ما زال على المريض رصيد مستحق. هل تريد إنهاء الزيارة وإغلاق الفاتورة؟" %}');"{% endif %}>
+          action="{% url 'secretary:update_appointment_status' appt.id %}">
       {% csrf_token %}
       <input type="hidden" name="new_status" value="COMPLETED">
       <input type="hidden" name="next" value="{% url 'secretary:waiting_room' %}">
-      <button type="submit"
+      <button type="{% if entry.balance and entry.balance > 0 %}button{% else %}submit{% endif %}"
+              {% if entry.balance and entry.balance > 0 %}data-close-visit-confirm{% endif %}
               title="{% trans 'إنهاء الزيارة وإغلاق الفاتورة' %}"
               class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-colors">
         <i class="fa-solid fa-circle-check text-xs"></i> {% trans "إنهاء" %}
