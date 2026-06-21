@@ -1859,6 +1859,14 @@ class BillingTest(SecretaryTestBase):
             status=Appointment.Status.CHECKED_IN, appointment_time=appointment_time,
         )
 
+    def _complete_visit(self, appt):
+        """Finish a visit so the open session locks (DRAFT → ISSUED) and any
+        remaining balance becomes real debt."""
+        from secretary import billing
+        appt.status = Appointment.Status.COMPLETED
+        appt.save(update_fields=["status"])
+        billing.on_appointment_status_changed(appt, Appointment.Status.COMPLETED)
+
     # ── Session lifecycle ────────────────────────────────────────────
 
     def test_open_session_requires_checked_in(self):
@@ -2026,8 +2034,13 @@ class BillingTest(SecretaryTestBase):
         appt = self._checked_in()
         billing.open_billing_session(appt, by_user=self.secretary_a)
         self.client.force_login(self.secretary_a)
+        # An open (in-progress) session is not yet debt → patient not listed.
         resp = self.client.get(reverse("secretary:patient_debts"))
         self.assertEqual(resp.status_code, 200)
+        self.assertNotContains(resp, self.patient_a.name)
+        # Complete the visit unpaid → the balance becomes debt → now listed.
+        self._complete_visit(appt)
+        resp = self.client.get(reverse("secretary:patient_debts"))
         self.assertContains(resp, self.patient_a.name)
 
     def test_debt_badge_htmx_shows_amount(self):
@@ -2035,13 +2048,71 @@ class BillingTest(SecretaryTestBase):
         appt = self._checked_in()
         billing.open_billing_session(appt, by_user=self.secretary_a)
         self.client.force_login(self.secretary_a)
+        # Open session → no debt banner.
         resp = self.client.get(
             reverse("secretary:patient_debt_badge_htmx"),
             {"patient_id": self.patient_a.id},
         )
         self.assertEqual(resp.status_code, 200)
+        self.assertNotContains(resp, "دين مستحق")
+        # After completing the visit unpaid → the banner shows the amount.
+        self._complete_visit(appt)
+        resp = self.client.get(
+            reverse("secretary:patient_debt_badge_htmx"),
+            {"patient_id": self.patient_a.id},
+        )
         self.assertContains(resp, "دين مستحق")  # banner shown
         self.assertContains(resp, "50")          # amount (locale may use , or .)
+
+    # ── Debt = finalized only (open session is the current bill, not debt) ──
+
+    def test_open_session_is_not_debt(self):
+        from secretary import billing
+        appt = self._checked_in()
+        billing.open_billing_session(appt, by_user=self.secretary_a)
+        # ₪50 open session must not count as debt anywhere it's displayed.
+        self.assertEqual(billing.patient_debt(self.clinic_a, self.patient_a), Decimal("0.00"))
+        self.assertEqual(billing.debt_map(self.clinic_a, [self.patient_a.id]), {})
+        self.assertEqual(billing.clinic_total_debt(self.clinic_a), Decimal("0.00"))
+        # But it's still fully payable (overpayment guard unaffected).
+        self.assertEqual(billing.patient_outstanding(self.clinic_a, self.patient_a), Decimal("50.00"))
+
+    def test_debt_appears_after_completing_visit_unpaid(self):
+        from secretary import billing
+        appt = self._checked_in()
+        billing.open_billing_session(appt, by_user=self.secretary_a)
+        self._complete_visit(appt)
+        self.assertEqual(billing.patient_debt(self.clinic_a, self.patient_a), Decimal("50.00"))
+        self.assertEqual(
+            billing.debt_map(self.clinic_a, [self.patient_a.id]),
+            {self.patient_a.id: Decimal("50.00")},
+        )
+
+    def test_partial_payment_mid_visit_is_not_debt(self):
+        from secretary import billing
+        appt = self._checked_in()
+        inv = billing.open_billing_session(appt, by_user=self.secretary_a)
+        billing.record_payment(primary_invoice=inv, amount=Decimal("30.00"),
+                               method="CASH", by_user=self.secretary_a)
+        # Still mid-visit (PARTIAL but appointment IN-queue) → no debt yet.
+        self.assertEqual(billing.patient_debt(self.clinic_a, self.patient_a), Decimal("0.00"))
+        self.assertEqual(billing.debt_map(self.clinic_a, [self.patient_a.id]), {})
+        # Complete unpaid remainder → the ₪20 left becomes debt.
+        self._complete_visit(appt)
+        self.assertEqual(billing.patient_debt(self.clinic_a, self.patient_a), Decimal("20.00"))
+
+    def test_debt_excludes_current_open_session_only(self):
+        from secretary import billing
+        # Prior completed unpaid visit → debt of 50.
+        old_appt = self._checked_in(appointment_time=time(9, 0))
+        billing.open_billing_session(old_appt, by_user=self.secretary_a)
+        self._complete_visit(old_appt)
+        # New open session → another 50, but in-progress (not debt).
+        new_appt = self._checked_in(appointment_time=time(11, 0))
+        billing.open_billing_session(new_appt, by_user=self.secretary_a)
+        # Debt = only the prior visit; total payable includes both.
+        self.assertEqual(billing.patient_debt(self.clinic_a, self.patient_a), Decimal("50.00"))
+        self.assertEqual(billing.patient_outstanding(self.clinic_a, self.patient_a), Decimal("100.00"))
 
     # ── Bilingual (English) rendering ────────────────────────────────
 

@@ -121,11 +121,17 @@
         <button type="button" onclick="presetCharge('{% trans "مستلزمات" %}')" class="px-3 py-1 rounded-lg text-xs font-bold bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-200 hover:border-primary-400">{% trans "مستلزمات" %}</button>
         <button type="button" onclick="presetCharge('')" class="px-3 py-1 rounded-lg text-xs font-bold bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-200 hover:border-primary-400">{% trans "أخرى" %}</button>
       </div>
-      <form method="post" action="{% url 'secretary:invoice_add_charge' invoice.id %}" class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+      <form method="post" action="{% url 'secretary:invoice_add_charge' invoice.id %}" class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
         {% csrf_token %}
         <div class="sm:col-span-6">{{ charge_form.description }}</div>
-        <div class="sm:col-span-2">{{ charge_form.quantity }}</div>
-        <div class="sm:col-span-2">{{ charge_form.unit_price }}</div>
+        <div class="sm:col-span-2">
+          <label for="id_quantity" class="block text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-1">{% trans "الكمية" %}</label>
+          {{ charge_form.quantity }}
+        </div>
+        <div class="sm:col-span-2">
+          <label for="id_unit_price" class="block text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-1">{% trans "سعر الوحدة" %} (₪)</label>
+          {{ charge_form.unit_price }}
+        </div>
         <div class="sm:col-span-2">
           <button type="submit" class="w-full px-4 py-2 rounded-xl bg-primary-600 text-white text-sm font-bold hover:bg-primary-700 transition-colors">
             <i class="fa-solid fa-plus"></i> {% trans "إضافة" %}

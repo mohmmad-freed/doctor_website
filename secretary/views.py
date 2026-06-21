@@ -474,7 +474,7 @@ def appointment_overview(request, appointment_id):
 
     # Billing: outstanding debt + any open session for this appointment.
     from secretary import billing
-    patient_debt = billing.patient_outstanding(clinic, patient)
+    patient_debt = billing.patient_debt(clinic, patient)
     open_invoice = billing.get_open_invoice(appointment)
 
     return render(request, "secretary/appointment_overview.html", {
@@ -1095,11 +1095,8 @@ def billing_invoices(request):
 
     invoices = list(invoices[:200])
 
-    totals = (
-        Invoice.objects.filter(clinic=clinic)
-        .exclude(status__in=void_statuses)
-        .aggregate(outstanding=Sum("balance_due"))
-    )
+    # Finalized debt only (matches the debtors list below — open sessions excluded).
+    totals = {"outstanding": billing.clinic_total_debt(clinic)}
     debtors_count = billing.patient_debtors(clinic).count()
 
     return render(request, "secretary/billing/dashboard.html", {
@@ -1154,7 +1151,7 @@ def invoice_detail(request, invoice_id):
         id=invoice_id, clinic=clinic,
     )
     max_payable = billing.patient_outstanding(clinic, invoice.patient)
-    other_debt = billing.patient_outstanding(clinic, invoice.patient, exclude_invoice=invoice)
+    other_debt = billing.patient_debt(clinic, invoice.patient, exclude_invoice=invoice)
 
     return render(request, "secretary/billing/invoice_detail.html", {
         "clinic": clinic,
@@ -1288,7 +1285,7 @@ def patient_debt_badge_htmx(request):
     if patient_id:
         try:
             patient = User.objects.get(id=patient_id)
-            amount = billing.patient_outstanding(staff.clinic, patient)
+            amount = billing.patient_debt(staff.clinic, patient)
         except (User.DoesNotExist, ValueError):
             amount = None
     return render(request, "secretary/billing/_debt_banner.html", {"amount": amount})
@@ -3727,7 +3724,7 @@ def create_appointment(request):
     if prefill_patient_id:
         from secretary import billing
         try:
-            prefill_patient_debt = billing.patient_outstanding(
+            prefill_patient_debt = billing.patient_debt(
                 clinic, User.objects.get(id=prefill_patient_id)
             )
         except (User.DoesNotExist, ValueError):

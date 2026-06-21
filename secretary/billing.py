@@ -16,7 +16,7 @@ import logging
 from decimal import Decimal, InvalidOperation
 
 from django.db import IntegrityError, transaction
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
@@ -33,6 +33,21 @@ _VOID_STATUSES = (Invoice.Status.CANCELLED, Invoice.Status.REFUNDED)
 
 # Appointment statuses during which a session is "open" (charges editable).
 _OPEN_APPT_STATUSES = (Appointment.Status.CHECKED_IN, Appointment.Status.IN_PROGRESS)
+
+# Invoices that are still an *open billing session* — the patient's current bill,
+# not yet debt. Queryset twin of ``is_editable()``: a session is open while its
+# appointment is CHECKED_IN/IN_PROGRESS, or — for a standalone invoice — while it
+# is still DRAFT/PARTIAL. The balance only becomes debt once the visit is completed
+# (DRAFT → ISSUED) with an amount left unpaid.
+# (For ``appointment=NULL`` rows the first clause is false since ``NULL IN (...)``
+# is false, so the standalone clause governs them.)
+_OPEN_SESSION_Q = (
+    Q(appointment__status__in=_OPEN_APPT_STATUSES)
+    | Q(
+        appointment__isnull=True,
+        status__in=(Invoice.Status.DRAFT, Invoice.Status.PARTIAL),
+    )
+)
 
 
 class BillingError(Exception):
@@ -123,7 +138,12 @@ def recompute_invoice_totals(invoice):
 
 
 def patient_outstanding(clinic, patient, exclude_invoice=None):
-    """Sum of ``balance_due`` over the patient's non-void invoices in the clinic."""
+    """Total *payable* by the patient: sum of ``balance_due`` over non-void invoices.
+
+    Includes the current open billing session — this is the cap used by the payment
+    guard so the current bill can be settled. For what the UI shows as *debt*, use
+    :func:`patient_debt` instead.
+    """
     qs = (
         Invoice.objects.filter(clinic=clinic, patient=patient)
         .exclude(status__in=_VOID_STATUSES)
@@ -133,18 +153,44 @@ def patient_outstanding(clinic, patient, exclude_invoice=None):
     return qs.aggregate(s=Sum("balance_due"))["s"] or ZERO
 
 
+def _debt_qs(clinic):
+    """Invoices that count as patient *debt*: non-void and finalized.
+
+    Excludes open billing sessions (the current bill) — those only become debt once
+    the visit is completed and the invoice is issued with a remaining balance.
+    """
+    return (
+        Invoice.objects.filter(clinic=clinic)
+        .exclude(status__in=_VOID_STATUSES)
+        .exclude(_OPEN_SESSION_Q)
+    )
+
+
+def patient_debt(clinic, patient, exclude_invoice=None):
+    """Patient's finalized outstanding debt (excludes the open billing session)."""
+    qs = _debt_qs(clinic).filter(patient=patient)
+    if exclude_invoice is not None:
+        qs = qs.exclude(pk=exclude_invoice.pk)
+    return qs.aggregate(s=Sum("balance_due"))["s"] or ZERO
+
+
+def clinic_total_debt(clinic):
+    """Sum of all finalized outstanding debt across the clinic's patients."""
+    return _debt_qs(clinic).aggregate(s=Sum("balance_due"))["s"] or ZERO
+
+
 def debt_map(clinic, patient_ids):
-    """Return ``{patient_id: Decimal}`` outstanding balances (only > 0).
+    """Return ``{patient_id: Decimal}`` finalized debt balances (only > 0).
 
     One aggregate query for a whole page of patients — avoids N+1 when rendering
-    debt badges on appointment lists.
+    debt badges on appointment lists. Open billing sessions are excluded.
     """
     ids = [pid for pid in set(patient_ids) if pid]
     if not ids:
         return {}
     rows = (
-        Invoice.objects.filter(clinic=clinic, patient_id__in=ids)
-        .exclude(status__in=_VOID_STATUSES)
+        _debt_qs(clinic)
+        .filter(patient_id__in=ids)
         .values("patient_id")
         .annotate(total=Sum("balance_due"))
         .filter(total__gt=ZERO)
@@ -168,10 +214,12 @@ def open_invoice_map(clinic, appointment_ids):
 
 
 def patient_debtors(clinic):
-    """Every patient in the clinic with an outstanding balance, largest first."""
+    """Every patient in the clinic with finalized outstanding debt, largest first.
+
+    Open billing sessions are excluded — a patient mid-visit is not yet a debtor.
+    """
     return (
-        Invoice.objects.filter(clinic=clinic)
-        .exclude(status__in=_VOID_STATUSES)
+        _debt_qs(clinic)
         .values("patient_id", "patient__name", "patient__phone")
         .annotate(total_due=Sum("balance_due"))
         .filter(total_due__gt=ZERO)
