@@ -2562,3 +2562,127 @@ class PurchaseRequestTests(SecretaryTestBase):
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "Review Purchase Requests")
         self.assertContains(resp, "Approve")
+
+
+# ════════════════════════════════════════════════════════════════════
+#  Waiting-room notes reminder + quick-view
+# ════════════════════════════════════════════════════════════════════
+
+class WaitingRoomNotesReminderTests(SecretaryTestBase):
+    """Notes badge on waiting-room cards + the read-only quick-view endpoint."""
+
+    def _make_today_appt(self, status=Appointment.Status.CHECKED_IN):
+        appt = self._make_appointment(status=status, appointment_date=date.today())
+        if status == Appointment.Status.CHECKED_IN:
+            appt.checked_in_at = timezone.now()
+            appt.save(update_fields=["checked_in_at"])
+        return appt
+
+    def _note(self, **kwargs):
+        from patients.models import StaffNote
+        defaults = dict(
+            clinic=self.clinic_a,
+            patient=self.patient_a,
+            audience=StaffNote.Audience.SECRETARY,
+            body="note body",
+            author=self.secretary_a,
+            author_name="Secretary A",
+            author_role="SECRETARY",
+        )
+        defaults.update(kwargs)
+        return StaffNote.objects.create(**defaults)
+
+    def test_annotate_notes_count_sums_all_sources(self):
+        from secretary import notes_utils
+        appt = self._make_today_appt()
+        appt.secretary_note = "legacy sec"      # +1
+        appt.doctor_note = "legacy doc"          # +1
+        self._note(appointment=appt)             # +1 appointment StaffNote
+        self._note(appointment=None)             # +1 patient-profile StaffNote
+        notes_utils.annotate_notes_count([appt], self.clinic_a)
+        self.assertEqual(appt.notes_count, 4)
+
+    def test_annotate_excludes_doctor_private(self):
+        from patients.models import StaffNote
+        from secretary import notes_utils
+        appt = self._make_today_appt()
+        self._note(appointment=appt, audience=StaffNote.Audience.DOCTOR_PRIVATE)
+        notes_utils.annotate_notes_count([appt], self.clinic_a)
+        self.assertEqual(appt.notes_count, 0)
+
+    def test_annotate_zero_when_no_notes(self):
+        from secretary import notes_utils
+        appt = self._make_today_appt()
+        notes_utils.annotate_notes_count([appt], self.clinic_a)
+        self.assertEqual(appt.notes_count, 0)
+
+    # Distinctive text only present on the notes badge button (not in the modal JS).
+    BADGE_MARKER = "لدى المريض ملاحظات"
+
+    def test_badge_renders_on_board_for_patient_with_notes(self):
+        appt = self._make_today_appt()
+        self._note(appointment=appt)
+        self.client.force_login(self.secretary_a)
+        resp = self.client.get(reverse("secretary:waiting_room"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, self.BADGE_MARKER)
+
+    def test_no_badge_when_no_notes(self):
+        self._make_today_appt()
+        self.client.force_login(self.secretary_a)
+        resp = self.client.get(reverse("secretary:waiting_room"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotContains(resp, self.BADGE_MARKER)
+
+    def test_quick_view_endpoint_lists_notes(self):
+        appt = self._make_today_appt()
+        self._note(appointment=appt, body="appt note text")
+        self._note(appointment=None, body="profile note text")
+        self.client.force_login(self.secretary_a)
+        resp = self.client.get(
+            reverse("secretary:waiting_room_notes_htmx"), {"appt": appt.id}
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "appt note text")
+        self.assertContains(resp, "profile note text")
+
+    def test_quick_view_hides_doctor_private(self):
+        from patients.models import StaffNote
+        appt = self._make_today_appt()
+        self._note(appointment=appt, audience=StaffNote.Audience.DOCTOR_PRIVATE,
+                   body="private clinical note")
+        self.client.force_login(self.secretary_a)
+        resp = self.client.get(
+            reverse("secretary:waiting_room_notes_htmx"), {"appt": appt.id}
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotContains(resp, "private clinical note")
+
+    def test_quick_view_tenant_isolation(self):
+        """A secretary cannot load notes for another clinic's appointment."""
+        other = self._make_appointment(clinic=self.clinic_b,
+                                       appointment_date=date.today())
+        self.client.force_login(self.secretary_a)
+        resp = self.client.get(
+            reverse("secretary:waiting_room_notes_htmx"), {"appt": other.id}
+        )
+        self.assertEqual(resp.status_code, 404)
+
+    def test_badge_and_popup_respect_english(self):
+        """In English mode the badge + quick-view render English, not the Arabic source."""
+        appt = self._make_today_appt()
+        self._note(appointment=appt, body="needs lab results")
+        self.secretary_a.preferred_language = "en"
+        self.secretary_a.save(update_fields=["preferred_language"])
+        self.client.force_login(self.secretary_a)
+
+        board = self.client.get(reverse("secretary:waiting_room"))
+        self.assertContains(board, "Patient has notes")   # English badge title
+        self.assertNotContains(board, self.BADGE_MARKER)   # not the Arabic source
+
+        popup = self.client.get(
+            reverse("secretary:waiting_room_notes_htmx"), {"appt": appt.id}
+        )
+        self.assertContains(popup, "Appointment notes")
+        self.assertContains(popup, "Manage notes")
+        self.assertNotContains(popup, "إدارة الملاحظات")  # not the Arabic source

@@ -1,0 +1,65 @@
+{% load i18n %}
+{% comment %}
+Read-only notes quick-view modal. Body is loaded on demand via HTMX from
+waiting_room_notes_htmx; lives outside the auto-refreshing columns so it stays
+open across the 30s polls. Trigger: any [data-view-notes] button (delegated).
+{% endcomment %}
+<div id="notes-modal"
+     class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 w-full max-w-lg flex flex-col max-h-[85vh]">
+    {# Header #}
+    <div class="flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+      <h3 class="flex items-center gap-2 font-bold text-gray-900 dark:text-white min-w-0">
+        <i class="fa-solid fa-note-sticky text-amber-500"></i>
+        <span class="truncate">{% if IS_RTL %}ملاحظات{% else %}Notes{% endif %}: <span id="notes-modal-title"></span></span>
+      </h3>
+      <button type="button" onclick="closeNotesModal()"
+              title="{% if IS_RTL %}إغلاق{% else %}Close{% endif %}"
+              class="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    {# Body (HTMX target) #}
+    <div id="notes-modal-body" class="p-5 overflow-y-auto"></div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var modal = document.getElementById('notes-modal');
+    var title = document.getElementById('notes-modal-title');
+    var body = document.getElementById('notes-modal-body');
+    var NOTES_URL = "{% url 'secretary:waiting_room_notes_htmx' %}";
+    var SPINNER =
+      '<div class="py-10 flex items-center justify-center text-gray-400 dark:text-gray-500">' +
+      '<i class="fa-solid fa-spinner fa-spin text-xl"></i></div>';
+
+    window.openNotesModal = function (apptId, patientName) {
+      title.textContent = patientName || '';
+      body.innerHTML = SPINNER;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      htmx.ajax('GET', NOTES_URL + '?appt=' + encodeURIComponent(apptId),
+                { target: '#notes-modal-body', swap: 'innerHTML' });
+    };
+    window.closeNotesModal = function () {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      body.innerHTML = '';
+    };
+
+    // Close on backdrop click + Escape.
+    modal.addEventListener('click', function (e) { if (e.target === this) closeNotesModal(); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeNotesModal();
+    });
+
+    // Event delegation: works for badges re-rendered by the 30s HTMX column swaps.
+    document.body.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-view-notes]');
+      if (!btn) return;
+      e.preventDefault();
+      openNotesModal(btn.dataset.apptId, btn.dataset.patientName);
+    });
+  })();
+</script>

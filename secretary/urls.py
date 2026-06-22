@@ -35,6 +35,7 @@ urlpatterns = [
     path('htmx/waiting-room-confirmed/', views.waiting_room_confirmed_htmx, name='waiting_room_confirmed_htmx'),
     path('htmx/waiting-room-checkedin/', views.waiting_room_checkedin_htmx, name='waiting_room_checkedin_htmx'),
     path('htmx/waiting-room-inprogress/', views.waiting_room_inprogress_htmx, name='waiting_room_inprogress_htmx'),
+    path('htmx/waiting-room-notes/', views.waiting_room_notes_htmx, name='waiting_room_notes_htmx'),
     path('htmx/reorder-queue/', views.reorder_queue, name='reorder_queue'),
 
     # --- Patient Management ---

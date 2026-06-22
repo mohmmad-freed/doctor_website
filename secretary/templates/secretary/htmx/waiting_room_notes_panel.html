@@ -1,0 +1,67 @@
+{% load i18n %}
+{% comment %}
+Read-only notes panel loaded into the waiting-room notes modal (#notes-modal-body).
+Params (from waiting_room_notes_htmx):
+  appt              the Appointment
+  patient_notes     list of patient-profile StaffNotes (secretary-visible)
+  appointment_notes list of appointment StaffNotes (secretary-visible)
+Managing notes (add/edit/delete) happens on the appointment overview page.
+{% endcomment %}
+
+{# ── Patient-profile notes ── #}
+<section class="space-y-2">
+  <h4 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+    <i class="fa-solid fa-user text-[11px]"></i>{% if IS_RTL %}ملاحظات ملف المريض{% else %}Patient profile notes{% endif %}
+  </h4>
+  {% if patient_notes %}
+  <ul class="space-y-2">
+    {% for note in patient_notes %}
+    {% include "secretary/htmx/_notes_panel_item.html" with note=note %}
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="text-sm text-gray-400 dark:text-gray-500 italic">{% if IS_RTL %}لا توجد ملاحظات على ملف المريض.{% else %}No notes on the patient profile.{% endif %}</p>
+  {% endif %}
+</section>
+
+{# ── Appointment notes (StaffNotes + legacy fields) ── #}
+<section class="space-y-2 mt-5">
+  <h4 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+    <i class="fa-regular fa-calendar text-[11px]"></i>{% if IS_RTL %}ملاحظات الموعد{% else %}Appointment notes{% endif %}
+  </h4>
+  {% if appointment_notes or appt.secretary_note or appt.doctor_note %}
+  <ul class="space-y-2">
+    {% for note in appointment_notes %}
+    {% include "secretary/htmx/_notes_panel_item.html" with note=note %}
+    {% endfor %}
+
+    {# Legacy free-text fields (written at booking) #}
+    {% if appt.doctor_note %}
+    <li class="rounded-xl border border-violet-200 dark:border-violet-800/60 bg-violet-50/40 dark:bg-violet-900/10 px-4 py-3">
+      <span class="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300">
+        <i class="fa-solid fa-user-doctor text-[10px]"></i>{% if IS_RTL %}إلى الطبيب{% else %}To doctor{% endif %}
+      </span>
+      <p class="mt-2 text-sm text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">{{ appt.doctor_note }}</p>
+    </li>
+    {% endif %}
+    {% if appt.secretary_note %}
+    <li class="rounded-xl border border-accent-200 dark:border-accent-800/60 bg-accent-50/40 dark:bg-accent-500/5 px-4 py-3">
+      <span class="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-accent-100 dark:bg-accent-500/20 text-accent-700 dark:text-accent-400">
+        <i class="fa-solid fa-user-nurse text-[10px]"></i>{% if IS_RTL %}سكرتارية فقط{% else %}Secretary only{% endif %}
+      </span>
+      <p class="mt-2 text-sm text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">{{ appt.secretary_note }}</p>
+    </li>
+    {% endif %}
+  </ul>
+  {% else %}
+  <p class="text-sm text-gray-400 dark:text-gray-500 italic">{% if IS_RTL %}لا توجد ملاحظات على هذا الموعد.{% else %}No notes on this appointment.{% endif %}</p>
+  {% endif %}
+</section>
+
+{# ── Manage link ── #}
+<div class="mt-5 pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-end">
+  <a href="{% url 'secretary:appointment_overview' appt.id %}?return_to=waiting_room"
+     class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold transition-colors">
+    <i class="fa-solid fa-pen-to-square text-xs"></i>{% if IS_RTL %}إدارة الملاحظات{% else %}Manage notes{% endif %}
+  </a>
+</div>

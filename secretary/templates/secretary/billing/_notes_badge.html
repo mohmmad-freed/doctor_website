@@ -1,0 +1,19 @@
+{% load i18n %}
+{% comment %}
+"Has notes" reminder badge for a waiting-room card. Sibling of _debt_badge.html.
+Expects ``appt`` with ``appt.notes_count`` set by notes_utils.annotate_notes_count.
+Clickable — opens the read-only notes modal (delegated listener in _notes_modal.html).
+{% endcomment %}
+{% if appt.notes_count %}
+<button type="button"
+        data-view-notes
+        data-appt-id="{{ appt.id }}"
+        data-patient-name="{{ appt.patient.name }}"
+        title="{% if IS_RTL %}لدى المريض ملاحظات — اضغط للعرض{% else %}Patient has notes — click to view{% endif %}"
+        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold
+               bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300
+               hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors cursor-pointer">
+  <i class="fa-solid fa-note-sticky text-[10px]"></i>
+  {% if IS_RTL %}ملاحظات{% else %}Notes{% endif %}{% if appt.notes_count > 1 %} {{ appt.notes_count }}{% endif %}
+</button>
+{% endif %}

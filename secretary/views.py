@@ -734,6 +734,16 @@ def waiting_room(request):
         e["balance"] = inv.balance_due if inv else None
         e["debt"] = debt_map.get(e["appt"].patient_id)
 
+    # Notes: set ``appt.notes_count`` on every card so the board can show a
+    # "has notes" reminder badge (profile + appointment + legacy notes).
+    from secretary import notes_utils
+    notes_utils.annotate_notes_count(
+        confirmed_list
+        + [e["appt"] for e in checkedin_list]
+        + [e["appt"] for e in inprogress_list],
+        clinic,
+    )
+
     return render(request, "secretary/waiting_room/board.html", {
         "clinic": clinic,
         "today": today,
@@ -845,8 +855,11 @@ def waiting_room_confirmed_htmx(request):
         qs = qs.filter(doctor_id=doctor_filter)
     qs = _filter_confirmed_by_query(qs, confirmed_q)
 
+    from secretary import notes_utils
+    confirmed_list = notes_utils.annotate_notes_count(list(qs), clinic)
+
     return render(request, "secretary/htmx/waiting_room_confirmed_rows.html", {
-        "confirmed_list": list(qs),
+        "confirmed_list": confirmed_list,
         "clinic": clinic,
     })
 
@@ -903,6 +916,9 @@ def waiting_room_checkedin_htmx(request):
         e["open_invoice"] = inv_map.get(e["appt"].id)
         e["debt"] = debts.get(e["appt"].patient_id)
 
+    from secretary import notes_utils
+    notes_utils.annotate_notes_count([e["appt"] for e in checkedin_list], clinic)
+
     return render(request, "secretary/htmx/waiting_room_checkedin_rows.html", {
         "checkedin_list": checkedin_list,
         "clinic": clinic,
@@ -945,9 +961,55 @@ def waiting_room_inprogress_htmx(request):
         e["balance"] = inv.balance_due if inv else None
         e["debt"] = debts.get(e["appt"].patient_id)
 
+    from secretary import notes_utils
+    notes_utils.annotate_notes_count([e["appt"] for e in inprogress_list], clinic)
+
     return render(request, "secretary/htmx/waiting_room_inprogress_rows.html", {
         "inprogress_list": inprogress_list,
         "clinic": clinic,
+    })
+
+
+@login_required
+def waiting_room_notes_htmx(request):
+    """Read-only notes panel for a waiting-room card, loaded into the notes modal.
+
+    Returns the secretary-visible notes for one appointment: patient-profile
+    StaffNotes, appointment StaffNotes, and the legacy secretary_note/doctor_note
+    text. No add/delete — managing notes happens on the appointment overview page.
+    """
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden()
+
+    clinic = staff.clinic
+    appt = get_object_or_404(
+        Appointment.objects.select_related("patient"),
+        id=request.GET.get("appt"),
+        clinic=clinic,
+    )
+
+    visible = [StaffNote.Audience.DOCTOR, StaffNote.Audience.SECRETARY]
+    appointment_notes = list(
+        StaffNote.objects.filter(appointment=appt, audience__in=visible)
+        .select_related("author")
+        .order_by("-created_at")
+    )
+    patient_notes = list(
+        StaffNote.objects.filter(
+            clinic=clinic,
+            patient=appt.patient,
+            appointment__isnull=True,
+            audience__in=visible,
+        )
+        .select_related("author")
+        .order_by("-created_at")
+    )
+
+    return render(request, "secretary/htmx/waiting_room_notes_panel.html", {
+        "appt": appt,
+        "patient_notes": patient_notes,
+        "appointment_notes": appointment_notes,
     })
 
 
