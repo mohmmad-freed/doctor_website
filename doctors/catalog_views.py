@@ -31,6 +31,15 @@ def _doctor_required(request):
     return None
 
 
+def _parse_clinic_id(request):
+    """Best-effort parse of ``clinic_id`` from GET (falling back to POST) → int or None."""
+    raw = request.GET.get("clinic_id") or request.POST.get("clinic_id") or 0
+    try:
+        return int(raw) or None
+    except (ValueError, TypeError):
+        return None
+
+
 def _resolve_catalog_clinic(request, clinic_id=None):
     """
     Given an optional clinic_id, return (clinic, all_clinics) for any doctor.
@@ -58,10 +67,7 @@ def order_catalog(request):
     if denied:
         return denied
 
-    try:
-        clinic_id = int(request.GET.get("clinic_id", 0)) or None
-    except (ValueError, TypeError):
-        clinic_id = None
+    clinic_id = _parse_clinic_id(request)
 
     clinic, all_clinics = _resolve_catalog_clinic(request, clinic_id)
 
@@ -155,10 +161,7 @@ def drug_family_create(request):
     if denied:
         return denied
 
-    try:
-        clinic_id = int(request.GET.get("clinic_id") or request.POST.get("clinic_id", 0)) or None
-    except (ValueError, TypeError):
-        clinic_id = None
+    clinic_id = _parse_clinic_id(request)
 
     clinic, all_clinics = _resolve_catalog_clinic(request, clinic_id)
     if not clinic:
@@ -246,10 +249,7 @@ def drug_product_create(request):
     if denied:
         return denied
 
-    try:
-        clinic_id = int(request.GET.get("clinic_id") or request.POST.get("clinic_id", 0)) or None
-    except (ValueError, TypeError):
-        clinic_id = None
+    clinic_id = _parse_clinic_id(request)
 
     clinic, all_clinics = _resolve_catalog_clinic(request, clinic_id)
     if not clinic:
@@ -368,10 +368,7 @@ def catalog_item_create(request):
     if denied:
         return denied
 
-    try:
-        clinic_id = int(request.GET.get("clinic_id") or request.POST.get("clinic_id", 0)) or None
-    except (ValueError, TypeError):
-        clinic_id = None
+    clinic_id = _parse_clinic_id(request)
 
     clinic, all_clinics = _resolve_catalog_clinic(request, clinic_id)
     if not clinic:

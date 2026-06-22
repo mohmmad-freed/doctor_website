@@ -6,6 +6,10 @@ navigation badge stays accurate across all doctor pages without requiring
 each view to query it individually.
 """
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def doctor_context(request):
     if not request.user.is_authenticated:
@@ -27,4 +31,7 @@ def doctor_context(request):
         ).count()
         return {"pending_invitations_count": count}
     except Exception:
+        # Runs on every doctor page — never let a badge query break the page,
+        # but surface the failure in the logs instead of swallowing it silently.
+        logger.warning("Failed to compute pending_invitations_count", exc_info=True)
         return {"pending_invitations_count": 0}

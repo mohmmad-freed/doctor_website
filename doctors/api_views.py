@@ -1,5 +1,6 @@
 from datetime import date, datetime
 
+from django.db.models import Count
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -28,7 +29,7 @@ class SpecialtyListAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        specialties = Specialty.objects.all()
+        specialties = Specialty.objects.annotate(doctor_count=Count("doctors"))
 
         if not specialties.exists():
             return Response(
