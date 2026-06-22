@@ -30,6 +30,17 @@ def _resolve_appointment_url(notification):
     """
     from django.urls import reverse
 
+    # Procurement notifications carry no appointment/subject_patient — route by
+    # purchase_request to the right portal's purchase-requests page.
+    if not notification.appointment_id and notification.purchase_request_id:
+        if notification.context_role == AppointmentNotification.ContextRole.SECRETARY:
+            return reverse("secretary:purchase_requests")
+        if notification.context_role == AppointmentNotification.ContextRole.CLINIC_OWNER:
+            return reverse(
+                "clinics:purchase_requests_list",
+                kwargs={"clinic_id": notification.purchase_request.clinic_id},
+            )
+
     # Patient-scoped notifications (e.g. a profile note) have no appointment but
     # carry subject_patient — route to that patient's profile in the right portal.
     if not notification.appointment_id:
@@ -72,7 +83,7 @@ def _render_notifications(request, context_role, template, base_template):
     user = request.user
     notifications_qs = (
         AppointmentNotification.objects.filter(patient=user, context_role=context_role)
-        .select_related("appointment__clinic", "appointment__doctor", "subject_patient")
+        .select_related("appointment__clinic", "appointment__doctor", "subject_patient", "purchase_request")
         .order_by("-created_at")
     )
 

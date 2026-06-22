@@ -916,3 +916,113 @@ def notify_staff_note(note, actor_user):
 
     except Exception as exc:
         logger.error("[NOTIFICATION] notify_staff_note failed: %r", exc)
+
+
+# ── Procurement (purchase request) notifications ──────────────────────────────
+
+
+def notify_owner_purchase_request_submitted(purchase_request):
+    """
+    Notify the clinic owner that a secretary submitted a purchase request.
+
+    Routed to the owner's CLINIC_OWNER portal context. The actor badge shows the
+    secretary who submitted it. Safe to call from transaction.on_commit().
+    Failures are logged, never raised.
+    """
+    try:
+        clinic = purchase_request.clinic
+        owner_id = clinic.main_doctor_id
+        if not owner_id:
+            return
+
+        secretary = purchase_request.requested_by
+        actor_name = secretary.name if secretary else ""
+        title = "طلب شراء جديد بانتظار المراجعة"
+        message = (
+            f"قدّم {actor_name} طلب شراء جديد: {purchase_request.title} "
+            f"(الإجمالي ₪{purchase_request.total}). يرجى المراجعة والموافقة أو الرفض."
+        )
+        title_en = "New Purchase Request Pending Review"
+        message_en = (
+            f"{actor_name} submitted a purchase request: {purchase_request.title} "
+            f"(total ₪{purchase_request.total}). Please review and approve or reject."
+        )
+
+        AppointmentNotification.objects.create(
+            patient_id=owner_id,
+            appointment=None,
+            purchase_request=purchase_request,
+            context_role=AppointmentNotification.ContextRole.CLINIC_OWNER,
+            notification_type=AppointmentNotification.Type.PURCHASE_REQUEST_SUBMITTED,
+            title=title,
+            message=message,
+            title_en=title_en,
+            message_en=message_en,
+            actor_role=AppointmentNotification.ActorRole.SECRETARY,
+            actor_name=actor_name,
+            is_delivered=True,
+        )
+        logger.info(
+            "[NOTIFICATION] Purchase request %s submitted → owner_id=%s",
+            getattr(purchase_request, "id", None), owner_id,
+        )
+    except Exception as exc:
+        logger.error("[NOTIFICATION] notify_owner_purchase_request_submitted failed: %r", exc)
+
+
+def notify_secretary_purchase_request_reviewed(purchase_request):
+    """
+    Notify the secretary that the owner approved or rejected their purchase request.
+
+    Routed to the secretary's SECRETARY portal context. The owner's note is embedded
+    in the message so the secretary reads the decision feedback inline. The type
+    reflects the outcome (APPROVED/REJECTED). Safe to call from
+    transaction.on_commit(). Failures are logged, never raised.
+    """
+    try:
+        secretary_id = purchase_request.requested_by_id
+        if not secretary_id:
+            return
+
+        reviewer = purchase_request.reviewed_by
+        actor_name = reviewer.name if reviewer else ""
+        owner_note = (purchase_request.owner_note or "").strip()
+        approved = purchase_request.status == purchase_request.Status.APPROVED
+
+        if approved:
+            notification_type = AppointmentNotification.Type.PURCHASE_REQUEST_APPROVED
+            title = "تمت الموافقة على طلب الشراء"
+            message = f"تمت الموافقة على طلب الشراء: {purchase_request.title}."
+            title_en = "Purchase Request Approved"
+            message_en = f"Your purchase request was approved: {purchase_request.title}."
+        else:
+            notification_type = AppointmentNotification.Type.PURCHASE_REQUEST_REJECTED
+            title = "تم رفض طلب الشراء"
+            message = f"تم رفض طلب الشراء: {purchase_request.title}."
+            title_en = "Purchase Request Rejected"
+            message_en = f"Your purchase request was rejected: {purchase_request.title}."
+
+        if owner_note:
+            message += f" ملاحظة المالك: {owner_note}"
+            message_en += f" Owner's note: {owner_note}"
+
+        AppointmentNotification.objects.create(
+            patient_id=secretary_id,
+            appointment=None,
+            purchase_request=purchase_request,
+            context_role=AppointmentNotification.ContextRole.SECRETARY,
+            notification_type=notification_type,
+            title=title,
+            message=message,
+            title_en=title_en,
+            message_en=message_en,
+            actor_role=AppointmentNotification.ActorRole.DOCTOR,
+            actor_name=actor_name,
+            is_delivered=True,
+        )
+        logger.info(
+            "[NOTIFICATION] Purchase request %s reviewed (%s) → secretary_id=%s",
+            getattr(purchase_request, "id", None), purchase_request.status, secretary_id,
+        )
+    except Exception as exc:
+        logger.error("[NOTIFICATION] notify_secretary_purchase_request_reviewed failed: %r", exc)

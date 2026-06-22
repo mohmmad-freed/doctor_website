@@ -60,6 +60,11 @@ urlpatterns = [
     path('billing/invoice/<int:invoice_id>/payment/', views.invoice_record_payment, name='invoice_record_payment'),
     path('htmx/patient-debt/', views.patient_debt_badge_htmx, name='patient_debt_badge_htmx'),
 
+    # --- Procurement (Purchase Requests) ---
+    path('purchase-requests/', views.purchase_requests, name='purchase_requests'),
+    path('purchase-requests/create/', views.purchase_request_create, name='purchase_request_create'),
+    path('purchase-requests/<int:request_id>/delete/', views.purchase_request_delete, name='purchase_request_delete'),
+
     # --- Reports ---
     path('reports/', views.reports_index, name='reports_index'),
     path('reports/daily/', views.report_daily, name='report_daily'),

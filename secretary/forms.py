@@ -5,7 +5,7 @@ from decimal import Decimal
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
-from secretary.models import Payment
+from secretary.models import Payment, PurchaseRequest
 
 # Shared Tailwind / dark-mode input styling (matches patients/forms.py convention).
 _INPUT = (
@@ -90,3 +90,32 @@ class PaymentForm(forms.Form):
                 % {"max": self.max_payable}
             )
         return amount
+
+
+class PurchaseRequestForm(forms.Form):
+    """Header fields of a purchase request. Line items are submitted as dynamic rows."""
+
+    title = forms.CharField(
+        max_length=255,
+        label=_("عنوان الطلب"),
+        widget=forms.TextInput(attrs={
+            "class": _INPUT,
+            "placeholder": _("مثال: مستلزمات مكتبية"),
+        }),
+    )
+    category = forms.ChoiceField(
+        choices=PurchaseRequest.Category.choices,
+        initial=PurchaseRequest.Category.CLINIC,
+        label=_("الفئة"),
+        widget=forms.Select(attrs={"class": _INPUT}),
+    )
+    note = forms.CharField(
+        required=False,
+        label=_("سبب الطلب (اختياري)"),
+        help_text=_("اشرح للمالك سبب الحاجة لهذا الطلب."),
+        widget=forms.Textarea(attrs={
+            "class": _INPUT,
+            "rows": 3,
+            "placeholder": _("مثال: نفدت أوراق الطباعة في الاستقبال."),
+        }),
+    )

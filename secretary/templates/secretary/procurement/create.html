@@ -1,0 +1,181 @@
+{% extends "secretary/base_secretary.html" %}
+{% load i18n %}
+{% block title %}{% trans "طلب شراء جديد" %}{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+
+  <!-- Header -->
+  <div class="flex items-center gap-3">
+    <a href="{% url 'secretary:purchase_requests' %}" class="text-gray-400 hover:text-primary-500 transition-colors">
+      <i class="fa-solid fa-arrow-{% if IS_RTL %}right{% else %}left{% endif %} text-lg"></i>
+    </a>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+      <i class="fa-solid fa-cart-plus text-primary-500"></i>
+      {% trans "طلب شراء جديد" %}
+    </h1>
+  </div>
+
+  <form method="post" class="space-y-6">
+    {% csrf_token %}
+
+    <!-- Request header fields -->
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 space-y-4">
+      <div>
+        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">{{ form.title.label }}</label>
+        {{ form.title }}
+        {% for e in form.title.errors %}<p class="text-xs text-red-600 mt-1">{{ e }}</p>{% endfor %}
+      </div>
+      <div>
+        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">{{ form.category.label }}</label>
+        {{ form.category }}
+      </div>
+      <div>
+        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">{{ form.note.label }}</label>
+        {{ form.note }}
+        <p class="text-xs text-gray-400 mt-1">{{ form.note.help_text }}</p>
+      </div>
+    </div>
+
+    <!-- Line items -->
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">{% trans "العناصر المطلوبة" %}</h2>
+        <button type="button" id="add-item-btn"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-primary-50 text-primary-700 hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-300 transition-colors">
+          <i class="fa-solid fa-plus"></i> {% trans "إضافة عنصر" %}
+        </button>
+      </div>
+
+      <!-- Column headers (so each field, e.g. quantity, is clearly labeled) -->
+      <div class="grid grid-cols-12 gap-2 px-1 mb-1.5">
+        <span class="col-span-6 text-[11px] font-bold text-gray-400 uppercase tracking-wide">{% trans "الوصف" %}</span>
+        <span class="col-span-2 text-[11px] font-bold text-gray-400 uppercase tracking-wide text-center">{% trans "الكمية" %}</span>
+        <span class="col-span-3 text-[11px] font-bold text-gray-400 uppercase tracking-wide">{% trans "سعر الوحدة" %} (₪)</span>
+        <span class="col-span-1"></span>
+      </div>
+
+      <div id="items-container" class="space-y-3"></div>
+
+      <div class="flex justify-end mt-4 pt-3 border-t border-gray-200 dark:border-slate-700">
+        <span class="text-sm font-bold text-gray-700 dark:text-gray-300 me-3">{% trans "الإجمالي التقديري:" %}</span>
+        <span id="items-total" class="text-lg font-extrabold text-primary-600 dark:text-primary-400">₪0.00</span>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-3">
+      <a href="{% url 'secretary:purchase_requests' %}"
+         class="px-5 py-2.5 rounded-xl border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 text-sm font-bold hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+        {% trans "إلغاء" %}
+      </a>
+      <button type="submit"
+              class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary-600 text-white text-sm font-bold hover:bg-primary-700 transition-colors">
+        <i class="fa-solid fa-paper-plane"></i> {% trans "إرسال للمراجعة" %}
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Row template -->
+<template id="item-row-template">
+  <div class="item-row grid grid-cols-12 gap-2 items-center">
+    <div class="col-span-6">
+      <input type="text" name="item_description" placeholder="{% trans 'وصف العنصر' %}"
+             class="w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-slate-900 dark:border-slate-700 dark:text-white">
+    </div>
+    <div class="col-span-2">
+      <input type="number" name="item_quantity" value="1" min="1" step="1"
+             inputmode="numeric" aria-label="{% trans 'الكمية' %}" placeholder="{% trans 'الكمية' %}"
+             class="item-qty w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-slate-900 dark:border-slate-700 dark:text-white">
+    </div>
+    <div class="col-span-3">
+      <input type="number" name="item_unit_price" min="0" step="any"
+             inputmode="decimal" aria-label="{% trans 'سعر الوحدة' %}" placeholder="{% trans 'سعر الوحدة' %}"
+             class="item-price w-full px-3 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-slate-900 dark:border-slate-700 dark:text-white">
+    </div>
+    <div class="col-span-1 text-center">
+      <button type="button" class="remove-item-btn text-red-500 hover:text-red-700 transition-colors" title="{% trans 'حذف' %}">
+        <i class="fa-solid fa-trash-can"></i>
+      </button>
+    </div>
+  </div>
+</template>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const container = document.getElementById('items-container');
+  const tpl = document.getElementById('item-row-template');
+  const totalEl = document.getElementById('items-total');
+
+  function recompute() {
+    let total = 0;
+    container.querySelectorAll('.item-row').forEach(function (row) {
+      const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+      const price = parseFloat(row.querySelector('.item-price').value) || 0;
+      total += qty * price;
+    });
+    totalEl.textContent = '₪' + total.toFixed(2);
+  }
+
+  function addRow() {
+    const node = tpl.content.cloneNode(true);
+    container.appendChild(node);
+    recompute();
+  }
+
+  // Block characters that <input type="number"> otherwise allows but we don't
+  // want: exponent ("e"), sign ("+"/"-"), and — for quantity — decimal points.
+  container.addEventListener('keydown', function (e) {
+    const t = e.target;
+    if (!t.classList) return;
+    const isQty = t.classList.contains('item-qty');
+    const isPrice = t.classList.contains('item-price');
+    if (!isQty && !isPrice) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;  // allow shortcuts
+    if (['e', 'E', '+', '-'].includes(e.key)) { e.preventDefault(); return; }
+    if (isQty && (e.key === '.' || e.key === ',')) { e.preventDefault(); return; }
+    // Only one decimal separator allowed on price.
+    if (isPrice && (e.key === '.' || e.key === ',') && t.value.includes('.')) {
+      e.preventDefault();
+    }
+  });
+
+  function sanitizePrice(input) {
+    // Keep at most 2 decimal places (e.g. 5.30); pasted/typed extras are trimmed.
+    const v = input.value;
+    const dot = v.indexOf('.');
+    if (dot !== -1 && v.length - dot - 1 > 2) {
+      input.value = v.slice(0, dot + 3);
+    }
+  }
+
+  container.addEventListener('input', function (e) {
+    if (e.target.classList && e.target.classList.contains('item-price')) {
+      sanitizePrice(e.target);
+    }
+    recompute();
+  });
+  container.addEventListener('click', function (e) {
+    const btn = e.target.closest('.remove-item-btn');
+    if (btn) {
+      const row = btn.closest('.item-row');
+      if (container.querySelectorAll('.item-row').length > 1) {
+        row.remove();
+      } else {
+        row.querySelectorAll('input').forEach(function (i) {
+          i.value = i.classList.contains('item-qty') ? '1' : '';
+        });
+      }
+      recompute();
+    }
+  });
+
+  document.getElementById('add-item-btn').addEventListener('click', addRow);
+
+  // Start with one empty row.
+  addRow();
+})();
+</script>
+{% endblock %}

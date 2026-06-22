@@ -1531,6 +1531,14 @@
                     <span class="qt-label">{% trans "مراجعة المؤهلات" %}</span>
                     <span class="qt-sub">{% trans "شهادات وتراخيص الأطباء" %}</span>
                 </a>
+                <a href="{% url 'clinics:purchase_requests_list' clinic_id=clinic.id %}" class="quick-tile">
+                    <div class="qt-icon mi-purple"><i class="fa-solid fa-cart-shopping"></i></div>
+                    <span class="qt-label">
+                        {% trans "طلبات الشراء" %}
+                        {% if pending_purchase_requests %}<span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;margin-inline-start:4px;background:#f59e0b;color:#fff;font-size:0.65rem;font-weight:800;border-radius:9px;">{{ pending_purchase_requests }}</span>{% endif %}
+                    </span>
+                    <span class="qt-sub">{% trans "مراجعة طلبات مستلزمات الطاقم" %}</span>
+                </a>
                 <a href="{% url 'clinics:compliance_settings' clinic_id=clinic.id %}" class="quick-tile">
                     <div class="qt-icon mi-red"><i class="fa-solid fa-shield-halved"></i></div>
                     <span class="qt-label">{% trans "إعدادات الامتثال" %}</span>
