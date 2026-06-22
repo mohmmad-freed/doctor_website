@@ -200,11 +200,13 @@
                 {# ── Actor badge: who triggered this (owner sees secretary & doctor names) ── #}
                 {% if notif.actor_role %}
                 <div style="margin-top:0.45rem;">
-                    <span class="onc-actor" style="{% if notif.actor_role == 'PATIENT' %}background:rgba(14,165,233,0.12);color:#0284c7;{% elif notif.actor_role == 'SECRETARY' %}background:rgba(139,92,246,0.12);color:#7c3aed;{% else %}background:rgba(20,184,166,0.12);color:#0d9488;{% endif %}">
+                    <span class="onc-actor" style="{% if notif.actor_role == 'PATIENT' %}background:rgba(14,165,233,0.12);color:#0284c7;{% elif notif.actor_role == 'SECRETARY' %}background:rgba(139,92,246,0.12);color:#7c3aed;{% elif notif.actor_role == 'OWNER' %}background:rgba(245,158,11,0.12);color:#b45309;{% else %}background:rgba(20,184,166,0.12);color:#0d9488;{% endif %}">
                         {% if notif.actor_role == 'PATIENT' %}
                             <i class="fa-solid fa-user" style="font-size:0.62rem;"></i>{% trans "بواسطة المريض" %}
                         {% elif notif.actor_role == 'SECRETARY' %}
                             <i class="fa-solid fa-user-nurse" style="font-size:0.62rem;"></i>{% trans "بواسطة السكرتيرة" %}
+                        {% elif notif.actor_role == 'OWNER' %}
+                            <i class="fa-solid fa-user-tie" style="font-size:0.62rem;"></i>{% trans "بواسطة المالك" %}
                         {% else %}
                             <i class="fa-solid fa-user-doctor" style="font-size:0.62rem;"></i>{% trans "بواسطة الطبيب" %}
                         {% endif %}
@@ -217,15 +219,8 @@
 
                 <p class="onc-msg">{{ notif.localized_message|clock_text:CLOCK_12H }}</p>
 
-                {# ── Footer: link · mark-read · delete ── #}
+                {# ── Footer: mark-read · link · delete (order matches secretary portal) ── #}
                 <div class="onc-foot">
-                    {% if notif.target_url %}
-                    <a href="{{ notif.target_url }}" style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.78rem;font-weight:700;color:var(--color-primary-500);text-decoration:none;">
-                        <i class="fa-solid {% if IS_RTL %}fa-arrow-left{% else %}fa-arrow-right{% endif %}" style="font-size:0.6rem;"></i>
-                        {% if not notif.appointment and notif.subject_patient %}{% trans "عرض ملف المريض" %}{% else %}{% trans "عرض التفاصيل" %}{% endif %}
-                    </a>
-                    {% endif %}
-
                     {% if not notif.is_read %}
                     <form method="post" action="{% url 'appointments:mark_notification_read' notif.pk %}" style="margin:0;">
                         {% csrf_token %}
@@ -240,6 +235,14 @@
                         <i class="fa-solid fa-check" style="font-size:0.6rem;color:#10b981;"></i>
                         {% trans "مقروء" %}
                     </span>
+                    {% endif %}
+
+                    {% if notif.target_url %}
+                    <span style="width:1px;height:0.85rem;background:var(--color-surface-border);flex-shrink:0;"></span>
+                    <a href="{{ notif.target_url }}" style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.78rem;font-weight:700;color:var(--color-primary-500);text-decoration:none;">
+                        {% if notif.purchase_request %}{% trans "عرض الطلب" %}{% elif not notif.appointment and notif.subject_patient %}{% trans "عرض ملف المريض" %}{% else %}{% trans "عرض التفاصيل" %}{% endif %}
+                        <i class="fa-solid {% if IS_RTL %}fa-arrow-left{% else %}fa-arrow-right{% endif %}" style="font-size:0.6rem;"></i>
+                    </a>
                     {% endif %}
 
                     {# Per-card delete (hard delete) #}

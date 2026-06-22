@@ -4167,3 +4167,9 @@ msgstr "Total Patient Debt"
 
 msgid "رصيد حالي (غير مرتبط بالفترة)"
 msgstr "Current balance (not period-bound)"
+
+msgid "عرض الطلب"
+msgstr "View Request"
+
+msgid "بواسطة المالك"
+msgstr "By owner"

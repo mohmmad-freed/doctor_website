@@ -1009,7 +1009,7 @@ def notify_secretary_purchase_request_reviewed(purchase_request):
             message=message,
             title_en=title_en,
             message_en=message_en,
-            actor_role=AppointmentNotification.ActorRole.DOCTOR,
+            actor_role=AppointmentNotification.ActorRole.OWNER,
             actor_name=actor_name,
             is_delivered=True,
         )

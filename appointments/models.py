@@ -370,6 +370,7 @@ class AppointmentNotification(models.Model):
         PATIENT = "PATIENT", "Patient"
         SECRETARY = "SECRETARY", "Secretary"
         DOCTOR = "DOCTOR", "Doctor"
+        OWNER = "OWNER", "Owner"
 
     patient = models.ForeignKey(
         settings.AUTH_USER_MODEL,

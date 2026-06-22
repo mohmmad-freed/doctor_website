@@ -2356,3 +2356,9 @@ msgstr ""
 
 msgid "رصيد حالي (غير مرتبط بالفترة)"
 msgstr ""
+
+msgid "عرض الطلب"
+msgstr ""
+
+msgid "بواسطة المالك"
+msgstr ""

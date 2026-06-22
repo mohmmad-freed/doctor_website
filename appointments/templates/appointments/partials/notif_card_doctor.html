@@ -65,19 +65,24 @@
                                  text-[10px] font-bold uppercase tracking-wide
                                  {% if notif.actor_role == 'PATIENT' %}bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-300
                                  {% elif notif.actor_role == 'SECRETARY' %}bg-violet-50 text-violet-700 dark:bg-violet-900/20 dark:text-violet-300
+                                 {% elif notif.actor_role == 'OWNER' %}bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300
                                  {% else %}bg-teal-50 text-teal-700 dark:bg-teal-900/20 dark:text-teal-300{% endif %}">
                         {% if notif.actor_role == 'PATIENT' %}
                             <i class="fa-solid fa-user text-[9px]"></i>{% trans "بواسطة المريض" %}
                         {% elif notif.actor_role == 'SECRETARY' %}
                             <i class="fa-solid fa-user-nurse text-[9px]"></i>{% trans "بواسطة السكرتيرة" %}
+                        {% elif notif.actor_role == 'OWNER' %}
+                            <i class="fa-solid fa-user-tie text-[9px]"></i>{% trans "بواسطة المالك" %}
                         {% else %}
                             <i class="fa-solid fa-user-doctor text-[9px]"></i>{% trans "بواسطة الطبيب" %}
                         {% endif %}
-                        {# Name shown per portal: secretary name in doctor/secretary/owner; doctor name in secretary/owner; never the patient portal. #}
+                        {# Name shown per portal: secretary name in doctor/secretary/owner; doctor name in secretary/owner; owner name everywhere it appears; never the patient portal. #}
                         {% if notif.actor_name %}
                             {% if notif.actor_role == 'SECRETARY' and context_role != 'PATIENT' %}
                                 <span class="opacity-50">·</span><bdi dir="auto" class="font-semibold normal-case">{{ notif.actor_name }}</bdi>
                             {% elif notif.actor_role == 'DOCTOR' and context_role == 'SECRETARY' or notif.actor_role == 'DOCTOR' and context_role == 'CLINIC_OWNER' %}
+                                <span class="opacity-50">·</span><bdi dir="auto" class="font-semibold normal-case">{{ notif.actor_name }}</bdi>
+                            {% elif notif.actor_role == 'OWNER' %}
                                 <span class="opacity-50">·</span><bdi dir="auto" class="font-semibold normal-case">{{ notif.actor_name }}</bdi>
                             {% endif %}
                         {% endif %}
@@ -131,7 +136,7 @@
                                text-primary-600 dark:text-primary-400
                                hover:text-primary-700 dark:hover:text-primary-300
                                transition-colors group">
-                    {% trans "عرض الموعد" %}
+                    {% if notif.purchase_request %}{% trans "عرض الطلب" %}{% elif not notif.appointment and notif.subject_patient %}{% trans "عرض ملف المريض" %}{% else %}{% trans "عرض الموعد" %}{% endif %}
                     <i class="fa-solid {% if IS_RTL %}fa-arrow-left{% else %}fa-arrow-right{% endif %}
                               text-[10px] transition-transform
                               {% if IS_RTL %}group-hover:-translate-x-0.5{% else %}group-hover:translate-x-0.5{% endif %}"></i>
@@ -143,7 +148,7 @@
                           text-primary-600 dark:text-primary-400
                           hover:text-primary-700 dark:hover:text-primary-300
                           transition-colors group">
-                    {% if not notif.appointment and notif.subject_patient %}{% trans "عرض ملف المريض" %}{% else %}{% trans "عرض الموعد" %}{% endif %}
+                    {% if notif.purchase_request %}{% trans "عرض الطلب" %}{% elif not notif.appointment and notif.subject_patient %}{% trans "عرض ملف المريض" %}{% else %}{% trans "عرض الموعد" %}{% endif %}
                     <i class="fa-solid {% if IS_RTL %}fa-arrow-left{% else %}fa-arrow-right{% endif %}
                               text-[10px] transition-transform
                               {% if IS_RTL %}group-hover:-translate-x-0.5{% else %}group-hover:translate-x-0.5{% endif %}"></i>
