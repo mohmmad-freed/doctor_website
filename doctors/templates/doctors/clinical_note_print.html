@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="{% if IS_RTL %}ar{% else %}en{% endif %}" dir="{% if IS_RTL %}rtl{% else %}ltr{% endif %}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if IS_RTL %}ملاحظة سريرية{% else %}Clinical Note{% endif %} – {{ patient.name }}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #eef1f6; color: #1e293b; padding: 2rem; }
+    [dir="rtl"] body { font-family: 'Cairo', sans-serif; }
+    .page { max-width: 760px; margin: 0 auto; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 8px 32px rgba(15,23,42,.12); }
+
+    /* Header / clinic branding */
+    .header { background: linear-gradient(135deg, #4338ca 0%, #6366f1 55%, #818cf8 100%); padding: 1.75rem 2.5rem; color: #fff; display: flex; align-items: center; gap: 1.25rem; }
+    .logo-box { flex-shrink: 0; width: 76px; height: 76px; border-radius: 14px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,.18); }
+    .logo-box img { width: 100%; height: 100%; object-fit: contain; }
+    .logo-fallback { font-size: 1.9rem; font-weight: 800; color: #4338ca; }
+    .clinic-info { flex: 1; min-width: 0; }
+    .clinic-info h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.2; }
+    .clinic-info .contact { font-size: .8rem; opacity: .88; margin-top: .4rem; line-height: 1.5; }
+    .clinic-info .contact span { margin-inline-end: .9rem; white-space: nowrap; }
+    .doc-badge { flex-shrink: 0; text-align: center; }
+    .doc-badge .pill { display: inline-block; padding: .35rem .75rem; border-radius: 999px; background: rgba(255,255,255,.18); font-size: .7rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+
+    /* Title strip */
+    .title-strip { display: flex; align-items: center; justify-content: space-between; padding: .9rem 2.5rem; background: #f1f5f9; border-bottom: 1px solid #e2e8f0; }
+    .title-strip h2 { font-size: 1.05rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: .5rem; }
+    .title-strip h2::before { content: ""; width: 8px; height: 22px; border-radius: 4px; background: #4f46e5; display: inline-block; }
+    .title-strip .date { font-size: .85rem; font-weight: 600; color: #64748b; }
+
+    /* Meta grid */
+    .meta { padding: 1.4rem 2.5rem; border-bottom: 1px solid #e2e8f0; display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem 1.5rem; }
+    .meta-item label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #94a3b8; display: block; margin-bottom: .25rem; }
+    .meta-item p { font-size: .92rem; font-weight: 600; color: #1e293b; }
+
+    /* Body sections */
+    .body { padding: 1.5rem 2.5rem .5rem; }
+    .section { margin-bottom: 1.25rem; }
+    .section > .label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #4f46e5; margin-bottom: .45rem; display: flex; align-items: center; gap: .45rem; }
+    .section > .label::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #6366f1; display: inline-block; }
+    .section .content { font-size: .9rem; line-height: 1.65; color: #334155; white-space: pre-wrap; background: #f8fafc; border: 1px solid #e8edf3; border-radius: .6rem; padding: .8rem 1rem; border-inline-start: 3px solid #c7d2fe; }
+
+    /* Ortho findings */
+    .ortho-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+    .ortho-card { background: #f0fdfa; border: 1px solid #ccfbf1; border-radius: .6rem; padding: .7rem .85rem; }
+    .ortho-card .region { font-size: .82rem; font-weight: 700; color: #0f766e; margin-bottom: .4rem; }
+    .chips { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: .35rem; }
+    .chip { font-size: .68rem; font-weight: 600; padding: .12rem .5rem; border-radius: 999px; background: #e2e8f0; color: #475569; }
+    .chip.pain { background: #fee2e2; color: #b91c1c; }
+    .ortho-card .rom { font-size: .72rem; color: #64748b; }
+    .ortho-card .onote { font-size: .72rem; color: #475569; font-style: italic; margin-top: .15rem; }
+
+    /* Footer / signature */
+    .footer { padding: 1.5rem 2.5rem; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: flex-end; margin-top: 1rem; }
+    .footer .note { font-size: .72rem; color: #94a3b8; max-width: 60%; }
+    .sig { text-align: center; }
+    .sig-line { width: 180px; border-top: 1.5px solid #94a3b8; margin-bottom: .4rem; }
+    .sig .doctor-name { font-size: .92rem; font-weight: 700; color: #1e293b; }
+    .sig p { font-size: .76rem; color: #64748b; }
+
+    .empty { font-size: .85rem; color: #94a3b8; font-style: italic; padding: 1rem 0; }
+
+    .print-btn { position: fixed; bottom: 2rem; inset-inline-end: 2rem; padding: .75rem 1.5rem; background: #4f46e5; color: #fff; border: none; border-radius: .7rem; font-family: inherit; font-size: .875rem; font-weight: 600; cursor: pointer; box-shadow: 0 6px 16px rgba(79,70,229,.4); display: flex; align-items: center; gap: .5rem; }
+    .print-btn:hover { background: #4338ca; }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .page { box-shadow: none; border-radius: 0; max-width: 100%; }
+      .print-btn { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- Clinic branding header -->
+  <div class="header">
+    <div class="logo-box">
+      {% if clinic.logo %}
+        <img src="{{ clinic.logo.url }}" alt="{{ clinic.name }}">
+      {% else %}
+        <span class="logo-fallback">{{ clinic.name|first|upper }}</span>
+      {% endif %}
+    </div>
+    <div class="clinic-info">
+      <h1>{{ clinic.name }}</h1>
+      <div class="contact">
+        {% if clinic.address %}<span>📍 {{ clinic.address }}</span>{% endif %}
+        {% if clinic.phone %}<span>📞 {{ clinic.phone }}</span>{% endif %}
+        {% if clinic.email %}<span>✉ {{ clinic.email }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="doc-badge">
+      <span class="pill">{% if IS_RTL %}ملاحظة سريرية{% else %}Clinical Note{% endif %}</span>
+    </div>
+  </div>
+
+  <!-- Title strip -->
+  <div class="title-strip">
+    <h2>{% if IS_RTL %}الملاحظة السريرية{% else %}Clinical Note{% endif %}</h2>
+    <span class="date">{{ note.created_at|date:"d F Y" }}</span>
+  </div>
+
+  <!-- Patient + doctor meta -->
+  <div class="meta">
+    <div class="meta-item">
+      <label>{% if IS_RTL %}المريض{% else %}Patient{% endif %}</label>
+      <p>{{ patient.name }}</p>
+    </div>
+    <div class="meta-item">
+      <label>{% if IS_RTL %}رقم الهاتف{% else %}Phone{% endif %}</label>
+      <p>{{ patient.phone|default:"—" }}</p>
+    </div>
+    <div class="meta-item">
+      <label>{% if IS_RTL %}الطبيب المعالج{% else %}Attending Doctor{% endif %}</label>
+      <p>{{ note.doctor.name }}</p>
+    </div>
+    <div class="meta-item">
+      <label>{% if IS_RTL %}تاريخ التحرير{% else %}Date{% endif %}</label>
+      <p>{{ note.created_at|date:"d F Y · H:i" }}</p>
+    </div>
+  </div>
+
+  <!-- Note body -->
+  <div class="body">
+    {% if note.subjective %}
+    <div class="section">
+      <div class="label">{% if IS_RTL %}الأعراض والشكوى{% else %}Subjective{% endif %}</div>
+      <div class="content">{{ note.subjective }}</div>
+    </div>
+    {% endif %}
+
+    {% if note.objective %}
+    <div class="section">
+      <div class="label">{% if IS_RTL %}الفحص السريري{% else %}Objective{% endif %}</div>
+      <div class="content">{{ note.objective }}</div>
+    </div>
+    {% endif %}
+
+    {% if note.assessment %}
+    <div class="section">
+      <div class="label">{% if IS_RTL %}التشخيص{% else %}Assessment{% endif %}</div>
+      <div class="content">{{ note.assessment }}</div>
+    </div>
+    {% endif %}
+
+    {% if note.plan %}
+    <div class="section">
+      <div class="label">{% if IS_RTL %}الخطة العلاجية{% else %}Plan{% endif %}</div>
+      <div class="content">{{ note.plan }}</div>
+    </div>
+    {% endif %}
+
+    {# Orthopedic structured findings #}
+    {% if note.ortho_findings_data %}
+    <div class="section">
+      <div class="label">{% if IS_RTL %}فحص العظام{% else %}Orthopedic Exam{% endif %}</div>
+      <div class="ortho-grid">
+        {% for finding in note.ortho_findings_data %}
+        <div class="ortho-card">
+          <div class="region">
+            {% if finding.id == 'cervical' %}{% if IS_RTL %}العمود الفقري العنقي{% else %}Cervical Spine{% endif %}
+            {% elif finding.id == 'r_shoulder' %}{% if IS_RTL %}الكتف الأيمن{% else %}Right Shoulder{% endif %}
+            {% elif finding.id == 'l_shoulder' %}{% if IS_RTL %}الكتف الأيسر{% else %}Left Shoulder{% endif %}
+            {% elif finding.id == 'r_elbow' %}{% if IS_RTL %}الكوع الأيمن{% else %}Right Elbow{% endif %}
+            {% elif finding.id == 'l_elbow' %}{% if IS_RTL %}الكوع الأيسر{% else %}Left Elbow{% endif %}
+            {% elif finding.id == 'r_wrist' %}{% if IS_RTL %}الرسغ/اليد اليمنى{% else %}Right Wrist/Hand{% endif %}
+            {% elif finding.id == 'l_wrist' %}{% if IS_RTL %}الرسغ/اليد اليسرى{% else %}Left Wrist/Hand{% endif %}
+            {% elif finding.id == 'thoracolumbar' %}{% if IS_RTL %}العمود الفقري الصدري/القطني{% else %}Thoracic/Lumbar Spine{% endif %}
+            {% elif finding.id == 'r_hip' %}{% if IS_RTL %}الورك الأيمن{% else %}Right Hip{% endif %}
+            {% elif finding.id == 'l_hip' %}{% if IS_RTL %}الورك الأيسر{% else %}Left Hip{% endif %}
+            {% elif finding.id == 'r_knee' %}{% if IS_RTL %}الركبة اليمنى{% else %}Right Knee{% endif %}
+            {% elif finding.id == 'l_knee' %}{% if IS_RTL %}الركبة اليسرى{% else %}Left Knee{% endif %}
+            {% elif finding.id == 'r_ankle' %}{% if IS_RTL %}الكاحل/القدم الأيمن{% else %}Right Ankle/Foot{% endif %}
+            {% elif finding.id == 'l_ankle' %}{% if IS_RTL %}الكاحل/القدم الأيسر{% else %}Left Ankle/Foot{% endif %}
+            {% else %}{{ finding.id }}{% endif %}
+          </div>
+          <div class="chips">
+            {% if finding.pain != '' and finding.pain != None %}<span class="chip pain">{% if IS_RTL %}ألم{% else %}Pain{% endif %} {{ finding.pain }}/10</span>{% endif %}
+            {% if finding.tenderness %}<span class="chip">{% if IS_RTL %}إيلام{% else %}Tenderness{% endif %}</span>{% endif %}
+            {% if finding.swelling %}<span class="chip">{% if IS_RTL %}تورم{% else %}Swelling{% endif %}</span>{% endif %}
+            {% if finding.instability %}<span class="chip">{% if IS_RTL %}عدم استقرار{% else %}Instability{% endif %}</span>{% endif %}
+            {% if finding.locking %}<span class="chip">{% if IS_RTL %}تقفل{% else %}Locking{% endif %}</span>{% endif %}
+            {% if finding.clicking %}<span class="chip">{% if IS_RTL %}طقطقة{% else %}Clicking{% endif %}</span>{% endif %}
+            {% if finding.weakness %}<span class="chip">{% if IS_RTL %}ضعف{% else %}Weakness{% endif %}</span>{% endif %}
+            {% if finding.impingement %}<span class="chip">{% if IS_RTL %}انضغاط{% else %}Impingement{% endif %}</span>{% endif %}
+            {% if finding.stiffness %}<span class="chip">{% if IS_RTL %}تيبس{% else %}Stiffness{% endif %}</span>{% endif %}
+            {% if finding.radiation %}<span class="chip">{% if IS_RTL %}انتشار{% else %}Radiation{% endif %}</span>{% endif %}
+            {% if finding.numbness %}<span class="chip">{% if IS_RTL %}تنميل{% else %}Numbness{% endif %}</span>{% endif %}
+          </div>
+          {% if finding.rom %}<p class="rom">{% if IS_RTL %}الحركة:{% else %}ROM:{% endif %} {{ finding.rom }}</p>{% endif %}
+          {% if finding.notes %}<p class="onote">{{ finding.notes }}</p>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# Extra sections: VITALS, BODY_DIAGRAM, DENTAL, CUSTOM — precomputed list of {label, value} #}
+    {% for extra in note.labeled_extras %}
+    <div class="section">
+      <div class="label">{{ extra.label }}</div>
+      <div class="content">{{ extra.value }}</div>
+    </div>
+    {% endfor %}
+
+    {% if note.free_text %}
+    <div class="section">
+      <div class="label">{% if IS_RTL %}ملاحظات إضافية{% else %}Additional Notes{% endif %}</div>
+      <div class="content">{{ note.free_text }}</div>
+    </div>
+    {% endif %}
+
+    {% if not note.subjective and not note.objective and not note.assessment and not note.plan and not note.free_text and not note.ortho_findings_data and not note.labeled_extras %}
+    <p class="empty">{% if IS_RTL %}لا يوجد محتوى مُسجّل في هذه الملاحظة.{% else %}This note has no recorded content.{% endif %}</p>
+    {% endif %}
+  </div>
+
+  <!-- Footer / signature -->
+  <div class="footer">
+    <p class="note">{% if IS_RTL %}صدرت هذه الملاحظة السريرية إلكترونياً عبر MedPortal.{% else %}This clinical note was issued electronically via MedPortal.{% endif %}</p>
+    <div class="sig">
+      <div class="sig-line"></div>
+      <p class="doctor-name">{{ note.doctor.name }}</p>
+      <p>{{ clinic.name }}</p>
+      <p>{{ note.created_at|date:"d M Y" }}</p>
+    </div>
+  </div>
+</div>
+
+<button class="print-btn" onclick="window.print()">
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+    <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/>
+    <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/>
+  </svg>
+  {% if IS_RTL %}طباعة{% else %}Print{% endif %}
+</button>
+
+</body>
+</html>

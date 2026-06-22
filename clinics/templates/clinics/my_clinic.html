@@ -1277,6 +1277,34 @@
                         {% endif %}
                     </dd>
                 </dl>
+
+                {# ── Clinic branding / logo ── #}
+                <div style="margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border,#e2e8f0);">
+                    <div style="display:flex;align-items:center;gap:.9rem;margin-bottom:.85rem;">
+                        <div style="width:60px;height:60px;border-radius:12px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;border:1px solid #e2e8f0;">
+                            {% if clinic.logo %}
+                            <img src="{{ clinic.logo.url }}" alt="{{ clinic.name }}" style="width:100%;height:100%;object-fit:contain;">
+                            {% else %}
+                            <i class="fa-solid fa-image" style="color:#94a3b8;font-size:1.2rem;"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <div style="font-weight:600;font-size:.9rem;">{% trans "شعار العيادة" %}</div>
+                            <div style="font-size:.78rem;color:#94a3b8;">{% trans "يظهر على المستندات المطبوعة (الوصفات والملاحظات السريرية)." %}</div>
+                        </div>
+                    </div>
+                    <form method="post" action="{% url 'clinics:clinic_upload_logo' clinic_id=clinic.id %}"
+                          enctype="multipart/form-data"
+                          style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
+                        {% csrf_token %}
+                        <input type="file" name="logo" accept="image/*" required
+                               style="font-size:.82rem;max-width:220px;">
+                        <button type="submit"
+                                style="display:inline-flex;align-items:center;gap:.4rem;padding:.5rem .9rem;border:none;border-radius:.55rem;background:#4f46e5;color:#fff;font-size:.82rem;font-weight:600;cursor:pointer;">
+                            <i class="fa-solid fa-upload"></i> {% if clinic.logo %}{% trans "تغيير الشعار" %}{% else %}{% trans "رفع الشعار" %}{% endif %}
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
 

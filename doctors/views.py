@@ -2335,6 +2335,7 @@ def ws_note_add(request, patient_id):
             free_text=request.POST.get("free_text", "").strip(),
             extra_sections=extra_sections,
             extra_sections_labels=_collect_extra_sections_labels(active_sections),
+            is_secretary_allowed=request.POST.get("is_secretary_allowed") == "on",
         )
         ctx.update(_ws_notes_data(ctx["patient"], ctx["shared_clinic_ids"], request))
         ctx["note_saved"]           = True
@@ -2363,6 +2364,7 @@ def ws_note_edit(request, patient_id, note_id):
         note.free_text          = request.POST.get("free_text", "").strip()
         note.extra_sections     = _collect_extra_sections(request.POST)
         note.extra_sections_labels = _collect_extra_sections_labels(active_sections)
+        note.is_secretary_allowed = request.POST.get("is_secretary_allowed") == "on"
         note.save()
         ctx.update(_ws_notes_data(ctx["patient"], ctx["shared_clinic_ids"], request))
         ctx["note_saved"]           = True
@@ -2425,6 +2427,29 @@ def ws_note_addendum_add(request, patient_id, note_id):
         )
 
     return redirect("doctors:patient_workspace", patient_id=patient_id)
+
+
+@login_required
+def ws_note_print(request, patient_id, note_id):
+    """Render a printable (browser 'Save as PDF') version of a single clinical note
+    for the treating doctor."""
+    ctx = _ws_access(request, patient_id)
+    if ctx is None:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden()
+
+    note = get_object_or_404(
+        ClinicalNote.objects.select_related("doctor", "clinic"),
+        pk=note_id,
+        patient_id=patient_id,
+        clinic_id__in=ctx["shared_clinic_ids"],
+    )
+    _annotate_notes_with_labeled_extras([note])
+    return render(
+        request,
+        "doctors/clinical_note_print.html",
+        {"note": note, "patient": ctx["patient"], "clinic": note.clinic},
+    )
 
 
 # ── Orders CRUD ───────────────────────────────────────────────────────────────

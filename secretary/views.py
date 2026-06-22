@@ -40,6 +40,26 @@ def _require_secretary(request):
     ).select_related("clinic").first()
 
 
+def _secretary_visible_note(clinic, patient_id):
+    """The single clinical note a secretary may read/print for this patient, or None.
+
+    Rule: the secretary may only ever see the *latest* note in their clinic, and
+    only when the authoring doctor flagged it as secretary-visible. Because we
+    always resolve the newest note first, the "latest" condition is structural —
+    an older flagged note can never be returned once a newer one exists.
+    """
+    from patients.models import ClinicalNote
+    note = (
+        ClinicalNote.objects.filter(patient_id=patient_id, clinic=clinic)
+        .select_related("doctor", "clinic")
+        .order_by("-created_at")
+        .first()
+    )
+    if note and note.is_secretary_allowed:
+        return note
+    return None
+
+
 def _today_filter_counts(clinic, all_rows=None):
     """
     Counts shown on the filter pills. Derived from the "all" row set so the numbers
@@ -3037,6 +3057,9 @@ def patient_detail(request, patient_id):
     from patients.models import PatientProfile as _PP
     blood_type_choices = _PP.BLOOD_TYPE_CHOICES
 
+    # Latest clinical note, only if the doctor allowed secretary access to it.
+    latest_clinical_note = _secretary_visible_note(clinic, patient_id)
+
     tab_list = [
         ("info",         _("المعلومات الشخصية"), "fa-solid fa-user"),
         ("appointments", _("المواعيد"),           "fa-solid fa-calendar-days"),
@@ -3063,7 +3086,36 @@ def patient_detail(request, patient_id):
         "tab_list": tab_list,
         "blood_type_choices": blood_type_choices,
         "patient_notes": patient_notes,
+        "latest_clinical_note": latest_clinical_note,
     })
+
+
+@login_required
+def clinical_note_print(request, patient_id):
+    """Printable (browser 'Save as PDF') view of the patient's latest clinical note,
+    for a secretary. Access is granted only when that latest note was flagged
+    secretary-visible by its doctor (see ``_secretary_visible_note``)."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+
+    clinic = staff.clinic
+    patient = get_object_or_404(User, id=patient_id)
+    get_object_or_404(ClinicPatient, clinic=clinic, patient=patient)
+
+    note = _secretary_visible_note(clinic, patient_id)
+    if note is None:
+        return HttpResponseForbidden(
+            "لا يُسمح لك بعرض هذه الملاحظة السريرية."
+        )
+
+    from doctors.views import _annotate_notes_with_labeled_extras
+    _annotate_notes_with_labeled_extras([note])
+    return render(
+        request,
+        "doctors/clinical_note_print.html",
+        {"note": note, "patient": patient, "clinic": clinic},
+    )
 
 
 @login_required
