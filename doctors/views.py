@@ -1,5 +1,7 @@
 import json
+import logging
 from datetime import datetime, date
+from functools import wraps
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
@@ -18,6 +20,35 @@ from .services import generate_slots_for_date
 from accounts.otp_utils import request_otp, verify_otp, is_in_cooldown, get_remaining_resends, get_cooldown_remaining
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
+
+
+def _is_doctor(user):
+    return user.has_role("DOCTOR") or user.has_role("MAIN_DOCTOR")
+
+
+def doctor_required(view_func):
+    """Require an authenticated DOCTOR/MAIN_DOCTOR.
+
+    Consolidates the four role-check patterns that used to be copy-pasted across
+    this module (inline ``"DOCTOR" not in ...`` blocks, ``_is_doctor``,
+    ``_require_doctor`` and ``_doctor_required``). Stack it *under* ``@login_required``
+    so ``request.user`` is always authenticated by the time this runs.
+
+    HTML page requests get a flash message + redirect home (unchanged behaviour);
+    HTMX/POST requests get a bare 403 so partial/AJAX callers fail cleanly instead
+    of swallowing a redirected HTML page.
+    """
+    @wraps(view_func)
+    def _wrapped(request, *args, **kwargs):
+        if not _is_doctor(request.user):
+            if request.headers.get("HX-Request") or request.method == "POST":
+                return HttpResponseForbidden("هذه الصفحة متاحة للأطباء فقط.")
+            messages.error(request, "هذه الصفحة متاحة للأطباء فقط.")
+            return redirect(reverse("accounts:home"))
+        return view_func(request, *args, **kwargs)
+
+    return _wrapped
 
 
 # ============================================
@@ -26,14 +57,10 @@ User = get_user_model()
 
 
 @login_required
+@doctor_required
 def dashboard(request):
     """Full doctor dashboard with verification status, clinic memberships, and today's appointments."""
     user = request.user
-    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
-        from django.contrib import messages as _msg
-        from django.urls import reverse as _rev
-        _msg.error(request, "هذه الصفحة متاحة للأطباء فقط.")
-        return redirect(_rev("accounts:home"))
 
     # Identity verification
     verification = DoctorVerification.objects.filter(user=user).first()
@@ -54,12 +81,17 @@ def dashboard(request):
         if cid not in _best or _role_priority.get(m.role, 99) < _role_priority.get(_best[cid].role, 99):
             _best[cid] = m
 
+    # Fetch this doctor's credentials once and group by clinic, instead of
+    # issuing a query (plus exists()/iteration) per clinic card.
+    from collections import defaultdict
+    creds_by_clinic = defaultdict(list)
+    for cred in ClinicDoctorCredential.objects.filter(doctor=user).select_related("specialty"):
+        creds_by_clinic[cred.clinic_id].append(cred)
+
     clinic_cards = []
     for m in _best.values():
-        credentials = ClinicDoctorCredential.objects.filter(
-            doctor=user, clinic=m.clinic
-        ).select_related("specialty")
-        all_verified = credentials.exists() and all(
+        credentials = creds_by_clinic.get(m.clinic_id, [])
+        all_verified = bool(credentials) and all(
             c.credential_status == "CREDENTIALS_VERIFIED" for c in credentials
         )
         clinic_cards.append({
@@ -135,14 +167,10 @@ def dashboard(request):
 
 
 @login_required
+@doctor_required
 def appointments_list(request):
     """Doctor's full appointment list — filterable by date and status."""
     user = request.user
-    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
-        from django.contrib import messages as _msg
-        from django.urls import reverse as _rev
-        _msg.error(request, "هذه الصفحة متاحة للأطباء فقط.")
-        return redirect(_rev("accounts:home"))
 
     from compliance.services.compliance_service import apply_due_no_shows
     apply_due_no_shows(Appointment.objects.filter(doctor=user))
@@ -396,10 +424,6 @@ def _staff_note_lang(ar, en):
     return en if lang.startswith("en") else ar
 
 
-def _is_doctor(user):
-    return user.has_role("DOCTOR") or user.has_role("MAIN_DOCTOR")
-
-
 @login_required
 @require_POST
 def appointment_note_add(request, appointment_id):
@@ -552,14 +576,10 @@ def patient_note_delete(request, patient_id, note_id):
 
 
 @login_required
+@doctor_required
 def appointment_detail(request, appointment_id):
     """Single appointment view with patient info, intake answers, and status controls."""
     user = request.user
-    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
-        from django.contrib import messages as _msg
-        from django.urls import reverse as _rev
-        _msg.error(request, "هذه الصفحة متاحة للأطباء فقط.")
-        return redirect(_rev("accounts:home"))
 
     appointment = get_object_or_404(Appointment, id=appointment_id, doctor=user)
     next_url = _validated_next(request)
@@ -586,6 +606,7 @@ def appointment_detail(request, appointment_id):
 
 
 @login_required
+@doctor_required
 def appointment_overview(request, appointment_id):
     """Patient-scoped view of a single appointment.
 
@@ -595,11 +616,6 @@ def appointment_overview(request, appointment_id):
     appointments with this doctor (upcoming + past) whose forms can be revealed inline.
     """
     user = request.user
-    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
-        from django.contrib import messages as _msg
-        from django.urls import reverse as _rev
-        _msg.error(request, "هذه الصفحة متاحة للأطباء فقط.")
-        return redirect(_rev("accounts:home"))
 
     appointment = get_object_or_404(
         Appointment.objects.select_related("patient", "clinic", "appointment_type"),
@@ -664,12 +680,10 @@ def appointment_overview(request, appointment_id):
 
 
 @login_required
+@doctor_required
 def appointment_intake_partial(request, appointment_id):
     """HTMX endpoint: render an appointment's submitted intake form (inline expander)."""
     user = request.user
-    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
-        from django.http import HttpResponseForbidden
-        return HttpResponseForbidden()
 
     appointment = get_object_or_404(Appointment, id=appointment_id, doctor=user)
     intake_data = build_appointment_intake_data(appointment)
@@ -678,19 +692,77 @@ def appointment_intake_partial(request, appointment_id):
     })
 
 
-@login_required
-def patients_list(request):
-    """Doctor's patient management page — full clinical tool with search, filter, sort, pagination."""
-    user = request.user
-    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
-        from django.contrib import messages as _msg
-        from django.urls import reverse as _rev
-        _msg.error(request, "هذه الصفحة متاحة للأطباء فقط.")
-        return redirect(_rev("accounts:home"))
+def _doctor_clinic_ids(user):
+    """Return ``(my_clinics, clinic_ids)`` for a doctor's active memberships.
 
-    from django.db.models import Max, Count, Q
-    from django.core.paginator import Paginator
-    from datetime import date, datetime
+    A multi-role user (e.g. MAIN_DOCTOR + DOCTOR) can hold several ``ClinicStaff``
+    rows for the same clinic, so we keep the first row per clinic (ordered by clinic
+    name) plus the set of distinct clinic ids. Shared by the patient list.
+    """
+    memberships = (
+        ClinicStaff.objects.filter(user=user, revoked_at__isnull=True)
+        .select_related("clinic")
+        .order_by("clinic__name")
+    )
+    seen = set()
+    my_clinics = []
+    for staff in memberships:
+        if staff.clinic_id not in seen:
+            seen.add(staff.clinic_id)
+            my_clinics.append(staff)
+    return my_clinics, list(seen)
+
+
+def _classify_patient_status(last_visit, today):
+    """Recency bucket for a patient: active (≤30d), follow_up (≤90d), else inactive."""
+    if not last_visit:
+        return "inactive"
+    days = (today - last_visit).days
+    if days <= 30:
+        return "active"
+    if days <= 90:
+        return "follow_up"
+    return "inactive"
+
+
+def _enrich_patient_row(patient, profile, clinics, today):
+    """Build the template/test row dict for one patient (annotated User instance)."""
+    age = None
+    if profile and profile.date_of_birth:
+        dob = profile.date_of_birth
+        age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+    gender = profile.gender if profile else ""
+    return {
+        "patient_id": patient.id,
+        "patient__name": patient.name,
+        "patient__phone": patient.phone,
+        "patient__national_id": patient.national_id,
+        "last_visit": patient.last_visit,
+        "total_visits": patient.total_visits or 0,
+        "age": age,
+        "gender": gender,
+        "gender_display": {"M": "Male", "F": "Female", "O": "Other"}.get(gender, "—"),
+        "clinics": clinics,
+        "patient_status": _classify_patient_status(patient.last_visit, today),
+    }
+
+
+@login_required
+@doctor_required
+def patients_list(request):
+    """Doctor's patient management page — full clinical tool with search, filter, sort, pagination.
+
+    Filtering, status bucketing, sorting and pagination all run in the database; only
+    the 25 rows of the current page are pulled into Python for enrichment, so the view
+    no longer materialises the clinic's entire patient table on every request.
+    """
+    user = request.user
+
+    from collections import defaultdict
+    from datetime import date, datetime, timedelta
+    from django.db.models import Count, F, Max, Q
+    from django.db.models.functions import Lower
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
     from patients.models import PatientProfile, ClinicPatient
 
     # ── Query params ─────────────────────────────────────────
@@ -702,43 +774,26 @@ def patients_list(request):
     sort          = request.GET.get("sort", "-last_visit")
     page_num      = request.GET.get("page", "1")
 
-    # ── Doctor's active clinics (deduplicated by clinic) ─────
-    # A multi-role user (MAIN_DOCTOR + DOCTOR) may have several
-    # ClinicStaff rows for the same clinic — deduplicate here.
-    my_clinics_qs = (
-        ClinicStaff.objects.filter(user=user, revoked_at__isnull=True)
-        .select_related("clinic")
-        .order_by("clinic__name")
-    )
-    seen_clinic_ids: set = set()
-    my_clinics = []
-    for staff in my_clinics_qs:
-        if staff.clinic_id not in seen_clinic_ids:
-            seen_clinic_ids.add(staff.clinic_id)
-            my_clinics.append(staff)
-    clinic_ids = list(seen_clinic_ids)
+    my_clinics, clinic_ids = _doctor_clinic_ids(user)
 
     # ── Determine effective clinic IDs for this request ──────
     if clinic_filter:
         try:
             _fid = int(clinic_filter)
-            effective_clinic_ids = [_fid] if _fid in clinic_ids else clinic_ids
-            if _fid not in clinic_ids:
-                clinic_filter = ""
         except (ValueError, TypeError):
+            _fid = None
+        if _fid in clinic_ids:
+            effective_clinic_ids = [_fid]
+        else:
             clinic_filter = ""
             effective_clinic_ids = clinic_ids
     else:
         effective_clinic_ids = clinic_ids
 
-    # ── Base: all patients registered in the doctor's clinics ─
-    # Use ClinicPatient as the source so secretary-registered
-    # patients appear even before their first appointment.
-    cp_qs = (
-        ClinicPatient.objects.filter(clinic_id__in=effective_clinic_ids)
-        .select_related("patient")
-    )
-
+    # ── Candidate patients: anyone registered (ClinicPatient) in the
+    # effective clinics, optionally matching the search term. Kept as a
+    # subquery so we never materialise the whole patient table. ─────────
+    cp_qs = ClinicPatient.objects.filter(clinic_id__in=effective_clinic_ids)
     if q:
         phone_q = q.replace(" ", "").replace("-", "")
         cp_qs = cp_qs.filter(
@@ -747,139 +802,102 @@ def patients_list(request):
             | Q(patient__national_id__icontains=q)
         )
 
-    # Deduplicate patients (same patient may be in multiple clinics)
-    seen_pids: set = set()
-    cp_list = []
-    for cp in cp_qs:
-        if cp.patient_id not in seen_pids:
-            seen_pids.add(cp.patient_id)
-            cp_list.append(cp)
-
-    patient_ids = list(seen_pids)
-
-    # ── Appointment stats for those patients (with this doctor) ─
-    appt_qs = (
-        Appointment.objects.filter(
-            doctor=user,
-            patient_id__in=patient_ids,
-            clinic_id__in=effective_clinic_ids,
-        ).exclude(status=Appointment.Status.CANCELLED)
+    # ── Appointment recency/volume per patient (this doctor only). The
+    # optional date window is applied inside the aggregate filter. ───────
+    appt_match = (
+        Q(appointments_as_patient__doctor=user)
+        & Q(appointments_as_patient__clinic_id__in=effective_clinic_ids)
+        & ~Q(appointments_as_patient__status=Appointment.Status.CANCELLED)
     )
-
     if date_from:
         try:
-            appt_qs = appt_qs.filter(
-                appointment_date__gte=datetime.strptime(date_from, "%Y-%m-%d").date()
+            appt_match &= Q(
+                appointments_as_patient__appointment_date__gte=datetime.strptime(date_from, "%Y-%m-%d").date()
             )
         except ValueError:
             date_from = ""
-
     if date_to:
         try:
-            appt_qs = appt_qs.filter(
-                appointment_date__lte=datetime.strptime(date_to, "%Y-%m-%d").date()
+            appt_match &= Q(
+                appointments_as_patient__appointment_date__lte=datetime.strptime(date_to, "%Y-%m-%d").date()
             )
         except ValueError:
             date_to = ""
 
-    appt_stats = {
-        s["patient_id"]: s
-        for s in appt_qs.values("patient_id").annotate(
-            last_visit=Max("appointment_date"), total_visits=Count("id")
-        )
-    }
+    patients_qs = User.objects.filter(id__in=cp_qs.values("patient_id")).annotate(
+        last_visit=Max("appointments_as_patient__appointment_date", filter=appt_match),
+        total_visits=Count("appointments_as_patient__id", filter=appt_match),
+    )
 
-    # ── Patient → clinic tags (from ClinicPatient) ────────────
-    patient_clinic_map: dict = {}
-    for cp in ClinicPatient.objects.filter(
-        patient_id__in=patient_ids,
-        clinic_id__in=clinic_ids,
-    ).select_related("clinic"):
-        pid = cp.patient_id
-        entry = {"id": cp.clinic_id, "name": cp.clinic.name}
-        if pid not in patient_clinic_map:
-            patient_clinic_map[pid] = []
-        if entry not in patient_clinic_map[pid]:
-            patient_clinic_map[pid].append(entry)
-
-    # ── Profiles ──────────────────────────────────────────────
-    profiles = {
-        pp.user_id: pp
-        for pp in PatientProfile.objects.filter(user_id__in=patient_ids)
-    }
-
-    GENDER_MAP = {"M": "Male", "F": "Female", "O": "Other"}
+    # ── Status buckets, expressed as last_visit recency windows so they
+    # can be both filtered and counted in the database. ──────────────────
     today = date.today()
-
-    # ── Build enriched list ───────────────────────────────────
-    enriched = []
-    for cp in cp_list:
-        pid   = cp.patient_id
-        prof  = profiles.get(pid)
-        stats = appt_stats.get(pid, {})
-
-        age = None
-        if prof and prof.date_of_birth:
-            dob = prof.date_of_birth
-            age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
-
-        lv           = stats.get("last_visit")
-        total_visits = stats.get("total_visits", 0)
-
-        if lv:
-            days = (today - lv).days
-            if days <= 30:
-                p_status = "active"
-            elif days <= 90:
-                p_status = "follow_up"
-            else:
-                p_status = "inactive"
-        else:
-            p_status = "inactive"   # registered but no appointments yet
-
-        enriched.append({
-            "patient_id":         pid,
-            "patient__name":      cp.patient.name,
-            "patient__phone":     cp.patient.phone,
-            "patient__national_id": cp.patient.national_id,
-            "last_visit":         lv,
-            "total_visits":       total_visits,
-            "age":                age,
-            "gender":             prof.gender if prof else "",
-            "gender_display":     GENDER_MAP.get(prof.gender if prof else "", "—"),
-            "clinics":            patient_clinic_map.get(pid, []),
-            "patient_status":     p_status,
-        })
-
-    # ── Sort (Python-level, nullable last_visit safe) ─────────
-    _min_date = date.min
-    SORT_CONFIGS = {
-        "-last_visit": (lambda p: p["last_visit"] or _min_date, True),
-        "last_visit":  (lambda p: p["last_visit"] or _min_date, False),
-        "name":        (lambda p: p["patient__name"].lower(), False),
-        "-name":       (lambda p: p["patient__name"].lower(), True),
-        "-visits":     (lambda p: p["total_visits"], True),
-        "visits":      (lambda p: p["total_visits"], False),
+    active_since   = today - timedelta(days=30)
+    followup_since = today - timedelta(days=90)
+    STATUS_FILTERS = {
+        "active":    Q(last_visit__gte=active_since),
+        "follow_up": Q(last_visit__lt=active_since, last_visit__gte=followup_since),
+        "inactive":  Q(last_visit__isnull=True) | Q(last_visit__lt=followup_since),
     }
-    sort_fn, reverse = SORT_CONFIGS.get(sort, SORT_CONFIGS["-last_visit"])
-    enriched.sort(key=sort_fn, reverse=reverse)
 
-    # ── Status filter (post-enrichment) ──────────────────────
+    # ── Summary counts — preserves the historical "counts over the filtered
+    # set" behaviour: a non-empty status filter zeroes the other buckets. ─
     if status_filter:
-        enriched = [p for p in enriched if p["patient_status"] == status_filter]
+        display_qs = (
+            patients_qs.filter(STATUS_FILTERS[status_filter])
+            if status_filter in STATUS_FILTERS else patients_qs.none()
+        )
+        total_count    = display_qs.count()
+        active_count   = total_count if status_filter == "active" else 0
+        followup_count = total_count if status_filter == "follow_up" else 0
+        inactive_count = total_count if status_filter == "inactive" else 0
+    else:
+        display_qs = patients_qs
+        active_count   = patients_qs.filter(STATUS_FILTERS["active"]).count()
+        followup_count = patients_qs.filter(STATUS_FILTERS["follow_up"]).count()
+        inactive_count = patients_qs.filter(STATUS_FILTERS["inactive"]).count()
+        total_count    = active_count + followup_count + inactive_count
 
-    # ── Summary counts ────────────────────────────────────────
-    total_count    = len(enriched)
-    active_count   = sum(1 for p in enriched if p["patient_status"] == "active")
-    followup_count = sum(1 for p in enriched if p["patient_status"] == "follow_up")
-    inactive_count = sum(1 for p in enriched if p["patient_status"] == "inactive")
+    # ── Sort in the database; "id" is the stable tie-breaker. ─────────
+    SORT_FIELDS = {
+        "-last_visit": (F("last_visit").desc(nulls_last=True), "id"),
+        "last_visit":  (F("last_visit").asc(nulls_first=True), "id"),
+        "name":        (Lower("name").asc(), "id"),
+        "-name":       (Lower("name").desc(), "id"),
+        "-visits":     (F("total_visits").desc(), "id"),
+        "visits":      (F("total_visits").asc(), "id"),
+    }
+    display_qs = display_qs.order_by(*SORT_FIELDS.get(sort, SORT_FIELDS["-last_visit"]))
 
-    # ── Pagination ────────────────────────────────────────────
-    paginator = Paginator(enriched, 25)
+    # ── Paginate the queryset (only the current page is fetched). ─────
+    paginator = Paginator(display_qs, 25)
     try:
         page_obj = paginator.page(int(page_num))
-    except Exception:
+    except (ValueError, EmptyPage, PageNotAnInteger):
         page_obj = paginator.page(1)
+
+    # ── Enrich ONLY the current page. ─────────────────────────────────
+    page_patients = list(page_obj.object_list)
+    page_pids = [p.id for p in page_patients]
+    profiles = {
+        pp.user_id: pp
+        for pp in PatientProfile.objects.filter(user_id__in=page_pids)
+    }
+    # Clinic tags span ALL the doctor's clinics (not just the filtered one).
+    patient_clinic_map = defaultdict(list)
+    seen_pairs = set()
+    for cp in ClinicPatient.objects.filter(
+        patient_id__in=page_pids, clinic_id__in=clinic_ids
+    ).select_related("clinic"):
+        key = (cp.patient_id, cp.clinic_id)
+        if key not in seen_pairs:
+            seen_pairs.add(key)
+            patient_clinic_map[cp.patient_id].append({"id": cp.clinic_id, "name": cp.clinic.name})
+
+    page_obj.object_list = [
+        _enrich_patient_row(p, profiles.get(p.id), patient_clinic_map.get(p.id, []), today)
+        for p in page_patients
+    ]
 
     ctx = {
         "patient_page":    page_obj,
@@ -1061,36 +1079,47 @@ def doctor_invitations_inbox(request):
 
 @login_required
 def accept_invitation_view(request, invitation_id):
-    """Action to accept an invitation."""
-    invitation = get_object_or_404(ClinicInvitation, id=invitation_id)
-    
+    """Accept an invitation.
+
+    The lookup is scoped to the caller's own phone, so unknown or someone else's
+    invitation id returns a uniform 404 (no existence oracle); ``accept_invitation``
+    re-verifies ownership inside its transaction as the real guard.
+    """
+    normalized_phone = PhoneNumberAuthBackend.normalize_phone_number(request.user.phone)
+    invitation = get_object_or_404(
+        ClinicInvitation, id=invitation_id, doctor_phone=normalized_phone
+    )
+
     if request.method == "POST":
         try:
             staff = accept_invitation(invitation, request.user)
             messages.success(request, f"You have successfully joined {staff.clinic.name}.")
-        except Exception as e:
-            err_msg = str(e)
-            if hasattr(e, 'messages'):
-                err_msg = " ".join(e.messages)
-            messages.error(request, f"Error: {err_msg}")
-            
+        except ValidationError as e:
+            messages.error(request, " ".join(e.messages))
+        except Exception:
+            logger.exception("Failed to accept invitation %s", invitation_id)
+            messages.error(request, "Something went wrong while accepting the invitation. Please try again.")
+
     return redirect(reverse("doctors:doctor_invitations_inbox"))
 
 @login_required
 def reject_invitation_view(request, invitation_id):
-    """Action to reject an invitation."""
-    invitation = get_object_or_404(ClinicInvitation, id=invitation_id)
-    
+    """Reject an invitation (scoped to the caller's own phone; see accept view)."""
+    normalized_phone = PhoneNumberAuthBackend.normalize_phone_number(request.user.phone)
+    invitation = get_object_or_404(
+        ClinicInvitation, id=invitation_id, doctor_phone=normalized_phone
+    )
+
     if request.method == "POST":
         try:
             reject_invitation(invitation, request.user)
             messages.success(request, "Invitation rejected.")
-        except Exception as e:
-            err_msg = str(e)
-            if hasattr(e, 'messages'):
-                err_msg = " ".join(e.messages)
-            messages.error(request, f"Error: {err_msg}")
-            
+        except ValidationError as e:
+            messages.error(request, " ".join(e.messages))
+        except Exception:
+            logger.exception("Failed to reject invitation %s", invitation_id)
+            messages.error(request, "Something went wrong while rejecting the invitation. Please try again.")
+
     return redirect(reverse("doctors:doctor_invitations_inbox"))
 
 
@@ -1226,12 +1255,10 @@ class DoctorCredentialUploadForm(django_forms.Form):
 
 
 @login_required
+@doctor_required
 def doctor_verification_status(request):
     """Show the doctor's dual-layer verification status."""
     user = request.user
-    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
-        messages.error(request, "This page is for doctors only.")
-        return redirect(reverse("accounts:home"))
 
     verification = DoctorVerification.objects.filter(user=user).first()
     credentials = ClinicDoctorCredential.objects.filter(
@@ -1245,12 +1272,10 @@ def doctor_verification_status(request):
 
 
 @login_required
+@doctor_required
 def doctor_upload_credentials(request):
     """Upload identity documents for platform verification."""
     user = request.user
-    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
-        messages.error(request, "This page is for doctors only.")
-        return redirect(reverse("accounts:home"))
 
     verification, _ = DoctorVerification.objects.get_or_create(
         user=user,
@@ -1315,12 +1340,10 @@ class DoctorProfileForm(django_forms.Form):
 
 
 @login_required
+@doctor_required
 def doctor_profile_view(request):
     """Read-only view of the doctor's profile."""
     user = request.user
-    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
-        messages.error(request, "This page is for doctors only.")
-        return redirect(reverse("accounts:home"))
 
     profile, _ = DoctorProfile.objects.get_or_create(user=user)
     specialties = profile.specialties.all()
@@ -1338,12 +1361,10 @@ def doctor_profile_view(request):
 
 
 @login_required
+@doctor_required
 def doctor_verify_phone_view(request):
     """Send / confirm OTP to mark the doctor's phone as verified."""
     user = request.user
-    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
-        messages.error(request, "This page is for doctors only.")
-        return redirect(reverse("accounts:home"))
 
     if user.is_verified:
         return redirect(reverse("doctors:doctor_profile"))
@@ -1398,12 +1419,10 @@ def doctor_verify_phone_view(request):
 
 
 @login_required
+@doctor_required
 def doctor_edit_profile_view(request):
     """Edit doctor's bio, experience, and email (email change via OTP)."""
     user = request.user
-    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
-        messages.error(request, "This page is for doctors only.")
-        return redirect(reverse("accounts:home"))
 
     profile, _ = DoctorProfile.objects.get_or_create(user=user)
 
@@ -1519,12 +1538,10 @@ def doctor_upload_clinic_credential(request, credential_id):
 
 
 @login_required
+@doctor_required
 def my_schedule(request):
     """Doctor manages their weekly availability schedule per clinic."""
     user = request.user
-    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
-        messages.error(request, "This page is for doctors only.")
-        return redirect(reverse("accounts:home"))
 
     # All active clinic memberships (deduplicated by clinic)
     _all_memberships = list(
@@ -1640,6 +1657,7 @@ def my_schedule(request):
 
 
 @login_required
+@doctor_required
 def my_appointment_types(request):
     """Doctor manages their own enabled appointment types per clinic."""
     from django.contrib import messages as _messages
@@ -1651,9 +1669,6 @@ def my_appointment_types(request):
     from django.core.exceptions import ValidationError as DjangoValidationError
 
     user = request.user
-    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
-        _messages.error(request, "This page is for doctors only.")
-        return redirect(_reverse("accounts:home"))
 
     # All active clinics the doctor belongs to (deduplicated by clinic)
     _all_memberships = list(
@@ -1717,14 +1732,15 @@ def my_appointment_types(request):
 # ============================================
 
 def _doctor_required(request):
-    """Returns None if user is a doctor, otherwise returns a redirect response."""
-    user = request.user
-    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
-        from django.contrib import messages as _msg
-        from django.urls import reverse as _rev
-        _msg.error(request, "هذه الصفحة متاحة للأطباء فقط.")
-        return redirect(_rev("accounts:home"))
-    return None
+    """Returns None if the user is a doctor, otherwise a redirect response.
+
+    Thin shim around ``_is_doctor`` for call sites (e.g. catalog views) that prefer a
+    returned response over the ``@doctor_required`` decorator.
+    """
+    if _is_doctor(request.user):
+        return None
+    messages.error(request, "هذه الصفحة متاحة للأطباء فقط.")
+    return redirect(reverse("accounts:home"))
 
 
 @login_required
@@ -3324,11 +3340,11 @@ def _get_active_note_sections(doctor, note=None):
 
 
 def _require_doctor(request):
-    """Return the user if they are a DOCTOR/MAIN_DOCTOR, else None."""
-    user = request.user
-    if "DOCTOR" not in (user.roles or []) and "MAIN_DOCTOR" not in (user.roles or []):
-        return None
-    return user
+    """Return the user if they are a DOCTOR/MAIN_DOCTOR, else None.
+
+    Thin shim around ``_is_doctor`` so the role rule lives in exactly one place.
+    """
+    return request.user if _is_doctor(request.user) else None
 
 
 @login_required

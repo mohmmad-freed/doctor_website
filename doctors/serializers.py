@@ -12,7 +12,10 @@ class SpecialtySerializer(serializers.ModelSerializer):
         fields = ["id", "name", "name_ar", "description", "doctor_count"]
 
     def get_doctor_count(self, obj):
-        return obj.doctors.count()
+        # Prefer a queryset annotation (set by the list view) to avoid a COUNT
+        # query per specialty; fall back to a direct count for single-object use.
+        count = getattr(obj, "doctor_count", None)
+        return count if count is not None else obj.doctors.count()
 
 
 class DoctorSpecialtySerializer(serializers.ModelSerializer):
@@ -53,7 +56,13 @@ class DoctorProfileListSerializer(serializers.ModelSerializer):
         ]
 
     def get_primary_specialty(self, obj):
-        primary = obj.doctor_specialties.filter(is_primary=True).select_related("specialty").first()
+        # Iterate the prefetched `doctor_specialties` (the list views prefetch
+        # `doctor_specialties__specialty`) instead of `.filter(...)`, which would
+        # ignore the prefetch cache and fire one query per doctor.
+        primary = next(
+            (ds for ds in obj.doctor_specialties.all() if ds.is_primary),
+            None,
+        )
         if primary:
             return {
                 "id": primary.specialty.id,
