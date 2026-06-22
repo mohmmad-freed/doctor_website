@@ -1,5 +1,10 @@
 from django.db import models
 from django.conf import settings
+from core.validators.file_validators import (
+    validate_file_extension,
+    validate_file_signature,
+    validate_file_size,
+)
 
 
 class Clinic(models.Model):
@@ -15,6 +20,13 @@ class Clinic(models.Model):
     address = models.TextField()
     phone = models.CharField(max_length=20, blank=True)
     email = models.EmailField(blank=True)
+    logo = models.ImageField(
+        upload_to="clinic_logos/",
+        blank=True,
+        null=True,
+        validators=[validate_file_extension, validate_file_signature, validate_file_size],
+        help_text="Optional clinic logo shown on printed documents.",
+    )
     description = models.TextField(blank=True)
     specialization = models.CharField(max_length=100, blank=True)
     specialties = models.ManyToManyField(

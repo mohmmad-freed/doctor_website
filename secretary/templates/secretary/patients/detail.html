@@ -217,6 +217,27 @@
       {# ══ Tab: Medical Records ══ #}
       {% elif active_tab == 'records' %}
       <div class="space-y-3">
+
+        {# Latest clinical note — visible only when the doctor allowed secretary access #}
+        {% if latest_clinical_note %}
+        <div class="flex items-center gap-4 p-4 rounded-xl border border-purple-100 dark:border-purple-900/40 bg-purple-50/60 dark:bg-purple-900/15 mb-2">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300">
+            <i class="fa-solid fa-notes-medical text-sm"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="font-medium text-gray-900 dark:text-gray-100">{% trans "آخر ملاحظة سريرية" %}</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              {% blocktrans with doctor=latest_clinical_note.doctor.name date=latest_clinical_note.created_at|date:"Y/m/d" %}د. {{ doctor }} · {{ date }}{% endblocktrans %}
+            </div>
+          </div>
+          <a href="{% url 'secretary:clinical_note_print' patient.id %}" target="_blank"
+             class="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold transition-colors flex-shrink-0"
+             title="{% trans 'طباعة / حفظ PDF' %}">
+            <i class="fa-solid fa-print text-xs"></i> {% trans "طباعة" %}
+          </a>
+        </div>
+        {% endif %}
+
         <div class="flex items-center justify-between mb-4">
           <h3 class="font-semibold text-gray-900 dark:text-white">{% blocktrans with count=medical_records.count %}السجلات الطبية ({{ count }}){% endblocktrans %}</h3>
         </div>

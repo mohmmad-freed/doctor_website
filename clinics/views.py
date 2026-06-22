@@ -74,6 +74,36 @@ def get_owner_clinic_or_404(request, clinic_id):
     return get_object_or_404(Clinic, id=clinic_id, main_doctor=request.user, is_active=True)
 
 
+@login_required
+def clinic_upload_logo(request, clinic_id):
+    """Upload (or replace) the clinic logo shown on printed documents. Main-doctor only."""
+    clinic = get_owner_clinic_or_404(request, clinic_id)
+    if request.method != "POST":
+        return redirect(reverse("clinics:my_clinic", args=[clinic.id]))
+
+    logo = request.FILES.get("logo")
+    if not logo:
+        messages.error(request, _("الرجاء اختيار صورة الشعار."))
+        return redirect(reverse("clinics:my_clinic", args=[clinic.id]))
+
+    # Reuse the shared image validators (extension, signature, size).
+    from core.validators.file_validators import (
+        validate_file_extension, validate_file_signature, validate_file_size,
+    )
+    from django.core.exceptions import ValidationError as DjangoValidationError
+    try:
+        for _validate in (validate_file_extension, validate_file_signature, validate_file_size):
+            _validate(logo)
+    except DjangoValidationError as exc:
+        messages.error(request, " ".join(exc.messages) if hasattr(exc, "messages") else str(exc))
+        return redirect(reverse("clinics:my_clinic", args=[clinic.id]))
+
+    clinic.logo = logo
+    clinic.save(update_fields=["logo"])
+    messages.success(request, _("تم حفظ شعار العيادة بنجاح."))
+    return redirect(reverse("clinics:my_clinic", args=[clinic.id]))
+
+
 # ============================================
 # CLINIC LIST + DASHBOARD
 # ============================================

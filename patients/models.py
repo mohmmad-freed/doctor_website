@@ -141,6 +141,11 @@ class ClinicalNote(models.Model):
     # (including element deletion) cannot retroactively change old note section titles.
     extra_sections_labels = models.JSONField(default=dict, blank=True)
 
+    # When True the authoring doctor has opted to let the clinic's secretary read /
+    # print this note — but only ever while it remains the latest note for the
+    # patient in this clinic (see ``is_latest_in_clinic``).
+    is_secretary_allowed = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -151,6 +156,14 @@ class ClinicalNote(models.Model):
 
     def __str__(self):
         return f"Note by {self.doctor.name} for {self.patient.name} ({self.created_at.date()})"
+
+    def is_latest_in_clinic(self):
+        """True if no newer clinical note exists for this patient in this clinic."""
+        return not ClinicalNote.objects.filter(
+            patient_id=self.patient_id,
+            clinic_id=self.clinic_id,
+            created_at__gt=self.created_at,
+        ).exists()
 
 
 class StaffNote(models.Model):

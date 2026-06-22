@@ -508,6 +508,22 @@
                   <p class="text-sm text-slate-400 dark:text-slate-500">{% if IS_RTL %}لم يتم تعريف أقسام.{% else %}No sections defined.{% endif %}</p>
                 {% endfor %}
 
+                {# ── Secretary access toggle ── #}
+                <label class="flex items-start gap-3 p-3 rounded-lg bg-purple-50/70 dark:bg-purple-900/15 border border-purple-100 dark:border-purple-900/30 cursor-pointer select-none">
+                  {# Default ON for new notes — the doctor opts out, not in. #}
+                  <input type="checkbox" name="is_secretary_allowed" checked
+                         class="mt-0.5 w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-purple-600 focus:ring-purple-500 cursor-pointer">
+                  <span>
+                    <span class="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                      <i class="fa-solid fa-user-nurse text-purple-500 me-1"></i>
+                      {% if IS_RTL %}السماح للسكرتيرة بعرض وطباعة هذه الملاحظة{% else %}Allow secretary to view & print this note{% endif %}
+                    </span>
+                    <span class="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      {% if IS_RTL %}يُطبَّق هذا الإذن فقط طالما أنها أحدث ملاحظة سريرية لهذا المريض.{% else %}This access applies only while it remains the latest clinical note for this patient.{% endif %}
+                    </span>
+                  </span>
+                </label>
+
                 <div class="flex items-center gap-2 pt-1">
                   <button type="submit"
                           class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold transition-colors shadow-sm">
@@ -556,9 +572,23 @@
                     {{ note.doctor.name|slice:":1"|upper }}
                   </div>
                   <div class="flex-1 min-w-0">
-                    <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">{{ note.doctor.name }}</p>
+                    <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                      {{ note.doctor.name }}
+                      {% if note.is_secretary_allowed %}
+                      <span class="inline-flex items-center gap-1 ms-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 align-middle"
+                            title="{% if IS_RTL %}مشاركة مع السكرتيرة (للملاحظة الأحدث فقط){% else %}Shared with secretary (latest note only){% endif %}">
+                        <i class="fa-solid fa-user-nurse text-[9px]"></i>
+                        {% if IS_RTL %}السكرتيرة{% else %}Secretary{% endif %}
+                      </span>
+                      {% endif %}
+                    </p>
                     <p class="text-xs text-slate-400 dark:text-slate-500">{{ note.clinic.name }} · {{ note.created_at|date:"d M Y, H:i" }}</p>
                   </div>
+                  <a href="{% url 'doctors:ws_note_print' patient.id note.id %}" target="_blank"
+                     title="{% if IS_RTL %}طباعة / حفظ PDF{% else %}Print / Save PDF{% endif %}"
+                     class="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex-shrink-0">
+                    <i class="fa-solid fa-print text-xs"></i>
+                  </a>
                   {% if note.doctor == doctor %}
                   <a href="{% url 'doctors:ws_note_edit' patient.id note.id %}"
                      hx-get="{% url 'doctors:ws_note_edit' patient.id note.id %}"
