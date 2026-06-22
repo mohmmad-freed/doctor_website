@@ -3,6 +3,7 @@ from datetime import date as _date
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.db import transaction
 from django.http import HttpResponse
 from django.urls import reverse
 from django.utils import timezone
@@ -164,6 +165,11 @@ def my_clinic(request, clinic_id):
         clinic=clinic, credential_status="CREDENTIALS_PENDING"
     ).count()
 
+    from secretary.models import PurchaseRequest
+    pending_purchase_requests = PurchaseRequest.objects.filter(
+        clinic=clinic, status=PurchaseRequest.Status.PENDING
+    ).count()
+
     # ── Subscription expiry warning ───────────────────────────────────
     sub_days_remaining = None
     if subscription and subscription.expires_at:
@@ -294,6 +300,7 @@ def my_clinic(request, clinic_id):
         "today_revenue": today_revenue,
         "pending_appointments": pending_appointments,
         "pending_credentials": pending_credentials,
+        "pending_purchase_requests": pending_purchase_requests,
         # New dashboard data
         "sub_days_remaining": sub_days_remaining,
         "noshow_rate_month": noshow_rate_month,
@@ -1217,6 +1224,104 @@ def clinic_credential_reject(request, clinic_id, credential_id):
         )
 
     return redirect(reverse("clinics:credentials_list", kwargs={"clinic_id": clinic_id}))
+
+
+# ============================================
+# PURCHASE REQUEST REVIEW (clinic owner)
+# ============================================
+
+
+@login_required
+def purchase_requests_list(request, clinic_id):
+    """Clinic owner page: review purchase requests submitted by secretaries."""
+    clinic = get_owner_clinic_or_404(request, clinic_id)
+
+    from secretary.models import PurchaseRequest
+
+    requests = (
+        PurchaseRequest.objects.filter(clinic=clinic)
+        .select_related("requested_by", "reviewed_by")
+        .prefetch_related("items")
+        .order_by("-created_at")
+    )
+    pending_count = sum(1 for r in requests if r.status == PurchaseRequest.Status.PENDING)
+
+    return render(request, "clinics/purchase_requests_review.html", {
+        "clinic": clinic,
+        "requests": requests,
+        "pending_count": pending_count,
+    })
+
+
+@login_required
+def purchase_request_approve(request, clinic_id, request_id):
+    """Clinic owner approves a purchase request (with an optional note)."""
+    clinic = get_owner_clinic_or_404(request, clinic_id)
+
+    from secretary.models import PurchaseRequest
+    pr = get_object_or_404(PurchaseRequest, id=request_id, clinic=clinic)
+
+    if request.method == "POST":
+        if pr.status != PurchaseRequest.Status.PENDING:
+            messages.error(request, _("تمت مراجعة هذا الطلب مسبقاً."))
+            return redirect(reverse("clinics:purchase_requests_list", kwargs={"clinic_id": clinic_id}))
+
+        from django.utils import timezone as _tz
+        pr.status = PurchaseRequest.Status.APPROVED
+        pr.reviewed_by = request.user
+        pr.reviewed_at = _tz.now()
+        pr.owner_note = request.POST.get("owner_note", "").strip()
+        pr.save(update_fields=["status", "reviewed_by", "reviewed_at", "owner_note", "updated_at"])
+
+        from appointments.services.appointment_notification_service import (
+            notify_secretary_purchase_request_reviewed,
+        )
+        transaction.on_commit(lambda: notify_secretary_purchase_request_reviewed(pr))
+
+        messages.success(
+            request,
+            _("تمت الموافقة على طلب الشراء %(num)s.") % {"num": pr.request_number},
+        )
+
+    return redirect(reverse("clinics:purchase_requests_list", kwargs={"clinic_id": clinic_id}))
+
+
+@login_required
+def purchase_request_reject(request, clinic_id, request_id):
+    """Clinic owner rejects a purchase request with a note (required)."""
+    clinic = get_owner_clinic_or_404(request, clinic_id)
+
+    from secretary.models import PurchaseRequest
+    pr = get_object_or_404(PurchaseRequest, id=request_id, clinic=clinic)
+
+    if request.method == "POST":
+        if pr.status != PurchaseRequest.Status.PENDING:
+            messages.error(request, _("تمت مراجعة هذا الطلب مسبقاً."))
+            return redirect(reverse("clinics:purchase_requests_list", kwargs={"clinic_id": clinic_id}))
+
+        note = request.POST.get("owner_note", "").strip()
+        if not note:
+            messages.error(request, _("يجب إدخال سبب الرفض."))
+            return redirect(reverse("clinics:purchase_requests_list", kwargs={"clinic_id": clinic_id}))
+
+        from django.utils import timezone as _tz
+        pr.status = PurchaseRequest.Status.REJECTED
+        pr.reviewed_by = request.user
+        pr.reviewed_at = _tz.now()
+        pr.owner_note = note
+        pr.save(update_fields=["status", "reviewed_by", "reviewed_at", "owner_note", "updated_at"])
+
+        from appointments.services.appointment_notification_service import (
+            notify_secretary_purchase_request_reviewed,
+        )
+        transaction.on_commit(lambda: notify_secretary_purchase_request_reviewed(pr))
+
+        messages.success(
+            request,
+            _("تم رفض طلب الشراء %(num)s.") % {"num": pr.request_number},
+        )
+
+    return redirect(reverse("clinics:purchase_requests_list", kwargs={"clinic_id": clinic_id}))
 
 
 # ============================================

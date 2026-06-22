@@ -64,4 +64,9 @@ urlpatterns = [
     path('<int:clinic_id>/credentials/', views.clinic_credentials_list, name='credentials_list'),
     path('<int:clinic_id>/credentials/<int:credential_id>/approve/', views.clinic_credential_approve, name='credential_approve'),
     path('<int:clinic_id>/credentials/<int:credential_id>/reject/', views.clinic_credential_reject, name='credential_reject'),
+
+    # Purchase Request Review (clinic owner)
+    path('<int:clinic_id>/purchase-requests/', views.purchase_requests_list, name='purchase_requests_list'),
+    path('<int:clinic_id>/purchase-requests/<int:request_id>/approve/', views.purchase_request_approve, name='purchase_request_approve'),
+    path('<int:clinic_id>/purchase-requests/<int:request_id>/reject/', views.purchase_request_reject, name='purchase_request_reject'),
 ]

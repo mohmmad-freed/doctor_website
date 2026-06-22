@@ -2268,3 +2268,297 @@ class OwnerNotificationCenterRenderTests(SecretaryTestBase):
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "Select all")
         self.assertContains(resp, "Delete selected")
+
+
+# ════════════════════════════════════════════════════════════════════
+#  Procurement — Purchase Requests (secretary → owner approval)
+# ════════════════════════════════════════════════════════════════════
+
+class PurchaseRequestTests(SecretaryTestBase):
+    """Create → owner approve/reject → notifications, with tenant isolation."""
+
+    def _create_payload(self):
+        return {
+            "title": "Office supplies",
+            "category": "CLINIC",
+            "note": "Reception ran out of paper",
+            "item_description": ["A4 paper", "Pens"],
+            "item_quantity": ["3", "10"],
+            "item_unit_price": ["20.00", "1.50"],
+        }
+
+    # ── Creation ──────────────────────────────────────────────────────
+
+    def test_secretary_creates_itemized_request_and_notifies_owner(self):
+        from secretary.models import PurchaseRequest
+        from appointments.models import AppointmentNotification
+
+        self.client.force_login(self.secretary_a)
+        with self.captureOnCommitCallbacks(execute=True):
+            resp = self.client.post(
+                reverse("secretary:purchase_request_create"), self._create_payload()
+            )
+        self.assertRedirects(
+            resp, reverse("secretary:purchase_requests"), fetch_redirect_response=False
+        )
+        pr = PurchaseRequest.objects.get(clinic=self.clinic_a)
+        self.assertEqual(pr.requested_by, self.secretary_a)
+        self.assertEqual(pr.status, PurchaseRequest.Status.PENDING)
+        self.assertEqual(pr.items.count(), 2)
+        # total = 3*20 + 10*1.5 = 75.00
+        self.assertEqual(pr.total, Decimal("75.00"))
+        self.assertTrue(pr.request_number.startswith("PR-"))
+
+        # Owner receives a CLINIC_OWNER notification.
+        notif = AppointmentNotification.objects.get(
+            patient=self.main_doctor_a,
+            context_role=AppointmentNotification.ContextRole.CLINIC_OWNER,
+            notification_type=AppointmentNotification.Type.PURCHASE_REQUEST_SUBMITTED,
+        )
+        self.assertEqual(notif.purchase_request_id, pr.id)
+
+    def test_create_without_items_shows_error_no_request(self):
+        from secretary.models import PurchaseRequest
+
+        self.client.force_login(self.secretary_a)
+        payload = self._create_payload()
+        payload["item_description"] = [""]
+        payload["item_quantity"] = ["1"]
+        payload["item_unit_price"] = [""]
+        self.client.post(reverse("secretary:purchase_request_create"), payload)
+        self.assertFalse(PurchaseRequest.objects.filter(clinic=self.clinic_a).exists())
+
+    def test_create_non_secretary_forbidden(self):
+        self.client.force_login(self.patient_a)
+        resp = self.client.get(reverse("secretary:purchase_request_create"))
+        self.assertEqual(resp.status_code, 403)
+
+    # ── Owner approval ────────────────────────────────────────────────
+
+    def _make_request(self, clinic=None):
+        from secretary import procurement
+        return procurement.create_purchase_request(
+            clinic=clinic or self.clinic_a,
+            user=self.secretary_a if (clinic or self.clinic_a) == self.clinic_a else self.secretary_b,
+            title="Gloves",
+            category="CLINIC",
+            note="needed",
+            items=[{"description": "Box of gloves", "quantity": "2", "unit_price": "30"}],
+        )
+
+    def test_owner_approve_with_note_sets_status_and_notifies_secretary(self):
+        from secretary.models import PurchaseRequest
+        from appointments.models import AppointmentNotification
+
+        pr = self._make_request()
+        self.client.force_login(self.main_doctor_a)
+        with self.captureOnCommitCallbacks(execute=True):
+            resp = self.client.post(
+                reverse("clinics:purchase_request_approve",
+                        kwargs={"clinic_id": self.clinic_a.id, "request_id": pr.id}),
+                {"owner_note": "Buy from usual supplier"},
+            )
+        self.assertEqual(resp.status_code, 302)
+        pr.refresh_from_db()
+        self.assertEqual(pr.status, PurchaseRequest.Status.APPROVED)
+        self.assertEqual(pr.reviewed_by, self.main_doctor_a)
+        self.assertEqual(pr.owner_note, "Buy from usual supplier")
+
+        notif = AppointmentNotification.objects.get(
+            patient=self.secretary_a,
+            context_role=AppointmentNotification.ContextRole.SECRETARY,
+            notification_type=AppointmentNotification.Type.PURCHASE_REQUEST_APPROVED,
+        )
+        self.assertIn("Buy from usual supplier", notif.message)
+        self.assertEqual(notif.purchase_request_id, pr.id)
+
+    def test_owner_reject_requires_note(self):
+        from secretary.models import PurchaseRequest
+
+        pr = self._make_request()
+        self.client.force_login(self.main_doctor_a)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(
+                reverse("clinics:purchase_request_reject",
+                        kwargs={"clinic_id": self.clinic_a.id, "request_id": pr.id}),
+                {"owner_note": ""},
+            )
+        pr.refresh_from_db()
+        self.assertEqual(pr.status, PurchaseRequest.Status.PENDING)
+
+    def test_owner_reject_with_note_sets_status_and_notifies(self):
+        from secretary.models import PurchaseRequest
+        from appointments.models import AppointmentNotification
+
+        pr = self._make_request()
+        self.client.force_login(self.main_doctor_a)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(
+                reverse("clinics:purchase_request_reject",
+                        kwargs={"clinic_id": self.clinic_a.id, "request_id": pr.id}),
+                {"owner_note": "Too expensive right now"},
+            )
+        pr.refresh_from_db()
+        self.assertEqual(pr.status, PurchaseRequest.Status.REJECTED)
+        self.assertEqual(pr.owner_note, "Too expensive right now")
+        notif = AppointmentNotification.objects.get(
+            patient=self.secretary_a,
+            notification_type=AppointmentNotification.Type.PURCHASE_REQUEST_REJECTED,
+        )
+        self.assertIn("Too expensive right now", notif.message)
+
+    def test_already_reviewed_request_cannot_be_reapproved(self):
+        from secretary.models import PurchaseRequest
+
+        pr = self._make_request()
+        pr.status = PurchaseRequest.Status.REJECTED
+        pr.save(update_fields=["status"])
+        self.client.force_login(self.main_doctor_a)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(
+                reverse("clinics:purchase_request_approve",
+                        kwargs={"clinic_id": self.clinic_a.id, "request_id": pr.id}),
+                {"owner_note": ""},
+            )
+        pr.refresh_from_db()
+        self.assertEqual(pr.status, PurchaseRequest.Status.REJECTED)
+
+    # ── Tenant isolation ──────────────────────────────────────────────
+
+    def test_secretary_list_only_shows_own_clinic(self):
+        pr_a = self._make_request(self.clinic_a)
+        pr_b = self._make_request(self.clinic_b)
+        self.client.force_login(self.secretary_a)
+        resp = self.client.get(reverse("secretary:purchase_requests"))
+        ids = [r.id for r in resp.context["requests"]]
+        self.assertIn(pr_a.id, ids)
+        self.assertNotIn(pr_b.id, ids)
+
+    def test_owner_cannot_approve_other_clinic_request(self):
+        from secretary.models import PurchaseRequest
+
+        pr_b = self._make_request(self.clinic_b)
+        # Owner A tries to approve via clinic A url → 404 (not in clinic A).
+        self.client.force_login(self.main_doctor_a)
+        resp = self.client.post(
+            reverse("clinics:purchase_request_approve",
+                    kwargs={"clinic_id": self.clinic_a.id, "request_id": pr_b.id})
+        )
+        self.assertEqual(resp.status_code, 404)
+        pr_b.refresh_from_db()
+        self.assertEqual(pr_b.status, PurchaseRequest.Status.PENDING)
+
+    # ── Delete ────────────────────────────────────────────────────────
+
+    def test_secretary_can_delete_pending_request(self):
+        from secretary.models import PurchaseRequest
+
+        pr = self._make_request()
+        self.client.force_login(self.secretary_a)
+        self.client.post(reverse("secretary:purchase_request_delete", args=[pr.id]))
+        self.assertFalse(PurchaseRequest.objects.filter(id=pr.id).exists())
+
+    def test_secretary_cannot_delete_reviewed_request(self):
+        from secretary.models import PurchaseRequest
+
+        pr = self._make_request()
+        pr.status = PurchaseRequest.Status.APPROVED
+        pr.save(update_fields=["status"])
+        self.client.force_login(self.secretary_a)
+        self.client.post(reverse("secretary:purchase_request_delete", args=[pr.id]))
+        self.assertTrue(PurchaseRequest.objects.filter(id=pr.id).exists())
+
+    # ── i18n ──────────────────────────────────────────────────────────
+
+    # ── Filters: period / sort / counts ──────────────────────────────
+
+    def test_filter_by_period_excludes_old_requests(self):
+        from secretary.models import PurchaseRequest
+
+        recent = self._make_request()
+        old = self._make_request()
+        PurchaseRequest.objects.filter(id=old.id).update(
+            created_at=timezone.now() - timedelta(days=40)
+        )
+        self.client.force_login(self.secretary_a)
+        resp = self.client.get(reverse("secretary:purchase_requests") + "?period=week")
+        ids = [r.id for r in resp.context["requests"]]
+        self.assertIn(recent.id, ids)
+        self.assertNotIn(old.id, ids)
+        # All-time shows both.
+        resp = self.client.get(reverse("secretary:purchase_requests") + "?period=all")
+        ids = [r.id for r in resp.context["requests"]]
+        self.assertIn(old.id, ids)
+        self.assertIn(recent.id, ids)
+
+    def test_sort_by_cost(self):
+        from secretary import procurement
+
+        cheap = procurement.create_purchase_request(
+            clinic=self.clinic_a, user=self.secretary_a, title="cheap", category="CLINIC",
+            items=[{"description": "x", "quantity": "1", "unit_price": "10"}],
+        )
+        pricey = procurement.create_purchase_request(
+            clinic=self.clinic_a, user=self.secretary_a, title="pricey", category="CLINIC",
+            items=[{"description": "y", "quantity": "1", "unit_price": "500"}],
+        )
+        self.client.force_login(self.secretary_a)
+        resp = self.client.get(reverse("secretary:purchase_requests") + "?sort=cost_high")
+        self.assertEqual([r.id for r in resp.context["requests"]][0], pricey.id)
+        resp = self.client.get(reverse("secretary:purchase_requests") + "?sort=cost_low")
+        self.assertEqual([r.id for r in resp.context["requests"]][0], cheap.id)
+
+    def test_status_counts_respect_period(self):
+        from secretary.models import PurchaseRequest
+
+        self._make_request()  # recent, PENDING
+        approved_old = self._make_request()
+        approved_old.status = PurchaseRequest.Status.APPROVED
+        approved_old.save(update_fields=["status"])
+        PurchaseRequest.objects.filter(id=approved_old.id).update(
+            created_at=timezone.now() - timedelta(days=40)
+        )
+        self.client.force_login(self.secretary_a)
+        resp = self.client.get(reverse("secretary:purchase_requests") + "?period=week")
+        counts = resp.context["counts"]
+        self.assertEqual(counts["all"], 1)
+        self.assertEqual(counts["PENDING"], 1)
+        self.assertEqual(counts["APPROVED"], 0)
+
+    def test_invalid_period_and_sort_fall_back_to_defaults(self):
+        self._make_request()
+        self.client.force_login(self.secretary_a)
+        resp = self.client.get(
+            reverse("secretary:purchase_requests") + "?period=garbage&sort=garbage"
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context["period"], "all")
+        self.assertEqual(resp.context["sort"], "newest")
+
+    def test_create_page_back_arrow_direction_per_language(self):
+        self.client.force_login(self.secretary_a)
+        # English (LTR): back arrow points left.
+        self.secretary_a.preferred_language = "en"
+        self.secretary_a.save(update_fields=["preferred_language"])
+        resp = self.client.get(reverse("secretary:purchase_request_create"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "fa-arrow-left")
+        self.assertNotContains(resp, "fa-arrow-right")
+        # Arabic (RTL): back arrow points right.
+        self.secretary_a.preferred_language = "ar"
+        self.secretary_a.save(update_fields=["preferred_language"])
+        resp = self.client.get(reverse("secretary:purchase_request_create"))
+        self.assertContains(resp, "fa-arrow-right")
+        self.assertNotContains(resp, "fa-arrow-left")
+
+    def test_owner_review_page_translates_to_english(self):
+        self._make_request()
+        self.main_doctor_a.preferred_language = "en"
+        self.main_doctor_a.save(update_fields=["preferred_language"])
+        self.client.force_login(self.main_doctor_a)
+        resp = self.client.get(
+            reverse("clinics:purchase_requests_list", kwargs={"clinic_id": self.clinic_a.id})
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Review Purchase Requests")
+        self.assertContains(resp, "Approve")

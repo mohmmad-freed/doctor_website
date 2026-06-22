@@ -2166,3 +2166,166 @@ msgstr ""
 
 msgid "يُسدَّد المبلغ من أقدم الديون أولاً."
 msgstr ""
+
+# Procurement / purchase requests
+
+msgid "الطاقم"
+msgstr ""
+
+msgid "مقبول"
+msgstr ""
+
+msgid "يرجى إدخال عنوان للطلب."
+msgstr ""
+
+msgid "الكمية يجب أن تكون رقماً صحيحاً."
+msgstr ""
+
+msgid "يرجى إضافة عنصر واحد على الأقل إلى الطلب."
+msgstr ""
+
+msgid "تعذّر إنشاء رقم طلب فريد. يرجى المحاولة مرة أخرى."
+msgstr ""
+
+msgid "عنوان الطلب"
+msgstr ""
+
+msgid "مثال: مستلزمات مكتبية"
+msgstr ""
+
+msgid "الفئة"
+msgstr ""
+
+msgid "سبب الطلب (اختياري)"
+msgstr ""
+
+msgid "اشرح للمالك سبب الحاجة لهذا الطلب."
+msgstr ""
+
+msgid "مثال: نفدت أوراق الطباعة في الاستقبال."
+msgstr ""
+
+msgid "تم إرسال طلب الشراء %(num)s إلى مالك العيادة للمراجعة."
+msgstr ""
+
+msgid "لا يمكن حذف طلب تمت مراجعته."
+msgstr ""
+
+msgid "تم حذف طلب الشراء."
+msgstr ""
+
+msgid "تمت مراجعة هذا الطلب مسبقاً."
+msgstr ""
+
+msgid "تمت الموافقة على طلب الشراء %(num)s."
+msgstr ""
+
+msgid "تم رفض طلب الشراء %(num)s."
+msgstr ""
+
+msgid "طلبات الشراء"
+msgstr ""
+
+msgid "طلبات شراء مستلزمات للعيادة أو الطاقم بانتظار موافقة المالك."
+msgstr ""
+
+msgid "طلب جديد"
+msgstr ""
+
+msgid "سبب الطلب:"
+msgstr ""
+
+msgid "ملاحظة المالك:"
+msgstr ""
+
+msgid "روجِع في %(reviewed_at)s — بواسطة %(reviewer)s"
+msgstr ""
+
+msgid "هل أنت متأكد من حذف هذا الطلب؟"
+msgstr ""
+
+msgid "لا توجد طلبات شراء."
+msgstr ""
+
+msgid "إنشاء أول طلب"
+msgstr ""
+
+msgid "طلب شراء جديد"
+msgstr ""
+
+msgid "العناصر المطلوبة"
+msgstr ""
+
+msgid "إضافة عنصر"
+msgstr ""
+
+msgid "الإجمالي التقديري:"
+msgstr ""
+
+msgid "إرسال للمراجعة"
+msgstr ""
+
+msgid "وصف العنصر"
+msgstr ""
+
+msgid "مراجعة طلبات الشراء"
+msgstr ""
+
+msgid "الطلبات المقدّمة"
+msgstr ""
+
+msgid "مقدّم الطلب: %(name)s"
+msgstr ""
+
+msgid "ملاحظتك:"
+msgstr ""
+
+msgid "موافقة"
+msgstr ""
+
+msgid "ملاحظة للسكرتارية (اختياري)"
+msgstr ""
+
+msgid "مثال: تمت الموافقة، اشترِ من المورّد المعتاد."
+msgstr ""
+
+msgid "تأكيد الموافقة"
+msgstr ""
+
+msgid "سبب الرفض (مطلوب)"
+msgstr ""
+
+msgid "لا توجد طلبات شراء بعد."
+msgstr ""
+
+msgid "مراجعة طلبات مستلزمات الطاقم"
+msgstr ""
+
+# Procurement filters
+
+msgid "ترتيب"
+msgstr ""
+
+msgid "الأحدث"
+msgstr ""
+
+msgid "الأعلى تكلفة"
+msgstr ""
+
+msgid "الأقل تكلفة"
+msgstr ""
+
+msgid "الفترة"
+msgstr ""
+
+msgid "آخر أسبوع"
+msgstr ""
+
+msgid "آخر شهر"
+msgstr ""
+
+msgid "آخر سنة"
+msgstr ""
+
+msgid "النتائج"
+msgstr ""

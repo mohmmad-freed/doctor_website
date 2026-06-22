@@ -1311,6 +1311,150 @@ def patient_debt_badge_htmx(request):
     return render(request, "secretary/billing/_debt_banner.html", {"amount": amount})
 
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Procurement (Purchase Requests)
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+@login_required
+def purchase_requests(request):
+    """List this clinic's purchase requests, filtered by status + time period and
+    sorted by date or cost."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+
+    from secretary.models import PurchaseRequest
+    from django.db.models import Count, Q
+
+    clinic = staff.clinic
+    status = request.GET.get("filter", "all")
+    period = request.GET.get("period", "all")
+    sort = request.GET.get("sort", "newest")
+
+    # ── Time period (rolling windows) ─────────────────────────────────
+    base_qs = PurchaseRequest.objects.filter(clinic=clinic)
+    period_days = {"week": 7, "month": 30, "year": 365}
+    if period in period_days:
+        since = timezone.now() - timedelta(days=period_days[period])
+        base_qs = base_qs.filter(created_at__gte=since)
+    else:
+        period = "all"
+
+    # ── Status counts within the selected period (for the pill badges) ─
+    agg = base_qs.aggregate(
+        all=Count("id"),
+        pending=Count("id", filter=Q(status=PurchaseRequest.Status.PENDING)),
+        approved=Count("id", filter=Q(status=PurchaseRequest.Status.APPROVED)),
+        rejected=Count("id", filter=Q(status=PurchaseRequest.Status.REJECTED)),
+    )
+    counts = {
+        "all": agg["all"],
+        "PENDING": agg["pending"],
+        "APPROVED": agg["approved"],
+        "REJECTED": agg["rejected"],
+    }
+
+    # ── Status filter ─────────────────────────────────────────────────
+    requests_qs = base_qs.select_related("requested_by", "reviewed_by").prefetch_related("items")
+    if status in PurchaseRequest.Status.values:
+        requests_qs = requests_qs.filter(status=status)
+    else:
+        status = "all"
+
+    # ── Sort (tie-break on newest for stable ordering) ────────────────
+    sort_map = {"newest": "-created_at", "cost_high": "-total", "cost_low": "total"}
+    if sort not in sort_map:
+        sort = "newest"
+    requests_qs = requests_qs.order_by(sort_map[sort], "-created_at")
+
+    requests_list = list(requests_qs[:200])
+
+    return render(request, "secretary/procurement/list.html", {
+        "clinic": clinic,
+        "requests": requests_list,
+        "filter": status,
+        "period": period,
+        "sort": sort,
+        "counts": counts,
+    })
+
+
+@login_required
+def purchase_request_create(request):
+    """Create a new itemized purchase request (PENDING) and notify the owner."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+
+    from secretary.forms import PurchaseRequestForm
+    from secretary import procurement
+
+    clinic = staff.clinic
+
+    if request.method == "POST":
+        form = PurchaseRequestForm(request.POST)
+        descriptions = request.POST.getlist("item_description")
+        quantities = request.POST.getlist("item_quantity")
+        unit_prices = request.POST.getlist("item_unit_price")
+        items = [
+            {"description": d, "quantity": q, "unit_price": p}
+            for d, q, p in zip(descriptions, quantities, unit_prices)
+        ]
+
+        if form.is_valid():
+            try:
+                pr = procurement.create_purchase_request(
+                    clinic=clinic,
+                    user=request.user,
+                    title=form.cleaned_data["title"],
+                    category=form.cleaned_data["category"],
+                    note=form.cleaned_data["note"],
+                    items=items,
+                )
+            except procurement.ProcurementError as e:
+                messages.error(request, e.message)
+            else:
+                from appointments.services.appointment_notification_service import (
+                    notify_owner_purchase_request_submitted,
+                )
+                transaction.on_commit(
+                    lambda: notify_owner_purchase_request_submitted(pr)
+                )
+                messages.success(
+                    request,
+                    _("تم إرسال طلب الشراء %(num)s إلى مالك العيادة للمراجعة.")
+                    % {"num": pr.request_number},
+                )
+                return redirect("secretary:purchase_requests")
+    else:
+        form = PurchaseRequestForm()
+
+    return render(request, "secretary/procurement/create.html", {
+        "clinic": clinic,
+        "form": form,
+    })
+
+
+@login_required
+@require_POST
+def purchase_request_delete(request, request_id):
+    """Delete a still-pending purchase request created within this clinic."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+
+    from secretary.models import PurchaseRequest
+
+    pr = get_object_or_404(PurchaseRequest, id=request_id, clinic=staff.clinic)
+    if not pr.is_editable:
+        messages.error(request, _("لا يمكن حذف طلب تمت مراجعته."))
+    else:
+        pr.delete()
+        messages.success(request, _("تم حذف طلب الشراء."))
+    return redirect("secretary:purchase_requests")
+
+
 @login_required
 def reports_index(request):
     """Reports hub — quick stats + links to each sub-report."""

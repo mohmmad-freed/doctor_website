@@ -3977,3 +3977,166 @@ msgstr "Could not record the payment. Check the amount."
 
 msgid "يُسدَّد المبلغ من أقدم الديون أولاً."
 msgstr "The amount is applied to the oldest debts first."
+
+# Procurement / purchase requests
+
+msgid "الطاقم"
+msgstr "Staff"
+
+msgid "مقبول"
+msgstr "Approved"
+
+msgid "يرجى إدخال عنوان للطلب."
+msgstr "Please enter a title for the request."
+
+msgid "الكمية يجب أن تكون رقماً صحيحاً."
+msgstr "Quantity must be a whole number."
+
+msgid "يرجى إضافة عنصر واحد على الأقل إلى الطلب."
+msgstr "Please add at least one item to the request."
+
+msgid "تعذّر إنشاء رقم طلب فريد. يرجى المحاولة مرة أخرى."
+msgstr "Could not generate a unique request number. Please try again."
+
+msgid "عنوان الطلب"
+msgstr "Request Title"
+
+msgid "مثال: مستلزمات مكتبية"
+msgstr "e.g. Office supplies"
+
+msgid "الفئة"
+msgstr "Category"
+
+msgid "سبب الطلب (اختياري)"
+msgstr "Reason for request (optional)"
+
+msgid "اشرح للمالك سبب الحاجة لهذا الطلب."
+msgstr "Explain to the owner why this is needed."
+
+msgid "مثال: نفدت أوراق الطباعة في الاستقبال."
+msgstr "e.g. The reception ran out of printer paper."
+
+msgid "تم إرسال طلب الشراء %(num)s إلى مالك العيادة للمراجعة."
+msgstr "Purchase request %(num)s was sent to the clinic owner for review."
+
+msgid "لا يمكن حذف طلب تمت مراجعته."
+msgstr "A request that has been reviewed cannot be deleted."
+
+msgid "تم حذف طلب الشراء."
+msgstr "Purchase request deleted."
+
+msgid "تمت مراجعة هذا الطلب مسبقاً."
+msgstr "This request has already been reviewed."
+
+msgid "تمت الموافقة على طلب الشراء %(num)s."
+msgstr "Purchase request %(num)s was approved."
+
+msgid "تم رفض طلب الشراء %(num)s."
+msgstr "Purchase request %(num)s was rejected."
+
+msgid "طلبات الشراء"
+msgstr "Purchase Requests"
+
+msgid "طلبات شراء مستلزمات للعيادة أو الطاقم بانتظار موافقة المالك."
+msgstr "Requests to buy supplies for the clinic or staff, pending the owner's approval."
+
+msgid "طلب جديد"
+msgstr "New Request"
+
+msgid "سبب الطلب:"
+msgstr "Reason for request:"
+
+msgid "ملاحظة المالك:"
+msgstr "Owner's note:"
+
+msgid "روجِع في %(reviewed_at)s — بواسطة %(reviewer)s"
+msgstr "Reviewed on %(reviewed_at)s — by %(reviewer)s"
+
+msgid "هل أنت متأكد من حذف هذا الطلب؟"
+msgstr "Are you sure you want to delete this request?"
+
+msgid "لا توجد طلبات شراء."
+msgstr "No purchase requests."
+
+msgid "إنشاء أول طلب"
+msgstr "Create your first request"
+
+msgid "طلب شراء جديد"
+msgstr "New Purchase Request"
+
+msgid "العناصر المطلوبة"
+msgstr "Requested Items"
+
+msgid "إضافة عنصر"
+msgstr "Add Item"
+
+msgid "الإجمالي التقديري:"
+msgstr "Estimated total:"
+
+msgid "إرسال للمراجعة"
+msgstr "Submit for review"
+
+msgid "وصف العنصر"
+msgstr "Item description"
+
+msgid "مراجعة طلبات الشراء"
+msgstr "Review Purchase Requests"
+
+msgid "الطلبات المقدّمة"
+msgstr "Submitted Requests"
+
+msgid "مقدّم الطلب: %(name)s"
+msgstr "Requested by: %(name)s"
+
+msgid "ملاحظتك:"
+msgstr "Your note:"
+
+msgid "موافقة"
+msgstr "Approve"
+
+msgid "ملاحظة للسكرتارية (اختياري)"
+msgstr "Note for the secretary (optional)"
+
+msgid "مثال: تمت الموافقة، اشترِ من المورّد المعتاد."
+msgstr "e.g. Approved — buy from the usual supplier."
+
+msgid "تأكيد الموافقة"
+msgstr "Confirm Approval"
+
+msgid "سبب الرفض (مطلوب)"
+msgstr "Rejection reason (required)"
+
+msgid "لا توجد طلبات شراء بعد."
+msgstr "No purchase requests yet."
+
+msgid "مراجعة طلبات مستلزمات الطاقم"
+msgstr "Review staff supply requests"
+
+# Procurement filters
+
+msgid "ترتيب"
+msgstr "Sort"
+
+msgid "الأحدث"
+msgstr "Newest"
+
+msgid "الأعلى تكلفة"
+msgstr "Highest cost"
+
+msgid "الأقل تكلفة"
+msgstr "Lowest cost"
+
+msgid "الفترة"
+msgstr "Period"
+
+msgid "آخر أسبوع"
+msgstr "Last week"
+
+msgid "آخر شهر"
+msgstr "Last month"
+
+msgid "آخر سنة"
+msgstr "Last year"
+
+msgid "النتائج"
+msgstr "Results"

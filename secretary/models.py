@@ -278,3 +278,158 @@ class Payment(models.Model):
             f"₪{self.amount} ({self.get_method_display()}) "
             f"— Inv {self.invoice.invoice_number} @ {self.received_at:%Y-%m-%d %H:%M}"
         )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Procurement (Purchase Requests)
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+class PurchaseRequest(models.Model):
+    """
+    A request by a secretary to purchase something for the clinic or staff.
+
+    Unlike an :class:`Invoice` (which charges a patient for services), a purchase
+    request is an internal procurement record that goes **pending** to the clinic
+    owner. The owner accepts or rejects it with a note that the secretary can read.
+
+    Status flow:
+        PENDING → APPROVED
+        PENDING → REJECTED
+    """
+
+    class Category(models.TextChoices):
+        CLINIC = "CLINIC", _lazy("العيادة")
+        STAFF = "STAFF", _lazy("الطاقم")
+        GENERAL = "GENERAL", _lazy("عام")
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", _lazy("قيد المراجعة")
+        APPROVED = "APPROVED", _lazy("مقبول")
+        REJECTED = "REJECTED", _lazy("مرفوض")
+
+    clinic = models.ForeignKey(
+        Clinic,
+        on_delete=models.CASCADE,
+        related_name="purchase_requests",
+        verbose_name="العيادة",
+    )
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="purchase_requests",
+        verbose_name="مقدّم الطلب",
+    )
+    request_number = models.CharField(
+        max_length=30,
+        unique=True,
+        help_text="Auto-generated unique request number (e.g. PR-2026-000001).",
+        verbose_name="رقم الطلب",
+    )
+    title = models.CharField(
+        max_length=255,
+        verbose_name="عنوان الطلب",
+    )
+    category = models.CharField(
+        max_length=20,
+        choices=Category.choices,
+        default=Category.CLINIC,
+        verbose_name="الفئة",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        verbose_name="الحالة",
+    )
+    note = models.TextField(
+        blank=True,
+        verbose_name="سبب الطلب",
+        help_text="Secretary's optional justification for the purchase (the 'why'), shown to the owner.",
+    )
+    total = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="الإجمالي",
+        help_text="Sum of line item totals — recomputed on change.",
+    )
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reviewed_purchase_requests",
+        verbose_name="روجع بواسطة",
+    )
+    reviewed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="تاريخ المراجعة",
+    )
+    owner_note = models.TextField(
+        blank=True,
+        verbose_name="ملاحظة المالك",
+        help_text="The owner's note on approval/rejection — visible to the secretary.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Purchase Request"
+        verbose_name_plural = "Purchase Requests"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["clinic", "status"], name="prq_clinic_status_idx"),
+            models.Index(fields=["clinic", "created_at"], name="prq_clinic_date_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.request_number} — {self.title} ({self.get_status_display()})"
+
+    @property
+    def is_editable(self):
+        """Secretary may edit/delete the request only while it is still pending."""
+        return self.status == self.Status.PENDING
+
+
+class PurchaseRequestItem(models.Model):
+    """A single line item on a purchase request (e.g. one product to buy)."""
+
+    request = models.ForeignKey(
+        PurchaseRequest,
+        on_delete=models.CASCADE,
+        related_name="items",
+        verbose_name="الطلب",
+    )
+    description = models.CharField(
+        max_length=255,
+        verbose_name="الوصف",
+    )
+    quantity = models.PositiveIntegerField(
+        default=1,
+        verbose_name="الكمية",
+    )
+    unit_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="سعر الوحدة",
+    )
+    total = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="الإجمالي",
+        help_text="quantity × unit_price — computed on save.",
+    )
+
+    class Meta:
+        verbose_name = "Purchase Request Item"
+        verbose_name_plural = "Purchase Request Items"
+        ordering = ["id"]
+
+    def save(self, *args, **kwargs):
+        self.total = self.quantity * self.unit_price
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.description} × {self.quantity} @ ₪{self.unit_price}"

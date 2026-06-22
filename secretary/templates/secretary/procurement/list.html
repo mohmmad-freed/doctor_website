@@ -1,0 +1,229 @@
+{% extends "secretary/base_secretary.html" %}
+{% load i18n %}
+{% block title %}{% trans "طلبات الشراء" %}{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Segmented filter controls (status + period) */
+  .seg-group { display:inline-flex; align-items:center; gap:4px; background:#f1f5f9; border-radius:12px; padding:4px; }
+  .dark .seg-group { background:#0f172a; }
+  .seg-pill {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:7px 13px; border-radius:9px; white-space:nowrap;
+    font-size:0.8125rem; font-weight:600; cursor:pointer; user-select:none;
+    color:#64748b; transition:background .15s, color .15s, box-shadow .15s;
+  }
+  .seg-pill:hover { color:#334155; }
+  .dark .seg-pill { color:#94a3b8; }
+  .dark .seg-pill:hover { color:#e2e8f0; }
+  input:checked + .seg-pill { background:#fff; color:#7c3aed; box-shadow:0 1px 2px rgba(0,0,0,.07); font-weight:700; }
+  .dark input:checked + .seg-pill { background:#1e293b; color:#a78bfa; }
+  input:focus-visible + .seg-pill { outline:2px solid #a78bfa; outline-offset:1px; }
+  .seg-count {
+    display:inline-flex; align-items:center; justify-content:center;
+    min-width:18px; height:18px; padding:0 5px; border-radius:9px;
+    font-size:0.65rem; font-weight:800;
+    background:rgba(100,116,139,.15); color:#64748b;
+  }
+  input:checked + .seg-pill .seg-count { background:rgba(124,58,237,.15); color:#7c3aed; }
+  .dark input:checked + .seg-pill .seg-count { background:rgba(167,139,250,.2); color:#a78bfa; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+        <i class="fa-solid fa-cart-shopping text-primary-500"></i>
+        {% trans "طلبات الشراء" %}
+      </h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{% trans "طلبات شراء مستلزمات للعيادة أو الطاقم بانتظار موافقة المالك." %}</p>
+    </div>
+    <a href="{% url 'secretary:purchase_request_create' %}"
+       class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-600 text-white text-sm font-bold hover:bg-primary-700 transition-colors">
+      <i class="fa-solid fa-plus"></i>
+      {% trans "طلب جديد" %}
+    </a>
+  </div>
+
+  <!-- Filters toolbar -->
+  <form method="get" class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4 space-y-3">
+
+    <!-- Status (left) + sort (right) -->
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="seg-group">
+        <label>
+          <input type="radio" name="filter" value="all" class="sr-only" {% if filter == 'all' %}checked{% endif %} onchange="this.form.submit()">
+          <span class="seg-pill">{% trans "الكل" %}<span class="seg-count">{{ counts.all }}</span></span>
+        </label>
+        <label>
+          <input type="radio" name="filter" value="PENDING" class="sr-only" {% if filter == 'PENDING' %}checked{% endif %} onchange="this.form.submit()">
+          <span class="seg-pill">{% trans "قيد المراجعة" %}<span class="seg-count">{{ counts.PENDING }}</span></span>
+        </label>
+        <label>
+          <input type="radio" name="filter" value="APPROVED" class="sr-only" {% if filter == 'APPROVED' %}checked{% endif %} onchange="this.form.submit()">
+          <span class="seg-pill">{% trans "مقبول" %}<span class="seg-count">{{ counts.APPROVED }}</span></span>
+        </label>
+        <label>
+          <input type="radio" name="filter" value="REJECTED" class="sr-only" {% if filter == 'REJECTED' %}checked{% endif %} onchange="this.form.submit()">
+          <span class="seg-pill">{% trans "مرفوض" %}<span class="seg-count">{{ counts.REJECTED }}</span></span>
+        </label>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <label for="pr-sort" class="text-xs font-bold text-gray-500 dark:text-gray-400 flex items-center gap-1 whitespace-nowrap">
+          <i class="fa-solid fa-arrow-down-wide-short"></i> {% trans "ترتيب" %}
+        </label>
+        <select id="pr-sort" name="sort" onchange="this.form.submit()"
+                class="px-3 py-1.5 border border-gray-300 rounded-xl text-sm font-semibold bg-white text-gray-700 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-slate-900 dark:border-slate-700 dark:text-white">
+          <option value="newest" {% if sort == 'newest' %}selected{% endif %}>{% trans "الأحدث" %}</option>
+          <option value="cost_high" {% if sort == 'cost_high' %}selected{% endif %}>{% trans "الأعلى تكلفة" %}</option>
+          <option value="cost_low" {% if sort == 'cost_low' %}selected{% endif %}>{% trans "الأقل تكلفة" %}</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Time period -->
+    <div class="flex flex-wrap items-center gap-2 pt-3 border-t border-gray-100 dark:border-slate-700">
+      <span class="text-xs font-bold text-gray-500 dark:text-gray-400 flex items-center gap-1 me-1 whitespace-nowrap">
+        <i class="fa-regular fa-calendar"></i> {% trans "الفترة" %}
+      </span>
+      <div class="seg-group">
+        <label>
+          <input type="radio" name="period" value="week" class="sr-only" {% if period == 'week' %}checked{% endif %} onchange="this.form.submit()">
+          <span class="seg-pill">{% trans "آخر أسبوع" %}</span>
+        </label>
+        <label>
+          <input type="radio" name="period" value="month" class="sr-only" {% if period == 'month' %}checked{% endif %} onchange="this.form.submit()">
+          <span class="seg-pill">{% trans "آخر شهر" %}</span>
+        </label>
+        <label>
+          <input type="radio" name="period" value="year" class="sr-only" {% if period == 'year' %}checked{% endif %} onchange="this.form.submit()">
+          <span class="seg-pill">{% trans "آخر سنة" %}</span>
+        </label>
+        <label>
+          <input type="radio" name="period" value="all" class="sr-only" {% if period == 'all' %}checked{% endif %} onchange="this.form.submit()">
+          <span class="seg-pill">{% trans "كل الوقت" %}</span>
+        </label>
+      </div>
+      <span class="ms-auto text-xs text-gray-400 whitespace-nowrap">{% trans "النتائج" %}: <span class="font-bold text-gray-500 dark:text-gray-300">{{ requests|length }}</span></span>
+    </div>
+
+    <noscript>
+      <div><button type="submit" class="px-4 py-2 rounded-xl bg-primary-600 text-white text-sm font-bold">{% trans "تطبيق" %}</button></div>
+    </noscript>
+  </form>
+
+  <!-- Requests list -->
+  <div class="space-y-4">
+    {% for pr in requests %}
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="font-mono text-xs text-gray-500 dark:text-gray-400">{{ pr.request_number }}</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-gray-300">
+              {{ pr.get_category_display }}
+            </span>
+          </div>
+          <h2 class="text-lg font-bold text-gray-900 dark:text-white mt-1">{{ pr.title }}</h2>
+        </div>
+        <div class="text-end">
+          {% if pr.status == 'PENDING' %}
+          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+            <i class="fa-solid fa-clock"></i> {{ pr.get_status_display }}
+          </span>
+          {% elif pr.status == 'APPROVED' %}
+          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+            <i class="fa-solid fa-check"></i> {{ pr.get_status_display }}
+          </span>
+          {% else %}
+          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+            <i class="fa-solid fa-xmark"></i> {{ pr.get_status_display }}
+          </span>
+          {% endif %}
+          <p class="text-xs text-gray-400 mt-1">{{ pr.created_at|date:"Y-m-d" }}</p>
+        </div>
+      </div>
+
+      <!-- Items -->
+      <div class="mt-4 overflow-x-auto dark-scrollbar">
+        <table class="w-full text-sm">
+          <thead class="text-gray-500 dark:text-gray-400 text-xs uppercase">
+            <tr>
+              <th class="text-start font-semibold py-1">{% trans "الوصف" %}</th>
+              <th class="text-center font-semibold py-1">{% trans "الكمية" %}</th>
+              <th class="text-end font-semibold py-1">{% trans "سعر الوحدة" %}</th>
+              <th class="text-end font-semibold py-1">{% trans "الإجمالي" %}</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
+            {% for item in pr.items.all %}
+            <tr>
+              <td class="py-1.5 text-gray-800 dark:text-gray-200">{{ item.description }}</td>
+              <td class="py-1.5 text-center text-gray-600 dark:text-gray-400">{{ item.quantity }}</td>
+              <td class="py-1.5 text-end text-gray-600 dark:text-gray-400">₪{{ item.unit_price|floatformat:2 }}</td>
+              <td class="py-1.5 text-end font-semibold text-gray-900 dark:text-white">₪{{ item.total|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr class="border-t-2 border-gray-200 dark:border-slate-600">
+              <td colspan="3" class="py-2 text-end font-bold text-gray-700 dark:text-gray-300">{% trans "الإجمالي" %}</td>
+              <td class="py-2 text-end font-extrabold text-primary-600 dark:text-primary-400">₪{{ pr.total|floatformat:2 }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      {% if pr.note %}
+      <div class="mt-3 text-sm bg-gray-50 dark:bg-slate-900/40 rounded-xl p-3">
+        <span class="font-bold text-gray-700 dark:text-gray-300">{% trans "سبب الطلب:" %}</span>
+        <span class="text-gray-600 dark:text-gray-400">{{ pr.note }}</span>
+      </div>
+      {% endif %}
+
+      {% if pr.status != 'PENDING' and pr.owner_note %}
+      <div class="mt-3 text-sm rounded-xl p-3 {% if pr.status == 'APPROVED' %}bg-green-50 dark:bg-green-900/20{% else %}bg-red-50 dark:bg-red-900/20{% endif %}">
+        <span class="font-bold {% if pr.status == 'APPROVED' %}text-green-700 dark:text-green-300{% else %}text-red-700 dark:text-red-300{% endif %}">
+          <i class="fa-solid fa-comment-dots"></i> {% trans "ملاحظة المالك:" %}
+        </span>
+        <span class="text-gray-700 dark:text-gray-300">{{ pr.owner_note }}</span>
+      </div>
+      {% endif %}
+
+      {% if pr.reviewed_by and pr.reviewed_at %}
+      <p class="mt-2 text-xs text-gray-400">
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        {% blocktrans with reviewed_at=pr.reviewed_at|date:"Y-m-d H:i" reviewer=pr.reviewed_by.name %}روجِع في {{ reviewed_at }} — بواسطة {{ reviewer }}{% endblocktrans %}
+      </p>
+      {% endif %}
+
+      {% if pr.is_editable %}
+      <div class="mt-4 flex justify-end">
+        <form method="post" action="{% url 'secretary:purchase_request_delete' pr.id %}"
+              onsubmit="return confirm('{% trans "هل أنت متأكد من حذف هذا الطلب؟" %}');">
+          {% csrf_token %}
+          <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+            <i class="fa-solid fa-trash"></i> {% trans "حذف" %}
+          </button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+    {% empty %}
+    <div class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 px-4 py-16 text-center text-gray-400">
+      <i class="fa-solid fa-cart-shopping text-4xl mb-3 block opacity-40"></i>
+      <p>{% trans "لا توجد طلبات شراء." %}</p>
+      <a href="{% url 'secretary:purchase_request_create' %}" class="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-xl bg-primary-600 text-white text-sm font-bold hover:bg-primary-700 transition-colors">
+        <i class="fa-solid fa-plus"></i> {% trans "إنشاء أول طلب" %}
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}

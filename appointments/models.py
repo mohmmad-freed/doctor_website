@@ -356,6 +356,9 @@ class AppointmentNotification(models.Model):
         APPOINTMENT_STATUS_CHANGED = "APPOINTMENT_STATUS_CHANGED", "Appointment Status Changed"
         STAFF_NOTE_FOR_DOCTOR = "STAFF_NOTE_FOR_DOCTOR", "Staff Note For Doctor"
         STAFF_NOTE_FOR_SECRETARY = "STAFF_NOTE_FOR_SECRETARY", "Staff Note For Secretary"
+        PURCHASE_REQUEST_SUBMITTED = "PURCHASE_REQUEST_SUBMITTED", "Purchase Request Submitted"
+        PURCHASE_REQUEST_APPROVED = "PURCHASE_REQUEST_APPROVED", "Purchase Request Approved"
+        PURCHASE_REQUEST_REJECTED = "PURCHASE_REQUEST_REJECTED", "Purchase Request Rejected"
 
     class ContextRole(models.TextChoices):
         PATIENT = "PATIENT", "Patient Context"
@@ -411,6 +414,15 @@ class AppointmentNotification(models.Model):
         blank=True,
         related_name="cancellation_notifications",
         help_text="ClinicStaff member who triggered this cancellation notification.",
+    )
+    purchase_request = models.ForeignKey(
+        "secretary.PurchaseRequest",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="notifications",
+        help_text="Purchase request this notification is about, used to route "
+                  "procurement notifications that have no associated appointment.",
     )
     actor_role = models.CharField(
         max_length=20,
