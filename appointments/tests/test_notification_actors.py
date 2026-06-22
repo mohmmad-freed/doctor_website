@@ -20,6 +20,7 @@ from appointments.services.appointment_notification_service import (
     _actor_from_booking,
     _actor_from_staff,
     notify_appointment_booked,
+    notify_owner_purchase_request_submitted,
     notify_staff_appointment_booked,
 )
 from clinics.models import Clinic, ClinicStaff
@@ -124,7 +125,6 @@ class ServiceActorPopulationTests(_BaseClinicFixture):
         for ctx in (
             AppointmentNotification.ContextRole.DOCTOR,
             AppointmentNotification.ContextRole.SECRETARY,
-            AppointmentNotification.ContextRole.CLINIC_OWNER,
         ):
             notif = AppointmentNotification.objects.filter(
                 appointment=appt, context_role=ctx
@@ -132,11 +132,18 @@ class ServiceActorPopulationTests(_BaseClinicFixture):
             self.assertIsNotNone(notif, f"missing notification for {ctx}")
             self.assertEqual(notif.actor_role, AppointmentNotification.ActorRole.SECRETARY)
             self.assertEqual(notif.actor_name, self.secretary.name)
+        # The clinic owner is NOT notified about appointment events.
+        self.assertFalse(
+            AppointmentNotification.objects.filter(
+                appointment=appt,
+                context_role=AppointmentNotification.ContextRole.CLINIC_OWNER,
+            ).exists()
+        )
 
     def test_exclude_user_ids_skips_recipient(self):
         appt = self._appointment(created_by=self.doctor)
         notify_staff_appointment_booked(appt, exclude_user_ids=[self.doctor.id])
-        # Doctor (the actor) is excluded; secretary + owner still notified.
+        # Doctor (the actor) is excluded; secretary still notified.
         self.assertFalse(
             AppointmentNotification.objects.filter(
                 appointment=appt,
@@ -149,7 +156,8 @@ class ServiceActorPopulationTests(_BaseClinicFixture):
                 appointment=appt, patient=self.secretary
             ).exists()
         )
-        self.assertTrue(
+        # The clinic owner is NOT notified about appointment events.
+        self.assertFalse(
             AppointmentNotification.objects.filter(
                 appointment=appt, patient=self.owner
             ).exists()
@@ -202,20 +210,46 @@ class ServiceActorPopulationTests(_BaseClinicFixture):
                 allow_conflict=True,
             )
 
-        # Secretary + owner notified, flagged as a doctor-initiated booking.
+        # Secretary notified, flagged as a doctor-initiated booking.
         sec = AppointmentNotification.objects.get(
             appointment=appt, patient=self.secretary
         )
         self.assertEqual(sec.notification_type, AppointmentNotification.Type.APPOINTMENT_BOOKED)
         self.assertEqual(sec.actor_role, AppointmentNotification.ActorRole.DOCTOR)
         self.assertEqual(sec.actor_name, self.doctor.name)
-        self.assertTrue(
+        # The clinic owner is NOT notified about appointment events.
+        self.assertFalse(
             AppointmentNotification.objects.filter(appointment=appt, patient=self.owner).exists()
         )
         # The booking doctor is NOT notified about their own action.
         self.assertFalse(
             AppointmentNotification.objects.filter(appointment=appt, patient=self.doctor).exists()
         )
+
+    def test_purchase_request_notifies_owner(self):
+        """Although appointment events skip the owner, a submitted purchase
+        request still reaches the owner's CLINIC_OWNER notification center."""
+        from secretary.models import PurchaseRequest
+
+        pr = PurchaseRequest.objects.create(
+            clinic=self.clinic,
+            requested_by=self.secretary,
+            request_number="PR-2030-000001",
+            title="أقلام وأوراق",
+            category=PurchaseRequest.Category.CLINIC,
+            total=120,
+        )
+        notify_owner_purchase_request_submitted(pr)
+
+        notif = AppointmentNotification.objects.filter(
+            patient=self.owner,
+            context_role=AppointmentNotification.ContextRole.CLINIC_OWNER,
+            notification_type=AppointmentNotification.Type.PURCHASE_REQUEST_SUBMITTED,
+            purchase_request=pr,
+        ).first()
+        self.assertIsNotNone(notif, "owner should be notified about purchase requests")
+        self.assertEqual(notif.actor_role, AppointmentNotification.ActorRole.SECRETARY)
+        self.assertEqual(notif.actor_name, self.secretary.name)
 
 
 class ActorNameVisibilityTests(_BaseClinicFixture):

@@ -903,7 +903,7 @@
                 <i class="fa-solid fa-coins"></i>
             </div>
             <div class="metric-body">
-                <div class="metric-num">{{ today_revenue|floatformat:0 }} <span class="metric-cap">{% trans "ر.س" %}</span></div>
+                <div class="metric-num">{{ today_revenue|floatformat:0 }} <span class="metric-cap">₪</span></div>
                 <div class="metric-lbl">{% trans "إيرادات اليوم" %}</div>
             </div>
         </div>
@@ -1179,7 +1179,7 @@
             <div class="p-card-body">
                 <div class="spark-container">
                     {% for r in revenue_7d %}
-                    <div class="spark-bar" style="height: {% widthratio r.amount revenue_max 100 %}%;" title="{{ r.date }}: {{ r.amount|floatformat:0 }} {% trans 'ر.س' %}"></div>
+                    <div class="spark-bar" style="height: {% widthratio r.amount revenue_max 100 %}%;" title="{{ r.date }}: {{ r.amount|floatformat:0 }} ₪"></div>
                     {% endfor %}
                 </div>
                 <div style="display:flex;justify-content:space-between;font-size:0.68rem;color:var(--color-text-muted);direction:ltr;margin-top:0.3rem;">

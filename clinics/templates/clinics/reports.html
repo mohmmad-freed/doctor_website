@@ -377,6 +377,37 @@
     </div>
 
     <!-- ══════════════════════════════════════════════════════════
+         1b. FINANCIAL SUMMARY (actual cash, approved costs, live debt)
+    ══════════════════════════════════════════════════════════ -->
+    <div class="section-title"><i class="fa-solid fa-sack-dollar"></i> {% trans "الملخص المالي" %}</div>
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-icon kpi-icon-green"><i class="fa-solid fa-money-bill-wave"></i></div>
+            <div class="kpi-value" style="font-size:1.35rem;">{{ gross_revenue|floatformat:0 }} ₪</div>
+            <div class="kpi-label">{% trans "الإيرادات المحصّلة" %}</div>
+            <div class="kpi-sub">{% trans "المدفوعات المستلمة خلال الفترة" %}</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon kpi-icon-orange"><i class="fa-solid fa-cart-shopping"></i></div>
+            <div class="kpi-value" style="font-size:1.35rem;">{{ total_costs|floatformat:0 }} ₪</div>
+            <div class="kpi-label">{% trans "إجمالي التكاليف" %}</div>
+            <div class="kpi-sub">{% trans "طلبات الشراء المعتمدة خلال الفترة" %}</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon kpi-icon-teal"><i class="fa-solid fa-scale-balanced"></i></div>
+            <div class="kpi-value" style="font-size:1.35rem;">{{ net_revenue|floatformat:0 }} ₪</div>
+            <div class="kpi-label">{% trans "صافي الإيراد" %}</div>
+            <div class="kpi-sub">{% trans "الإيرادات المحصّلة − التكاليف" %}</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon kpi-icon-red"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+            <div class="kpi-value" style="font-size:1.35rem;">{{ total_debt|floatformat:0 }} ₪</div>
+            <div class="kpi-label">{% trans "إجمالي ديون المرضى" %}</div>
+            <div class="kpi-sub">{% trans "رصيد حالي (غير مرتبط بالفترة)" %}</div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════
          2. APPOINTMENTS OVER TIME + STATUS BREAKDOWN
     ══════════════════════════════════════════════════════════ -->
     <div class="section-title"><i class="fa-solid fa-calendar-days"></i> {% trans "المواعيد" %}</div>

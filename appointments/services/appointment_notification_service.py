@@ -425,12 +425,10 @@ def notify_staff_patient_cancelled(appointment):
         for s_id in secretary_ids:
             recipients.append((s_id, AppointmentNotification.ContextRole.SECRETARY))
 
-        # Notify the Clinic Owner (MAIN_DOCTOR) under CLINIC_OWNER context,
-        # but only if they are not already the doctor on this appointment
-        # (to avoid sending them a duplicate DOCTOR + CLINIC_OWNER pair).
-        owner_id = appointment.clinic.main_doctor_id
-        if owner_id and owner_id != appointment.doctor_id:
-            recipients.append((owner_id, AppointmentNotification.ContextRole.CLINIC_OWNER))
+        # The clinic owner is intentionally NOT notified about appointment events
+        # (booked/cancelled/edited) — the owner notification center is reserved for
+        # business events such as purchase requests. If the owner is also the
+        # appointment's doctor they still get the DOCTOR-context notification above.
 
         for user_id, ctx_role in recipients:
             try:
@@ -498,10 +496,7 @@ def notify_staff_patient_edited(appointment, old_date, old_time, old_type):
         for s_id in secretary_ids:
             recipients.append((s_id, AppointmentNotification.ContextRole.SECRETARY))
 
-        # Notify the Clinic Owner under CLINIC_OWNER context.
-        owner_id = appointment.clinic.main_doctor_id
-        if owner_id and owner_id != appointment.doctor_id:
-            recipients.append((owner_id, AppointmentNotification.ContextRole.CLINIC_OWNER))
+        # The clinic owner is intentionally NOT notified about appointment events.
 
         for user_id, ctx_role in recipients:
             try:
@@ -663,9 +658,7 @@ def notify_staff_appointment_booked(appointment, exclude_user_ids=None, actor_ro
         for s_id in secretary_ids:
             recipients.append((s_id, AppointmentNotification.ContextRole.SECRETARY))
 
-        owner_id = appointment.clinic.main_doctor_id
-        if owner_id and owner_id != appointment.doctor_id:
-            recipients.append((owner_id, AppointmentNotification.ContextRole.CLINIC_OWNER))
+        # The clinic owner is intentionally NOT notified about appointment events.
 
         for user_id, ctx_role in recipients:
             if user_id in exclude:

@@ -4140,3 +4140,30 @@ msgstr "Last year"
 
 msgid "النتائج"
 msgstr "Results"
+
+msgid "الملخص المالي"
+msgstr "Financial Summary"
+
+msgid "الإيرادات المحصّلة"
+msgstr "Collected Revenue"
+
+msgid "المدفوعات المستلمة خلال الفترة"
+msgstr "Payments received during the period"
+
+msgid "إجمالي التكاليف"
+msgstr "Total Costs"
+
+msgid "طلبات الشراء المعتمدة خلال الفترة"
+msgstr "Approved purchase requests during the period"
+
+msgid "صافي الإيراد"
+msgstr "Net Revenue"
+
+msgid "الإيرادات المحصّلة − التكاليف"
+msgstr "Collected revenue − costs"
+
+msgid "إجمالي ديون المرضى"
+msgstr "Total Patient Debt"
+
+msgid "رصيد حالي (غير مرتبط بالفترة)"
+msgstr "Current balance (not period-bound)"

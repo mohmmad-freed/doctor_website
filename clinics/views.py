@@ -122,12 +122,15 @@ def my_clinic(request, clinic_id):
 
     now = timezone.now()
 
+    from secretary.models import Payment
+
     # Today's snapshot
     today_qs = Appointment.objects.filter(clinic=clinic, appointment_date=today)
     today_appointments = today_qs.count()
-    today_revenue = today_qs.filter(status="COMPLETED").aggregate(
-        total=Sum("appointment_type__price")
-    )["total"] or 0
+    # Revenue = actual cash collected today (payments), not appointment-price estimate.
+    today_revenue = Payment.objects.filter(
+        clinic=clinic, received_at__date=today
+    ).aggregate(total=Sum("amount"))["total"] or 0
 
     # Pending actions
     pending_appointments = Appointment.objects.filter(clinic=clinic, status="PENDING").count()
@@ -209,13 +212,13 @@ def my_clinic(request, clinic_id):
             "id_status": id_status,
         })
 
-    # ── 7-day revenue trend (sparkline data) ──────────────────────────
+    # ── 7-day revenue trend (sparkline data) — actual cash collected ──
     revenue_7d = []
     for i in range(6, -1, -1):
         d = today - timedelta(days=i)
-        day_rev = Appointment.objects.filter(
-            clinic=clinic, appointment_date=d, status="COMPLETED",
-        ).aggregate(total=Sum("appointment_type__price"))["total"] or 0
+        day_rev = Payment.objects.filter(
+            clinic=clinic, received_at__date=d,
+        ).aggregate(total=Sum("amount"))["total"] or 0
         revenue_7d.append({"date": d.strftime("%d/%m"), "amount": float(day_rev)})
     revenue_7d_json = json.dumps(revenue_7d)
     revenue_max = max((r["amount"] for r in revenue_7d), default=1) or 1
@@ -1305,7 +1308,9 @@ def reports_view(request):
     from datetime import date as _date_type
     from appointments.models import Appointment
     from patients.models import PatientProfile
-    from django.db.models import Count
+    from django.db.models import Count, Sum
+    from secretary.models import Payment, PurchaseRequest
+    from secretary import billing
 
     # ── Clinics ──────────────────────────────────────────────────────────────
     clinics = Clinic.objects.filter(main_doctor=request.user, is_active=True).order_by("name")
@@ -1354,6 +1359,55 @@ def reports_view(request):
         base_qs = base_qs.filter(appointment_date__year=today_date.year)
     elif date_range == "all_time":
         pass
+
+    # ── Financial window (mirrors the appointment date_range above) ────────────
+    # Revenue (collected payments) and costs (approved purchases) respect the
+    # selected period; total patient debt is a live snapshot (see below).
+    if date_range == "today":
+        fin_start, fin_end = today_date, today_date
+    elif date_range == "this_week":
+        fin_start, fin_end = today_date - timedelta(days=today_date.weekday()), today_date
+    elif date_range == "this_month":
+        fin_start, fin_end = today_date.replace(day=1), today_date
+    elif date_range == "last_month":
+        fin_end = today_date.replace(day=1) - timedelta(days=1)
+        fin_start = fin_end.replace(day=1)
+    elif date_range == "ytd":
+        fin_start, fin_end = _date_type(today_date.year, 1, 1), today_date
+    else:  # all_time
+        fin_start, fin_end = None, None
+
+    # Financial scope honours the clinic filter (single clinic when selected).
+    fin_clinic_ids = clinic_ids
+    if selected_clinic:
+        try:
+            cid = int(selected_clinic)
+            if cid in clinic_ids:
+                fin_clinic_ids = [cid]
+        except ValueError:
+            pass
+
+    payments_qs = Payment.objects.filter(clinic_id__in=fin_clinic_ids)
+    costs_qs = PurchaseRequest.objects.filter(
+        clinic_id__in=fin_clinic_ids, status=PurchaseRequest.Status.APPROVED
+    )
+    if fin_start is not None:
+        payments_qs = payments_qs.filter(
+            received_at__date__gte=fin_start, received_at__date__lte=fin_end
+        )
+        costs_qs = costs_qs.filter(
+            reviewed_at__date__gte=fin_start, reviewed_at__date__lte=fin_end
+        )
+
+    gross_revenue = payments_qs.aggregate(s=Sum("amount"))["s"] or 0
+    total_costs = costs_qs.aggregate(s=Sum("total"))["s"] or 0
+    net_revenue = gross_revenue - total_costs
+
+    # Total outstanding patient debt — live running balance, NOT period-filtered.
+    total_debt = 0
+    for c in clinics:
+        if c.id in fin_clinic_ids:
+            total_debt += billing.clinic_total_debt(c)
 
     all_doctors = ClinicStaff.objects.filter(clinic_id__in=clinic_ids, role="DOCTOR", is_active=True).select_related("user").order_by("user__name")
 
@@ -1537,6 +1591,11 @@ def reports_view(request):
         "no_show_rate":          no_show_rate,
         "cancel_rate":           cancel_rate,
         "total_revenue":         total_revenue,
+        # Accurate financials (actual cash / approved costs / live debt)
+        "gross_revenue":         gross_revenue,
+        "total_costs":           total_costs,
+        "net_revenue":           net_revenue,
+        "total_debt":            total_debt,
         "new_patients":          new_patients,
         "returning_patients":    returning_patients,
         # Tables
