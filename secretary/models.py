@@ -145,6 +145,11 @@ class Invoice(models.Model):
         """An invoice can only be cancelled if it has no payments and is DRAFT or ISSUED."""
         return self.status in (self.Status.DRAFT, self.Status.ISSUED) and self.amount_paid == 0
 
+    @property
+    def can_be_deleted(self):
+        """A draft invoice with no payments may be permanently deleted."""
+        return self.status == self.Status.DRAFT and self.amount_paid == 0
+
 
 class InvoiceItem(models.Model):
     """

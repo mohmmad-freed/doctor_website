@@ -1189,7 +1189,7 @@ msgid "تفاصيل الأداء"
 msgstr "Performance Details"
 
 msgid "مجدولة"
-msgstr "Scheduled"
+msgstr "Capacity"
 
 msgid "محجوزة"
 msgstr "Booked"
@@ -1209,14 +1209,14 @@ msgstr "Top Service"
 msgid "لا توجد بيانات أطباء لهذه الفترة"
 msgstr "No doctor data for this period"
 
-msgid "استخدام عالٍ (≥ 80%)"
-msgstr "High utilization (≥ 80%)"
+msgid "استخدام عالٍ (≥ 80%%)"
+msgstr "High utilization (≥ 80%%)"
 
-msgid "استخدام متوسط (50–79%)"
-msgstr "Medium utilization (50–79%)"
+msgid "استخدام متوسط (50–79%%)"
+msgstr "Medium utilization (50–79%%)"
 
-msgid "استخدام منخفض (< 50%)"
-msgstr "Low utilization (< 50%)"
+msgid "استخدام منخفض (< 50%%)"
+msgstr "Low utilization (< 50%%)"
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 msgid "مجموع اليوم"
@@ -1354,37 +1354,37 @@ msgid "العودة إلى التقارير"
 msgstr "Back to Reports"
 
 msgid "الجلسات المجدولة في الفترة"
-msgstr "Sessions scheduled in the period"
+msgstr "Work-session capacity in the period"
 
 msgid "الجلسات المجدولة = مجموع نوبات العمل × عدد أيام الفترة"
-msgstr "Scheduled sessions = sum of work shifts × number of days in the period"
+msgstr "Capacity = sum of work shifts × number of days in the period"
 
 msgid "الشريط = إجمالي المواعيد"
 msgstr "Bar = total appointments"
 
 msgid "النسبة = الاستخدام (محجوز ÷ مجدول)"
-msgstr "Percentage = utilization (booked ÷ scheduled)"
+msgstr "Percentage = utilization (booked ÷ capacity)"
 
-msgid "جدد ({{ n }})"
-msgstr "New ({{ n }})"
+msgid "جدد (%(n)s)"
+msgstr "New (%(n)s)"
 
-msgid "متكررون ({{ n }})"
-msgstr "Returning ({{ n }})"
+msgid "متكررون (%(n)s)"
+msgstr "Returning (%(n)s)"
 
-msgid "تفاصيل الزيارات ({{ t }})"
-msgstr "Visit Details ({{ t }})"
+msgid "تفاصيل الزيارات (%(t)s)"
+msgstr "Visit Details (%(t)s)"
 
-msgid "قائمة المواعيد ({{ t }})"
-msgstr "Appointments List ({{ t }})"
+msgid "قائمة المواعيد (%(t)s)"
+msgstr "Appointments List (%(t)s)"
 
-msgid "{{ cnt }} مرة"
-msgstr "{{ cnt }} times"
+msgid "%(cnt)s مرة"
+msgstr "%(cnt)s times"
 
-msgid "الغياب ({{ n }})"
-msgstr "Absences ({{ n }})"
+msgid "الغياب (%(n)s)"
+msgstr "Absences (%(n)s)"
 
-msgid "الإلغاءات ({{ n }})"
-msgstr "Cancellations ({{ n }})"
+msgid "الإلغاءات (%(n)s)"
+msgstr "Cancellations (%(n)s)"
 
 msgid "سبب الإلغاء"
 msgstr "Cancellation Reason"
@@ -3858,6 +3858,18 @@ msgstr "Invalid charge data."
 msgid "تم حذف الرسوم."
 msgstr "Charge removed."
 
+msgid "حذف الفاتورة"
+msgstr "Delete invoice"
+
+msgid "حذف هذه الفاتورة المسودة نهائياً. لا يمكن التراجع."
+msgstr "Permanently delete this draft invoice. This cannot be undone."
+
+msgid "تم حذف الفاتورة %(n)s."
+msgstr "Invoice %(n)s deleted."
+
+msgid "لا يمكن حذف هذه الفاتورة (مسودة فقط وبدون دفعات)."
+msgstr "This invoice cannot be deleted (drafts with no payments only)."
+
 msgid "تم تسجيل الدفعة بنجاح."
 msgstr "Payment recorded successfully."
 
@@ -4173,3 +4185,31 @@ msgstr "View Request"
 
 msgid "بواسطة المالك"
 msgstr "By owner"
+
+msgid "آخر ملاحظة سريرية"
+msgstr "Latest Clinical Note"
+
+msgid "طباعة / حفظ PDF"
+msgstr "Print / Save PDF"
+
+msgid "د. %(doctor)s · %(date)s"
+msgstr "Dr. %(doctor)s · %(date)s"
+
+# ── Reports: redesign additions ───────────────────────────────────────────────
+msgid "نسبة الإنجاز"
+msgstr "Completion Rate"
+
+msgid "اتجاه الزيارات اليومي"
+msgstr "Daily Visits Trend"
+
+msgid "متوسط %(n)s زيارة/يوم"
+msgstr "Avg %(n)s visits/day"
+
+msgid "الغياب والإلغاء حسب الطبيب"
+msgstr "No-shows & Cancellations by Doctor"
+
+msgid "اليوم السابق"
+msgstr "Previous day"
+
+msgid "اليوم التالي"
+msgstr "Next day"

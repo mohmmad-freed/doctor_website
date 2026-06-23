@@ -14,7 +14,7 @@
   {# ── Quick stats: today ── #}
   <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
     <h2 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">
-      {% trans "اليوم" %} — {{ today|date:"l، j F Y" }}
+      {% trans "اليوم" %} — {% if IS_RTL %}{{ today|date:"l، j F Y" }}{% else %}{{ today|date:"l, j F Y" }}{% endif %}
     </h2>
     <div class="grid grid-cols-3 gap-4">
       <div class="text-center">

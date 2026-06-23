@@ -9,7 +9,7 @@
   {# ── Header ── #}
   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 print:hidden">
     <div class="flex items-center gap-4">
-      <a href="{% url 'secretary:reports_index' %}" data-back
+      <a href="{% url 'secretary:reports_index' %}"
          aria-label="{% trans 'رجوع' %}"
          class="p-2 rounded-xl text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
         <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %}"></i>
@@ -54,7 +54,7 @@
         <option value="">{% trans "جميع الأطباء" %}</option>
         {% for doc in doctors %}
         <option value="{{ doc.id }}" {% if doctor_filter == doc.id|stringformat:"s" %}selected{% endif %}>
-          د. {{ doc.name }}
+          {% if IS_RTL %}د. {% else %}Dr. {% endif %}{{ doc.name }}
         </option>
         {% endfor %}
       </select>
@@ -91,24 +91,39 @@
     </div>
   </div>
 
+  {# ── Daily volume trend ── #}
+  {% if show_daily_chart %}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
+    <div class="flex items-center justify-between mb-4 gap-3">
+      <h2 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">{% trans "اتجاه الزيارات اليومي" %}</h2>
+      <span class="text-xs font-medium text-gray-500 dark:text-gray-400 shrink-0">{% blocktrans with n=avg_per_day %}متوسط {{ n }} زيارة/يوم{% endblocktrans %}</span>
+    </div>
+    <div class="flex items-end gap-0.5 h-28">
+      {% for d in daily_series %}
+      <div class="flex-1 flex items-end h-full min-w-0" title="{{ d.date|date:'j/m' }} — {{ d.count }}">
+        <div class="w-full rounded-t bg-purple-400/70 dark:bg-purple-500/60 hover:bg-purple-500 dark:hover:bg-purple-400 transition-colors"
+             style="height: {% widthratio d.count max_daily 100 %}%;{% if d.count %}min-height:4px;{% endif %}"></div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="flex items-center justify-between mt-2 text-[11px] text-gray-400 dark:text-gray-500">
+      <span>{{ date_from|date:"j/m" }}</span>
+      <span>{{ date_to|date:"j/m" }}</span>
+    </div>
+  </div>
+  {% endif %}
+
   {# ── New vs returning bar ── #}
   {% if unique_patients > 0 %}
   <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
     <h2 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">{% trans "نسبة المرضى الجدد والمتكررين" %}</h2>
-    <div class="flex rounded-full overflow-hidden h-5">
-      {% with new_pct=new_patients|floatformat:0 %}
-      <div class="bg-emerald-500 flex items-center justify-center text-xs text-white font-medium"
-           style="width: {% widthratio new_patients unique_patients 100 %}%">
-        {% if new_patients > 0 %}{% widthratio new_patients unique_patients 100 %}%{% endif %}
-      </div>
-      <div class="bg-blue-400 flex items-center justify-center text-xs text-white font-medium flex-1">
-        {% if returning_patients > 0 %}{% widthratio returning_patients unique_patients 100 %}%{% endif %}
-      </div>
-      {% endwith %}
+    <div class="flex rounded-full overflow-hidden h-5 bg-gray-100 dark:bg-gray-700">
+      <div class="bg-emerald-500" style="width: {% widthratio new_patients unique_patients 100 %}%"></div>
+      <div class="bg-blue-400 flex-1"></div>
     </div>
-    <div class="flex items-center gap-4 mt-2 text-xs text-gray-500 dark:text-gray-400">
-      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-emerald-500 inline-block"></span> {% blocktrans with n=new_patients %}جدد ({{ n }}){% endblocktrans %}</span>
-      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-blue-400 inline-block"></span> {% blocktrans with n=returning_patients %}متكررون ({{ n }}){% endblocktrans %}</span>
+    <div class="flex flex-wrap items-center gap-x-5 gap-y-1.5 mt-2.5 text-xs text-gray-500 dark:text-gray-400">
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-emerald-500 inline-block shrink-0"></span> {% blocktrans with n=new_patients %}جدد ({{ n }}){% endblocktrans %} · {% widthratio new_patients unique_patients 100 %}%</span>
+      <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-blue-400 inline-block shrink-0"></span> {% blocktrans with n=returning_patients %}متكررون ({{ n }}){% endblocktrans %} · {% widthratio returning_patients unique_patients 100 %}%</span>
     </div>
   </div>
   {% endif %}
@@ -126,11 +141,11 @@
       <table class="w-full text-sm">
         <thead>
           <tr class="bg-gray-50 dark:bg-gray-700/50">
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "المريض" %}</th>
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "التاريخ" %}</th>
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "الوقت" %}</th>
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "الطبيب" %}</th>
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "الخدمة" %}</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-start">{% trans "المريض" %}</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-start">{% trans "التاريخ" %}</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-start">{% trans "الوقت" %}</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-start">{% trans "الطبيب" %}</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-start">{% trans "الخدمة" %}</th>
             <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-center">{% trans "الحالة" %}</th>
           </tr>
         </thead>
@@ -142,15 +157,15 @@
                  class="font-medium text-gray-900 dark:text-gray-100 hover:text-purple-600 dark:hover:text-purple-400 transition-colors print:no-underline">
                 {{ appt.patient.name }}
               </a>
-              <div class="text-xs text-gray-400 dark:text-gray-500">{{ appt.patient.phone }}</div>
+              <div class="text-xs text-gray-400 dark:text-gray-500" dir="ltr">{{ appt.patient.phone }}</div>
             </td>
             <td class="px-4 py-3 text-gray-700 dark:text-gray-300">{{ appt.appointment_date|date:"j/m/Y" }}</td>
             <td class="px-4 py-3 font-mono text-gray-600 dark:text-gray-400">{{ appt.appointment_time|clock:CLOCK_12H }}</td>
             <td class="px-4 py-3 text-gray-600 dark:text-gray-400">
-              {% if appt.doctor %}د. {{ appt.doctor.name }}{% else %}—{% endif %}
+              {% if appt.doctor %}{% if IS_RTL %}د. {% else %}Dr. {% endif %}{{ appt.doctor.name }}{% else %}&mdash;{% endif %}
             </td>
             <td class="px-4 py-3 text-gray-600 dark:text-gray-400">
-              {% if appt.appointment_type %}{{ appt.appointment_type.display_name }}{% else %}—{% endif %}
+              {% if appt.appointment_type %}{{ appt.appointment_type.display_name }}{% else %}&mdash;{% endif %}
             </td>
             <td class="px-4 py-3 text-center">
               <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
@@ -177,15 +192,4 @@
   </div>
 
 </div>
-
-<style>
-@media print {
-  nav, header, footer, .print\\:hidden { display: none !important; }
-  body { background: white !important; color: black !important; }
-  .bg-white { background: white !important; }
-  .border { border-color: #ddd !important; }
-  .rounded-2xl { border-radius: 0 !important; }
-  a { color: inherit !important; text-decoration: none !important; }
-}
-</style>
 {% endblock %}

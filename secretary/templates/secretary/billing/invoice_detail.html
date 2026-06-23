@@ -73,6 +73,22 @@
       </form>
     </div>
     {% endif %}
+
+    {% if invoice.can_be_deleted %}
+    <div class="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3">
+      <p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        {% trans "حذف هذه الفاتورة المسودة نهائياً. لا يمكن التراجع." %}
+      </p>
+      <form method="post" action="{% url 'secretary:invoice_delete' invoice.id %}">
+        {% csrf_token %}
+        <button type="submit"
+                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors shadow-sm">
+          <i class="fa-solid fa-trash-can"></i> {% trans "حذف الفاتورة" %}
+        </button>
+      </form>
+    </div>
+    {% endif %}
   </div>
 
   <!-- Charges -->

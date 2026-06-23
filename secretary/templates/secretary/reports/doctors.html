@@ -9,7 +9,7 @@
   {# ── Header ── #}
   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 print:hidden">
     <div class="flex items-center gap-4">
-      <a href="{% url 'secretary:reports_index' %}" data-back
+      <a href="{% url 'secretary:reports_index' %}"
          aria-label="{% trans 'رجوع' %}"
          class="p-2 rounded-xl text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
         <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %}"></i>
@@ -51,7 +51,8 @@
             class="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold transition-colors">
       {% trans "عرض" %}
     </button>
-    <a href="?date_from={{ today|date:'Y-m-d'|slice:':8' }}01&date_to={{ today|date:'Y-m-d' }}"
+    {# Reset to the view's default range (month-to-date) #}
+    <a href="?"
        class="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
       {% trans "هذا الشهر" %}
     </a>
@@ -70,8 +71,8 @@
     <div class="space-y-3">
       {% for row in doctor_rows %}
       <div class="flex items-center gap-3">
-        <div class="w-28 text-xs text-gray-700 dark:text-gray-300 truncate shrink-0 text-right" title="د. {{ row.doctor.name }}">
-          د. {{ row.doctor.name|truncatechars:14 }}
+        <div class="w-28 text-xs text-gray-700 dark:text-gray-300 truncate shrink-0 text-start" title="{% if IS_RTL %}د. {% else %}Dr. {% endif %}{{ row.doctor.name }}">
+          {% if IS_RTL %}د. {% else %}Dr. {% endif %}{{ row.doctor.name|truncatechars:14 }}
         </div>
         <div class="flex-1 h-6 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
           {% if row.total_booked > 0 %}
@@ -85,7 +86,7 @@
           </div>
           {% endif %}
         </div>
-        <div class="w-16 text-xs text-right shrink-0">
+        <div class="w-16 text-xs text-end shrink-0">
           <span class="font-semibold {% if row.utilization >= 80 %}text-emerald-600 dark:text-emerald-400{% elif row.utilization >= 50 %}text-blue-600 dark:text-blue-400{% else %}text-gray-500 dark:text-gray-400{% endif %}">
             {{ row.utilization }}%
           </span>
@@ -93,7 +94,7 @@
       </div>
       {% endfor %}
     </div>
-    <div class="flex items-center gap-4 mt-3 text-xs text-gray-500 dark:text-gray-400">
+    <div class="flex flex-wrap items-center gap-4 mt-3 text-xs text-gray-500 dark:text-gray-400">
       <span>{% trans "الشريط = إجمالي المواعيد" %}</span>
       <span>{% trans "النسبة = الاستخدام (محجوز ÷ مجدول)" %}</span>
     </div>
@@ -111,22 +112,23 @@
       <table class="w-full text-sm">
         <thead>
           <tr class="bg-gray-50 dark:bg-gray-700/50">
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "الطبيب" %}</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-start">{% trans "الطبيب" %}</th>
             <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-center" title="{% trans 'الجلسات المجدولة في الفترة' %}">{% trans "مجدولة" %}</th>
             <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-center">{% trans "محجوزة" %}</th>
             <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-center">{% trans "مكتملة" %}</th>
             <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-center">{% trans "غياب" %}</th>
             <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-center">{% trans "ملغاة" %}</th>
             <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-center">{% trans "الاستخدام" %}</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-center">{% trans "نسبة الإنجاز" %}</th>
             <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-center">{% trans "متوسط يومي" %}</th>
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "أكثر خدمة" %}</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-start">{% trans "أكثر خدمة" %}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
           {% for row in doctor_rows %}
           <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
             <td class="px-4 py-3">
-              <div class="font-medium text-gray-900 dark:text-gray-100">د. {{ row.doctor.name }}</div>
+              <div class="font-medium text-gray-900 dark:text-gray-100">{% if IS_RTL %}د. {% else %}Dr. {% endif %}{{ row.doctor.name }}</div>
             </td>
             <td class="px-4 py-3 text-center text-gray-500 dark:text-gray-400">{{ row.scheduled_sessions }}</td>
             <td class="px-4 py-3 text-center font-bold text-gray-700 dark:text-gray-300">{{ row.total_booked }}</td>
@@ -148,8 +150,16 @@
                 </span>
               </div>
             </td>
+            <td class="px-4 py-3 text-center">
+              <span class="text-xs font-semibold
+                {% if row.completion_rate >= 80 %}text-emerald-600 dark:text-emerald-400
+                {% elif row.completion_rate >= 50 %}text-blue-600 dark:text-blue-400
+                {% else %}text-gray-500 dark:text-gray-400{% endif %}">
+                {{ row.completion_rate }}%
+              </span>
+            </td>
             <td class="px-4 py-3 text-center text-gray-600 dark:text-gray-400">{{ row.avg_daily }}</td>
-            <td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 max-w-[140px] truncate">{{ row.top_type }}</td>
+            <td class="px-4 py-3 text-start text-xs text-gray-500 dark:text-gray-400 max-w-[140px] truncate">{{ row.top_type }}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -175,14 +185,4 @@
   {% endif %}
 
 </div>
-
-<style>
-@media print {
-  nav, header, footer, .print\\:hidden { display: none !important; }
-  body { background: white !important; color: black !important; }
-  .bg-white { background: white !important; }
-  .border { border-color: #ddd !important; }
-  .rounded-2xl { border-radius: 0 !important; }
-}
-</style>
 {% endblock %}

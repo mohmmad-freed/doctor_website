@@ -64,6 +64,7 @@
             <th class="text-end font-semibold px-4 py-3">{% trans "الإجمالي" %}</th>
             <th class="text-end font-semibold px-4 py-3">{% trans "المتبقي" %}</th>
             <th class="text-center font-semibold px-4 py-3">{% trans "الحالة" %}</th>
+            <th class="px-4 py-3"><span class="sr-only">{% trans "إجراءات" %}</span></th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
@@ -76,9 +77,19 @@
             <td class="px-4 py-3 text-end font-semibold text-gray-900 dark:text-white">₪{{ invoice.total|floatformat:2 }}</td>
             <td class="px-4 py-3 text-end font-bold {% if invoice.balance_due > 0 %}text-red-600 dark:text-red-400{% else %}text-gray-400{% endif %}">₪{{ invoice.balance_due|floatformat:2 }}</td>
             <td class="px-4 py-3 text-center">{% include "secretary/billing/_invoice_status.html" %}</td>
+            <td class="px-4 py-3 text-center w-10" onclick="event.stopPropagation()">
+              {% if invoice.can_be_deleted %}
+              <form method="post" action="{% url 'secretary:invoice_delete' invoice.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="text-gray-300 hover:text-red-500 transition-colors"
+                        title="{% trans 'حذف' %}"><i class="fa-solid fa-trash-can"></i></button>
+              </form>
+              {% endif %}
+            </td>
           </tr>
           {% empty %}
-          <tr><td colspan="6" class="px-4 py-12 text-center text-gray-400">
+          <tr><td colspan="7" class="px-4 py-12 text-center text-gray-400">
             <i class="fa-solid fa-file-invoice text-3xl mb-2 block opacity-40"></i>
             {% trans "لا توجد فواتير." %}
           </td></tr>

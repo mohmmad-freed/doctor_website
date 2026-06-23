@@ -2087,6 +2087,18 @@ msgstr ""
 msgid "تم حذف الرسوم."
 msgstr ""
 
+msgid "حذف الفاتورة"
+msgstr ""
+
+msgid "حذف هذه الفاتورة المسودة نهائياً. لا يمكن التراجع."
+msgstr ""
+
+msgid "تم حذف الفاتورة %(n)s."
+msgstr ""
+
+msgid "لا يمكن حذف هذه الفاتورة (مسودة فقط وبدون دفعات)."
+msgstr ""
+
 msgid "تم تسجيل الدفعة بنجاح."
 msgstr ""
 
@@ -2361,4 +2373,32 @@ msgid "عرض الطلب"
 msgstr ""
 
 msgid "بواسطة المالك"
+msgstr ""
+
+msgid "آخر ملاحظة سريرية"
+msgstr ""
+
+msgid "طباعة / حفظ PDF"
+msgstr ""
+
+msgid "د. %(doctor)s · %(date)s"
+msgstr ""
+
+# ── Reports: redesign additions ───────────────────────────────────────────────
+msgid "نسبة الإنجاز"
+msgstr ""
+
+msgid "اتجاه الزيارات اليومي"
+msgstr ""
+
+msgid "متوسط %(n)s زيارة/يوم"
+msgstr ""
+
+msgid "الغياب والإلغاء حسب الطبيب"
+msgstr ""
+
+msgid "اليوم السابق"
+msgstr ""
+
+msgid "اليوم التالي"
 msgstr ""

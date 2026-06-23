@@ -60,6 +60,7 @@ urlpatterns = [
     path('billing/invoice/<int:invoice_id>/charges/add/', views.invoice_add_charge, name='invoice_add_charge'),
     path('billing/invoice/<int:invoice_id>/charges/<int:item_id>/delete/', views.invoice_remove_charge, name='invoice_remove_charge'),
     path('billing/invoice/<int:invoice_id>/payment/', views.invoice_record_payment, name='invoice_record_payment'),
+    path('billing/invoice/<int:invoice_id>/delete/', views.invoice_delete, name='invoice_delete'),
     path('htmx/patient-debt/', views.patient_debt_badge_htmx, name='patient_debt_badge_htmx'),
 
     # --- Procurement (Purchase Requests) ---

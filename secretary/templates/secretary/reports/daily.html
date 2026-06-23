@@ -9,14 +9,14 @@
   {# ── Header ── #}
   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 print:hidden">
     <div class="flex items-center gap-4">
-      <a href="{% url 'secretary:reports_index' %}" data-back
+      <a href="{% url 'secretary:reports_index' %}"
          aria-label="{% trans 'رجوع' %}"
          class="p-2 rounded-xl text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
         <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %}"></i>
       </a>
       <div>
         <h1 class="text-xl font-bold text-gray-900 dark:text-white">{% trans "تقرير المواعيد اليومي" %}</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ report_date|date:"l، j F Y" }}</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{% if IS_RTL %}{{ report_date|date:"l، j F Y" }}{% else %}{{ report_date|date:"l, j F Y" }}{% endif %}</p>
       </div>
     </div>
     <div class="flex items-center gap-2 flex-wrap">
@@ -31,49 +31,56 @@
     </div>
   </div>
 
-  {# ── Date picker ── #}
-  <form method="get" class="flex items-center gap-3 print:hidden">
-    <input type="date" name="date" value="{{ report_date|date:'Y-m-d' }}"
-           max="{{ today|date:'Y-m-d' }}"
-           class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
-    <button type="submit"
-            class="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold transition-colors">
-      {% trans "عرض" %}
-    </button>
-    {% if report_date != today %}
-    <a href="?" class="text-sm text-purple-600 dark:text-purple-400 hover:underline">{% trans "اليوم" %}</a>
+  {# ── Date navigation ── #}
+  <div class="flex flex-wrap items-center gap-3 print:hidden">
+    {# Previous day (earlier) #}
+    <a href="?date={{ prev_date|date:'Y-m-d' }}" aria-label="{% trans 'اليوم السابق' %}"
+       class="w-9 h-9 inline-flex items-center justify-center rounded-xl border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+      <i class="fa-solid {% if IS_RTL %}fa-chevron-right{% else %}fa-chevron-left{% endif %}"></i>
+    </a>
+    <form method="get" class="flex items-center gap-2">
+      <input type="date" name="date" value="{{ report_date|date:'Y-m-d' }}"
+             max="{{ today|date:'Y-m-d' }}"
+             onchange="this.form.submit()"
+             class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
+    </form>
+    {# Next day (later) — hidden when already on today #}
+    {% if report_date < today %}
+    <a href="?date={{ next_date|date:'Y-m-d' }}" aria-label="{% trans 'اليوم التالي' %}"
+       class="w-9 h-9 inline-flex items-center justify-center rounded-xl border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+      <i class="fa-solid {% if IS_RTL %}fa-chevron-left{% else %}fa-chevron-right{% endif %}"></i>
+    </a>
+    <a href="?" class="text-sm text-purple-600 dark:text-purple-400 hover:underline ms-1">{% trans "اليوم" %}</a>
     {% endif %}
-  </form>
+  </div>
 
   {# ── Print header (visible only in print) ── #}
   <div class="hidden print:block mb-4">
     <h1 class="text-xl font-bold">{{ clinic.name }} — {% trans "تقرير المواعيد اليومي" %}</h1>
-    <p class="text-sm text-gray-500">{{ report_date|date:"l، j F Y" }}</p>
+    <p class="text-sm text-gray-500">{% if IS_RTL %}{{ report_date|date:"l، j F Y" }}{% else %}{{ report_date|date:"l, j F Y" }}{% endif %}</p>
   </div>
 
-  {# ── Summary strip ── #}
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+  {# ── Headline KPIs ── #}
+  <div class="grid grid-cols-3 gap-4">
     <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 text-center">
       <div class="text-3xl font-bold text-gray-900 dark:text-white">{{ total }}</div>
-      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{% trans "إجمالي" %}</div>
+      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{% trans "إجمالي المواعيد" %}</div>
     </div>
-    {% for sb in status_breakdown %}
-    {% if sb.count > 0 %}
+    {% for sb in status_breakdown %}{% if sb.status == 'COMPLETED' %}
     <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 text-center">
-      <div class="text-2xl font-bold
-        {% if sb.status == 'COMPLETED' %}text-emerald-600 dark:text-emerald-400
-        {% elif sb.status == 'CANCELLED' %}text-red-600 dark:text-red-400
-        {% elif sb.status == 'NO_SHOW' %}text-amber-600 dark:text-amber-400
-        {% elif sb.status == 'CONFIRMED' %}text-blue-600 dark:text-blue-400
-        {% elif sb.status == 'CHECKED_IN' %}text-indigo-600 dark:text-indigo-400
-        {% else %}text-gray-600 dark:text-gray-400{% endif %}">{{ sb.count }}</div>
-      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ sb.label }}</div>
+      <div class="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{{ sb.count }}</div>
+      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{% trans "مكتملة" %}</div>
     </div>
-    {% endif %}
-    {% endfor %}
+    {% endif %}{% endfor %}
+    {% for sb in status_breakdown %}{% if sb.status == 'NO_SHOW' %}
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 text-center">
+      <div class="text-3xl font-bold text-amber-600 dark:text-amber-400">{{ sb.count }}</div>
+      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{% trans "لم يحضروا" %}</div>
+    </div>
+    {% endif %}{% endfor %}
   </div>
 
-  {# ── Status breakdown bar ── #}
+  {# ── Status distribution ── #}
   {% if total > 0 %}
   <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
     <h2 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">{% trans "توزيع الحالات" %}</h2>
@@ -81,7 +88,7 @@
       {% for sb in status_breakdown %}
       {% if sb.count > 0 %}
       <div class="flex items-center gap-3">
-        <div class="w-24 text-xs text-gray-600 dark:text-gray-300 text-left shrink-0">{{ sb.label }}</div>
+        <div class="w-24 text-xs text-gray-600 dark:text-gray-300 text-start shrink-0">{{ sb.label }}</div>
         <div class="flex-1 h-5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
           <div class="h-full rounded-full transition-all
             {% if sb.status == 'COMPLETED' %}bg-emerald-500
@@ -89,10 +96,11 @@
             {% elif sb.status == 'NO_SHOW' %}bg-amber-500
             {% elif sb.status == 'CONFIRMED' %}bg-blue-500
             {% elif sb.status == 'CHECKED_IN' %}bg-indigo-500
+            {% elif sb.status == 'IN_PROGRESS' %}bg-purple-500
             {% else %}bg-gray-400{% endif %}"
                style="width: {{ sb.pct }}%"></div>
         </div>
-        <div class="w-16 text-xs text-gray-500 dark:text-gray-400 text-right shrink-0">{{ sb.count }} ({{ sb.pct }}%)</div>
+        <div class="w-20 text-xs text-gray-500 dark:text-gray-400 text-end shrink-0">{{ sb.count }} ({{ sb.pct }}%)</div>
       </div>
       {% endif %}
       {% endfor %}
@@ -109,8 +117,8 @@
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
-          <tr class="bg-gray-50 dark:bg-gray-700/50 text-right">
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "الطبيب" %}</th>
+          <tr class="bg-gray-50 dark:bg-gray-700/50">
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-start">{% trans "الطبيب" %}</th>
             <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-center">{% trans "الإجمالي" %}</th>
             <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-center">{% trans "مكتملة" %}</th>
             <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-center">{% trans "لم يحضر" %}</th>
@@ -121,7 +129,7 @@
           {% for ds in doctor_stats %}
           <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
             <td class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
-              د. {{ ds.doctor.name }}
+              {% if ds.doctor %}{% if IS_RTL %}د. {% else %}Dr. {% endif %}{{ ds.doctor.name }}{% else %}&mdash;{% endif %}
             </td>
             <td class="px-4 py-3 text-center font-bold text-gray-700 dark:text-gray-300">{{ ds.total }}</td>
             <td class="px-4 py-3 text-center text-emerald-600 dark:text-emerald-400 font-medium">{{ ds.completed }}</td>
@@ -148,11 +156,11 @@
       <table class="w-full text-sm">
         <thead>
           <tr class="bg-gray-50 dark:bg-gray-700/50">
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">#</th>
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "الوقت" %}</th>
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "المريض" %}</th>
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "الطبيب" %}</th>
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "الخدمة" %}</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-start">#</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-start">{% trans "الوقت" %}</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-start">{% trans "المريض" %}</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-start">{% trans "الطبيب" %}</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-start">{% trans "الخدمة" %}</th>
             <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-center">{% trans "الحالة" %}</th>
           </tr>
         </thead>
@@ -163,13 +171,13 @@
             <td class="px-4 py-3 font-mono text-gray-700 dark:text-gray-300 text-sm">{{ appt.appointment_time|clock:CLOCK_12H }}</td>
             <td class="px-4 py-3">
               <div class="font-medium text-gray-900 dark:text-gray-100">{{ appt.patient.name }}</div>
-              <div class="text-xs text-gray-400 dark:text-gray-500">{{ appt.patient.phone }}</div>
+              <div class="text-xs text-gray-400 dark:text-gray-500" dir="ltr">{{ appt.patient.phone }}</div>
             </td>
             <td class="px-4 py-3 text-gray-700 dark:text-gray-300">
-              {% if appt.doctor %}د. {{ appt.doctor.name }}{% else %}—{% endif %}
+              {% if appt.doctor %}{% if IS_RTL %}د. {% else %}Dr. {% endif %}{{ appt.doctor.name }}{% else %}&mdash;{% endif %}
             </td>
             <td class="px-4 py-3 text-gray-600 dark:text-gray-400">
-              {% if appt.appointment_type %}{{ appt.appointment_type.display_name }}{% else %}—{% endif %}
+              {% if appt.appointment_type %}{{ appt.appointment_type.display_name }}{% else %}&mdash;{% endif %}
             </td>
             <td class="px-4 py-3 text-center">
               <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
@@ -197,16 +205,4 @@
   </div>
 
 </div>
-
-<style>
-@media print {
-  nav, header, footer, .print\\:hidden { display: none !important; }
-  body { background: white !important; color: black !important; }
-  .bg-white { background: white !important; }
-  .border { border-color: #ddd !important; }
-  .rounded-2xl { border-radius: 0 !important; }
-  table { page-break-inside: auto; }
-  tr { page-break-inside: avoid; }
-}
-</style>
 {% endblock %}

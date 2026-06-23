@@ -314,6 +314,13 @@ def remove_charge(item):
     return invoice
 
 
+def delete_invoice(invoice):
+    """Permanently delete a draft invoice (line items cascade). Guards eligibility."""
+    if not invoice.can_be_deleted:
+        raise BillingError(_("لا يمكن حذف هذه الفاتورة (مسودة فقط وبدون دفعات)."))
+    invoice.delete()
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Payments
 # ──────────────────────────────────────────────────────────────────────────────

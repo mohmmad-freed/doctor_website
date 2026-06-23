@@ -9,7 +9,7 @@ from django.db import transaction
 from django.db.models import F, Q, Sum
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.utils import timezone
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext as _, get_language
 from django.views.decorators.http import require_POST
 
 from appointments.models import Appointment, AppointmentType
@@ -1301,6 +1301,33 @@ def invoice_remove_charge(request, invoice_id, item_id):
 
 @login_required
 @require_POST
+def invoice_delete(request, invoice_id):
+    """Permanently delete a draft invoice (no payments)."""
+    staff = _require_secretary(request)
+    if not staff:
+        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
+
+    from secretary.models import Invoice
+    from secretary import billing
+
+    invoice = get_object_or_404(Invoice, id=invoice_id, clinic=staff.clinic)
+    number = invoice.invoice_number  # capture before delete for the message
+    try:
+        billing.delete_invoice(invoice)
+        messages.success(request, _("تم حذف الفاتورة %(n)s.") % {"n": number})
+    except billing.BillingError as e:
+        messages.error(request, e.message)
+        return redirect("secretary:invoice_detail", invoice_id=invoice_id)
+
+    # Return to where the delete was triggered (the filtered list), else the list.
+    next_url = request.POST.get("next", "")
+    if next_url.startswith("/") and f"/invoice/{invoice_id}/" not in next_url:
+        return redirect(next_url)
+    return redirect("secretary:billing_invoices")
+
+
+@login_required
+@require_POST
 def invoice_record_payment(request, invoice_id):
     """Record a payment against an invoice (overpayment-guarded, FIFO debt settle)."""
     staff = _require_secretary(request)
@@ -1632,6 +1659,8 @@ def report_daily(request):
         "clinic": clinic,
         "report_date": report_date,
         "today": today,
+        "prev_date": report_date - timedelta(days=1),
+        "next_date": report_date + timedelta(days=1),
         "appointments": appointments,
         "total": total,
         "status_breakdown": status_breakdown,
@@ -1706,6 +1735,19 @@ def report_visits(request):
     )
     returning_patients = len(all_patient_ids) - new_patients
 
+    # Daily-volume series + average visits/day (operational trend, built from the
+    # already-loaded list so it adds no extra queries).
+    num_days = (date_to - date_from).days + 1
+    avg_per_day = round(len(appointments) / num_days, 1) if num_days > 0 else 0
+    day_counts = {date_from + timedelta(days=i): 0 for i in range(num_days)}
+    for a in appointments:
+        if a.appointment_date in day_counts:
+            day_counts[a.appointment_date] += 1
+    daily_series = [{"date": d, "count": c} for d, c in sorted(day_counts.items())]
+    max_daily = max((row["count"] for row in daily_series), default=0) or 1
+    # Keep the bar strip legible — hide it for very wide ranges.
+    show_daily_chart = 1 < num_days <= 92
+
     # Doctors for filter dropdown
     from clinics.models import ClinicStaff as CS
     doctor_staff = CS.objects.filter(
@@ -1742,6 +1784,10 @@ def report_visits(request):
         "new_patients": new_patients,
         "returning_patients": returning_patients,
         "doctors": doctors,
+        "avg_per_day": avg_per_day,
+        "daily_series": daily_series,
+        "max_daily": max_daily,
+        "show_daily_chart": show_daily_chart,
     })
 
 
@@ -1781,11 +1827,20 @@ def report_noshows(request):
         base_qs = base_qs.filter(doctor_id=doctor_filter)
 
     total = base_qs.count()
-    noshows_qs = base_qs.filter(status=Appointment.Status.NO_SHOW).select_related("patient", "doctor", "appointment_type").order_by("-appointment_date")
-    cancelled_qs = base_qs.filter(status=Appointment.Status.CANCELLED).select_related("patient", "doctor", "appointment_type").order_by("-appointment_date")
+    # Evaluate each queryset once and reuse the lists for every breakdown below.
+    noshows = list(
+        base_qs.filter(status=Appointment.Status.NO_SHOW)
+        .select_related("patient", "doctor", "appointment_type")
+        .order_by("-appointment_date")
+    )
+    cancellations = list(
+        base_qs.filter(status=Appointment.Status.CANCELLED)
+        .select_related("patient", "doctor", "appointment_type")
+        .order_by("-appointment_date")
+    )
 
-    noshow_count = noshows_qs.count()
-    cancelled_count = cancelled_qs.count()
+    noshow_count = len(noshows)
+    cancelled_count = len(cancellations)
     noshow_rate = round(noshow_count / total * 100, 1) if total > 0 else 0
     cancel_rate = round(cancelled_count / total * 100, 1) if total > 0 else 0
 
@@ -1797,15 +1852,29 @@ def report_noshows(request):
         .order_by("-count")[:5]
     )
 
-    # Day-of-week breakdown (0=Mon … 6=Sun)
-    DOW_NAMES = ["الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"]
-    dow_counts = {i: {"name": DOW_NAMES[i], "noshows": 0, "cancelled": 0} for i in range(7)}
-    for appt in noshows_qs:
+    # Day-of-week breakdown (0=Mon … 6=Sun). WEEKDAYS holds Django's own
+    # translated weekday names, so they render correctly in Arabic and English.
+    from django.utils.dates import WEEKDAYS
+    dow_counts = {i: {"name": WEEKDAYS[i], "noshows": 0, "cancelled": 0} for i in range(7)}
+    for appt in noshows:
         dow_counts[appt.appointment_date.weekday()]["noshows"] += 1
-    for appt in cancelled_qs:
+    for appt in cancellations:
         dow_counts[appt.appointment_date.weekday()]["cancelled"] += 1
     dow_breakdown = list(dow_counts.values())
     max_dow = max((d["noshows"] + d["cancelled"]) for d in dow_breakdown) or 1
+
+    # No-shows & cancellations grouped by doctor.
+    by_doctor = {}
+    for appt in noshows:
+        row = by_doctor.setdefault(appt.doctor_id, {"doctor": appt.doctor, "noshows": 0, "cancelled": 0})
+        row["noshows"] += 1
+    for appt in cancellations:
+        row = by_doctor.setdefault(appt.doctor_id, {"doctor": appt.doctor, "noshows": 0, "cancelled": 0})
+        row["cancelled"] += 1
+    doctor_breakdown = sorted(
+        by_doctor.values(), key=lambda r: r["noshows"] + r["cancelled"], reverse=True
+    )
+    max_doc_total = max((r["noshows"] + r["cancelled"]) for r in doctor_breakdown) if doctor_breakdown else 1
 
     # Doctors for filter
     from clinics.models import ClinicStaff as CS
@@ -1820,12 +1889,12 @@ def report_noshows(request):
         response["Content-Disposition"] = f'attachment; filename="noshows_{date_from}_{date_to}.csv"'
         writer = csv_module.writer(response)
         writer.writerow(["النوع", "المريض", "الهاتف", "التاريخ", "الطبيب", "الخدمة", "السبب"])
-        for appt in noshows_qs:
+        for appt in noshows:
             writer.writerow(["لم يحضر", appt.patient.name, appt.patient.phone,
                               appt.appointment_date.strftime("%Y/%m/%d"),
                               appt.doctor.name if appt.doctor else "",
                               appt.appointment_type.display_name if appt.appointment_type else "", ""])
-        for appt in cancelled_qs:
+        for appt in cancellations:
             writer.writerow(["ملغى", appt.patient.name, appt.patient.phone,
                               appt.appointment_date.strftime("%Y/%m/%d"),
                               appt.doctor.name if appt.doctor else "",
@@ -1845,11 +1914,13 @@ def report_noshows(request):
         "cancelled_count": cancelled_count,
         "noshow_rate": noshow_rate,
         "cancel_rate": cancel_rate,
-        "noshows": list(noshows_qs),
-        "cancellations": list(cancelled_qs),
+        "noshows": noshows,
+        "cancellations": cancellations,
         "top_noshows": top_noshows,
         "dow_breakdown": dow_breakdown,
         "max_dow": max_dow,
+        "doctor_breakdown": doctor_breakdown,
+        "max_doc_total": max_doc_total,
     })
 
 
@@ -1920,6 +1991,7 @@ def report_doctors(request):
 
         utilization = round(total_booked / scheduled_sessions * 100) if scheduled_sessions > 0 else 0
         avg_daily = round(total_booked / max(num_days, 1), 1)
+        completion_rate = round(completed / total_booked * 100) if total_booked > 0 else 0
 
         # Most common appointment type
         top_type = (
@@ -1929,7 +2001,16 @@ def report_doctors(request):
             .order_by("-cnt")
             .first()
         )
-        top_type_name = (top_type["appointment_type__name_ar"] or top_type["appointment_type__name"]) if top_type else "—"
+        # Pick the service name for the active language (mirrors AppointmentType.display_name).
+        if top_type:
+            _name = top_type["appointment_type__name"]
+            _name_ar = top_type["appointment_type__name_ar"]
+            if (get_language() or "ar").startswith("ar"):
+                top_type_name = _name_ar or _name
+            else:
+                top_type_name = _name or _name_ar
+        else:
+            top_type_name = "—"
 
         doctor_rows.append({
             "doctor": doctor,
@@ -1939,6 +2020,7 @@ def report_doctors(request):
             "noshows": noshows,
             "cancelled": cancelled,
             "utilization": utilization,
+            "completion_rate": completion_rate,
             "avg_daily": avg_daily,
             "top_type": top_type_name,
         })
@@ -1953,12 +2035,13 @@ def report_doctors(request):
         response["Content-Disposition"] = f'attachment; filename="doctors_{date_from}_{date_to}.csv"'
         writer = csv_module.writer(response)
         writer.writerow(["الطبيب", "الجلسات المجدولة", "المواعيد المحجوزة",
-                          "مكتملة", "لم يحضر", "ملغاة", "نسبة الاستخدام %", "متوسط يومي"])
+                          "مكتملة", "لم يحضر", "ملغاة",
+                          "نسبة الاستخدام %", "نسبة الإنجاز %", "متوسط يومي"])
         for row in doctor_rows:
             writer.writerow([
                 row["doctor"].name, row["scheduled_sessions"], row["total_booked"],
                 row["completed"], row["noshows"], row["cancelled"],
-                row["utilization"], row["avg_daily"],
+                row["utilization"], row["completion_rate"], row["avg_daily"],
             ])
         return response
 

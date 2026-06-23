@@ -9,7 +9,7 @@
   {# ── Header ── #}
   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 print:hidden">
     <div class="flex items-center gap-4">
-      <a href="{% url 'secretary:reports_index' %}" data-back
+      <a href="{% url 'secretary:reports_index' %}"
          aria-label="{% trans 'رجوع' %}"
          class="p-2 rounded-xl text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
         <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %}"></i>
@@ -54,7 +54,7 @@
         <option value="">{% trans "جميع الأطباء" %}</option>
         {% for doc in doctors %}
         <option value="{{ doc.id }}" {% if doctor_filter == doc.id|stringformat:"s" %}selected{% endif %}>
-          د. {{ doc.name }}
+          {% if IS_RTL %}د. {% else %}Dr. {% endif %}{{ doc.name }}
         </option>
         {% endfor %}
       </select>
@@ -71,8 +71,8 @@
     <p class="text-sm text-gray-500">{{ date_from|date:"j F Y" }} — {{ date_to|date:"j F Y" }}</p>
   </div>
 
-  {# ── Rate cards ── #}
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+  {# ── Count cards ── #}
+  <div class="grid grid-cols-3 gap-4">
     <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 text-center">
       <div class="text-3xl font-bold text-gray-900 dark:text-white">{{ total }}</div>
       <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{% trans "إجمالي المواعيد" %}</div>
@@ -85,11 +85,27 @@
       <div class="text-3xl font-bold text-red-600 dark:text-red-400">{{ cancelled_count }}</div>
       <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{% trans "ملغاة" %}</div>
     </div>
-    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 text-center">
-      <div class="text-2xl font-bold text-gray-700 dark:text-gray-300">{{ noshow_rate }}%</div>
-      <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{% trans "نسبة الغياب" %}</div>
-      <div class="text-lg font-bold text-gray-600 dark:text-gray-400 mt-1">{{ cancel_rate }}%</div>
-      <div class="text-xs text-gray-500 dark:text-gray-400">{% trans "نسبة الإلغاء" %}</div>
+  </div>
+
+  {# ── Rate panel ── #}
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
+      <div class="flex items-baseline justify-between mb-2">
+        <span class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">{% trans "نسبة الغياب" %}</span>
+        <span class="text-2xl font-bold text-amber-600 dark:text-amber-400">{{ noshow_rate }}%</span>
+      </div>
+      <div class="h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+        <div class="h-full bg-amber-500 rounded-full" style="width: {{ noshow_rate }}%"></div>
+      </div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
+      <div class="flex items-baseline justify-between mb-2">
+        <span class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">{% trans "نسبة الإلغاء" %}</span>
+        <span class="text-2xl font-bold text-red-600 dark:text-red-400">{{ cancel_rate }}%</span>
+      </div>
+      <div class="h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+        <div class="h-full bg-red-500 rounded-full" style="width: {{ cancel_rate }}%"></div>
+      </div>
     </div>
   </div>
 
@@ -98,26 +114,22 @@
     <h2 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">{% trans "توزيع الغياب حسب أيام الأسبوع" %}</h2>
     <div class="space-y-2">
       {% for day in dow_breakdown %}
-      {% with day_total=day.noshows|add:day.cancelled %}
       <div class="flex items-center gap-3">
-        <div class="w-16 text-xs text-gray-600 dark:text-gray-300 text-right shrink-0">{{ day.name }}</div>
+        <div class="w-20 text-xs text-gray-600 dark:text-gray-300 text-start shrink-0">{{ day.name }}</div>
         <div class="flex-1 h-5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden flex">
           {% if day.noshows > 0 %}
-          <div class="h-full bg-amber-500 transition-all"
-               style="width: {% widthratio day.noshows max_dow 100 %}%"></div>
+          <div class="h-full bg-amber-500" style="width: {% widthratio day.noshows max_dow 100 %}%"></div>
           {% endif %}
           {% if day.cancelled > 0 %}
-          <div class="h-full bg-red-500 transition-all"
-               style="width: {% widthratio day.cancelled max_dow 100 %}%"></div>
+          <div class="h-full bg-red-500" style="width: {% widthratio day.cancelled max_dow 100 %}%"></div>
           {% endif %}
         </div>
-        <div class="w-20 text-xs text-gray-500 dark:text-gray-400 text-right shrink-0">
-          {% if day.noshows > 0 %}<span class="text-amber-600 dark:text-amber-400">{{ day.noshows }}غ</span>{% endif %}
-          {% if day.cancelled > 0 %}<span class="text-red-600 dark:text-red-400 ms-1">{{ day.cancelled }}إ</span>{% endif %}
-          {% if day.noshows == 0 and day.cancelled == 0 %}<span class="text-gray-300">—</span>{% endif %}
+        <div class="w-20 text-xs text-end shrink-0 flex items-center justify-end gap-2">
+          {% if day.noshows > 0 %}<span class="text-amber-600 dark:text-amber-400 font-medium">{{ day.noshows }}</span>{% endif %}
+          {% if day.cancelled > 0 %}<span class="text-red-600 dark:text-red-400 font-medium">{{ day.cancelled }}</span>{% endif %}
+          {% if day.noshows == 0 and day.cancelled == 0 %}<span class="text-gray-300 dark:text-gray-600">—</span>{% endif %}
         </div>
       </div>
-      {% endwith %}
       {% endfor %}
     </div>
     <div class="flex items-center gap-4 mt-3 text-xs text-gray-500 dark:text-gray-400">
@@ -125,6 +137,34 @@
       <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-red-500 inline-block"></span> {% trans "إلغاء" %}</span>
     </div>
   </div>
+
+  {# ── By-doctor breakdown ── #}
+  {% if doctor_breakdown %}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5">
+    <h2 class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-4">{% trans "الغياب والإلغاء حسب الطبيب" %}</h2>
+    <div class="space-y-2.5">
+      {% for row in doctor_breakdown %}
+      <div class="flex items-center gap-3">
+        <div class="w-36 text-xs text-gray-700 dark:text-gray-300 text-start shrink-0 truncate">
+          {% if row.doctor %}{% if IS_RTL %}د. {% else %}Dr. {% endif %}{{ row.doctor.name }}{% else %}&mdash;{% endif %}
+        </div>
+        <div class="flex-1 h-5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden flex">
+          {% if row.noshows > 0 %}
+          <div class="h-full bg-amber-500" style="width: {% widthratio row.noshows max_doc_total 100 %}%"></div>
+          {% endif %}
+          {% if row.cancelled > 0 %}
+          <div class="h-full bg-red-500" style="width: {% widthratio row.cancelled max_doc_total 100 %}%"></div>
+          {% endif %}
+        </div>
+        <div class="w-20 text-xs text-end shrink-0 flex items-center justify-end gap-2">
+          {% if row.noshows > 0 %}<span class="text-amber-600 dark:text-amber-400 font-medium">{{ row.noshows }}</span>{% endif %}
+          {% if row.cancelled > 0 %}<span class="text-red-600 dark:text-red-400 font-medium">{{ row.cancelled }}</span>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
 
   {# ── Top no-show patients ── #}
   {% if top_noshows %}
@@ -140,7 +180,7 @@
         </div>
         <div class="flex-1 min-w-0">
           <div class="font-medium text-gray-900 dark:text-gray-100 text-sm truncate">{{ p.patient__name }}</div>
-          <div class="text-xs text-gray-400 dark:text-gray-500">{{ p.patient__phone }}</div>
+          <div class="text-xs text-gray-400 dark:text-gray-500" dir="ltr">{{ p.patient__phone }}</div>
         </div>
         <div class="text-sm font-bold text-amber-600 dark:text-amber-400 shrink-0">
           {% blocktrans with cnt=p.count %}{{ cnt }} مرة{% endblocktrans %}
@@ -162,10 +202,10 @@
       <table class="w-full text-sm">
         <thead>
           <tr class="bg-gray-50 dark:bg-gray-700/50">
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "المريض" %}</th>
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "التاريخ" %}</th>
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "الطبيب" %}</th>
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "الخدمة" %}</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-start">{% trans "المريض" %}</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-start">{% trans "التاريخ" %}</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-start">{% trans "الطبيب" %}</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-start">{% trans "الخدمة" %}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
@@ -173,17 +213,17 @@
           <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
             <td class="px-4 py-3">
               <a href="{% url 'secretary:patient_detail' appt.patient.id %}"
-                 class="font-medium text-gray-900 dark:text-gray-100 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
+                 class="font-medium text-gray-900 dark:text-gray-100 hover:text-purple-600 dark:hover:text-purple-400 transition-colors print:no-underline">
                 {{ appt.patient.name }}
               </a>
-              <div class="text-xs text-gray-400 dark:text-gray-500">{{ appt.patient.phone }}</div>
+              <div class="text-xs text-gray-400 dark:text-gray-500" dir="ltr">{{ appt.patient.phone }}</div>
             </td>
             <td class="px-4 py-3 text-gray-600 dark:text-gray-400">{{ appt.appointment_date|date:"j/m/Y" }}</td>
             <td class="px-4 py-3 text-gray-600 dark:text-gray-400">
-              {% if appt.doctor %}د. {{ appt.doctor.name }}{% else %}—{% endif %}
+              {% if appt.doctor %}{% if IS_RTL %}د. {% else %}Dr. {% endif %}{{ appt.doctor.name }}{% else %}&mdash;{% endif %}
             </td>
             <td class="px-4 py-3 text-gray-600 dark:text-gray-400">
-              {% if appt.appointment_type %}{{ appt.appointment_type.display_name }}{% else %}—{% endif %}
+              {% if appt.appointment_type %}{{ appt.appointment_type.display_name }}{% else %}&mdash;{% endif %}
             </td>
           </tr>
           {% endfor %}
@@ -204,10 +244,10 @@
       <table class="w-full text-sm">
         <thead>
           <tr class="bg-gray-50 dark:bg-gray-700/50">
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "المريض" %}</th>
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "التاريخ" %}</th>
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "الطبيب" %}</th>
-            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-right">{% trans "سبب الإلغاء" %}</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-start">{% trans "المريض" %}</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-start">{% trans "التاريخ" %}</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-start">{% trans "الطبيب" %}</th>
+            <th class="px-4 py-2.5 font-medium text-gray-500 dark:text-gray-400 text-start">{% trans "سبب الإلغاء" %}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
@@ -215,14 +255,14 @@
           <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
             <td class="px-4 py-3">
               <a href="{% url 'secretary:patient_detail' appt.patient.id %}"
-                 class="font-medium text-gray-900 dark:text-gray-100 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
+                 class="font-medium text-gray-900 dark:text-gray-100 hover:text-purple-600 dark:hover:text-purple-400 transition-colors print:no-underline">
                 {{ appt.patient.name }}
               </a>
-              <div class="text-xs text-gray-400 dark:text-gray-500">{{ appt.patient.phone }}</div>
+              <div class="text-xs text-gray-400 dark:text-gray-500" dir="ltr">{{ appt.patient.phone }}</div>
             </td>
             <td class="px-4 py-3 text-gray-600 dark:text-gray-400">{{ appt.appointment_date|date:"j/m/Y" }}</td>
             <td class="px-4 py-3 text-gray-600 dark:text-gray-400">
-              {% if appt.doctor %}د. {{ appt.doctor.name }}{% else %}—{% endif %}
+              {% if appt.doctor %}{% if IS_RTL %}د. {% else %}Dr. {% endif %}{{ appt.doctor.name }}{% else %}&mdash;{% endif %}
             </td>
             <td class="px-4 py-3 text-gray-500 dark:text-gray-400 italic">
               {{ appt.cancellation_reason|default:"—" }}
@@ -243,15 +283,4 @@
   {% endif %}
 
 </div>
-
-<style>
-@media print {
-  nav, header, footer, .print\\:hidden { display: none !important; }
-  body { background: white !important; color: black !important; }
-  .bg-white { background: white !important; }
-  .border { border-color: #ddd !important; }
-  .rounded-2xl { border-radius: 0 !important; }
-  a { color: inherit !important; text-decoration: none !important; }
-}
-</style>
 {% endblock %}
