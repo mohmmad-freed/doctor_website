@@ -1,3 +1,4 @@
+import logging
 from datetime import date, datetime, timedelta
 
 from django.shortcuts import render, get_object_or_404, redirect
@@ -17,6 +18,8 @@ from patients.models import ClinicPatient, PatientProfile, StaffNote
 from secretary.timefmt import format_clock
 
 User = get_user_model()
+
+logger = logging.getLogger(__name__)
 
 
 def _clock(request, value):
@@ -767,14 +770,22 @@ def waiting_room_display(request):
     Auto-refreshes via <meta http-equiv='refresh' content='20'>.
     """
     from clinics.models import Clinic as ClinicModel
-    clinic_id = request.GET.get("clinic_id")
-    if not clinic_id:
-        return HttpResponse("يرجى تحديد معرّف العيادة في الرابط: ?clinic_id=X", status=400)
+    from django.core.exceptions import ValidationError
+
+    # Public, unauthenticated kiosk screen. The clinic is addressed by an
+    # unguessable per-clinic display_token (NOT the sequential PK), so the live
+    # queue of arbitrary clinics can't be harvested by walking integer ids.
+    token = request.GET.get("token", "").strip()
+    if not token:
+        return HttpResponse(
+            "رابط الشاشة غير صالح. افتح شاشة العرض من لوحة غرفة الانتظار.", status=400
+        )
 
     try:
-        clinic = ClinicModel.objects.get(id=clinic_id, is_active=True)
-    except ClinicModel.DoesNotExist:
-        return HttpResponse("العيادة غير موجودة أو غير نشطة.", status=404)
+        clinic = ClinicModel.objects.get(display_token=token, is_active=True)
+    except (ClinicModel.DoesNotExist, ValidationError, ValueError):
+        # Generic response — never reveal whether a token or clinic exists.
+        return HttpResponse("الشاشة غير متاحة.", status=404)
 
     today = date.today()
     now = timezone.now()
@@ -1046,7 +1057,15 @@ def reorder_queue(request):
 
     for priority, appt_id in enumerate(order, start=1):
         if appt_id in valid_ids:
-            Appointment.objects.filter(id=appt_id).update(queue_priority=priority)
+            # Re-assert the clinic/date/status scope on the write itself, so the
+            # update can never touch another clinic's appointment even if the
+            # valid_ids guard above is ever weakened.
+            Appointment.objects.filter(
+                id=appt_id,
+                clinic=clinic,
+                appointment_date=today,
+                status=Appointment.Status.CHECKED_IN,
+            ).update(queue_priority=priority)
 
     return HttpResponse(status=200)
 
@@ -2497,6 +2516,18 @@ def settings_clinic(request):
                 )
             return redirect("secretary:settings_clinic")
 
+        if section == "kiosk":
+            # Rotate the public lobby-screen token — the old kiosk link stops working
+            # immediately. Used to recover from a leaked link or retire a screen.
+            import uuid as _uuid
+            clinic.display_token = _uuid.uuid4()
+            clinic.save(update_fields=["display_token"])
+            messages.success(
+                request,
+                _("تم إنشاء رابط جديد لشاشة غرفة الانتظار. لن يعمل الرابط القديم بعد الآن."),
+            )
+            return redirect("secretary:settings_clinic")
+
         # Default: booking-policy section
         auto_confirm = bool(request.POST.get("auto_confirm_patient_bookings"))
         allow_multi = bool(request.POST.get("allow_multiple_bookings_same_day"))
@@ -2514,11 +2545,16 @@ def settings_clinic(request):
         messages.success(request, _("تم حفظ إعدادات الحجز."))
         return redirect("secretary:settings_clinic")
 
+    kiosk_url = request.build_absolute_uri(
+        reverse("secretary:waiting_room_display") + f"?token={clinic.display_token}"
+    )
+
     return render(request, "secretary/settings/clinic.html", {
         "clinic": clinic,
         "staff": staff,
         "booking_settings": booking_settings,
         "compliance_settings": get_clinic_compliance_settings(clinic),
+        "kiosk_url": kiosk_url,
     })
 
 
@@ -4680,25 +4716,44 @@ def register_patient(request):
 
 @login_required
 def patient_search_htmx(request):
-    """HTMX endpoint: search patients by name / phone / national ID."""
+    """HTMX endpoint: find a patient to register.
+
+    Cross-tenant fishing guard: a *global* match (any patient in the system) is
+    returned ONLY on an exact phone or national-id — the strong identifiers a
+    secretary legitimately has when registering an existing patient. Partial
+    matches (name, or partial phone/id) are restricted to THIS clinic's own
+    roster, so a secretary can't enumerate the global patient directory by name.
+    Every lookup is audit-logged (who/when/how-many — never the searched value).
+    """
     staff = _require_secretary(request)
     if not staff:
         return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
+    clinic = staff.clinic
     q = request.GET.get("q", "").strip()
     patients = []
 
     if len(q) >= 2:
         normalized_q = PhoneNumberAuthBackend.normalize_phone_number(q)
-        patients = (
-            User.objects.filter(
-                Q(name__icontains=q)
-                | Q(phone__icontains=normalized_q)
-                | Q(national_id__icontains=q)
-            )
-            .filter(Q(role="PATIENT") | Q(roles__contains=["PATIENT"]))
+        patient_role = Q(role="PATIENT") | Q(roles__contains=["PATIENT"])
+        # Global reach: exact phone OR exact national id only.
+        strong_match = Q(phone=normalized_q) | Q(national_id__iexact=q)
+        # Broad reach (name / partial): only within this clinic's registered patients.
+        clinic_match = Q(clinic_registrations__clinic=clinic) & (
+            Q(name__icontains=q)
+            | Q(phone__icontains=normalized_q)
+            | Q(national_id__icontains=q)
+        )
+        patients = list(
+            User.objects.filter(patient_role)
+            .filter(strong_match | clinic_match)
+            .distinct()
             .select_related("patient_profile")
             .order_by("name")[:10]
+        )
+        logger.info(
+            "secretary_patient_search user=%s clinic=%s q_len=%s results=%s",
+            request.user.id, clinic.id, len(q), len(patients),
         )
 
     return render(request, "secretary/htmx/patient_search_results.html", {
@@ -4729,10 +4784,13 @@ def patient_detail_htmx(request, patient_id):
         clinic=clinic, patient=patient
     ).exists()
     age = _compute_age(profile.date_of_birth if profile else None)
-    other_clinics = (
+    # Surface only WHETHER the patient is registered at any other clinic — never the
+    # other clinics' names. Returning clinic names here would let a secretary enumerate
+    # user ids and learn which clinics a patient attends elsewhere (cross-tenant leak).
+    registered_elsewhere = (
         ClinicPatient.objects.filter(patient=patient)
         .exclude(clinic=clinic)
-        .select_related("clinic")
+        .exists()
     )
 
     return render(request, "secretary/htmx/patient_card.html", {
@@ -4741,7 +4799,7 @@ def patient_detail_htmx(request, patient_id):
         "age": age,
         "already_registered": already_registered,
         "clinic": clinic,
-        "other_clinics": other_clinics,
+        "registered_elsewhere": registered_elsewhere,
     })
 
 

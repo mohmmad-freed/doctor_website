@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="refresh" content="20;url=?clinic_id={{ clinic.id }}&amp;lang={{ display_lang }}">
+  <meta http-equiv="refresh" content="20;url=?token={{ clinic.display_token }}&amp;lang={{ display_lang }}">
   <title>{% if display_is_rtl %}غرفة الانتظار{% else %}Waiting Room{% endif %} — {{ clinic.name }}</title>
 
   <!-- No-FOUC: apply display_theme before paint; defaults to dark if unset -->
@@ -104,11 +104,11 @@
 
     <div class="flex items-center gap-4 flex-shrink-0">
       {% if display_is_rtl %}
-      <a href="?clinic_id={{ clinic.id }}&amp;lang=en" class="lang-btn">
+      <a href="?token={{ clinic.display_token }}&amp;lang=en" class="lang-btn">
         <i class="fa-solid fa-globe" style="font-size:0.75rem;"></i> عر
       </a>
       {% else %}
-      <a href="?clinic_id={{ clinic.id }}&amp;lang=ar" class="lang-btn">
+      <a href="?token={{ clinic.display_token }}&amp;lang=ar" class="lang-btn">
         <i class="fa-solid fa-globe" style="font-size:0.75rem;"></i> EN
       </a>
       {% endif %}

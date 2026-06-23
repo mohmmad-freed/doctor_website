@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 from django.conf import settings
 from core.validators.file_validators import (
@@ -47,6 +49,12 @@ class Clinic(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="PENDING")
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
+    display_token = models.UUIDField(
+        default=uuid.uuid4,
+        unique=True,
+        editable=False,
+        help_text="Unguessable token for the public lobby/kiosk waiting-room screen URL.",
+    )
 
     def __str__(self):
         return self.name

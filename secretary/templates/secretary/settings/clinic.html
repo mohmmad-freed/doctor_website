@@ -224,6 +224,60 @@
     </form>
   </div>
 
+  {# ── Waiting-room display (kiosk) link ── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+      <h3 class="font-semibold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+        <i class="fa-solid fa-tv text-primary-500"></i>
+        {% trans "شاشة غرفة الانتظار" %}
+      </h3>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        {% trans "افتح هذا الرابط على شاشة في صالة الانتظار لعرض طابور المرضى. الرابط لا يتطلب تسجيل دخول — شاركه بحذر." %}
+      </p>
+    </div>
+
+    <div class="p-5 space-y-4">
+      {# Current link #}
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">{% trans "رابط الشاشة الحالي" %}</label>
+        <div class="flex items-stretch gap-2">
+          <input type="text" id="kiosk-url" value="{{ kiosk_url }}" readonly dir="ltr"
+                 class="flex-1 min-w-0 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300 text-sm px-3 py-2.5 text-left focus:outline-none focus:ring-2 focus:ring-primary-500">
+          <button type="button" id="kiosk-copy"
+                  class="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition flex-shrink-0">
+            <i class="fa-solid fa-copy"></i>
+            <span class="hidden sm:inline">{% trans "نسخ" %}</span>
+          </button>
+          <a href="{{ kiosk_url }}" target="_blank"
+             class="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold transition flex-shrink-0">
+            <i class="fa-solid fa-up-right-from-square"></i>
+            <span class="hidden sm:inline">{% trans "فتح" %}</span>
+          </a>
+        </div>
+      </div>
+
+      {# Regenerate — invalidates the old link #}
+      <div class="flex items-start gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/40">
+        <i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5"></i>
+        <div class="flex-1 min-w-0">
+          <p class="text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
+            {% trans "أنشئ رابطاً جديداً إذا تسرّب الرابط الحالي أو لم تعد شاشة قيد الاستخدام. سيتوقف الرابط القديم فوراً عن العمل." %}
+          </p>
+          <form method="post" novalidate class="mt-2"
+                onsubmit="return confirm('{% trans "سيتوقف الرابط الحالي عن العمل وستحتاج إلى تحديث أي شاشة تستخدمه. هل تريد المتابعة؟" %}');">
+            {% csrf_token %}
+            <input type="hidden" name="form_section" value="kiosk">
+            <button type="submit"
+                    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 text-sm font-semibold hover:bg-amber-100 dark:hover:bg-amber-900/40 transition">
+              <i class="fa-solid fa-rotate"></i>
+              {% trans "إنشاء رابط جديد" %}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -266,6 +320,28 @@
       }
     }
     enabled.addEventListener('change', sync);
+  })();
+
+  (function () {
+    var btn = document.getElementById('kiosk-copy');
+    var input = document.getElementById('kiosk-url');
+    if (!btn || !input) return;
+    btn.addEventListener('click', function () {
+      input.select();
+      input.setSelectionRange(0, 99999);
+      var done = function () {
+        var orig = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+        setTimeout(function () { btn.innerHTML = orig; }, 1500);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(input.value).then(done, function () {
+          try { document.execCommand('copy'); done(); } catch (e) {}
+        });
+      } else {
+        try { document.execCommand('copy'); done(); } catch (e) {}
+      }
+    });
   })();
 </script>
 {% endblock %}

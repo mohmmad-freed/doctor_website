@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(git stash pop)",
-      "Bash(venv/Scripts/python -c ' *)"
+      "Bash(venv/Scripts/python -c ' *)",
+      "PowerShell(& \".\\\\venv\\\\Scripts\\\\python.exe\" manage.py test secretary --verbosity=1)"
     ]
   }
 }

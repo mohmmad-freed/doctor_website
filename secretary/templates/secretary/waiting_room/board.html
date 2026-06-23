@@ -24,7 +24,7 @@
         <i class="fa-solid fa-user-check"></i> {% trans "تسجيل وصول" %}
       </a>
 
-      <a href="{% url 'secretary:waiting_room_display' %}?clinic_id={{ clinic.id }}"
+      <a href="{% url 'secretary:waiting_room_display' %}?token={{ clinic.display_token }}"
          target="_blank"
          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-semibold transition-colors"
          title="{% trans 'فتح شاشة العرض' %}">
