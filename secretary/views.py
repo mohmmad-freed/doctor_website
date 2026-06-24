@@ -1,4 +1,5 @@
 import logging
+import functools
 from datetime import date, datetime, timedelta
 
 from django.shortcuts import render, get_object_or_404, redirect
@@ -41,6 +42,32 @@ def _require_secretary(request):
     return ClinicStaff.objects.filter(
         user=request.user, role="SECRETARY", is_active=True
     ).select_related("clinic").first()
+
+
+def secretary_required(view=None, *, as_json=False):
+    """Gate a view behind an authenticated, active SECRETARY ClinicStaff post.
+
+    Enforces BOTH authentication (via login_required) and role membership (an
+    active ClinicStaff row with role="SECRETARY", resolved by _require_secretary).
+    Membership is keyed on that staff row, NOT on user.role/user.roles, so
+    multi-role users (e.g. DOCTOR+SECRETARY, or a PATIENT promoted to SECRETARY)
+    are handled correctly. The resolved staff row is injected as the view's
+    second positional argument.
+
+    Anonymous users get login_required's redirect; authenticated non-secretaries
+    get 403 (HTML by default, or JSON when as_json=True for the calendar feeds).
+    """
+    def decorator(fn):
+        @functools.wraps(fn)
+        def _inner(request, *args, **kwargs):
+            staff = _require_secretary(request)
+            if not staff:
+                if as_json:
+                    return JsonResponse({"error": "Forbidden"}, status=403)
+                return HttpResponseForbidden(_("هذه الصفحة متاحة للسكرتارية فقط."))
+            return fn(request, staff, *args, **kwargs)
+        return login_required(_inner)
+    return decorator(view) if view else decorator
 
 
 def _secretary_visible_note(clinic, patient_id):
@@ -213,12 +240,9 @@ def _get_doctor_statuses(clinic):
     return result
 
 
-@login_required
-def dashboard(request):
+@secretary_required
+def dashboard(request, staff):
     """Secretary daily overview: today's appointments, stats, and live status panels."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     clinic = staff.clinic
     _sweep_clinic_no_shows(clinic)
@@ -322,12 +346,9 @@ def dashboard(request):
     })
 
 
-@login_required
-def doctor_status_htmx(request):
+@secretary_required
+def doctor_status_htmx(request, staff):
     """HTMX endpoint: returns the doctor status cards partial (auto-refreshes every 60s)."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden()
 
     doctor_statuses = _get_doctor_statuses(staff.clinic)
     return render(request, "secretary/htmx/doctor_status_cards.html", {
@@ -335,12 +356,9 @@ def doctor_status_htmx(request):
     })
 
 
-@login_required
-def todays_appointments_htmx(request):
+@secretary_required
+def todays_appointments_htmx(request, staff):
     """HTMX endpoint: returns the filtered today's-appointments table body partial."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden()
 
     clinic = staff.clinic
     _sweep_clinic_no_shows(clinic)
@@ -371,13 +389,10 @@ def todays_appointments_htmx(request):
     })
 
 
-@login_required
+@secretary_required
 @require_POST
-def checkin_appointment(request, appointment_id):
+def checkin_appointment(request, staff, appointment_id):
     """Mark a CONFIRMED appointment as CHECKED_IN and set checked_in_at timestamp."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     appointment = get_object_or_404(Appointment, id=appointment_id, clinic=staff.clinic)
 
@@ -397,8 +412,8 @@ def checkin_appointment(request, appointment_id):
     return redirect("secretary:dashboard")
 
 
-@login_required
-def appointment_overview(request, appointment_id):
+@secretary_required
+def appointment_overview(request, staff, appointment_id):
     """Patient-scoped overview of a single appointment for the secretary.
 
     Reached from the secretary notification center "view appointment" link. Shows the
@@ -407,9 +422,6 @@ def appointment_overview(request, appointment_id):
     other appointments in this clinic — with ANY doctor — split into upcoming + past,
     each card showing the booking doctor so the secretary can tell them apart inline.
     """
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     clinic = staff.clinic
     appointment = get_object_or_404(
@@ -518,13 +530,10 @@ def appointment_overview(request, appointment_id):
     })
 
 
-@login_required
-def appointment_intake_partial(request, appointment_id):
+@secretary_required
+def appointment_intake_partial(request, staff, appointment_id):
     """HTMX endpoint: render an appointment's submitted intake form (inline expander)
     on the secretary appointment-overview timeline. Clinic-scoped."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     appointment = get_object_or_404(
         Appointment, id=appointment_id, clinic=staff.clinic
@@ -536,17 +545,14 @@ def appointment_intake_partial(request, appointment_id):
     })
 
 
-@login_required
+@secretary_required
 @require_POST
-def register_new_patient_only(request, appointment_id):
+def register_new_patient_only(request, staff, appointment_id):
     """Register an unregistered patient in the clinic AND cancel this booking.
 
     Used when the secretary wants to keep the patient on file for future visits
     but reject the specific slot they requested. Atomic: both happen or neither.
     """
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     from django.db import transaction
     from secretary.services import transition_appointment_status
@@ -621,12 +627,9 @@ def _filter_confirmed_by_query(qs, q: str):
 
 # ── Stub views for unimplemented modules ─────────────────────────────────────
 
-@login_required
-def waiting_room(request):
+@secretary_required
+def waiting_room(request, staff):
     """Secretary waiting room board — two-column live queue management."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     from clinics.models import ClinicStaff as CS
     clinic = staff.clinic
@@ -847,12 +850,9 @@ def waiting_room_display(request):
     })
 
 
-@login_required
-def waiting_room_confirmed_htmx(request):
+@secretary_required
+def waiting_room_confirmed_htmx(request, staff):
     """HTMX polling endpoint — refreshes the CONFIRMED column every 30s."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden()
 
     clinic = staff.clinic
     _sweep_clinic_no_shows(clinic)
@@ -882,12 +882,9 @@ def waiting_room_confirmed_htmx(request):
     })
 
 
-@login_required
-def waiting_room_checkedin_htmx(request):
+@secretary_required
+def waiting_room_checkedin_htmx(request, staff):
     """HTMX polling endpoint — refreshes the CHECKED_IN column every 30s."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden()
 
     clinic = staff.clinic
     _sweep_clinic_no_shows(clinic)
@@ -943,12 +940,9 @@ def waiting_room_checkedin_htmx(request):
     })
 
 
-@login_required
-def waiting_room_inprogress_htmx(request):
+@secretary_required
+def waiting_room_inprogress_htmx(request, staff):
     """HTMX polling endpoint — refreshes the IN_PROGRESS ("with the doctor") column every 30s."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden()
 
     clinic = staff.clinic
     _sweep_clinic_no_shows(clinic)
@@ -988,17 +982,14 @@ def waiting_room_inprogress_htmx(request):
     })
 
 
-@login_required
-def waiting_room_notes_htmx(request):
+@secretary_required
+def waiting_room_notes_htmx(request, staff):
     """Read-only notes panel for a waiting-room card, loaded into the notes modal.
 
     Returns the secretary-visible notes for one appointment: patient-profile
     StaffNotes, appointment StaffNotes, and the legacy secretary_note/doctor_note
     text. No add/delete — managing notes happens on the appointment overview page.
     """
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden()
 
     clinic = staff.clinic
     appt = get_object_or_404(
@@ -1031,14 +1022,11 @@ def waiting_room_notes_htmx(request):
     })
 
 
-@login_required
-def reorder_queue(request):
+@secretary_required
+def reorder_queue(request, staff):
     """POST — secretary drags to reorder the CHECKED_IN queue; persists new priorities."""
     if request.method != "POST":
         return HttpResponse(status=405)
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden()
 
     import json
     try:
@@ -1077,15 +1065,12 @@ def reorder_queue(request):
     return HttpResponse(status=200)
 
 
-@login_required
-def checkin_search(request):
+@secretary_required
+def checkin_search(request, staff):
     """
     Dedicated check-in search page: secretary searches for a patient,
     sees today's appointments, and checks them in with one click.
     """
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     clinic = staff.clinic
     today = date.today()
@@ -1133,12 +1118,9 @@ def checkin_search(request):
     })
 
 
-@login_required
-def calendar_view(request):
+@secretary_required
+def calendar_view(request, staff):
     """Calendar view — FullCalendar v6 with HTMX data feed."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     from clinics.models import ClinicStaff as CS
     clinic = staff.clinic
@@ -1168,12 +1150,9 @@ def calendar_view(request):
     })
 
 
-@login_required
-def billing_invoices(request):
+@secretary_required
+def billing_invoices(request, staff):
     """Billing dashboard: clinic invoices with a status filter + patient search."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     from secretary.models import Invoice
     from secretary import billing
@@ -1217,13 +1196,10 @@ def billing_invoices(request):
     })
 
 
-@login_required
+@secretary_required
 @require_POST
-def start_billing(request, appointment_id):
+def start_billing(request, staff, appointment_id):
     """Open a billing session for a checked-in patient and go to the invoice."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     from secretary import billing
 
@@ -1242,12 +1218,9 @@ def start_billing(request, appointment_id):
     return redirect("secretary:invoice_detail", invoice_id=invoice.id)
 
 
-@login_required
-def invoice_detail(request, invoice_id):
+@secretary_required
+def invoice_detail(request, staff, invoice_id):
     """The billing-session screen: line items, add-charge + payment forms, history."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     from secretary.models import Invoice
     from secretary import billing
@@ -1274,13 +1247,10 @@ def invoice_detail(request, invoice_id):
     })
 
 
-@login_required
+@secretary_required
 @require_POST
-def invoice_add_charge(request, invoice_id):
+def invoice_add_charge(request, staff, invoice_id):
     """Add a charge (line item) to an open invoice."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     from secretary.models import Invoice
     from secretary import billing
@@ -1304,13 +1274,10 @@ def invoice_add_charge(request, invoice_id):
     return redirect("secretary:invoice_detail", invoice_id=invoice.id)
 
 
-@login_required
+@secretary_required
 @require_POST
-def invoice_remove_charge(request, invoice_id, item_id):
+def invoice_remove_charge(request, staff, invoice_id, item_id):
     """Remove a charge from an open invoice."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     from secretary.models import Invoice, InvoiceItem
     from secretary import billing
@@ -1325,13 +1292,10 @@ def invoice_remove_charge(request, invoice_id, item_id):
     return redirect("secretary:invoice_detail", invoice_id=invoice.id)
 
 
-@login_required
+@secretary_required
 @require_POST
-def invoice_delete(request, invoice_id):
+def invoice_delete(request, staff, invoice_id):
     """Permanently delete a draft invoice (no payments)."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     from secretary.models import Invoice
     from secretary import billing
@@ -1352,13 +1316,10 @@ def invoice_delete(request, invoice_id):
     return redirect("secretary:billing_invoices")
 
 
-@login_required
+@secretary_required
 @require_POST
-def invoice_record_payment(request, invoice_id):
+def invoice_record_payment(request, staff, invoice_id):
     """Record a payment against an invoice (overpayment-guarded, FIFO debt settle)."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     from secretary.models import Invoice
     from secretary import billing
@@ -1386,12 +1347,9 @@ def invoice_record_payment(request, invoice_id):
     return redirect("secretary:invoice_detail", invoice_id=invoice.id)
 
 
-@login_required
-def patient_debts(request):
+@secretary_required
+def patient_debts(request, staff):
     """Page listing every patient with an outstanding balance and the amount owed."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     from decimal import Decimal
     from secretary import billing
@@ -1406,12 +1364,9 @@ def patient_debts(request):
     })
 
 
-@login_required
-def patient_debt_badge_htmx(request):
+@secretary_required
+def patient_debt_badge_htmx(request, staff):
     """HTMX: outstanding-debt warning banner for a selected patient (booking form)."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden()
 
     from secretary import billing
 
@@ -1431,13 +1386,10 @@ def patient_debt_badge_htmx(request):
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@login_required
-def purchase_requests(request):
+@secretary_required
+def purchase_requests(request, staff):
     """List this clinic's purchase requests, filtered by status + time period and
     sorted by date or cost."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     from secretary.models import PurchaseRequest
     from django.db.models import Count, Q
@@ -1495,12 +1447,9 @@ def purchase_requests(request):
     })
 
 
-@login_required
-def purchase_request_create(request):
+@secretary_required
+def purchase_request_create(request, staff):
     """Create a new itemized purchase request (PENDING) and notify the owner."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     from secretary.forms import PurchaseRequestForm
     from secretary import procurement
@@ -1551,13 +1500,10 @@ def purchase_request_create(request):
     })
 
 
-@login_required
+@secretary_required
 @require_POST
-def purchase_request_delete(request, request_id):
+def purchase_request_delete(request, staff, request_id):
     """Delete a still-pending purchase request created within this clinic."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     from secretary.models import PurchaseRequest
 
@@ -1570,14 +1516,11 @@ def purchase_request_delete(request, request_id):
     return redirect("secretary:purchase_requests")
 
 
-@login_required
-def reports_index(request):
+@secretary_required
+def reports_index(request, staff):
     """Reports hub — quick stats + links to each sub-report."""
     from django.db.models import Count
 
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     clinic = staff.clinic
     today = date.today()
@@ -1604,15 +1547,12 @@ def reports_index(request):
     })
 
 
-@login_required
-def report_daily(request):
+@secretary_required
+def report_daily(request, staff):
     """Daily appointments report. Supports ?export=csv."""
     from django.db.models import Count, Sum
     import csv as csv_module
 
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     clinic = staff.clinic
     _sweep_clinic_no_shows(clinic)
@@ -1694,15 +1634,12 @@ def report_daily(request):
     })
 
 
-@login_required
-def report_visits(request):
+@secretary_required
+def report_visits(request, staff):
     """Patient visits report with date range + doctor filter. Supports ?export=csv."""
     from django.db.models import Count
     import csv as csv_module
 
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     clinic = staff.clinic
     _sweep_clinic_no_shows(clinic)
@@ -1817,15 +1754,12 @@ def report_visits(request):
     })
 
 
-@login_required
-def report_noshows(request):
+@secretary_required
+def report_noshows(request, staff):
     """No-show & cancellation report. Supports ?export=csv."""
     from django.db.models import Count
     import csv as csv_module
 
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     clinic = staff.clinic
     _sweep_clinic_no_shows(clinic)
@@ -1950,16 +1884,13 @@ def report_noshows(request):
     })
 
 
-@login_required
-def report_doctors(request):
+@secretary_required
+def report_doctors(request, staff):
     """Doctor utilization report. Supports ?export=csv."""
     from django.db.models import Count
     from doctors.models import DoctorAvailability
     import csv as csv_module
 
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     clinic = staff.clinic
     _sweep_clinic_no_shows(clinic)
@@ -2081,8 +2012,8 @@ def report_doctors(request):
     })
 
 
-@login_required
-def doctor_schedule(request):
+@secretary_required
+def doctor_schedule(request, staff):
     """
     Weekly schedule view for all clinic doctors.
     Shows DoctorAvailability (recurring) and DoctorAvailabilityException (blocks) per doctor.
@@ -2093,9 +2024,6 @@ def doctor_schedule(request):
     from doctors.models import DoctorAvailability
     from django.db.models import Count
 
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     clinic = staff.clinic
     today = date.today()
@@ -2221,8 +2149,8 @@ def doctor_schedule(request):
     })
 
 
-@login_required
-def block_doctor_time(request):
+@secretary_required
+def block_doctor_time(request, staff):
     """
     Create a DoctorAvailabilityException: block a doctor for a date range.
     Secretary can add blocks. Warns if active appointments exist in the range.
@@ -2230,9 +2158,6 @@ def block_doctor_time(request):
     from clinics.models import ClinicStaff as CS, DoctorAvailabilityException
     from django.core.exceptions import ValidationError as DjangoValidationError
 
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     clinic = staff.clinic
     today = date.today()
@@ -2342,15 +2267,12 @@ def block_doctor_time(request):
     })
 
 
-@login_required
+@secretary_required
 @require_POST
-def delete_doctor_block(request, exception_id):
+def delete_doctor_block(request, staff, exception_id):
     """Deactivate (soft-delete) a DoctorAvailabilityException."""
     from clinics.models import DoctorAvailabilityException
 
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden()
 
     exc = get_object_or_404(
         DoctorAvailabilityException,
@@ -2368,8 +2290,8 @@ def delete_doctor_block(request, exception_id):
     return redirect("secretary:doctor_schedule")
 
 
-@login_required
-def settings_profile(request):
+@secretary_required
+def settings_profile(request, staff):
     """Secretary settings & profile page.
     Handles two POST actions:
       - action=profile  → update name, email, city
@@ -2379,9 +2301,6 @@ def settings_profile(request):
     """
     from accounts.models import City
 
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     clinic = staff.clinic
     user = request.user
@@ -2482,12 +2401,9 @@ def settings_profile(request):
     })
 
 
-@login_required
-def settings_clinic(request):
+@secretary_required
+def settings_clinic(request, staff):
     """Clinic-wide booking policy settings, editable by any active secretary."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     from clinics.services import (
         get_clinic_compliance_settings,
@@ -2567,15 +2483,12 @@ def settings_clinic(request):
 
 # ── New appointment module views ──────────────────────────────────────────────
 
-@login_required
+@secretary_required
 @require_POST
-def accept_new_patient_request(request, appointment_id):
+def accept_new_patient_request(request, staff, appointment_id):
     """Accept an unregistered patient's pending booking: register them in the
     clinic and confirm the appointment (atomic). Reuses _generate_file_number
     and transition_appointment_status."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     from django.db import transaction
     from secretary.services import transition_appointment_status
@@ -2613,14 +2526,11 @@ def accept_new_patient_request(request, appointment_id):
     return redirect(redirect_to)
 
 
-@login_required
+@secretary_required
 @require_POST
-def reject_new_patient_request(request, appointment_id):
+def reject_new_patient_request(request, staff, appointment_id):
     """Reject an unregistered patient's pending booking: cancel it without
     registering the patient."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     from secretary.services import transition_appointment_status
     from appointments.services.booking_service import BookingError
@@ -2651,16 +2561,13 @@ def reject_new_patient_request(request, appointment_id):
     return redirect(redirect_to)
 
 
-@login_required
+@secretary_required
 @require_POST
-def update_appointment_status(request, appointment_id):
+def update_appointment_status(request, staff, appointment_id):
     """
     HTMX endpoint: update appointment status with validation.
     Returns the updated status badge HTML partial.
     """
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden()
 
     from secretary.services import transition_appointment_status, get_valid_transitions
     from appointments.services.booking_service import BookingError
@@ -2711,18 +2618,15 @@ def update_appointment_status(request, appointment_id):
     })
 
 
-@login_required
+@secretary_required
 @require_POST
-def remove_from_queue(request, appointment_id):
+def remove_from_queue(request, staff, appointment_id):
     """
     Secretary "X" button on a CHECKED_IN row in the waiting room.
 
       - Walk-in  → delete the appointment (no prior state to return to).
       - Booked   → revert status to CONFIRMED so the original booking is preserved.
     """
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden()
 
     from secretary.services import transition_appointment_status
     from appointments.services.booking_service import BookingError
@@ -2758,15 +2662,12 @@ def remove_from_queue(request, appointment_id):
     return _redirect_back()
 
 
-@login_required
-def get_time_slots_htmx(request):
+@secretary_required
+def get_time_slots_htmx(request, staff):
     """
     HTMX endpoint: return available time slots for a doctor on a date.
     GET params: doctor_id, date (YYYY-MM-DD), appointment_type_id
     """
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden()
 
     from datetime import datetime as _dt
     from doctors.services import generate_slots_for_date
@@ -2822,12 +2723,9 @@ def get_time_slots_htmx(request):
     })
 
 
-@login_required
-def get_doctor_types_htmx(request):
+@secretary_required
+def get_doctor_types_htmx(request, staff):
     """HTMX endpoint: return appointment types for a specific doctor in this clinic."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden()
 
     from appointments.services.appointment_type_service import get_appointment_types_for_doctor_in_clinic
 
@@ -2844,15 +2742,12 @@ def get_doctor_types_htmx(request):
     })
 
 
-@login_required
-def doctor_working_days_json(request):
+@secretary_required(as_json=True)
+def doctor_working_days_json(request, staff):
     """
     JSON endpoint: returns the weekdays (Python weekday: 0=Mon..6=Sun) on which
     the selected doctor has at least one active availability block in this clinic.
     """
-    staff = _require_secretary(request)
-    if not staff:
-        return JsonResponse({"error": "Forbidden"}, status=403)
 
     from doctors.models import DoctorAvailability
 
@@ -2875,8 +2770,8 @@ def doctor_working_days_json(request):
     return JsonResponse({"working_days": working_days})
 
 
-@login_required
-def appointments_json(request):
+@secretary_required(as_json=True)
+def appointments_json(request, staff):
     """
     JSON feed for FullCalendar.
     GET params: start (ISO date), end (ISO date), doctor_id (optional)
@@ -2888,9 +2783,6 @@ def appointments_json(request):
     a group summary card (kind="group") with a per-status count breakdown when
     multiple appointments fall in the same window.
     """
-    staff = _require_secretary(request)
-    if not staff:
-        return JsonResponse({"error": "Forbidden"}, status=403)
 
     import math
     from datetime import datetime as _dt, timedelta
@@ -3264,12 +3156,9 @@ def _patient_list_filter(request):
     return value if value in ("all", "blocked") else ""
 
 
-@login_required
-def patient_list(request):
+@secretary_required
+def patient_list(request, staff):
     """Full patient roster for this clinic with search, sort, pagination."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     from django.core.paginator import Paginator
     from compliance.services.compliance_service import count_blocked_patients
@@ -3302,12 +3191,9 @@ def patient_list(request):
     })
 
 
-@login_required
-def patient_detail(request, patient_id):
+@secretary_required
+def patient_detail(request, staff, patient_id):
     """Full patient profile: personal info, appointments, medical records, billing."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     clinic = staff.clinic
     patient = get_object_or_404(User, id=patient_id)
@@ -3422,14 +3308,11 @@ def patient_detail(request, patient_id):
     })
 
 
-@login_required
-def clinical_note_print(request, patient_id):
+@secretary_required
+def clinical_note_print(request, staff, patient_id):
     """Printable (browser 'Save as PDF') view of the patient's latest clinical note,
     for a secretary. Access is granted only when that latest note was flagged
     secretary-visible by its doctor (see ``_secretary_visible_note``)."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     clinic = staff.clinic
     patient = get_object_or_404(User, id=patient_id)
@@ -3450,13 +3333,10 @@ def clinical_note_print(request, patient_id):
     )
 
 
-@login_required
+@secretary_required
 @require_POST
-def patient_pay_debt(request, patient_id):
+def patient_pay_debt(request, staff, patient_id):
     """Settle a patient's outstanding debts in one go (FIFO, oldest debt first)."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     from secretary.models import Invoice
     from secretary import billing
@@ -3503,12 +3383,9 @@ def patient_pay_debt(request, patient_id):
     return redirect(redirect_url)
 
 
-@login_required
-def edit_patient(request, patient_id):
+@secretary_required
+def edit_patient(request, staff, patient_id):
     """Edit patient demographics (secretary-permitted fields only)."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     clinic = staff.clinic
     patient = get_object_or_404(User, id=patient_id)
@@ -3628,15 +3505,12 @@ def edit_patient(request, patient_id):
     })
 
 
-@login_required
-def create_new_patient(request):
+@secretary_required
+def create_new_patient(request, staff):
     """
     Create a brand-new patient (not yet in the system) and register them in this clinic.
     If a user with the same phone already exists, redirect to register_patient with warning.
     """
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     clinic = staff.clinic
     from accounts.models import City
@@ -3802,12 +3676,9 @@ def create_new_patient(request):
     })
 
 
-@login_required
-def patient_list_htmx(request):
+@secretary_required
+def patient_list_htmx(request, staff):
     """HTMX live search endpoint for the patient list table."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden()
 
     clinic = staff.clinic
     search = request.GET.get("q", "").strip()
@@ -3831,14 +3702,11 @@ def patient_list_htmx(request):
     })
 
 
-@login_required
+@secretary_required
 @require_POST
-def remove_patient_block(request, patient_id):
+def remove_patient_block(request, staff, patient_id):
     """Lift a patient's no-show block (manual waiver) — e.g. when the patient
     comes to the clinic in person. Reuses compliance.apply_manual_waiver."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     clinic = staff.clinic
     cp = get_object_or_404(ClinicPatient, clinic=clinic, patient_id=patient_id)
@@ -3863,12 +3731,9 @@ def remove_patient_block(request, patient_id):
     return redirect(url)
 
 
-@login_required
-def appointments_list(request):
+@secretary_required
+def appointments_list(request, staff):
     """Full appointment list with filters, search, and pagination."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     from django.core.paginator import Paginator
     from clinics.models import ClinicStaff as CS
@@ -3962,12 +3827,9 @@ def appointments_list(request):
     })
 
 
-@login_required
-def create_appointment(request):
+@secretary_required
+def create_appointment(request, staff):
     """Secretary books an appointment on behalf of a patient."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     clinic = staff.clinic
     from clinics.models import ClinicStaff as CS
@@ -4129,15 +3991,12 @@ def create_appointment(request):
     })
 
 
-@login_required
-def register_walk_in(request):
+@secretary_required
+def register_walk_in(request, staff):
     """
     Secretary registers a walk-in patient: today/now, status CHECKED_IN,
     is_walk_in=True. Patient is added to the waiting-room queue immediately.
     """
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden(_("هذه الصفحة متاحة للسكرتارية فقط."))
 
     clinic = staff.clinic
     from clinics.models import ClinicStaff as CS
@@ -4214,12 +4073,9 @@ def register_walk_in(request):
     })
 
 
-@login_required
-def edit_appointment(request, appointment_id):
+@secretary_required
+def edit_appointment(request, staff, appointment_id):
     """Secretary reschedules or updates an appointment."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden(_("هذه الصفحة متاحة للسكرتارية فقط."))
 
     clinic = staff.clinic
     appointment = get_object_or_404(Appointment, id=appointment_id, clinic=clinic)
@@ -4360,12 +4216,9 @@ def edit_appointment(request, appointment_id):
     })
 
 
-@login_required
-def cancel_appointment(request, appointment_id):
+@secretary_required
+def cancel_appointment(request, staff, appointment_id):
     """Secretary cancels an appointment (with optional reason)."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     is_htmx = request.headers.get("HX-Request") == "true"
     htmx_target_patient_id = request.POST.get("walkin_patient_id", "").strip()
@@ -4457,13 +4310,10 @@ def _add_staff_note(request, staff, patient, appointment):
     return note
 
 
-@login_required
+@secretary_required
 @require_POST
-def appointment_note_add(request, appointment_id):
+def appointment_note_add(request, staff, appointment_id):
     """Secretary adds a note (for the doctor or secretaries-only) to an appointment."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
     appointment = get_object_or_404(
         Appointment.objects.select_related("patient", "doctor"),
         id=appointment_id, clinic=staff.clinic,
@@ -4475,16 +4325,13 @@ def appointment_note_add(request, appointment_id):
     )
 
 
-@login_required
+@secretary_required
 @require_POST
-def appointment_note_delete(request, appointment_id, note_id):
+def appointment_note_delete(request, staff, appointment_id, note_id):
     """Secretary deletes her OWN appointment note.
 
     Scoped to secretary-visible notes (never a doctor's private note, so no existence
     oracle); deletion is allowed only for notes authored from the secretary portal."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
     note = get_object_or_404(
         StaffNote.objects.exclude(audience=StaffNote.Audience.DOCTOR_PRIVATE),
         id=note_id, appointment_id=appointment_id, clinic=staff.clinic,
@@ -4499,29 +4346,23 @@ def appointment_note_delete(request, appointment_id, note_id):
     )
 
 
-@login_required
+@secretary_required
 @require_POST
-def patient_note_add(request, patient_id):
+def patient_note_add(request, staff, patient_id):
     """Secretary adds a note (for the doctor or secretaries-only) to a patient profile."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
     patient = get_object_or_404(User, id=patient_id)
     get_object_or_404(ClinicPatient, clinic=staff.clinic, patient=patient)
     _add_staff_note(request, staff, patient, None)
     return _safe_redirect(request, reverse("secretary:patient_detail", args=[patient_id]))
 
 
-@login_required
+@secretary_required
 @require_POST
-def patient_note_delete(request, patient_id, note_id):
+def patient_note_delete(request, staff, patient_id, note_id):
     """Secretary deletes her OWN patient-profile note.
 
     Scoped to secretary-visible notes (never a doctor's private note); deletion is
     allowed only for notes authored from the secretary portal."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
     note = get_object_or_404(
         StaffNote.objects.exclude(audience=StaffNote.Audience.DOCTOR_PRIVATE),
         id=note_id, patient_id=patient_id, clinic=staff.clinic,
@@ -4562,12 +4403,9 @@ def _render_walkin_patient_appointments(request, staff, patient_id):
     })
 
 
-@login_required
-def patient_walkin_appointments_htmx(request):
+@secretary_required
+def patient_walkin_appointments_htmx(request, staff):
     """HTMX endpoint: list a patient's future appointments for the walk-in flow."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     patient_id = request.GET.get("patient_id", "").strip()
     if not patient_id:
@@ -4711,12 +4549,9 @@ def _compute_age(date_of_birth):
     )
 
 
-@login_required
-def register_patient(request):
+@secretary_required
+def register_patient(request, staff):
     """Secretary patient registration landing page."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     clinic = staff.clinic
     recently_registered = (
@@ -4760,8 +4595,8 @@ def _patient_reachable_for_registration(clinic, patient, q=""):
     return User.objects.filter(_strong_identifier_q(q), pk=patient.pk).exists()
 
 
-@login_required
-def patient_search_htmx(request):
+@secretary_required
+def patient_search_htmx(request, staff):
     """HTMX endpoint: find a patient to register.
 
     Cross-tenant fishing guard: a *global* match (any patient in the system) is
@@ -4771,9 +4606,6 @@ def patient_search_htmx(request):
     roster, so a secretary can't enumerate the global patient directory by name.
     Every lookup is audit-logged (who/when/how-many — never the searched value).
     """
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     clinic = staff.clinic
     q = request.GET.get("q", "").strip()
@@ -4809,12 +4641,9 @@ def patient_search_htmx(request):
     })
 
 
-@login_required
-def patient_detail_htmx(request, patient_id):
+@secretary_required
+def patient_detail_htmx(request, staff, patient_id):
     """HTMX endpoint: load patient summary card + registration form."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     clinic = staff.clinic
     patient = get_object_or_404(User, id=patient_id)
@@ -4857,12 +4686,9 @@ def patient_detail_htmx(request, patient_id):
     })
 
 
-@login_required
-def register_patient_submit(request):
+@secretary_required
+def register_patient_submit(request, staff):
     """POST: register a patient in the secretary's clinic, optionally filling profile gaps."""
-    staff = _require_secretary(request)
-    if not staff:
-        return HttpResponseForbidden("هذه الصفحة متاحة للسكرتارية فقط.")
 
     if request.method != "POST":
         return redirect("secretary:register_patient")
