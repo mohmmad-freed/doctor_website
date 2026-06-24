@@ -3,7 +3,9 @@
     "allow": [
       "Bash(git stash pop)",
       "Bash(venv/Scripts/python -c ' *)",
-      "PowerShell(& \".\\\\venv\\\\Scripts\\\\python.exe\" manage.py test secretary --verbosity=1)"
+      "PowerShell(& \".\\\\venv\\\\Scripts\\\\python.exe\" manage.py test secretary --verbosity=1)",
+      "Bash(DJANGO_SETTINGS_MODULE=clinic_website.settings venv/Scripts/python.exe -c ' *)",
+      "Bash(PYTHONIOENCODING=utf-8 DJANGO_SETTINGS_MODULE=clinic_website.settings venv/Scripts/python.exe -c ' *)"
     ]
   }
 }

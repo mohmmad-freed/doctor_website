@@ -17,7 +17,7 @@
         data-patient-id="{{ patient.id }}"
         data-patient-name="{{ patient.name|escapejs }}"
         data-patient-phone="{{ patient.phone }}"
-        hx-get="{% url 'secretary:patient_card' patient.id %}"
+        hx-get="{% url 'secretary:patient_card' patient.id %}?q={{ query|urlencode }}"
         hx-target="#patient-detail-section"
         hx-swap="innerHTML"
         hx-indicator="#search-spinner"

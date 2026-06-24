@@ -2397,6 +2397,37 @@ msgstr "6 hours"
 msgid "نهاية يوم الموعد"
 msgstr "End of the appointment day"
 
+# ── Waiting-room display / kiosk link (secretary clinic settings) ────────────
+msgid "شاشة غرفة الانتظار"
+msgstr "Waiting Room Screen"
+
+msgid "افتح هذا الرابط على شاشة في صالة الانتظار لعرض طابور المرضى. الرابط لا يتطلب تسجيل دخول — شاركه بحذر."
+msgstr "Open this link on a screen in the waiting area to show the patient queue. The link requires no login — share it with care."
+
+msgid "رابط الشاشة الحالي"
+msgstr "Current screen link"
+
+msgid "أدخل هذا الرابط في متصفح الإنترنت على جهاز الشاشة (تلفاز أو جهاز لوحي) في صالة الانتظار."
+msgstr "Enter this link in a web browser on the screen device (TV or tablet) in the waiting area."
+
+msgid "نسخ"
+msgstr "Copy"
+
+msgid "فتح"
+msgstr "Open"
+
+msgid "أنشئ رابطاً جديداً إذا تسرّب الرابط الحالي أو لم تعد شاشة قيد الاستخدام. سيتوقف الرابط القديم فوراً عن العمل."
+msgstr "Generate a new link if the current one has leaked or a screen is no longer in use. The old link will stop working immediately."
+
+msgid "سيتوقف الرابط الحالي عن العمل وستحتاج إلى تحديث أي شاشة تستخدمه. هل تريد المتابعة؟"
+msgstr "The current link will stop working and you will need to update any screen that uses it. Do you want to continue?"
+
+msgid "إنشاء رابط جديد"
+msgstr "Generate new link"
+
+msgid "تم إنشاء رابط جديد لشاشة غرفة الانتظار. لن يعمل الرابط القديم بعد الآن."
+msgstr "A new waiting-room screen link has been generated. The old link will no longer work."
+
 # ── Booking confirmation page (PENDING banner) ──────────────────────────────
 msgid "تم استلام طلب الحجز"
 msgstr "Booking request received"

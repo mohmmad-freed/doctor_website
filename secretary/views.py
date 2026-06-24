@@ -8,7 +8,7 @@ from django.contrib.auth import get_user_model
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import F, Q, Sum
-from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
+from django.http import Http404, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.utils import timezone
 from django.utils.translation import gettext as _, get_language
 from django.views.decorators.http import require_POST
@@ -772,20 +772,34 @@ def waiting_room_display(request):
     from clinics.models import Clinic as ClinicModel
     from django.core.exceptions import ValidationError
 
+    # Display-screen language is independent of the secretary's system language.
+    # Controlled by ?lang= param so the TV/kiosk can show Arabic/English without
+    # affecting whoever is logged in on the secretary workstation. Resolved up
+    # front so the error responses below honour it too.
+    display_lang = request.GET.get("lang", "ar")
+    if display_lang not in ("ar", "en"):
+        display_lang = "ar"
+
     # Public, unauthenticated kiosk screen. The clinic is addressed by an
     # unguessable per-clinic display_token (NOT the sequential PK), so the live
     # queue of arbitrary clinics can't be harvested by walking integer ids.
     token = request.GET.get("token", "").strip()
     if not token:
         return HttpResponse(
-            "رابط الشاشة غير صالح. افتح شاشة العرض من لوحة غرفة الانتظار.", status=400
+            "رابط الشاشة غير صالح. افتح شاشة العرض من لوحة غرفة الانتظار."
+            if display_lang == "ar"
+            else "Invalid screen link. Open the display screen from the waiting-room board.",
+            status=400,
         )
 
     try:
         clinic = ClinicModel.objects.get(display_token=token, is_active=True)
     except (ClinicModel.DoesNotExist, ValidationError, ValueError):
         # Generic response — never reveal whether a token or clinic exists.
-        return HttpResponse("الشاشة غير متاحة.", status=404)
+        return HttpResponse(
+            "الشاشة غير متاحة." if display_lang == "ar" else "Screen unavailable.",
+            status=404,
+        )
 
     today = date.today()
     now = timezone.now()
@@ -821,13 +835,6 @@ def waiting_room_display(request):
             "is_in_progress": appt.status == Appointment.Status.IN_PROGRESS,
             "wait_minutes": wait_minutes,
         })
-
-    # Display-screen language is independent of the secretary's system language.
-    # Controlled by ?lang= param so the TV/kiosk can show Arabic/English without
-    # affecting whoever is logged in on the secretary workstation.
-    display_lang = request.GET.get("lang", "ar")
-    if display_lang not in ("ar", "en"):
-        display_lang = "ar"
 
     return render(request, "secretary/waiting_room/display.html", {
         "clinic": clinic,
@@ -4366,8 +4373,11 @@ def cancel_appointment(request, appointment_id):
     if request.method == "POST":
         from secretary.services import transition_appointment_status
         from appointments.services.booking_service import BookingError
+        # Fetch outside the try so a cross-clinic id raises a clean Http404 instead
+        # of being swallowed by the broad ``except Exception`` below (which would
+        # otherwise return 302 / a 500 for HTMX on a non-existent-in-clinic id).
+        appointment = get_object_or_404(Appointment, id=appointment_id, clinic=staff.clinic)
         try:
-            appointment = get_object_or_404(Appointment, id=appointment_id, clinic=staff.clinic)
             reason = request.POST.get("cancellation_reason", "").strip() or "إلغاء من قِبل السكرتارية"
             transition_appointment_status(
                 appointment,
@@ -4531,6 +4541,12 @@ def _render_walkin_patient_appointments(request, staff, patient_id):
     try:
         patient = User.objects.get(id=patient_id)
     except (User.DoesNotExist, ValueError):
+        return HttpResponse("")
+
+    # Cross-tenant guard: only surface a patient registered in this clinic. A
+    # non-clinic patient has no appointments here anyway, so returning empty
+    # avoids echoing their name (PII) for an arbitrary global user id.
+    if not ClinicPatient.objects.filter(clinic=staff.clinic, patient=patient).exists():
         return HttpResponse("")
 
     future_appts = list(get_patient_future_appointments(patient=patient, clinic=staff.clinic))
@@ -4714,6 +4730,36 @@ def register_patient(request):
     })
 
 
+def _strong_identifier_q(q):
+    """Q matching a patient by an *exact* strong identifier (phone or national id).
+
+    These are the only identifiers that grant a secretary cross-clinic reach when
+    registering an existing patient. Single source of truth shared by
+    ``patient_search_htmx`` (queryset filter) and
+    ``_patient_reachable_for_registration`` (per-patient re-check).
+    """
+    normalized_q = PhoneNumberAuthBackend.normalize_phone_number(q)
+    return Q(phone=normalized_q) | Q(national_id__iexact=q)
+
+
+def _patient_reachable_for_registration(clinic, patient, q=""):
+    """Whether a secretary may legitimately load this patient's PII card.
+
+    True when the patient is already registered in ``clinic`` (an existing patient
+    the secretary owns), OR when ``q`` is an exact strong-identifier match for the
+    patient — the only way a not-yet-registered global patient can surface via
+    search. This closes id-based enumeration of the global patient directory
+    through the card / walk-in lookup endpoints (see ``patient_search_htmx`` for
+    the matching search-side guard).
+    """
+    if ClinicPatient.objects.filter(clinic=clinic, patient=patient).exists():
+        return True
+    q = (q or "").strip()
+    if len(q) < 2:
+        return False
+    return User.objects.filter(_strong_identifier_q(q), pk=patient.pk).exists()
+
+
 @login_required
 def patient_search_htmx(request):
     """HTMX endpoint: find a patient to register.
@@ -4737,7 +4783,7 @@ def patient_search_htmx(request):
         normalized_q = PhoneNumberAuthBackend.normalize_phone_number(q)
         patient_role = Q(role="PATIENT") | Q(roles__contains=["PATIENT"])
         # Global reach: exact phone OR exact national id only.
-        strong_match = Q(phone=normalized_q) | Q(national_id__iexact=q)
+        strong_match = _strong_identifier_q(q)
         # Broad reach (name / partial): only within this clinic's registered patients.
         clinic_match = Q(clinic_registrations__clinic=clinic) & (
             Q(name__icontains=q)
@@ -4778,6 +4824,14 @@ def patient_detail_htmx(request, patient_id):
             '<p class="text-red-500 text-sm p-4">المستخدم المحدد ليس مريضاً.</p>',
             status=400,
         )
+
+    # Cross-tenant guard: only surface PII for a patient the secretary could
+    # legitimately reach — already registered here, or matched by an exact strong
+    # identifier (the forwarded search query). Without this, /patients/<id>/card/
+    # would let a secretary enumerate user ids to harvest names/DOBs system-wide,
+    # bypassing the guard in patient_search_htmx.
+    if not _patient_reachable_for_registration(clinic, patient, request.GET.get("q", "")):
+        raise Http404("Patient not reachable from this clinic")
 
     profile = getattr(patient, "patient_profile", None)
     already_registered = ClinicPatient.objects.filter(
