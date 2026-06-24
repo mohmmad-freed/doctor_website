@@ -234,3 +234,27 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": False,
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
+
+# ============================================
+# PRODUCTION SECURITY HARDENING (HTTPS)
+# Active only when DEBUG=False so local http dev is unaffected.
+# ============================================
+if not DEBUG:
+    # App sits behind a trusted reverse proxy / load balancer that
+    # terminates TLS and sets X-Forwarded-Proto. Only safe behind such a
+    # proxy — never set this if the app is directly reachable.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+    # Redirect every HTTP request to HTTPS.
+    SECURE_SSL_REDIRECT = True
+
+    # HTTP Strict Transport Security. 1 year + subdomains + preload is the
+    # preload-list-eligible config. Consider ramping from a small value
+    # (e.g. 3600) first if you are not yet certain all subdomains are HTTPS.
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+    # Cookies only sent over HTTPS.
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
