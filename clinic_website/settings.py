@@ -236,6 +236,37 @@ SIMPLE_JWT = {
 }
 
 # ============================================
+# SESSION SECURITY (staff portal handling PHI)
+# Not HTTPS-dependent, so these apply in ALL environments. The Secure cookie
+# flags (SESSION_COOKIE_SECURE / CSRF_COOKIE_SECURE) live in the `if not DEBUG`
+# block below because they must stay off for local http dev.
+#
+# Backend: SESSION_ENGINE is unset -> django.contrib.sessions.backends.db.
+# Sessions are server-side in the `django_session` table; the cookie carries
+# only an opaque key, and auth.logout() flushes the record + cycles the key.
+# ============================================
+
+# Block JavaScript from reading the SESSION cookie (XSS cookie theft).
+# This is already Django's default; set explicitly for auditability.
+# NOTE: do NOT set CSRF_COOKIE_HTTPONLY — HTMX needs to read the csrftoken cookie.
+SESSION_COOKIE_HTTPONLY = True
+
+# Lock cross-site cookie behaviour. 'Lax' is Django's default; explicit for audit.
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
+
+# Idle (rolling) timeout: 60 minutes of inactivity. SESSION_SAVE_EVERY_REQUEST
+# re-stamps the expiry on every request, so the countdown resets on activity
+# instead of being an absolute window from login.
+SESSION_COOKIE_AGE = 3600  # 60 minutes
+SESSION_SAVE_EVERY_REQUEST = True
+
+# End the session when the browser is closed (defense for shared front-desk
+# machines). The cookie becomes a browser-session cookie; the server-side idle
+# timeout above still applies within an open browser.
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+# ============================================
 # PRODUCTION SECURITY HARDENING (HTTPS)
 # Active only when DEBUG=False so local http dev is unaffected.
 # ============================================
