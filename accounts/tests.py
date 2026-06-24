@@ -1,8 +1,10 @@
 from unittest.mock import patch
-from django.test import TestCase, Client
+from django.test import TestCase, Client, override_settings
+from django.core.cache import cache
 from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
+from accounts import ratelimit
 from accounts.models import CustomUser, City
 from accounts.forms import PatientRegistrationForm, LoginForm, MainDoctorRegistrationForm
 from clinics.models import Clinic, ClinicActivationCode, ClinicStaff, ClinicSubscription, ClinicVerification
@@ -2067,3 +2069,90 @@ class ClinicSwitcherTest(TestCase):
             reverse("clinics:switch_clinic", kwargs={"clinic_id": self.clinic2.id})
         )
         self.assertEqual(self.client.session["selected_clinic_id"], self.clinic2.id)
+
+
+# Isolate throttle state from the shared Redis cache.
+_LOCMEM_CACHE = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "auth-throttle-tests",
+    }
+}
+
+# Default-language (Arabic) messages emitted by login_view.
+_INVALID_CREDS_AR = "رقم الهاتف أو كلمة المرور غير صحيحة."
+_UNVERIFIED_AR = "رقم هاتفك غير موثق. يرجى التواصل مع الدعم الفني."
+_TOO_MANY_AR = "محاولات تسجيل دخول كثيرة فاشلة. يرجى المحاولة لاحقاً."
+
+
+@override_settings(CACHES=_LOCMEM_CACHE, ENFORCE_PHONE_VERIFICATION=True)
+class LoginAuthHardeningTest(TestCase):
+    """Login: unverified-account enumeration fix (#2) + brute-force throttle (#4)."""
+
+    def setUp(self):
+        cache.clear()
+        self.client = Client()
+        self.city = City.objects.create(name="Nablus")
+
+        self.verified = CustomUser.objects.create_user(
+            phone="0594073157", name="Verified User",
+            national_id="123456789", password="TestPass123!@#",
+        )
+        self.verified.is_verified = True
+        self.verified.save(update_fields=["is_verified"])
+        PatientProfile.objects.create(user=self.verified)
+
+        self.unverified = CustomUser.objects.create_user(
+            phone="0594073199", name="Unverified User",
+            national_id="222333444", password="TestPass123!@#",
+        )
+        self.unverified.is_verified = False
+        self.unverified.save(update_fields=["is_verified"])
+
+    def _login(self, phone, password):
+        return self.client.post(
+            reverse("accounts:login"), {"phone": phone, "password": password}
+        )
+
+    # ── #2 enumeration ────────────────────────────────────────────────
+    def test_unverified_not_disclosed_on_wrong_password(self):
+        """A registered-but-unverified phone with a wrong password must look
+        identical to any other bad login — no 'not verified' tell."""
+        resp = self._login("0594073199", "WRONGpass99")
+        self.assertContains(resp, _INVALID_CREDS_AR)
+        self.assertNotContains(resp, _UNVERIFIED_AR)
+
+    def test_unknown_phone_same_generic_message(self):
+        resp = self._login("0591234567", "WRONGpass99")
+        self.assertContains(resp, _INVALID_CREDS_AR)
+        self.assertNotContains(resp, _UNVERIFIED_AR)
+
+    def test_unverified_disclosed_only_with_correct_password(self):
+        """The owner (correct password) still gets the actionable message."""
+        resp = self._login("0594073199", "TestPass123!@#")
+        self.assertContains(resp, _UNVERIFIED_AR)
+
+    # ── #4 throttle ───────────────────────────────────────────────────
+    def test_throttle_blocks_after_max_failures(self):
+        for _ in range(ratelimit.LOGIN_MAX_ATTEMPTS):
+            resp = self._login("0594073157", "WRONGpass99")
+            self.assertContains(resp, _INVALID_CREDS_AR)
+        # Now blocked — even the CORRECT password is refused.
+        resp = self._login("0594073157", "TestPass123!@#")
+        self.assertContains(resp, _TOO_MANY_AR)
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_successful_login_resets_throttle(self):
+        for _ in range(ratelimit.LOGIN_MAX_ATTEMPTS - 1):
+            self._login("0594073157", "WRONGpass99")
+        # Correct login succeeds and clears the counter.
+        self.assertEqual(
+            self._login("0594073157", "TestPass123!@#").status_code, 302
+        )
+        self.client.logout()
+        # A fresh batch of failures would have tripped the block if the counter
+        # had not been reset on success.
+        for _ in range(ratelimit.LOGIN_MAX_ATTEMPTS - 1):
+            resp = self._login("0594073157", "WRONGpass99")
+        self.assertContains(resp, _INVALID_CREDS_AR)
+        self.assertNotContains(resp, _TOO_MANY_AR)

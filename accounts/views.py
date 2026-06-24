@@ -21,6 +21,7 @@ from .forms import (
     ClinicRegStep2EmailOnlyForm,
     ClinicRegStep3Form,
 )
+from . import ratelimit
 from .otp_utils import request_otp, verify_otp, is_in_cooldown, get_remaining_resends
 from .email_utils import (
     generate_email_verification_token,
@@ -134,6 +135,11 @@ def login_view(request):
         if page_lang == "en"
         else "يرجى تصحيح الأخطاء أدناه."
     )
+    too_many_attempts_msg = (
+        "Too many failed attempts. Please try again later."
+        if page_lang == "en"
+        else "محاولات تسجيل دخول كثيرة فاشلة. يرجى المحاولة لاحقاً."
+    )
 
     if request.method == "POST":
         form = LoginForm(request.POST)
@@ -143,34 +149,38 @@ def login_view(request):
 
             normalized_phone = PhoneNumberAuthBackend.normalize_phone_number(phone)
 
-            try:
-                user_obj = User.objects.get(phone=normalized_phone)
+            # Brute-force throttle (keyed by phone) — block before touching the
+            # password so guessing can't continue past the limit.
+            if ratelimit.is_blocked("login", normalized_phone, ratelimit.LOGIN_MAX_ATTEMPTS):
+                messages.error(request, too_many_attempts_msg)
+                return render(request, "accounts/login.html", {"form": form})
 
-                if settings.ENFORCE_PHONE_VERIFICATION and not user_obj.is_verified:
-                    messages.error(request, unverified_phone_msg)
-                    return render(request, "accounts/login.html", {"form": form})
+            # authenticate() returns the user iff the password is correct (the
+            # backend also runs a dummy hash for unknown phones to flatten timing).
+            user = authenticate(request, username=phone, password=password)
 
-                if not user_obj.check_password(password):
-                    messages.error(request, invalid_credentials_msg)
-                    return render(request, "accounts/login.html", {"form": form})
-
-            except User.DoesNotExist:
+            if user is None:
+                # Unknown phone OR wrong password — single generic message so the
+                # response never discloses whether an account exists.
+                ratelimit.register_failure("login", normalized_phone, ratelimit.LOGIN_WINDOW_SECONDS)
                 messages.error(request, invalid_credentials_msg)
                 return render(request, "accounts/login.html", {"form": form})
 
-            user = authenticate(request, username=phone, password=password)
+            # Only now that the password is proven correct is it safe to reveal
+            # the account's verification state (avoids unverified-account enumeration).
+            if settings.ENFORCE_PHONE_VERIFICATION and not user.is_verified:
+                messages.error(request, unverified_phone_msg)
+                return render(request, "accounts/login.html", {"form": form})
 
-            if user is not None:
-                login(request, user)
-                _lang = user.preferred_language or get_default_language_for_role(getattr(user, "role", "PATIENT"))
-                messages.success(
-                    request,
-                    f"Welcome back, {user.name}!" if _lang == "en" else f"أهلاً بعودتك، {user.name}!",
-                )
-                next_url = request.GET.get("next")
-                return handle_pending_invitation_redirect(request, default_url=next_url)
-            else:
-                messages.error(request, invalid_credentials_msg)
+            ratelimit.clear_failures("login", normalized_phone)
+            login(request, user)
+            _lang = user.preferred_language or get_default_language_for_role(getattr(user, "role", "PATIENT"))
+            messages.success(
+                request,
+                f"Welcome back, {user.name}!" if _lang == "en" else f"أهلاً بعودتك، {user.name}!",
+            )
+            next_url = request.GET.get("next")
+            return handle_pending_invitation_redirect(request, default_url=next_url)
         else:
             messages.error(request, correct_errors_msg)
     else:

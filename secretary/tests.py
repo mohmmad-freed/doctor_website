@@ -11,10 +11,13 @@ Covers:
 from datetime import date, time, timedelta
 from decimal import Decimal
 
-from django.test import TestCase, Client
+from django.test import TestCase, Client, override_settings
+from django.core.cache import cache
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils import timezone
+
+from accounts import ratelimit
 
 from appointments.models import Appointment, AppointmentType, AppointmentAnswer
 from clinics.models import Clinic, ClinicStaff, ClinicInvitation
@@ -2686,3 +2689,60 @@ class WaitingRoomNotesReminderTests(SecretaryTestBase):
         self.assertContains(popup, "Appointment notes")
         self.assertContains(popup, "Manage notes")
         self.assertNotContains(popup, "إدارة الملاحظات")  # not the Arabic source
+
+
+_LOCMEM_CACHE = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "sec-pw-tests",
+    }
+}
+
+
+@override_settings(CACHES=_LOCMEM_CACHE)
+class SecretaryPasswordChangeHardeningTests(SecretaryTestBase):
+    """settings_profile password change: AUTH_PASSWORD_VALIDATORS (#1) +
+    wrong-current-password throttle (#4)."""
+
+    def setUp(self):
+        super().setUp()
+        cache.clear()
+        self.url = reverse("secretary:settings_profile")
+        self.client.force_login(self.secretary_a)
+
+    def _change(self, current, new, confirm=None):
+        return self.client.post(self.url, {
+            "action": "password",
+            "current_password": current,
+            "new_password": new,
+            "confirm_password": new if confirm is None else confirm,
+        })
+
+    def test_weak_new_password_rejected(self):
+        """An all-numeric / common password is now blocked by the validators."""
+        resp = self._change("pass1234", "12345678")
+        self.assertEqual(resp.status_code, 200)  # re-rendered, not redirected
+        self.secretary_a.refresh_from_db()
+        self.assertTrue(self.secretary_a.check_password("pass1234"))  # unchanged
+
+    def test_strong_new_password_accepted(self):
+        resp = self._change("pass1234", "Zx9qWpL2k7")
+        self.assertRedirects(resp, self.url)
+        self.secretary_a.refresh_from_db()
+        self.assertTrue(self.secretary_a.check_password("Zx9qWpL2k7"))
+
+    def test_mismatched_confirmation_rejected(self):
+        resp = self._change("pass1234", "Zx9qWpL2k7", confirm="different99")
+        self.assertEqual(resp.status_code, 200)
+        self.secretary_a.refresh_from_db()
+        self.assertTrue(self.secretary_a.check_password("pass1234"))
+
+    def test_wrong_current_password_throttled(self):
+        for _ in range(ratelimit.PW_CHANGE_MAX_ATTEMPTS):
+            resp = self._change("WRONGpw99", "Zx9qWpL2k7")
+            self.assertEqual(resp.status_code, 200)
+        # Blocked now — even the CORRECT current password can't change it.
+        resp = self._change("pass1234", "Zx9qWpL2k7")
+        self.assertContains(resp, "محاولات كثيرة")
+        self.secretary_a.refresh_from_db()
+        self.assertTrue(self.secretary_a.check_password("pass1234"))  # unchanged

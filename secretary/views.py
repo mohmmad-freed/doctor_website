@@ -2366,23 +2366,37 @@ def settings_profile(request, staff):
 
         # ── Password change ──────────────────────────────────────────
         elif action == "password":
+            from accounts import ratelimit
             current_pw = request.POST.get("current_password", "")
             new_pw = request.POST.get("new_password", "").strip()
             confirm_pw = request.POST.get("confirm_password", "").strip()
 
-            if not current_pw:
+            # Throttle repeated wrong-current-password guesses (a hijacked session
+            # shouldn't get unlimited attempts at the existing password).
+            if ratelimit.is_blocked("pw_change", user.pk, ratelimit.PW_CHANGE_MAX_ATTEMPTS):
+                password_errors["current_password"] = "محاولات كثيرة. حاول مرة أخرى بعد قليل."
+            elif not current_pw:
                 password_errors["current_password"] = "أدخل كلمة المرور الحالية."
             elif not user.check_password(current_pw):
+                ratelimit.register_failure("pw_change", user.pk, ratelimit.PW_CHANGE_WINDOW_SECONDS)
                 password_errors["current_password"] = "كلمة المرور الحالية غير صحيحة."
 
             if not new_pw:
                 password_errors["new_password"] = "أدخل كلمة المرور الجديدة."
-            elif len(new_pw) < 8:
-                password_errors["new_password"] = "كلمة المرور يجب أن تكون 8 أحرف على الأقل."
             elif new_pw != confirm_pw:
                 password_errors["confirm_password"] = "كلمتا المرور غير متطابقتين."
+            else:
+                # Enforce the project's configured AUTH_PASSWORD_VALIDATORS
+                # (length, common-password, all-numeric, user-attribute similarity).
+                from django.contrib.auth import password_validation
+                from django.core.exceptions import ValidationError as _PWValidationError
+                try:
+                    password_validation.validate_password(new_pw, user)
+                except _PWValidationError as exc:
+                    password_errors["new_password"] = " ".join(exc.messages)
 
             if not password_errors:
+                ratelimit.clear_failures("pw_change", user.pk)
                 user.set_password(new_pw)
                 user.save(update_fields=["password"])
                 # Re-authenticate so the session stays valid
