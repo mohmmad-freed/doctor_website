@@ -1952,6 +1952,64 @@ class BillingTest(SecretaryTestBase):
         inv.refresh_from_db()
         self.assertEqual(inv.status, Invoice.Status.CANCELLED)
 
+    def test_add_charge_rejects_absurd_line_total(self):
+        """F-1: a line total beyond the money-column range is a clean BillingError,
+        not an uncaught DB overflow."""
+        from secretary import billing
+        appt = self._checked_in()
+        inv = billing.open_billing_session(appt, by_user=self.secretary_a)
+        with self.assertRaises(billing.BillingError):
+            billing.add_charge(
+                inv, description="ضخم", quantity=2, unit_price=Decimal("99999999.99"),
+            )
+        inv.refresh_from_db()
+        self.assertEqual(inv.items.count(), 1)        # only the consultation seed
+        self.assertEqual(inv.total, Decimal("50.00"))  # invoice untouched
+
+    def test_add_charge_view_rejects_absurd_quantity_without_500(self):
+        """F-1: crafted oversize charges return a flash error (302), never a 500."""
+        from secretary import billing
+        appt = self._checked_in()
+        inv = billing.open_billing_session(appt, by_user=self.secretary_a)
+        self.client.force_login(self.secretary_a)
+        url = reverse("secretary:invoice_add_charge", args=[inv.id])
+
+        # Quantity past the form cap → form invalid → 302, no item added.
+        resp = self.client.post(
+            url, {"description": "x", "quantity": "999999999", "unit_price": "10"},
+        )
+        self.assertEqual(resp.status_code, 302)
+
+        # Quantity ok but the product overflows the column → BillingError → 302.
+        resp = self.client.post(
+            url, {"description": "x", "quantity": "2", "unit_price": "99999999.99"},
+        )
+        self.assertEqual(resp.status_code, 302)
+
+        inv.refresh_from_db()
+        self.assertEqual(inv.items.count(), 1)  # neither charge landed
+
+    def test_discount_clamped_to_subtotal(self):
+        """F-3: recompute clamps discount to [0, subtotal] so 0 ≤ total ≤ subtotal."""
+        from secretary import billing
+        appt = self._checked_in()
+        inv = billing.open_billing_session(appt, by_user=self.secretary_a)  # subtotal 50
+
+        # Over-large discount cannot drive total/balance negative.
+        inv.discount = Decimal("999.00")
+        billing.recompute_invoice_totals(inv)
+        inv.refresh_from_db()
+        self.assertEqual(inv.discount, Decimal("50.00"))
+        self.assertEqual(inv.total, Decimal("0.00"))
+        self.assertGreaterEqual(inv.balance_due, Decimal("0.00"))
+
+        # Negative discount cannot inflate the bill.
+        inv.discount = Decimal("-25.00")
+        billing.recompute_invoice_totals(inv)
+        inv.refresh_from_db()
+        self.assertEqual(inv.discount, Decimal("0.00"))
+        self.assertEqual(inv.total, Decimal("50.00"))
+
     # ── Payments ─────────────────────────────────────────────────────
 
     def test_partial_then_full_payment(self):

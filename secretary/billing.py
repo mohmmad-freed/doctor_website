@@ -28,6 +28,12 @@ logger = logging.getLogger(__name__)
 TWOPLACES = Decimal("0.01")
 ZERO = Decimal("0.00")
 
+# Upper bound for a single line item's total. The Invoice/InvoiceItem money columns
+# are DecimalField(max_digits=10) (≤ 99,999,999.99); capping each line well below that
+# keeps room for the invoice subtotal to sum multiple lines without a DB overflow, and
+# turns an absurd charge into a clean BillingError instead of an uncaught 500.
+MAX_LINE_TOTAL = Decimal("9999999.99")
+
 # Invoice statuses that do NOT count toward a patient's outstanding balance.
 _VOID_STATUSES = (Invoice.Status.CANCELLED, Invoice.Status.REFUNDED)
 
@@ -119,7 +125,13 @@ def recompute_invoice_totals(invoice):
     """Recompute subtotal/total/balance_due and payment status, then save."""
     subtotal = invoice.items.aggregate(s=Sum("total"))["s"] or ZERO
     invoice.subtotal = subtotal
-    invoice.total = subtotal - (invoice.discount or ZERO)
+    # Clamp the discount to [0, subtotal] so the invariant 0 ≤ total ≤ subtotal holds
+    # no matter how `discount` was set — a negative discount can't inflate the bill and
+    # an over-large one can't drive total/balance_due negative (which would otherwise
+    # shrink patient_outstanding, the payment cap, across the patient's other invoices).
+    discount = max(ZERO, min(invoice.discount or ZERO, subtotal))
+    invoice.discount = discount
+    invoice.total = subtotal - discount
     paid = invoice.amount_paid or ZERO
     invoice.balance_due = invoice.total - paid
 
@@ -291,6 +303,8 @@ def add_charge(invoice, *, description, quantity, unit_price):
     unit_price = _to_money(unit_price)
     if unit_price < ZERO:
         raise BillingError(_("سعر الوحدة غير صالح."))
+    if int(quantity) * unit_price > MAX_LINE_TOTAL:
+        raise BillingError(_("إجمالي الرسم كبير جداً. يرجى إدخال كمية أو سعر أقل."))
 
     with transaction.atomic():
         item = InvoiceItem.objects.create(
@@ -343,7 +357,21 @@ def record_payment(*, primary_invoice, amount, method, reference="", breakdown="
     clinic = primary_invoice.clinic
     patient = primary_invoice.patient
 
-    max_payable = patient_outstanding(clinic, patient)  # includes this invoice
+    # Lock every non-void invoice for this patient up front so the overpayment check
+    # and the FIFO allocation act on a consistent, serialized view. Without the row
+    # lock two concurrent payments could each read the same balances, both pass the
+    # cap, and together overpay (TOCTOU). The cap is derived from this locked set.
+    locked = list(
+        Invoice.objects.select_for_update()
+        .filter(clinic=clinic, patient=patient)
+        .exclude(status__in=_VOID_STATUSES)
+        .order_by("created_at")
+    )
+    # Resolve the primary against the locked (non-void) set: a void invoice is absent
+    # here and so can never receive an allocation.
+    locked_primary = next((inv for inv in locked if inv.pk == primary_invoice.pk), None)
+
+    max_payable = sum((inv.balance_due or ZERO for inv in locked), ZERO)
     if amount > max_payable:
         raise BillingError(
             _("المبلغ المُدخل يتجاوز إجمالي المستحقات على المريض (الحد الأقصى ₪%(max)s).")
@@ -351,17 +379,14 @@ def record_payment(*, primary_invoice, amount, method, reference="", breakdown="
         )
 
     # Allocation order: this invoice first, then other unpaid invoices oldest first.
-    primary_invoice.refresh_from_db()
-    others = list(
-        Invoice.objects.filter(clinic=clinic, patient=patient, balance_due__gt=ZERO)
-        .exclude(status__in=_VOID_STATUSES)
-        .exclude(pk=primary_invoice.pk)
-        .order_by("created_at")
-    )
     targets = []
-    if primary_invoice.balance_due > ZERO:
-        targets.append((primary_invoice, True))
-    targets.extend((inv, False) for inv in others)
+    if locked_primary is not None and (locked_primary.balance_due or ZERO) > ZERO:
+        targets.append((locked_primary, True))
+    targets.extend(
+        (inv, False)
+        for inv in locked
+        if inv.pk != primary_invoice.pk and (inv.balance_due or ZERO) > ZERO
+    )
 
     remaining = amount
     payments = []

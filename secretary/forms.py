@@ -27,9 +27,10 @@ class ChargeForm(forms.Form):
     )
     quantity = forms.IntegerField(
         min_value=1,
+        max_value=10000,
         initial=1,
         label=_("الكمية"),
-        widget=forms.NumberInput(attrs={"class": _INPUT, "min": "1"}),
+        widget=forms.NumberInput(attrs={"class": _INPUT, "min": "1", "max": "10000"}),
     )
     unit_price = forms.DecimalField(
         max_digits=10,
