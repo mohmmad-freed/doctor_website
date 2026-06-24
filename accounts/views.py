@@ -149,9 +149,14 @@ def login_view(request):
 
             normalized_phone = PhoneNumberAuthBackend.normalize_phone_number(phone)
 
-            # Brute-force throttle (keyed by phone) — block before touching the
-            # password so guessing can't continue past the limit.
-            if ratelimit.is_blocked("login", normalized_phone, ratelimit.LOGIN_MAX_ATTEMPTS):
+            # Brute-force throttle — block before touching the password so
+            # guessing can't continue past the limit. Two layers: per-phone
+            # (stops hammering one victim) and per-IP (stops password-spray
+            # across many accounts from one source). Fail-open if Redis is down.
+            ip = ratelimit.client_ip(request)
+            if ratelimit.is_blocked(
+                "login", normalized_phone, ratelimit.LOGIN_MAX_ATTEMPTS
+            ) or ratelimit.is_blocked("login_ip", ip, ratelimit.LOGIN_IP_MAX_ATTEMPTS):
                 messages.error(request, too_many_attempts_msg)
                 return render(request, "accounts/login.html", {"form": form})
 
@@ -162,7 +167,14 @@ def login_view(request):
             if user is None:
                 # Unknown phone OR wrong password — single generic message so the
                 # response never discloses whether an account exists.
-                ratelimit.register_failure("login", normalized_phone, ratelimit.LOGIN_WINDOW_SECONDS)
+                ratelimit.register_failure(
+                    "login", normalized_phone,
+                    ratelimit.LOGIN_WINDOW_SECONDS, limit=ratelimit.LOGIN_MAX_ATTEMPTS,
+                )
+                ratelimit.register_failure(
+                    "login_ip", ip,
+                    ratelimit.LOGIN_IP_WINDOW_SECONDS, limit=ratelimit.LOGIN_IP_MAX_ATTEMPTS,
+                )
                 messages.error(request, invalid_credentials_msg)
                 return render(request, "accounts/login.html", {"form": form})
 

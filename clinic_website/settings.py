@@ -41,6 +41,16 @@ ENFORCE_PHONE_VERIFICATION = os.environ.get("ENFORCE_PHONE_VERIFICATION", "1") =
 ENFORCE_OTP_LIMITS = os.environ.get("ENFORCE_OTP_LIMITS", "1") == "1"
 
 # ============================================
+# LOGIN BRUTE-FORCE THROTTLE (accounts/ratelimit.py)
+# ============================================
+# Per-account (phone) layer: N failures then an escalating block.
+LOGIN_MAX_ATTEMPTS = int(os.environ.get("LOGIN_MAX_ATTEMPTS", "5"))
+LOGIN_WINDOW_SECONDS = int(os.environ.get("LOGIN_WINDOW_SECONDS", "900"))
+# Per-IP layer: higher cap, since one IP can legitimately be many users (NAT).
+LOGIN_IP_MAX_ATTEMPTS = int(os.environ.get("LOGIN_IP_MAX_ATTEMPTS", "20"))
+LOGIN_IP_WINDOW_SECONDS = int(os.environ.get("LOGIN_IP_WINDOW_SECONDS", "900"))
+
+# ============================================
 # SMS PROVIDER (TweetsMS)
 # ============================================
 SMS_PROVIDER = os.environ.get("SMS_PROVIDER", "")

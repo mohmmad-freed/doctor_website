@@ -143,6 +143,7 @@ def send_change_email_verification(user, email, verification_url):
 EMAIL_OTP_EXPIRY_SECONDS = 10 * 60  # 10 minutes
 _EMAIL_OTP_MAX_ATTEMPTS = 3
 _EMAIL_OTP_COOLDOWN_SECONDS = 60
+_EMAIL_OTP_MAX_RESEND_PER_DAY = 3
 
 
 def _email_otp_key(email):
@@ -157,6 +158,10 @@ def _email_otp_cooldown_key(email):
     return f"email_otp:cooldown:{email.lower()}"
 
 
+def _email_otp_resend_count_key(email):
+    return f"email_otp:resend_count:{email.lower()}"
+
+
 def send_email_otp(email, recipient_name):
     """
     Generate a 6-digit OTP, store in Redis, and deliver via Brevo.
@@ -164,6 +169,18 @@ def send_email_otp(email, recipient_name):
     """
     if cache.get(_email_otp_cooldown_key(email)):
         return False, "يرجى الانتظار قبل طلب رمز جديد."
+
+    # Daily resend cap (matches SMS OTP); gated by the same feature flag so dev
+    # can disable it. Always-on cooldown above still applies regardless.
+    resend_count = cache.get(_email_otp_resend_count_key(email)) or 0
+    if getattr(settings, "ENFORCE_OTP_LIMITS", False):
+        if resend_count >= _EMAIL_OTP_MAX_RESEND_PER_DAY:
+            logger.warning(
+                "[EMAIL OTP] Daily resend limit reached for email=%s count=%s",
+                email,
+                resend_count,
+            )
+            return False, "لقد تجاوزت الحد اليومي لطلبات رمز التحقق. يرجى المحاولة غداً."
 
     otp = str(random.randint(100000, 999999))
     cache.set(_email_otp_key(email), otp, timeout=EMAIL_OTP_EXPIRY_SECONDS)
@@ -197,6 +214,13 @@ def send_email_otp(email, recipient_name):
 
     cache.set(_email_otp_cooldown_key(email), True, timeout=_EMAIL_OTP_COOLDOWN_SECONDS)
     cache.delete(_email_otp_attempts_key(email))
+
+    # Bump the daily resend counter (24h window, seeded on first send of the day).
+    if resend_count == 0:
+        cache.set(_email_otp_resend_count_key(email), 1, timeout=24 * 60 * 60)
+    else:
+        cache.incr(_email_otp_resend_count_key(email))
+
     logger.info("[EMAIL OTP] sent to %s", email)
     return True, "تم إرسال رمز التحقق إلى بريدك الإلكتروني."
 

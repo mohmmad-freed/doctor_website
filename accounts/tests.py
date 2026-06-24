@@ -2156,3 +2156,155 @@ class LoginAuthHardeningTest(TestCase):
             resp = self._login("0594073157", "WRONGpass99")
         self.assertContains(resp, _INVALID_CREDS_AR)
         self.assertNotContains(resp, _TOO_MANY_AR)
+
+
+class LoginThrottleExtensionsTest(TestCase):
+    """API/JWT throttle, IP layer, escalating backoff, fail-open, and the
+    email-OTP daily cap + prod system check added in the rate-limiting audit."""
+
+    def setUp(self):
+        cache.clear()
+        self.client = Client()
+        self.password = "TestPass123!@#"
+        self.user = CustomUser.objects.create_user(
+            phone="0594073157", name="Verified User",
+            national_id="123456789", password=self.password,
+        )
+        self.user.is_verified = True
+        self.user.save(update_fields=["is_verified"])
+        PatientProfile.objects.create(user=self.user)
+
+    def _api_login(self, phone, password):
+        return self.client.post(
+            reverse("accounts:api_login"), {"phone": phone, "password": password}
+        )
+
+    def _web_login(self, phone, password):
+        return self.client.post(
+            reverse("accounts:login"), {"phone": phone, "password": password}
+        )
+
+    # ── API/JWT throttle (the gap this audit closed) ──────────────────
+    def test_api_login_blocks_after_max_failures(self):
+        for _ in range(ratelimit.LOGIN_MAX_ATTEMPTS):
+            resp = self._api_login("0594073157", "WRONGpass99")
+            self.assertEqual(resp.status_code, 400)
+        # Now blocked — even the correct password is refused (no token issued).
+        resp = self._api_login("0594073157", self.password)
+        self.assertEqual(resp.status_code, 400)
+        # DRF wraps ValidationError({"detail": ...}) values in a list.
+        self.assertIn("Too many", str(resp.json().get("detail", "")))
+        self.assertNotIn("access", resp.json())
+
+    def test_api_and_web_share_one_counter(self):
+        """A budget burned on the API must also block the web form (same
+        'login' scope keyed by phone) — no fresh tries by switching surface."""
+        for _ in range(ratelimit.LOGIN_MAX_ATTEMPTS):
+            self._api_login("0594073157", "WRONGpass99")
+        resp = self._web_login("0594073157", self.password)
+        self.assertContains(resp, _TOO_MANY_AR)
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    # ── No user-enumeration on the API (matches web posture) ──────────
+    def test_api_unknown_phone_and_wrong_password_are_indistinguishable(self):
+        unknown = self._api_login("0591234567", "WRONGpass99")
+        wrong_pw = self._api_login("0594073157", "WRONGpass99")
+        self.assertEqual(unknown.status_code, 400)
+        self.assertEqual(wrong_pw.status_code, 400)
+        # Byte-identical bodies — nothing reveals which account exists.
+        self.assertEqual(unknown.json(), wrong_pw.json())
+
+    @override_settings(ENFORCE_PHONE_VERIFICATION=True)
+    def test_api_unverified_state_not_leaked_without_password(self):
+        """A registered-but-unverified phone with a wrong password must look
+        like any other bad login — no 'not verified' tell pre-password."""
+        unverified = CustomUser.objects.create_user(
+            phone="0594073199", name="Unverified", national_id="222333444",
+            password=self.password,
+        )
+        unverified.is_verified = False
+        unverified.save(update_fields=["is_verified"])
+        resp = self._api_login("0594073199", "WRONGpass99")
+        self.assertEqual(resp.status_code, 400)
+        self.assertNotIn("verified", str(resp.json()).lower())
+
+    # ── Per-IP layer ──────────────────────────────────────────────────
+    def test_ip_layer_blocks_password_spray(self):
+        """Failures spread across many phones (each below the per-phone limit)
+        still trip the per-IP cap and then block even a valid login."""
+        with patch.object(ratelimit, "LOGIN_IP_MAX_ATTEMPTS", 3):
+            for i in range(3):
+                self._web_login(f"059000000{i}", "WRONGpass99")
+            # IP is now blocked; the legitimate user can't log in from it.
+            resp = self._web_login("0594073157", self.password)
+            self.assertContains(resp, _TOO_MANY_AR)
+            self.assertNotIn("_auth_user_id", self.client.session)
+
+    # ── Escalating backoff ────────────────────────────────────────────
+    def test_block_seconds_escalates_with_strikes(self):
+        ladder = ratelimit.LOGIN_LOCKOUT_LADDER
+        self.assertEqual(ratelimit._block_seconds_for_strikes(1), ladder[0])
+        self.assertEqual(ratelimit._block_seconds_for_strikes(2), ladder[1])
+        # Strikes beyond the ladder clamp to the longest block.
+        self.assertEqual(ratelimit._block_seconds_for_strikes(99), ladder[-1])
+
+    def test_repeated_breaches_increment_strikes(self):
+        scope, ident, limit = "login", "0590000000", 3
+        # First breach.
+        for _ in range(limit):
+            ratelimit.register_failure(scope, ident, 900, limit=limit)
+        self.assertTrue(ratelimit.is_blocked(scope, ident, limit))
+        self.assertEqual(cache.get(ratelimit._strikes_key(scope, ident)), 1)
+        # Simulate the block window + rolling counter elapsing (strikes persist).
+        cache.delete(ratelimit._block_key(scope, ident))
+        cache.delete(ratelimit._key(scope, ident))
+        self.assertFalse(ratelimit.is_blocked(scope, ident, limit))
+        # Second breach escalates the strike level.
+        for _ in range(limit):
+            ratelimit.register_failure(scope, ident, 900, limit=limit)
+        self.assertEqual(cache.get(ratelimit._strikes_key(scope, ident)), 2)
+        self.assertTrue(ratelimit.is_blocked(scope, ident, limit))
+
+    # ── Fail-open ─────────────────────────────────────────────────────
+    def test_throttle_fails_open_when_cache_down(self):
+        with patch.object(ratelimit.cache, "get", side_effect=Exception("redis down")):
+            self.assertFalse(ratelimit.is_blocked("login", "x", 5))
+        with patch.object(ratelimit.cache, "add", side_effect=Exception("redis down")):
+            self.assertEqual(
+                ratelimit.register_failure("login", "x", 900, limit=5), 0
+            )
+
+    # ── Email-OTP daily cap ───────────────────────────────────────────
+    @override_settings(ENFORCE_OTP_LIMITS=True)
+    def test_email_otp_daily_cap_enforced(self):
+        from accounts import email_utils
+        email = "patient@example.com"
+        with patch("accounts.email_utils._send_email", return_value=None):
+            for _ in range(email_utils._EMAIL_OTP_MAX_RESEND_PER_DAY):
+                ok, _ = email_utils.send_email_otp(email, "X")
+                self.assertTrue(ok)
+                cache.delete(email_utils._email_otp_cooldown_key(email))  # bypass 60s cooldown
+            ok, _ = email_utils.send_email_otp(email, "X")
+            self.assertFalse(ok)
+
+    @override_settings(ENFORCE_OTP_LIMITS=False)
+    def test_email_otp_daily_cap_disabled_in_dev(self):
+        from accounts import email_utils
+        email = "patient@example.com"
+        with patch("accounts.email_utils._send_email", return_value=None):
+            for _ in range(email_utils._EMAIL_OTP_MAX_RESEND_PER_DAY + 2):
+                ok, _ = email_utils.send_email_otp(email, "X")
+                self.assertTrue(ok)
+                cache.delete(email_utils._email_otp_cooldown_key(email))
+
+    # ── Prod startup guard ────────────────────────────────────────────
+    @override_settings(DEBUG=False, ENFORCE_OTP_LIMITS=False, ENFORCE_PHONE_VERIFICATION=True)
+    def test_system_check_flags_insecure_prod_config(self):
+        from accounts.checks import insecure_flags_in_production
+        ids = [e.id for e in insecure_flags_in_production(None)]
+        self.assertIn("accounts.E001", ids)
+
+    @override_settings(DEBUG=True, ENFORCE_OTP_LIMITS=False, ENFORCE_PHONE_VERIFICATION=False)
+    def test_system_check_silent_in_dev(self):
+        from accounts.checks import insecure_flags_in_production
+        self.assertEqual(insecure_flags_in_production(None), [])
