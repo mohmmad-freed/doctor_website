@@ -20,6 +20,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 
+from appointments.models import Appointment
 from clinics.models import DoctorAvailabilityException
 from patients.models import ClinicPatient, StaffNote
 from secretary.models import Invoice, InvoiceItem, PurchaseRequest
@@ -214,3 +215,105 @@ class SecretaryPatientCardHardeningTests(SecretaryTestBase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.content.strip(), b"")
         self.assertNotContains(resp, self.patient_a.name)
+
+
+class SecretaryBookingTenantTests(SecretaryTestBase):
+    """The booking POST endpoints (`create_appointment`, `register_walk_in`) resolve
+    a *global* User by id/phone from the request body — the unguarded sibling of the
+    patient-card lookups. They must refuse to book a patient the secretary can't
+    legitimately reach, closing the cross-tenant enumeration + appointment-injection
+    vector (secretary at clinic B booking a clinic-A-only patient by raw id)."""
+
+    def setUp(self):
+        super().setUp()
+        # patient_a is registered ONLY in clinic A — secretary_b's adversary target.
+        ClinicPatient.objects.create(
+            clinic=self.clinic_a, patient=self.patient_a, registered_by=self.secretary_a,
+        )
+        # patient_b is registered in clinic B — the legitimate positive control.
+        self.patient_b = User.objects.create_user(
+            phone="0595550000", password="pass1234", national_id="555000111",
+            name="Patient Bilal", role="PATIENT", roles=["PATIENT"],
+        )
+        ClinicPatient.objects.create(
+            clinic=self.clinic_b, patient=self.patient_b, registered_by=self.secretary_b,
+        )
+
+    def _create_appt(self, patient_id="", patient_phone=""):
+        return self.client.post(reverse("secretary:create_appointment"), {
+            "patient_id": str(patient_id),
+            "patient_phone": patient_phone,
+            "doctor_id": self.doctor_b.id,
+            "appointment_type_id": self.appt_type_b.id,
+            "appointment_date": self.next_monday.strftime("%Y-%m-%d"),
+            "appointment_time": "10:00",
+        })
+
+    def _walk_in(self, patient_id):
+        return self.client.post(reverse("secretary:register_walk_in"), {
+            "patient_id": str(patient_id),
+            "doctor_id": self.doctor_b.id,
+            "appointment_type_id": self.appt_type_b.id,
+        })
+
+    # ── create_appointment ────────────────────────────────────────────────
+
+    def test_create_appointment_rejects_foreign_patient_by_id(self):
+        """secretary_b can't book clinic-A-only patient_a by raw id (no clinic-B appt)."""
+        self.client.force_login(self.secretary_b)
+        resp = self._create_appt(patient_id=self.patient_a.id)
+        self.assertEqual(resp.status_code, 302)
+        self.assertFalse(
+            Appointment.objects.filter(
+                clinic=self.clinic_b, patient=self.patient_a
+            ).exists(),
+            "create_appointment injected an appointment for a foreign patient",
+        )
+
+    def test_create_appointment_allows_own_clinic_patient(self):
+        """Positive control: booking clinic B's own registered patient succeeds."""
+        self.client.force_login(self.secretary_b)
+        resp = self._create_appt(patient_id=self.patient_b.id)
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(
+            Appointment.objects.filter(
+                clinic=self.clinic_b, patient=self.patient_b
+            ).exists()
+        )
+
+    def test_create_appointment_allows_new_patient_by_exact_phone(self):
+        """By-phone flow preserved: an exact phone strong-id books a global patient
+        the secretary legitimately knows, even if not yet a clinic-B member."""
+        self.client.force_login(self.secretary_b)
+        resp = self._create_appt(patient_phone=self.patient_a.phone)
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(
+            Appointment.objects.filter(
+                clinic=self.clinic_b, patient=self.patient_a
+            ).exists()
+        )
+
+    # ── register_walk_in ──────────────────────────────────────────────────
+
+    def test_walk_in_rejects_foreign_patient_by_id(self):
+        """register_walk_in refuses a patient not on clinic B's roster (q='' → membership)."""
+        self.client.force_login(self.secretary_b)
+        resp = self._walk_in(self.patient_a.id)
+        self.assertEqual(resp.status_code, 302)
+        self.assertFalse(
+            Appointment.objects.filter(
+                clinic=self.clinic_b, patient=self.patient_a
+            ).exists(),
+            "register_walk_in queued a foreign patient",
+        )
+
+    def test_walk_in_allows_own_clinic_patient(self):
+        """Positive control: walk-in for clinic B's own registered patient succeeds."""
+        self.client.force_login(self.secretary_b)
+        resp = self._walk_in(self.patient_b.id)
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(
+            Appointment.objects.filter(
+                clinic=self.clinic_b, patient=self.patient_b, is_walk_in=True
+            ).exists()
+        )

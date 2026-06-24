@@ -459,8 +459,9 @@ def register_patient_email(request):
     """Optional step: Add email after registration"""
     user = request.user
 
-    # Only allow newly registered patients
-    if user.role != "PATIENT":
+    # Only allow patients (checked via the roles array, not the single primary
+    # `role` field, so a multi-role patient can still add their email here).
+    if not user.has_role("PATIENT"):
         return redirect("accounts:home")
 
     if request.method == "POST":

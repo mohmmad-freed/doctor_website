@@ -4,11 +4,13 @@ from .models import Clinic
 def clinic_switcher(request):
     """
     Exposes owned_clinics and selected_clinic to all templates.
-    Only runs for authenticated MAIN_DOCTOR users.
+    Only runs for authenticated clinic owners — checked via the roles array, not
+    the single primary `role` field, so a multi-role owner (e.g. PATIENT primary +
+    MAIN_DOCTOR) still gets the clinic switcher.
     """
     if not request.user.is_authenticated:
         return {}
-    if getattr(request.user, "role", None) != "MAIN_DOCTOR":
+    if not request.user.has_role("MAIN_DOCTOR"):
         return {}
 
     clinics = list(

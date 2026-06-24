@@ -3910,6 +3910,15 @@ def create_appointment(request, staff):
                 messages.error(request, _("يرجى اختيار مريض أو إدخال رقم هاتف صحيح."))
                 return redirect("secretary:create_appointment")
 
+            # Cross-tenant guard: only book for a patient the secretary can
+            # legitimately reach — already registered in THIS clinic, or matched by
+            # the exact phone strong-identifier they just typed. Mirrors the patient
+            # card / search guard so this POST can't be used to enumerate or inject
+            # appointments against the global patient directory by raw id.
+            if not _patient_reachable_for_registration(clinic, patient, q=patient_phone):
+                messages.error(request, _("هذا المريض غير مسجّل في هذه العيادة."))
+                return redirect("secretary:create_appointment")
+
             # ── Optional doctor intake form (secretary may fill it on the patient's
             # behalf). All fields are optional here; only file type/size limits are
             # validated. Validate BEFORE booking so a file error doesn't create an
@@ -4049,6 +4058,14 @@ def register_walk_in(request, staff):
                 patient = User.objects.get(id=patient_id)
             except User.DoesNotExist:
                 messages.error(request, _("المريض المحدد غير موجود."))
+                return redirect("secretary:register_walk_in")
+
+            # Cross-tenant guard (see create_appointment): a walk-in can only be
+            # registered for a patient already on THIS clinic's roster. The walk-in
+            # form carries only patient_id (chosen from the clinic-scoped search),
+            # so there is no strong-identifier to fall back on (q="").
+            if not _patient_reachable_for_registration(clinic, patient, q=""):
+                messages.error(request, _("هذا المريض غير مسجّل في هذه العيادة."))
                 return redirect("secretary:register_walk_in")
 
             from patients.services import ensure_patient_profile

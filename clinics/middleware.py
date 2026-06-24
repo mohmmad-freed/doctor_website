@@ -45,9 +45,18 @@ class ClinicIsolationMiddleware:
         user = request.user
         path = request.path
 
-        # 2. Patient Logic
-        role = getattr(user, "role", None)
-        if role == "PATIENT":
+        # Staff status is derived from the FULL roles array, not the single primary
+        # `role` field — a multi-role user (e.g. PATIENT + an active SECRETARY post)
+        # whose primary role happens to be PATIENT must still be treated as staff
+        # rather than 403'd out of their own portal. The real per-clinic gate lives
+        # in each portal's decorator (e.g. @secretary_required); this is isolation
+        # defense-in-depth.
+        is_staff = any(
+            user.has_role(r) for r in ("MAIN_DOCTOR", "DOCTOR", "SECRETARY")
+        )
+
+        # 2. Patient Logic (no staff role at all)
+        if not is_staff:
             # Allow patient-facing doctor pages
             if PATIENT_ALLOWED_DOCTOR_PATHS.match(path):
                 return self.get_response(request)
@@ -65,71 +74,70 @@ class ClinicIsolationMiddleware:
             return self.get_response(request)
 
         # 3. Staff Logic (Main Doctor, Doctor, Secretary)
-        if role in ["MAIN_DOCTOR", "DOCTOR", "SECRETARY"]:
 
-            # Exemptions for staff (e.g. logout) to prevent lockouts
-            if (
-                path == "/accounts/logout/"
-                or path.startswith("/admin/")
-                or path.startswith("/static/")
-                or path.startswith("/media/")
-            ):
-                return self.get_response(request)
+        # Exemptions for staff (e.g. logout) to prevent lockouts
+        if (
+            path == "/accounts/logout/"
+            or path.startswith("/admin/")
+            or path.startswith("/static/")
+            or path.startswith("/media/")
+        ):
+            return self.get_response(request)
 
-            clinic = None
+        clinic = None
 
-            try:
-                if role == "MAIN_DOCTOR":
-                    from clinics.models import Clinic
+        try:
+            if user.has_role("MAIN_DOCTOR"):
+                from clinics.models import Clinic
 
-                    # Prefer the clinic explicitly in the URL, then session, then first owned
-                    url_clinic_id = (
-                        request.resolver_match.kwargs.get("clinic_id")
-                        if request.resolver_match else None
-                    )
-                    if url_clinic_id:
-                        clinic = Clinic.objects.filter(
-                            id=url_clinic_id, main_doctor=user, is_active=True
-                        ).first()
-                    if not clinic:
-                        session_clinic_id = request.session.get("selected_clinic_id")
-                        if session_clinic_id:
-                            clinic = Clinic.objects.filter(
-                                id=session_clinic_id, main_doctor=user, is_active=True
-                            ).first()
-                    if not clinic:
-                        clinic = user.owned_clinic.first()
-
-                elif role in ["DOCTOR", "SECRETARY"]:
-                    from clinics.models import ClinicStaff
-
-                    staff_entry = (
-                        ClinicStaff.objects.filter(user=user, is_active=True)
-                        .select_related("clinic")
-                        .first()
-                    )
-                    if staff_entry:
-                        clinic = staff_entry.clinic
-
-            except Exception:
-                pass
-
-            if not clinic:
-                # Secretary invitation paths are exempt: a secretary who has not yet
-                # accepted an invitation has no ClinicStaff record and must be allowed
-                # to reach the accept/reject views.
-                if role == "SECRETARY" and path.startswith("/secretary/invites/"):
-                    return self.get_response(request)
-                # Notification paths are exempt: staff can read their notifications
-                # even if they have no current active clinic assignment.
-                if path.startswith("/appointments/notifications/"):
-                    return self.get_response(request)
-                return HttpResponseForbidden(
-                    "Access Denied: You are not assigned to any active clinic."
+                # Prefer the clinic explicitly in the URL, then session, then first owned
+                url_clinic_id = (
+                    request.resolver_match.kwargs.get("clinic_id")
+                    if request.resolver_match else None
                 )
+                if url_clinic_id:
+                    clinic = Clinic.objects.filter(
+                        id=url_clinic_id, main_doctor=user, is_active=True
+                    ).first()
+                if not clinic:
+                    session_clinic_id = request.session.get("selected_clinic_id")
+                    if session_clinic_id:
+                        clinic = Clinic.objects.filter(
+                            id=session_clinic_id, main_doctor=user, is_active=True
+                        ).first()
+                if not clinic:
+                    clinic = user.owned_clinic.first()
 
-            # Attach clinic to request for use in Views
-            request.clinic = clinic
-            request.clinic_id = clinic.id
+            else:
+                from clinics.models import ClinicStaff
+
+                staff_entry = (
+                    ClinicStaff.objects.filter(user=user, is_active=True)
+                    .select_related("clinic")
+                    .first()
+                )
+                if staff_entry:
+                    clinic = staff_entry.clinic
+
+        except Exception:
+            pass
+
+        if not clinic:
+            # Secretary invitation paths are exempt: a secretary who has not yet
+            # accepted an invitation has no ClinicStaff record and must be allowed
+            # to reach the accept/reject views.
+            if user.has_role("SECRETARY") and path.startswith("/secretary/invites/"):
+                return self.get_response(request)
+            # Notification paths are exempt: staff can read their notifications
+            # even if they have no current active clinic assignment.
+            if path.startswith("/appointments/notifications/"):
+                return self.get_response(request)
+            return HttpResponseForbidden(
+                "Access Denied: You are not assigned to any active clinic."
+            )
+
+        # Attach clinic to request for use in Views
+        request.clinic = clinic
+        request.clinic_id = clinic.id
 
         return self.get_response(request)

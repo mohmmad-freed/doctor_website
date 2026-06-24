@@ -527,6 +527,14 @@ class WalkInRegistrationTests(SecretaryTestBase):
             day_of_week=date.today().weekday(),
             defaults={"start_time": time(0, 0), "end_time": time(23, 59)},
         )
+        # patient_a is on clinic A's roster — the realistic precondition for a
+        # secretary booking them. The walk-in/create views now refuse to book a
+        # patient they can't reach (see SecretaryBookingTenantTests in test_idor.py).
+        from patients.models import ClinicPatient
+        ClinicPatient.objects.get_or_create(
+            clinic=self.clinic_a, patient=self.patient_a,
+            defaults={"registered_by": self.secretary_a},
+        )
 
     # ── Service: register_walk_in ─────────────────────────────────────
 
@@ -1725,6 +1733,15 @@ class SecretaryIntakeBookingTest(SecretaryTestBase):
         super().setUp()
         from django.core.files.uploadedfile import SimpleUploadedFile  # noqa: F401
         self.SimpleUploadedFile = SimpleUploadedFile
+
+        # patient_a is on clinic A's roster — the realistic precondition for a
+        # secretary booking them. The create view now refuses to book a patient it
+        # can't reach (see SecretaryBookingTenantTests in test_idor.py).
+        from patients.models import ClinicPatient
+        ClinicPatient.objects.get_or_create(
+            clinic=self.clinic_a, patient=self.patient_a,
+            defaults={"registered_by": self.secretary_a},
+        )
 
         # Generic template for doctor_a (applies to all appointment types).
         self.template = DoctorIntakeFormTemplate.objects.create(
