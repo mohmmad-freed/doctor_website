@@ -65,6 +65,14 @@
     </button>
   </form>
 
+  {# ── Range-clamped notice ── #}
+  {% if range_clamped %}
+  <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl px-4 py-3 flex items-start gap-3 text-sm text-amber-800 dark:text-amber-300 print:hidden">
+    <i class="fa-solid fa-circle-info mt-0.5"></i>
+    <span>{% trans "الفترة المطلوبة كانت واسعة جدًا، وتم تقليصها إلى الحد الأقصى المسموح به." %}</span>
+  </div>
+  {% endif %}
+
   {# ── Print header ── #}
   <div class="hidden print:block mb-4">
     <h1 class="text-xl font-bold">{{ clinic.name }} — {% trans "تقرير الغياب والإلغاء" %}</h1>

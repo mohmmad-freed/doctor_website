@@ -51,6 +51,16 @@ LOGIN_IP_MAX_ATTEMPTS = int(os.environ.get("LOGIN_IP_MAX_ATTEMPTS", "20"))
 LOGIN_IP_WINDOW_SECONDS = int(os.environ.get("LOGIN_IP_WINDOW_SECONDS", "900"))
 
 # ============================================
+# REPORT / BULK-EXPORT GUARDS (secretary portal CSV reports)
+# ============================================
+# Max width (days) of a report date range; wider requests are clamped so one
+# export can't scan/dump unbounded PHI history. ~1 year by default.
+REPORT_MAX_RANGE_DAYS = int(os.environ.get("REPORT_MAX_RANGE_DAYS", "366"))
+# Per-secretary bulk-export rate cap (accounts/ratelimit.export_rate_limited).
+EXPORT_MAX_PER_WINDOW = int(os.environ.get("EXPORT_MAX_PER_WINDOW", "20"))
+EXPORT_WINDOW_SECONDS = int(os.environ.get("EXPORT_WINDOW_SECONDS", "600"))
+
+# ============================================
 # SMS PROVIDER (TweetsMS)
 # ============================================
 SMS_PROVIDER = os.environ.get("SMS_PROVIDER", "")

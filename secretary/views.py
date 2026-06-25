@@ -2,6 +2,7 @@ import logging
 import functools
 from datetime import date, datetime, timedelta
 
+from django.conf import settings
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
@@ -17,7 +18,7 @@ from django.views.decorators.http import require_POST
 from appointments.models import Appointment, AppointmentType
 from patients.models import ClinicPatient, PatientProfile, StaffNote
 from secretary.timefmt import format_clock
-from accounts.ratelimit import client_ip
+from accounts.ratelimit import client_ip, export_rate_limited
 from clinics.audit import log_activity
 from clinics.models import ActivityLog
 
@@ -37,6 +38,64 @@ def _sweep_clinic_no_shows(clinic):
     so every status badge, filter, and report stays accurate without the cron."""
     from compliance.services.compliance_service import apply_due_no_shows
     apply_due_no_shows(Appointment.objects.filter(clinic=clinic))
+
+
+def _int_or_none(value):
+    """Coerce a query-param to int, or None when blank/non-numeric.
+
+    Guards `.filter(doctor_id=...)` against a 500 on garbage input (e.g.
+    ?doctor_id=abc) — an unparseable value simply means "no doctor filter".
+    """
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _parse_report_range(request, default_from, default_to):
+    """Parse a report's date_from/date_to query params with safe bounds.
+
+    Returns ``(date_from, date_to, clamped)``:
+    - missing/invalid values fall back to the supplied defaults;
+    - a reversed range (from > to) resets to the defaults;
+    - a window wider than ``settings.REPORT_MAX_RANGE_DAYS`` is narrowed to
+      ``[date_to - max, date_to]`` so a single request can never scan — or
+      export — unbounded PHI history. ``clamped`` is True when that narrowing
+      happened, so the view/template can surface a notice.
+    """
+    try:
+        date_from = date.fromisoformat(request.GET.get("date_from", ""))
+    except ValueError:
+        date_from = default_from
+    try:
+        date_to = date.fromisoformat(request.GET.get("date_to", ""))
+    except ValueError:
+        date_to = default_to
+
+    # Reversed range → fall back to defaults rather than return empty/odd results.
+    if date_from > date_to:
+        date_from, date_to = default_from, default_to
+
+    max_days = getattr(settings, "REPORT_MAX_RANGE_DAYS", 366)
+    clamped = False
+    if (date_to - date_from).days > max_days:
+        date_from = date_to - timedelta(days=max_days)
+        clamped = True
+    return date_from, date_to, clamped
+
+
+def _export_blocked_response(request):
+    """Return a 429 response if this secretary has tripped the bulk-export rate
+    cap, else None. Keeps the report views' CSV-export branches DRY and ensures
+    every export path is throttled identically.
+    """
+    if export_rate_limited(request.user.pk):
+        return HttpResponse(
+            _("لقد تجاوزت الحد المسموح به لعمليات التصدير. حاول مرة أخرى بعد قليل."),
+            status=429,
+            content_type="text/plain; charset=utf-8",
+        )
+    return None
 
 
 def _require_secretary(request):
@@ -1627,6 +1686,9 @@ def report_daily(request, staff):
 
     # CSV export
     if request.GET.get("export") == "csv":
+        blocked = _export_blocked_response(request)
+        if blocked:
+            return blocked
         response = HttpResponse(content_type="text/csv; charset=utf-8-sig")
         response["Content-Disposition"] = f'attachment; filename="daily_report_{report_date}.csv"'
         writer = csv_module.writer(response)
@@ -1640,6 +1702,13 @@ def report_daily(request, staff):
                 appt.get_status_display(),
                 str(appt.appointment_type.price) if appt.appointment_type else "",
             ])
+        log_activity(
+            actor=request.user, clinic=clinic,
+            action=ActivityLog.Action.REPORT_EXPORTED,
+            target=clinic, request=request,
+            metadata={"report": "daily", "date": str(report_date),
+                      "row_count": total},
+        )
         return response
 
     return render(request, "secretary/reports/daily.html", {
@@ -1665,20 +1734,12 @@ def report_visits(request, staff):
     clinic = staff.clinic
     _sweep_clinic_no_shows(clinic)
     today = date.today()
-    default_from = (today - timedelta(days=29)).isoformat()
 
-    date_from_str = request.GET.get("date_from", default_from)
-    date_to_str = request.GET.get("date_to", today.isoformat())
+    date_from, date_to, range_clamped = _parse_report_range(
+        request, today - timedelta(days=29), today
+    )
     doctor_filter = request.GET.get("doctor_id", "")
-
-    try:
-        date_from = date.fromisoformat(date_from_str)
-    except ValueError:
-        date_from = today - timedelta(days=29)
-    try:
-        date_to = date.fromisoformat(date_to_str)
-    except ValueError:
-        date_to = today
+    doctor_id = _int_or_none(doctor_filter)
 
     qs = (
         Appointment.objects.filter(
@@ -1695,8 +1756,8 @@ def report_visits(request, staff):
         .select_related("patient", "doctor", "appointment_type")
         .order_by("-appointment_date", "appointment_time")
     )
-    if doctor_filter:
-        qs = qs.filter(doctor_id=doctor_filter)
+    if doctor_id is not None:
+        qs = qs.filter(doctor_id=doctor_id)
 
     appointments = list(qs)
 
@@ -1741,6 +1802,9 @@ def report_visits(request, staff):
 
     # CSV export
     if request.GET.get("export") == "csv":
+        blocked = _export_blocked_response(request)
+        if blocked:
+            return blocked
         response = HttpResponse(content_type="text/csv; charset=utf-8-sig")
         response["Content-Disposition"] = f'attachment; filename="visits_{date_from}_{date_to}.csv"'
         writer = csv_module.writer(response)
@@ -1754,6 +1818,14 @@ def report_visits(request, staff):
                 appt.appointment_type.display_name if appt.appointment_type else "",
                 appt.get_status_display(),
             ])
+        log_activity(
+            actor=request.user, clinic=clinic,
+            action=ActivityLog.Action.REPORT_EXPORTED,
+            target=clinic, request=request,
+            metadata={"report": "visits", "date_from": str(date_from),
+                      "date_to": str(date_to), "doctor_id": doctor_id,
+                      "row_count": len(appointments)},
+        )
         return response
 
     return render(request, "secretary/reports/visits.html", {
@@ -1761,6 +1833,7 @@ def report_visits(request, staff):
         "today": today,
         "date_from": date_from,
         "date_to": date_to,
+        "range_clamped": range_clamped,
         "doctor_filter": doctor_filter,
         "appointments": appointments,
         "total": len(appointments),
@@ -1785,27 +1858,19 @@ def report_noshows(request, staff):
     clinic = staff.clinic
     _sweep_clinic_no_shows(clinic)
     today = date.today()
-    default_from = (today - timedelta(days=29)).isoformat()
 
-    date_from_str = request.GET.get("date_from", default_from)
-    date_to_str = request.GET.get("date_to", today.isoformat())
+    date_from, date_to, range_clamped = _parse_report_range(
+        request, today - timedelta(days=29), today
+    )
     doctor_filter = request.GET.get("doctor_id", "")
-
-    try:
-        date_from = date.fromisoformat(date_from_str)
-    except ValueError:
-        date_from = today - timedelta(days=29)
-    try:
-        date_to = date.fromisoformat(date_to_str)
-    except ValueError:
-        date_to = today
+    doctor_id = _int_or_none(doctor_filter)
 
     base_qs = Appointment.objects.filter(
         clinic=clinic,
         appointment_date__range=(date_from, date_to),
     )
-    if doctor_filter:
-        base_qs = base_qs.filter(doctor_id=doctor_filter)
+    if doctor_id is not None:
+        base_qs = base_qs.filter(doctor_id=doctor_id)
 
     total = base_qs.count()
     # Evaluate each queryset once and reuse the lists for every breakdown below.
@@ -1866,6 +1931,9 @@ def report_noshows(request, staff):
 
     # CSV export
     if request.GET.get("export") == "csv":
+        blocked = _export_blocked_response(request)
+        if blocked:
+            return blocked
         response = HttpResponse(content_type="text/csv; charset=utf-8-sig")
         response["Content-Disposition"] = f'attachment; filename="noshows_{date_from}_{date_to}.csv"'
         writer = csv_module.writer(response)
@@ -1881,6 +1949,14 @@ def report_noshows(request, staff):
                               appt.doctor.name if appt.doctor else "",
                               appt.appointment_type.display_name if appt.appointment_type else "",
                               appt.cancellation_reason])
+        log_activity(
+            actor=request.user, clinic=clinic,
+            action=ActivityLog.Action.REPORT_EXPORTED,
+            target=clinic, request=request,
+            metadata={"report": "noshows", "date_from": str(date_from),
+                      "date_to": str(date_to), "doctor_id": doctor_id,
+                      "row_count": len(noshows) + len(cancellations)},
+        )
         return response
 
     return render(request, "secretary/reports/noshows.html", {
@@ -1888,6 +1964,7 @@ def report_noshows(request, staff):
         "today": today,
         "date_from": date_from,
         "date_to": date_to,
+        "range_clamped": range_clamped,
         "doctor_filter": doctor_filter,
         "doctors": doctors,
         "total": total,
@@ -1918,16 +1995,9 @@ def report_doctors(request, staff):
     today = date.today()
     month_start = today.replace(day=1)
 
-    date_from_str = request.GET.get("date_from", month_start.isoformat())
-    date_to_str = request.GET.get("date_to", today.isoformat())
-    try:
-        date_from = date.fromisoformat(date_from_str)
-    except ValueError:
-        date_from = month_start
-    try:
-        date_to = date.fromisoformat(date_to_str)
-    except ValueError:
-        date_to = today
+    date_from, date_to, range_clamped = _parse_report_range(
+        request, month_start, today
+    )
 
     from clinics.models import ClinicStaff as CS
     doctor_staff = CS.objects.filter(
@@ -2009,6 +2079,9 @@ def report_doctors(request, staff):
 
     # CSV export
     if request.GET.get("export") == "csv":
+        blocked = _export_blocked_response(request)
+        if blocked:
+            return blocked
         response = HttpResponse(content_type="text/csv; charset=utf-8-sig")
         response["Content-Disposition"] = f'attachment; filename="doctors_{date_from}_{date_to}.csv"'
         writer = csv_module.writer(response)
@@ -2021,6 +2094,13 @@ def report_doctors(request, staff):
                 row["completed"], row["noshows"], row["cancelled"],
                 row["utilization"], row["completion_rate"], row["avg_daily"],
             ])
+        log_activity(
+            actor=request.user, clinic=clinic,
+            action=ActivityLog.Action.REPORT_EXPORTED,
+            target=clinic, request=request,
+            metadata={"report": "doctors", "date_from": str(date_from),
+                      "date_to": str(date_to), "row_count": len(doctor_rows)},
+        )
         return response
 
     return render(request, "secretary/reports/doctors.html", {
@@ -2028,6 +2108,7 @@ def report_doctors(request, staff):
         "today": today,
         "date_from": date_from,
         "date_to": date_to,
+        "range_clamped": range_clamped,
         "doctor_rows": doctor_rows,
         "max_booked": max_booked,
     })

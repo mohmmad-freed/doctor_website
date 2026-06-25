@@ -43,6 +43,13 @@ LOGIN_IP_WINDOW_SECONDS = getattr(settings, "LOGIN_IP_WINDOW_SECONDS", 15 * 60)
 PW_CHANGE_MAX_ATTEMPTS = getattr(settings, "PW_CHANGE_MAX_ATTEMPTS", 5)
 PW_CHANGE_WINDOW_SECONDS = getattr(settings, "PW_CHANGE_WINDOW_SECONDS", 15 * 60)
 
+# Bulk-export rate cap — see hit_rate_limit / export_rate_limited below. Unlike
+# the auth throttle above this is a plain per-identity request cap (no strikes,
+# no lockout ladder) for a *legitimate* action we merely want to slow down.
+# Read live from settings at call time so deployments (and tests) can tune them.
+EXPORT_MAX_PER_WINDOW = getattr(settings, "EXPORT_MAX_PER_WINDOW", 20)
+EXPORT_WINDOW_SECONDS = getattr(settings, "EXPORT_WINDOW_SECONDS", 10 * 60)
+
 # Escalating block durations applied once an identity trips the limit. The Nth
 # breach uses LADDER[min(N - 1, len - 1)] seconds, so repeat offenders are held
 # progressively longer (15 min → 1 h → 24 h by default).
@@ -173,3 +180,44 @@ def clear_failures(scope, ident):
         ])
     except Exception:
         pass
+
+
+def hit_rate_limit(scope, ident, limit, window_seconds):
+    """Count one event against a rolling fixed window for ``ident``.
+
+    Returns True once the identity has made *more than* ``limit`` calls inside
+    the window (i.e. the ``limit``-th call is allowed, the next is capped).
+
+    Unlike :func:`register_failure` this is for legitimate-but-rate-capped
+    actions (e.g. bulk CSV export): a plain per-identity counter with no strikes
+    and no escalating lockout. Fail-open — a cache outage returns False so the
+    action proceeds rather than being wrongly blocked.
+    """
+    key = f"ratecap:{scope}:{ident}"
+    try:
+        # add() seeds the counter (and the window TTL) only on the first call.
+        if cache.add(key, 1, timeout=window_seconds):
+            total = 1
+        else:
+            try:
+                total = cache.incr(key)
+            except ValueError:
+                # Key expired between add() and incr() — restart the window.
+                cache.set(key, 1, timeout=window_seconds)
+                total = 1
+        return total > limit
+    except Exception:
+        logger.warning("[ratecap] cache op failed for %s:%s — failing open", scope, ident)
+        return False
+
+
+def export_rate_limited(ident):
+    """True once ``ident`` exceeds the bulk-export cap in the rolling window.
+
+    Convenience wrapper over :func:`hit_rate_limit` that reads the limit/window
+    live from settings (EXPORT_MAX_PER_WINDOW / EXPORT_WINDOW_SECONDS), so the
+    cap is tunable per-deployment and overridable in tests.
+    """
+    limit = getattr(settings, "EXPORT_MAX_PER_WINDOW", EXPORT_MAX_PER_WINDOW)
+    window = getattr(settings, "EXPORT_WINDOW_SECONDS", EXPORT_WINDOW_SECONDS)
+    return hit_rate_limit("csv_export", ident, limit, window)

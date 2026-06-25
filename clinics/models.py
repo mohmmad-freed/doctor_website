@@ -273,6 +273,7 @@ class ActivityLog(models.Model):
         CLINICAL_NOTE_VIEWED       = "CLINICAL_NOTE_VIEWED",       "Clinical note viewed"
         PATIENT_REGISTERED         = "PATIENT_REGISTERED",         "Patient registered in clinic"
         PATIENT_UPDATED            = "PATIENT_UPDATED",            "Patient record updated"
+        REPORT_EXPORTED            = "REPORT_EXPORTED",            "Report exported (CSV)"
 
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL,
