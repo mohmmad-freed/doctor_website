@@ -9,6 +9,11 @@ urlpatterns = [
     path("dashboard/", views.home_redirect, name="home"),
     path("login/", views.login_view, name="login"),
     path("logout/", views.logout_view, name="logout"),
+    # Two-factor authentication (staff, opt-in)
+    path("login/mfa/", views.mfa_challenge, name="mfa_challenge"),
+    path("mfa/setup/", views.mfa_setup, name="mfa_setup"),
+    path("mfa/backup-codes/", views.mfa_backup_codes, name="mfa_backup_codes"),
+    path("mfa/disable/", views.mfa_disable, name="mfa_disable"),
     path("register/", views.register_view, name="register"),
     # Patient registration (3 steps)
     path(

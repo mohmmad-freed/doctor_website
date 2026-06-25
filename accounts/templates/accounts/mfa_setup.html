@@ -1,0 +1,50 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}{% if CURRENT_LANG == 'en' %}Set up two-factor authentication{% else %}إعداد المصادقة الثنائية{% endif %}{% endblock %}
+
+{% block content %}
+<section class="auth-wrapper">
+    <div class="container" style="display: flex; justify-content: center;">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h2 class="text-h2">{% if CURRENT_LANG == 'en' %}Set up two-factor authentication{% else %}إعداد المصادقة الثنائية{% endif %}</h2>
+                <p class="text-body-m text-muted">
+                    {% if CURRENT_LANG == 'en' %}Scan this QR code with an authenticator app (Google Authenticator, Authy, …), then enter the code it shows.{% else %}امسح رمز QR بتطبيق مصادقة (Google Authenticator، Authy، …) ثم أدخل الرمز الذي يظهر.{% endif %}
+                </p>
+            </div>
+
+            <div style="text-align: center; margin-bottom: 1rem;">
+                <img src="{{ qr }}" alt="QR" width="200" height="200"
+                    style="border: 1px solid var(--border-default, #e2e8f0); border-radius: 8px; padding: 8px; background: #fff;">
+            </div>
+
+            <div style="text-align: center; margin-bottom: 1.25rem;">
+                <p class="text-body-m text-muted" style="margin-bottom: 4px;">
+                    {% if CURRENT_LANG == 'en' %}Or enter this key manually:{% else %}أو أدخل هذا المفتاح يدوياً:{% endif %}
+                </p>
+                <code dir="ltr" style="display: inline-block; padding: 6px 10px; background: var(--color-surface-2, #f1f5f9); border-radius: 6px; letter-spacing: 0.1em; font-size: 0.95rem; word-break: break-all;">{{ secret }}</code>
+            </div>
+
+            <form method="post" action="{% url 'accounts:mfa_setup' %}">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="code">{% if CURRENT_LANG == 'en' %}Code from your app{% else %}الرمز من التطبيق{% endif %}</label>
+                    <input type="text" id="code" name="code" inputmode="numeric" autocomplete="one-time-code"
+                        pattern="[0-9]*" maxlength="6" required dir="ltr" autofocus
+                        placeholder="••••••" style="text-align: center; letter-spacing: 0.4em;">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    {% if CURRENT_LANG == 'en' %}Enable two-factor authentication{% else %}تفعيل المصادقة الثنائية{% endif %}
+                </button>
+            </form>
+
+            <div class="text-center" style="margin-top: 1.5rem;">
+                <a href="{% url settings_url %}" class="text-muted" style="font-size: 0.9rem;">
+                    {% if CURRENT_LANG == 'en' %}Cancel{% else %}إلغاء{% endif %}
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

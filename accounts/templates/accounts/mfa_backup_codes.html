@@ -1,0 +1,47 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}{% if CURRENT_LANG == 'en' %}Backup codes{% else %}الرموز الاحتياطية{% endif %}{% endblock %}
+
+{% block content %}
+<section class="auth-wrapper">
+    <div class="container" style="display: flex; justify-content: center;">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h2 class="text-h2">{% if CURRENT_LANG == 'en' %}Backup codes{% else %}الرموز الاحتياطية{% endif %}</h2>
+            </div>
+
+            {% if codes %}
+            <p class="text-body-m" style="margin-bottom: 1rem;">
+                {% if CURRENT_LANG == 'en' %}Save these one-time codes somewhere safe. Each works once if you lose access to your authenticator and phone. <strong>They will not be shown again.</strong>{% else %}احفظ هذه الرموز ذات الاستخدام الواحد في مكان آمن. يعمل كل رمز مرة واحدة إذا فقدت تطبيق المصادقة وهاتفك. <strong>لن تُعرض مرة أخرى.</strong>{% endif %}
+            </p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 1.5rem;" dir="ltr">
+                {% for code in codes %}
+                <code style="padding: 8px 10px; background: var(--color-surface-2, #f1f5f9); border-radius: 6px; text-align: center; letter-spacing: 0.12em; font-size: 1rem;">{{ code }}</code>
+                {% endfor %}
+            </div>
+            <a href="{% url settings_url %}" class="btn btn-primary" style="width: 100%; display: block; text-align: center;">
+                {% if CURRENT_LANG == 'en' %}I've saved my codes{% else %}لقد حفظت رموزي{% endif %}
+            </a>
+
+            {% else %}
+            <p class="text-body-m text-muted" style="margin-bottom: 1rem;">
+                {% if CURRENT_LANG == 'en' %}Backup codes are shown only once when generated. You have <strong>{{ remaining }}</strong> unused code{{ remaining|pluralize }} left. If you've lost them, generate a new set — the old codes stop working.{% else %}تُعرض الرموز الاحتياطية مرة واحدة فقط عند إنشائها. لديك <strong>{{ remaining }}</strong> رمز غير مستخدم. إذا فقدتها، أنشئ مجموعة جديدة — وتتوقف الرموز القديمة عن العمل.{% endif %}
+            </p>
+            <form method="post" action="{% url 'accounts:mfa_backup_codes' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="regenerate">
+                <button type="submit" class="btn btn-secondary" style="width: 100%;">
+                    {% if CURRENT_LANG == 'en' %}Generate new backup codes{% else %}إنشاء رموز احتياطية جديدة{% endif %}
+                </button>
+            </form>
+            <div class="text-center" style="margin-top: 1.5rem;">
+                <a href="{% url settings_url %}" class="text-muted" style="font-size: 0.9rem;">
+                    {% if CURRENT_LANG == 'en' %}Back to settings{% else %}العودة إلى الإعدادات{% endif %}
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}

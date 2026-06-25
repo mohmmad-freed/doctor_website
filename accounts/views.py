@@ -8,7 +8,9 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.db import transaction, IntegrityError
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 import re
+import time
 
 from .forms import (
     LoginForm,
@@ -22,6 +24,7 @@ from .forms import (
     ClinicRegStep3Form,
 )
 from . import ratelimit
+from . import mfa_utils
 from .otp_utils import request_otp, verify_otp, is_in_cooldown, get_remaining_resends
 from .email_utils import (
     generate_email_verification_token,
@@ -34,7 +37,7 @@ from .email_utils import (
 )
 from .models import City
 from .backends import PhoneNumberAuthBackend
-from clinics.models import Clinic, ClinicActivationCode
+from clinics.models import Clinic, ClinicActivationCode, ClinicStaff
 from clinics.services import create_clinic_for_main_doctor
 from doctors.models import Specialty
 from patients.models import PatientProfile
@@ -114,6 +117,28 @@ def handle_pending_invitation_redirect(request, default_url=None):
     return redirect("accounts:home")
 
 
+def _is_staff(user):
+    """True if *user* has portal access to multi-patient PHI and is therefore
+    eligible for staff MFA: any active ClinicStaff post, or owns a clinic."""
+    if not getattr(user, "is_authenticated", False):
+        return False
+    if ClinicStaff.objects.filter(user=user, is_active=True).exists():
+        return True
+    return Clinic.objects.filter(main_doctor=user).exists()
+
+
+def _user_requires_mfa(user):
+    """Whether this login must clear a second factor before the session is set.
+
+    Opt-in today: only accounts that explicitly enabled MFA are challenged
+    (enrollment is staff-only, so ``mfa_enabled`` implies staff). This single
+    function is the enforcement chokepoint — to make MFA mandatory for staff
+    later, also return True for un-enrolled staff and route them into setup;
+    the rest of the login flow needs no change.
+    """
+    return bool(getattr(user, "mfa_enabled", False))
+
+
 def login_view(request):
     """Handle user login with phone number"""
     if request.user.is_authenticated:
@@ -184,14 +209,28 @@ def login_view(request):
                 messages.error(request, unverified_phone_msg)
                 return render(request, "accounts/login.html", {"form": form})
 
+            # Password is proven correct — clear the brute-force counters for it.
             ratelimit.clear_failures("login", normalized_phone)
+
+            next_url = request.GET.get("next")
+
+            # Opt-in second factor (staff): if MFA is enabled and this browser is
+            # not already a trusted device, defer login() until the challenge is
+            # passed. We stash a short-lived, half-authenticated marker in the
+            # session rather than logging the user in now. The MFA redirect only
+            # happens after a correct password, so it leaks no account state.
+            if _user_requires_mfa(user) and not mfa_utils.is_trusted_device(request, user):
+                request.session["mfa_pending_user_id"] = user.id
+                request.session["mfa_pending_at"] = time.time()
+                request.session["mfa_next"] = next_url or ""
+                return redirect("accounts:mfa_challenge")
+
             login(request, user)
             _lang = user.preferred_language or get_default_language_for_role(getattr(user, "role", "PATIENT"))
             messages.success(
                 request,
                 f"Welcome back, {user.name}!" if _lang == "en" else f"أهلاً بعودتك، {user.name}!",
             )
-            next_url = request.GET.get("next")
             return handle_pending_invitation_redirect(request, default_url=next_url)
         else:
             messages.error(request, correct_errors_msg)
@@ -199,6 +238,251 @@ def login_view(request):
         form = LoginForm()
 
     return render(request, "accounts/login.html", {"form": form})
+
+
+# ============================================================================
+# MFA (two-factor) — challenge at login + opt-in enrollment for staff.
+# See accounts/mfa_utils.py for the crypto/TOTP/backup-code/trusted-device core.
+# ============================================================================
+def _t(request, en, ar):
+    """Tiny inline translator for the MFA views (page language → string)."""
+    return en if getattr(request, "LANGUAGE_CODE", "ar") == "en" else ar
+
+
+def _clear_mfa_pending(request):
+    for k in ("mfa_pending_user_id", "mfa_pending_at", "mfa_next"):
+        request.session.pop(k, None)
+
+
+def _safe_next(request, fallback="accounts:home"):
+    """Return a validated internal ``next`` URL, else *fallback* (a view name)."""
+    nxt = request.POST.get("next") or request.GET.get("next")
+    if nxt and url_has_allowed_host_and_scheme(
+        nxt, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        return nxt
+    return fallback
+
+
+def _mfa_settings_url(user):
+    """Best settings/profile page to return a staff member to after MFA changes.
+
+    Mirrors home_redirect's priority (owner → doctor → secretary) so multi-role
+    users land on a page they actually have."""
+    if Clinic.objects.filter(main_doctor=user).exists():
+        return "clinics:owner_profile"
+    if user.has_role("DOCTOR") or user.has_role("MAIN_DOCTOR"):
+        return "doctors:doctor_profile"
+    if ClinicStaff.objects.filter(user=user, role="SECRETARY", is_active=True).exists():
+        return "secretary:settings_profile"
+    return "accounts:home"
+
+
+def _complete_mfa_login(request, user, remember_device=False):
+    """Finish a deferred login once the second factor has passed."""
+    # We authenticated by password in a previous request, so set the backend
+    # explicitly (two backends are configured, login() can't infer it).
+    user.backend = "accounts.backends.PhoneNumberAuthBackend"
+    next_url = request.session.get("mfa_next") or None
+    _clear_mfa_pending(request)
+    login(request, user)  # rotates the session key — fixation-safe
+    _lang = user.preferred_language or get_default_language_for_role(
+        getattr(user, "role", "PATIENT")
+    )
+    messages.success(
+        request,
+        f"Welcome back, {user.name}!" if _lang == "en" else f"أهلاً بعودتك، {user.name}!",
+    )
+    response = handle_pending_invitation_redirect(request, default_url=next_url)
+    if remember_device:
+        mfa_utils.set_trusted_device_cookie(response, user)
+    return response
+
+
+def mfa_challenge(request):
+    """Second-factor step after a correct staff password.
+
+    Reads the short-lived half-authenticated marker set by ``login_view`` and
+    verifies a TOTP code, an SMS OTP (fallback), or a one-time backup code, then
+    completes ``login()``. No marker / expired marker → back to the login page.
+    """
+    uid = request.session.get("mfa_pending_user_id")
+    started = request.session.get("mfa_pending_at")
+    ttl = getattr(settings, "MFA_PENDING_TTL_SECONDS", 600)
+    if not uid or not started or (time.time() - started) > ttl:
+        _clear_mfa_pending(request)
+        messages.error(request, _t(request,
+            "Your login session expired. Please sign in again.",
+            "انتهت صلاحية جلسة تسجيل الدخول. يرجى تسجيل الدخول مجدداً."))
+        return redirect("accounts:login")
+
+    try:
+        user = User.objects.get(pk=uid)
+    except User.DoesNotExist:
+        _clear_mfa_pending(request)
+        return redirect("accounts:login")
+
+    # MFA turned off between the password step and now — nothing to challenge.
+    if not user.mfa_enabled:
+        return _complete_mfa_login(request, user)
+
+    ip = ratelimit.client_ip(request)
+    sms_sent = False
+
+    if request.method == "POST":
+        action = request.POST.get("action", "verify")
+
+        if ratelimit.is_blocked("mfa", user.pk, settings.MFA_MAX_ATTEMPTS) or \
+                ratelimit.is_blocked("mfa_ip", ip, settings.MFA_IP_MAX_ATTEMPTS):
+            messages.error(request, _t(request,
+                "Too many attempts. Please try again later.",
+                "محاولات كثيرة. يرجى المحاولة لاحقاً."))
+            return render(request, "accounts/mfa_challenge.html",
+                          _mfa_challenge_ctx(user))
+
+        if action == "send_sms":
+            ok, msg = request_otp(user.phone)
+            sms_sent = ok
+            (messages.success if ok else messages.error)(request, msg)
+            return render(request, "accounts/mfa_challenge.html",
+                          _mfa_challenge_ctx(user, sms_sent=sms_sent))
+
+        method = request.POST.get("method", "totp")
+        code = request.POST.get("code", "").strip()
+        verified = False
+        if method == "sms":
+            verified, _msg = verify_otp(user.phone, code)
+        elif method == "backup":
+            verified = mfa_utils.verify_and_consume_backup_code(user, code)
+        else:
+            verified = mfa_utils.verify_totp(mfa_utils.user_totp_secret(user), code)
+
+        if verified:
+            ratelimit.clear_failures("mfa", user.pk)
+            remember = request.POST.get("remember_device") == "1"
+            return _complete_mfa_login(request, user, remember_device=remember)
+
+        ratelimit.register_failure("mfa", user.pk,
+                                   settings.MFA_WINDOW_SECONDS, limit=settings.MFA_MAX_ATTEMPTS)
+        ratelimit.register_failure("mfa_ip", ip,
+                                   settings.MFA_IP_WINDOW_SECONDS, limit=settings.MFA_IP_MAX_ATTEMPTS)
+        messages.error(request, _t(request,
+            "Incorrect code. Please try again.",
+            "الرمز غير صحيح. يرجى المحاولة مرة أخرى."))
+
+    return render(request, "accounts/mfa_challenge.html", _mfa_challenge_ctx(user, sms_sent=sms_sent))
+
+
+def _mfa_challenge_ctx(user, sms_sent=False):
+    return {
+        "has_phone": bool(user.phone),
+        "backup_remaining": mfa_utils.unused_backup_code_count(user),
+        "sms_sent": sms_sent,
+    }
+
+
+@login_required
+def mfa_setup(request):
+    """Opt-in TOTP enrollment (staff only). Confirms a code before enabling."""
+    user = request.user
+    if not _is_staff(user):
+        messages.error(request, _t(request,
+            "Two-factor authentication is available to clinic staff only.",
+            "المصادقة الثنائية متاحة لطاقم العيادة فقط."))
+        return redirect("accounts:home")
+    if user.mfa_enabled:
+        messages.info(request, _t(request,
+            "Two-factor authentication is already enabled.",
+            "المصادقة الثنائية مفعّلة بالفعل."))
+        return redirect(_mfa_settings_url(user))
+
+    # Hold the candidate secret in the session until the user proves they can
+    # generate a valid code from it.
+    secret = request.session.get("mfa_setup_secret")
+    if not secret:
+        secret = mfa_utils.generate_totp_secret()
+        request.session["mfa_setup_secret"] = secret
+
+    if request.method == "POST":
+        code = request.POST.get("code", "").strip()
+        if mfa_utils.verify_totp(secret, code):
+            mfa_utils.enable_mfa(user, secret)
+            request.session.pop("mfa_setup_secret", None)
+            request.session["mfa_backup_codes_once"] = mfa_utils.generate_backup_codes(user)
+            messages.success(request, _t(request,
+                "Two-factor authentication enabled.",
+                "تم تفعيل المصادقة الثنائية."))
+            return redirect("accounts:mfa_backup_codes")
+        messages.error(request, _t(request,
+            "Incorrect code. Please scan the QR and try again.",
+            "الرمز غير صحيح. يرجى مسح الرمز والمحاولة مجدداً."))
+
+    return render(request, "accounts/mfa_setup.html", {
+        "qr": mfa_utils.qr_data_uri(mfa_utils.provisioning_uri(secret, user.phone)),
+        "secret": secret,
+        "settings_url": _mfa_settings_url(user),
+    })
+
+
+@login_required
+def mfa_backup_codes(request):
+    """Show one-time backup codes (once, right after enroll/regenerate)."""
+    user = request.user
+    if not user.mfa_enabled:
+        return redirect("accounts:home")
+
+    codes = request.session.pop("mfa_backup_codes_once", None)
+    if request.method == "POST" and request.POST.get("action") == "regenerate":
+        codes = mfa_utils.generate_backup_codes(user)
+        messages.success(request, _t(request,
+            "New backup codes generated. Your old codes no longer work.",
+            "تم إنشاء رموز احتياطية جديدة. الرموز القديمة لم تعد صالحة."))
+
+    return render(request, "accounts/mfa_backup_codes.html", {
+        "codes": codes,
+        "remaining": mfa_utils.unused_backup_code_count(user),
+        "settings_url": _mfa_settings_url(user),
+    })
+
+
+@login_required
+def mfa_disable(request):
+    """Turn MFA off after re-auth (current password OR a valid TOTP/backup code)."""
+    user = request.user
+    if not user.mfa_enabled:
+        return redirect("accounts:home")
+
+    if request.method == "POST":
+        if ratelimit.is_blocked("mfa", user.pk, settings.MFA_MAX_ATTEMPTS):
+            messages.error(request, _t(request,
+                "Too many attempts. Please try again later.",
+                "محاولات كثيرة. يرجى المحاولة لاحقاً."))
+            return render(request, "accounts/mfa_disable.html", {"settings_url": _mfa_settings_url(user)})
+
+        password = request.POST.get("password", "")
+        code = request.POST.get("code", "").strip()
+        confirmed = bool(password and user.check_password(password))
+        if not confirmed and code:
+            confirmed = mfa_utils.verify_totp(mfa_utils.user_totp_secret(user), code) or \
+                mfa_utils.verify_and_consume_backup_code(user, code)
+
+        if confirmed:
+            ratelimit.clear_failures("mfa", user.pk)
+            mfa_utils.disable_mfa(user)
+            messages.success(request, _t(request,
+                "Two-factor authentication disabled.",
+                "تم إيقاف المصادقة الثنائية."))
+            response = redirect(_mfa_settings_url(user))
+            response.delete_cookie(getattr(settings, "MFA_TRUSTED_DEVICE_COOKIE", "mfa_device"))
+            return response
+
+        ratelimit.register_failure("mfa", user.pk,
+                                   settings.MFA_WINDOW_SECONDS, limit=settings.MFA_MAX_ATTEMPTS)
+        messages.error(request, _t(request,
+            "Could not confirm. Check your password or code.",
+            "تعذّر التأكيد. تحقق من كلمة المرور أو الرمز."))
+
+    return render(request, "accounts/mfa_disable.html", {"settings_url": _mfa_settings_url(user)})
 
 
 def register_view(request):

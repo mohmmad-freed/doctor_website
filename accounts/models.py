@@ -131,6 +131,30 @@ class CustomUser(AbstractUser):
         help_text="Preferred time-of-day display style across the secretary side.",
     )
 
+    # ── Two-factor authentication (opt-in, staff-only; see accounts/mfa_utils.py) ──
+    mfa_enabled = models.BooleanField(
+        default=False,
+        help_text="Whether the user has an active second factor (TOTP) on login.",
+    )
+    mfa_totp_secret = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="Fernet-encrypted TOTP shared secret. Never stored in plaintext.",
+    )
+    mfa_enrolled_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the user completed MFA enrollment.",
+    )
+    mfa_device_salt = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        help_text="Per-user salt for 'remember this device' cookies. Rotating it "
+        "revokes every trusted device (sign out other devices).",
+    )
+
     # Set phone as the unique identifier for login
     USERNAME_FIELD = "phone"
     REQUIRED_FIELDS = []
@@ -147,6 +171,36 @@ class CustomUser(AbstractUser):
     class Meta:
         verbose_name = "User"
         verbose_name_plural = "Users"
+
+
+class StaffMfaBackupCode(models.Model):
+    """One-time recovery code for staff MFA.
+
+    Stored hashed (never plaintext); a code is consumed on first successful use
+    by stamping ``used_at``. Generated in a batch at enrollment and shown to the
+    user exactly once. See accounts/mfa_utils.py for generation/verification.
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="mfa_backup_codes",
+    )
+    code_hash = models.CharField(max_length=128, db_index=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Staff MFA Backup Code"
+        verbose_name_plural = "Staff MFA Backup Codes"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "used_at"], name="mfa_backup_user_used_idx"),
+        ]
+
+    def __str__(self):
+        state = "used" if self.used_at else "unused"
+        return f"backup code for {self.user_id} ({state})"
 
 
 def identity_claim_evidence_upload_path(instance, filename):

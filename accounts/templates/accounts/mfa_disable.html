@@ -1,0 +1,43 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}{% if CURRENT_LANG == 'en' %}Disable two-factor authentication{% else %}إيقاف المصادقة الثنائية{% endif %}{% endblock %}
+
+{% block content %}
+<section class="auth-wrapper">
+    <div class="container" style="display: flex; justify-content: center;">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h2 class="text-h2">{% if CURRENT_LANG == 'en' %}Disable two-factor authentication{% else %}إيقاف المصادقة الثنائية{% endif %}</h2>
+                <p class="text-body-m text-muted">
+                    {% if CURRENT_LANG == 'en' %}This removes the second factor from your account. Confirm with your password or a current authenticator/backup code.{% else %}سيؤدي هذا إلى إزالة العامل الثاني من حسابك. أكّد بكلمة المرور أو برمز مصادقة/احتياطي حالي.{% endif %}
+                </p>
+            </div>
+
+            <form method="post" action="{% url 'accounts:mfa_disable' %}">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="password">{% if CURRENT_LANG == 'en' %}Password{% else %}كلمة المرور{% endif %}</label>
+                    <input type="password" id="password" name="password" autocomplete="current-password">
+                </div>
+                <p class="text-center text-muted" style="font-size: 0.85rem; margin: 0.25rem 0 0.75rem;">
+                    {% if CURRENT_LANG == 'en' %}— or —{% else %}— أو —{% endif %}
+                </p>
+                <div class="form-group">
+                    <label for="code">{% if CURRENT_LANG == 'en' %}Authenticator or backup code{% else %}رمز المصادقة أو الرمز الاحتياطي{% endif %}</label>
+                    <input type="text" id="code" name="code" dir="ltr" style="text-align: center; letter-spacing: 0.2em;">
+                </div>
+                <button type="submit" class="btn btn-danger" style="width: 100%;">
+                    {% if CURRENT_LANG == 'en' %}Disable two-factor authentication{% else %}إيقاف المصادقة الثنائية{% endif %}
+                </button>
+            </form>
+
+            <div class="text-center" style="margin-top: 1.5rem;">
+                <a href="{% url settings_url %}" class="text-muted" style="font-size: 0.9rem;">
+                    {% if CURRENT_LANG == 'en' %}Cancel{% else %}إلغاء{% endif %}
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

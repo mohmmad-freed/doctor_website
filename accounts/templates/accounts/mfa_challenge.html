@@ -1,0 +1,79 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}{% if CURRENT_LANG == 'en' %}Two-step verification{% else %}التحقق بخطوتين{% endif %}{% endblock %}
+
+{% block content %}
+<section class="auth-wrapper">
+    <div class="container" style="display: flex; justify-content: center;">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h2 class="text-h2">{% if CURRENT_LANG == 'en' %}Two-step verification{% else %}التحقق بخطوتين{% endif %}</h2>
+                <p class="text-body-m text-muted">
+                    {% if CURRENT_LANG == 'en' %}Enter the 6-digit code from your authenticator app.{% else %}أدخل الرمز المكوّن من 6 أرقام من تطبيق المصادقة.{% endif %}
+                </p>
+            </div>
+
+            <!-- Primary: TOTP / SMS code entry -->
+            <form method="post" action="{% url 'accounts:mfa_challenge' %}">
+                {% csrf_token %}
+                <input type="hidden" name="method" value="{% if sms_sent %}sms{% else %}totp{% endif %}">
+                <div class="form-group">
+                    <label for="code">{% if CURRENT_LANG == 'en' %}Verification code{% else %}رمز التحقق{% endif %}</label>
+                    <input type="text" id="code" name="code" inputmode="numeric" autocomplete="one-time-code"
+                        pattern="[0-9]*" maxlength="6" required dir="ltr" autofocus
+                        placeholder="••••••" style="text-align: center; letter-spacing: 0.4em;">
+                </div>
+                <label style="display: flex; align-items: center; gap: 8px; margin: 0.5rem 0 1rem; font-size: 0.9rem;">
+                    <input type="checkbox" name="remember_device" value="1" style="width: auto;">
+                    {% if CURRENT_LANG == 'en' %}Trust this device for 30 days{% else %}الوثوق بهذا الجهاز لمدة 30 يوماً{% endif %}
+                </label>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    {% if CURRENT_LANG == 'en' %}Verify{% else %}تحقّق{% endif %}
+                </button>
+            </form>
+
+            <!-- Fallback: send an SMS code to the registered phone -->
+            {% if has_phone %}
+            <form method="post" action="{% url 'accounts:mfa_challenge' %}" style="margin-top: 1rem; text-align: center;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="send_sms">
+                <button type="submit" class="btn-link" style="background: none; border: none; color: var(--text-muted, #718096); font-weight: 600; cursor: pointer; font-size: 0.9rem;">
+                    <i class="fa-solid fa-comment-sms" style="font-size: 0.85rem;"></i>
+                    {% if CURRENT_LANG == 'en' %}Send a code by SMS instead{% else %}إرسال رمز عبر الرسائل القصيرة بدلاً من ذلك{% endif %}
+                </button>
+            </form>
+            {% endif %}
+
+            <!-- Fallback: one-time backup code -->
+            <details style="margin-top: 1.25rem; border-top: 1px solid var(--border-default, #e2e8f0); padding-top: 1rem;">
+                <summary style="cursor: pointer; color: var(--text-muted, #718096); font-size: 0.9rem; font-weight: 600;">
+                    {% if CURRENT_LANG == 'en' %}Use a backup code{% else %}استخدام رمز احتياطي{% endif %}
+                    {% if backup_remaining %}<span class="text-muted">({{ backup_remaining }})</span>{% endif %}
+                </summary>
+                <form method="post" action="{% url 'accounts:mfa_challenge' %}" style="margin-top: 0.75rem;">
+                    {% csrf_token %}
+                    <input type="hidden" name="method" value="backup">
+                    <div class="form-group">
+                        <input type="text" name="code" required dir="ltr" placeholder="XXXX-XXXX"
+                            style="text-align: center; letter-spacing: 0.15em;">
+                    </div>
+                    <label style="display: flex; align-items: center; gap: 8px; margin: 0.5rem 0 1rem; font-size: 0.9rem;">
+                        <input type="checkbox" name="remember_device" value="1" style="width: auto;">
+                        {% if CURRENT_LANG == 'en' %}Trust this device for 30 days{% else %}الوثوق بهذا الجهاز لمدة 30 يوماً{% endif %}
+                    </label>
+                    <button type="submit" class="btn btn-secondary" style="width: 100%;">
+                        {% if CURRENT_LANG == 'en' %}Verify backup code{% else %}تحقّق من الرمز الاحتياطي{% endif %}
+                    </button>
+                </form>
+            </details>
+
+            <div class="text-center" style="margin-top: 1.5rem;">
+                <a href="{% url 'accounts:login' %}" class="text-muted" style="font-size: 0.9rem;">
+                    {% if CURRENT_LANG == 'en' %}Cancel and sign in again{% else %}إلغاء وتسجيل الدخول من جديد{% endif %}
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

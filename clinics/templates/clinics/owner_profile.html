@@ -289,6 +289,37 @@
         </div>
     </div>
 
+    <!-- ── Two-factor authentication (MFA) ────────────────────────── -->
+    <div class="sec-card">
+        <div class="sec-head">
+            <h2 class="sec-title"><i class="fa-solid fa-shield-halved"></i> {% trans "المصادقة الثنائية" %}</h2>
+            {% if user.mfa_enabled %}
+            <span class="v-badge vb-yes"><i class="fa-solid fa-circle-check"></i> {% trans "مُفعّلة" %}</span>
+            {% else %}
+            <span class="st-pill stp-suspended">{% trans "غير مُفعّلة" %}</span>
+            {% endif %}
+        </div>
+        <div class="sec-body">
+            <p style="font-size:0.86rem;color:var(--color-text-muted);margin:0 0 1rem;">
+                {% trans "اطلب رمزاً إضافياً من تطبيق مصادقة عند تسجيل الدخول لحماية بيانات العيادة والمرضى." %}
+            </p>
+            {% if user.mfa_enabled %}
+            <div style="display:flex;gap:0.6rem;flex-wrap:wrap;">
+                <a href="{% url 'accounts:mfa_backup_codes' %}" class="btn-back-hero" style="background:var(--color-surface-ground);color:var(--color-text-body);border-color:var(--color-surface-border);">
+                    <i class="fa-solid fa-list-ol"></i> {% trans "الرموز الاحتياطية" %}
+                </a>
+                <a href="{% url 'accounts:mfa_disable' %}" class="btn-back-hero" style="background:#fee2e2;color:#991b1b;border-color:#fecaca;">
+                    <i class="fa-solid fa-shield-xmark"></i> {% trans "إيقاف" %}
+                </a>
+            </div>
+            {% else %}
+            <a href="{% url 'accounts:mfa_setup' %}" class="btn-edit-hero" style="background:var(--color-primary-500);color:#fff;">
+                <i class="fa-solid fa-shield-halved"></i> {% trans "تفعيل المصادقة الثنائية" %}
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
     <!-- ── Owned Clinics ──────────────────────────────────────────── -->
     {% if owned_clinics %}
     <div class="sec-card">

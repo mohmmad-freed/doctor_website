@@ -51,6 +51,32 @@ LOGIN_IP_MAX_ATTEMPTS = int(os.environ.get("LOGIN_IP_MAX_ATTEMPTS", "20"))
 LOGIN_IP_WINDOW_SECONDS = int(os.environ.get("LOGIN_IP_WINDOW_SECONDS", "900"))
 
 # ============================================
+# STAFF MFA (two-factor for portal logins — accounts/mfa_utils.py)
+# ============================================
+# Opt-in second factor for staff (secretary/doctor/owner). TOTP is primary;
+# the existing phone OTP (accounts/otp_utils.py) is the fallback/recovery channel.
+#
+# MFA_SECRET_KEY: Fernet key (urlsafe base64, 32 bytes) used to encrypt each
+# user's TOTP secret at rest. MUST be set in production and kept stable — losing
+# or rotating it makes every stored TOTP secret undecryptable (forces re-enroll).
+# Falls back to SECRET_KEY-derived material in DEBUG only (see mfa_utils).
+MFA_SECRET_KEY = os.environ.get("MFA_SECRET_KEY", "")
+# How long the half-authenticated "password OK, awaiting 2nd factor" state lives
+# before the user must re-enter their password (seconds).
+MFA_PENDING_TTL_SECONDS = int(os.environ.get("MFA_PENDING_TTL_SECONDS", "600"))
+# Per-account / per-IP cap on wrong second-factor attempts before the escalating
+# lockout ladder kicks in (reuses accounts/ratelimit.py scopes "mfa"/"mfa_ip").
+MFA_MAX_ATTEMPTS = int(os.environ.get("MFA_MAX_ATTEMPTS", "5"))
+MFA_WINDOW_SECONDS = int(os.environ.get("MFA_WINDOW_SECONDS", "900"))
+MFA_IP_MAX_ATTEMPTS = int(os.environ.get("MFA_IP_MAX_ATTEMPTS", "20"))
+MFA_IP_WINDOW_SECONDS = int(os.environ.get("MFA_IP_WINDOW_SECONDS", "900"))
+# "Remember this device" cookie: skips the 2nd-factor prompt on a known browser.
+MFA_TRUSTED_DEVICE_COOKIE = os.environ.get("MFA_TRUSTED_DEVICE_COOKIE", "mfa_device")
+MFA_TRUSTED_DEVICE_MAX_AGE = int(os.environ.get("MFA_TRUSTED_DEVICE_MAX_AGE", str(30 * 24 * 60 * 60)))  # 30 days
+# Number of one-time backup codes generated at enrollment.
+MFA_BACKUP_CODE_COUNT = int(os.environ.get("MFA_BACKUP_CODE_COUNT", "10"))
+
+# ============================================
 # REPORT / BULK-EXPORT GUARDS (secretary portal CSV reports)
 # ============================================
 # Max width (days) of a report date range; wider requests are clamped so one

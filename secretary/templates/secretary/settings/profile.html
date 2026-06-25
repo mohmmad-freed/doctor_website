@@ -218,6 +218,47 @@
     </div>
   </div>
 
+  {# ── Two-factor authentication (MFA) ── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between gap-3">
+      <h3 class="font-semibold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+        <i class="fa-solid fa-shield-halved text-emerald-500"></i>
+        {% trans "المصادقة الثنائية" %}
+      </h3>
+      {% if request.user.mfa_enabled %}
+      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">
+        <i class="fa-solid fa-circle-check text-[10px]"></i> {% trans "مُفعّلة" %}
+      </span>
+      {% else %}
+      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+        {% trans "غير مُفعّلة" %}
+      </span>
+      {% endif %}
+    </div>
+    <div class="p-5">
+      <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+        {% trans "أضِف طبقة حماية ثانية لحسابك عبر تطبيق مصادقة (مثل Google Authenticator). يُطلب رمز إضافي عند تسجيل الدخول بجانب كلمة المرور." %}
+      </p>
+      {% if request.user.mfa_enabled %}
+      <div class="flex flex-wrap items-center gap-3">
+        <a href="{% url 'accounts:mfa_backup_codes' %}"
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+          <i class="fa-solid fa-list-ol"></i> {% trans "الرموز الاحتياطية" %}
+        </a>
+        <a href="{% url 'accounts:mfa_disable' %}"
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-semibold hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
+          <i class="fa-solid fa-shield-xmark"></i> {% trans "إيقاف" %}
+        </a>
+      </div>
+      {% else %}
+      <a href="{% url 'accounts:mfa_setup' %}"
+         class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold shadow transition-colors">
+        <i class="fa-solid fa-shield-halved"></i> {% trans "تفعيل المصادقة الثنائية" %}
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
   {# ── Preferences (localStorage-based) ── #}
   <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
     <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
