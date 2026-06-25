@@ -839,7 +839,7 @@ def waiting_room_display(request):
             "wait_minutes": wait_minutes,
         })
 
-    return render(request, "secretary/waiting_room/display.html", {
+    response = render(request, "secretary/waiting_room/display.html", {
         "clinic": clinic,
         "queue_entries": queue_entries,
         "today": today,
@@ -848,6 +848,12 @@ def waiting_room_display(request):
         "display_is_rtl": display_lang == "ar",
         "display_dir": "rtl" if display_lang == "ar" else "ltr",
     })
+    # Public PII surface (patient first-names, token-addressed): keep it out of
+    # search indexes and shared caches, and never leak the URL token via Referer.
+    response["Cache-Control"] = "no-store"
+    response["X-Robots-Tag"] = "noindex, nofollow"
+    response["Referrer-Policy"] = "no-referrer"
+    return response
 
 
 @secretary_required
