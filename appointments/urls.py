@@ -57,6 +57,11 @@ urlpatterns = [
         views.booking_confirmation,
         name="booking_confirmation",
     ),
+    path(
+        "attachments/<int:attachment_id>/download/",
+        views.download_attachment,
+        name="download_attachment",
+    ),
 
     # --- HTMX Partials ---
     path(

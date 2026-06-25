@@ -793,6 +793,31 @@ def edit_profile(request):
     return render(request, "patients/edit_profile.html", context)
 
 
+@login_required
+def download_medical_record(request, record_id):
+    """
+    Access-controlled download for a patient medical record.
+
+    Uploaded records are NEVER served from a public ``/media/`` URL; this view
+    is the only way to reach them. Allowed for the owning patient or any active
+    staff member of the record's clinic (see
+    ``clinics.access.user_can_access_clinic_file``); everyone else gets a 404.
+    """
+    from django.shortcuts import get_object_or_404
+    from django.http import Http404
+    from clinics.access import user_can_access_clinic_file
+    from core.protected_media import serve_protected_file
+    from .models import MedicalRecord
+
+    record = get_object_or_404(MedicalRecord, pk=record_id)
+    if not user_can_access_clinic_file(
+        request.user, record.clinic_id, record.patient_id
+    ):
+        raise Http404
+
+    return serve_protected_file(record.file, record.original_name)
+
+
 class PatientProfileAPIView(APIView):
     """
     API endpoint for patients to view their own profile.

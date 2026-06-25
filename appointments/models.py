@@ -261,9 +261,15 @@ class AppointmentAnswer(models.Model):
 
 
 def appointment_attachment_path(instance, filename):
-    """Generate upload path: media/appointments/{appointment_id}/{uuid}_{filename}"""
-    uid = uuid.uuid4().hex[:8]
-    return f"appointments/{instance.appointment_id}/{uid}_{filename}"
+    """
+    Generate upload path: media/appointments/{appointment_id}/{uuid}.{ext}
+
+    The raw client filename is discarded (the human name is kept separately in
+    ``original_name``): this avoids storing attacker-controlled bytes in the
+    on-disk path and removes collisions, mirroring ``_record_upload_path``.
+    """
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
+    return f"appointments/{instance.appointment_id}/{uuid.uuid4().hex}.{ext}"
 
 
 class AppointmentAttachment(models.Model):

@@ -45,10 +45,13 @@ class PatientProfile(models.Model):
 
     def get_avatar_upload_path(instance, filename):
         """
-        Dynamic path to avoid collisions and Organize files.
-        Format: patients/avatars/user_<id>/<filename>
+        Dynamic path to avoid collisions and organize files. The raw client
+        filename is discarded (only the extension is kept) so attacker-controlled
+        bytes never land in the on-disk path.
+        Format: patients/avatars/user_<id>/<uuid>.<ext>
         """
-        return f"patients/avatars/user_{instance.user.id}/{filename}"
+        ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
+        return f"patients/avatars/user_{instance.user.id}/{uuid.uuid4().hex}.{ext}"
 
     avatar = models.ImageField(
         upload_to=get_avatar_upload_path,
@@ -418,7 +421,10 @@ class MedicalRecord(models.Model):
     category = models.CharField(
         max_length=20, choices=Category.choices, default=Category.GENERAL
     )
-    file = models.FileField(upload_to=_record_upload_path, validators=[validate_file_size])
+    file = models.FileField(
+        upload_to=_record_upload_path,
+        validators=[validate_file_extension, validate_file_signature, validate_file_size],
+    )
     original_name = models.CharField(max_length=255)
     file_size = models.BigIntegerField(null=True, blank=True)
     notes = models.TextField(blank=True)

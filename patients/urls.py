@@ -35,4 +35,9 @@ urlpatterns = [
     ),
     path("profile/", views.profile, name="profile"),
     path("profile/edit/", views.edit_profile, name="edit_profile"),
+    path(
+        "records/<int:record_id>/download/",
+        views.download_medical_record,
+        name="download_medical_record",
+    ),
 ]

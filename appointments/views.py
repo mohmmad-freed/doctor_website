@@ -511,3 +511,30 @@ def booking_confirmation(request, appointment_id):
         "dated_file_groups": dated_file_groups,
     }
     return render(request, "appointments/booking_confirmation.html", context)
+
+
+@login_required
+def download_attachment(request, attachment_id):
+    """
+    Access-controlled download for an intake-form attachment.
+
+    Uploaded files are NEVER served from a public ``/media/`` URL; this view is
+    the only way to reach them. Allowed for the owning patient or any active
+    staff member of the appointment's clinic (see
+    ``clinics.access.user_can_access_clinic_file``); everyone else gets a 404.
+    """
+    from django.http import Http404
+    from clinics.access import user_can_access_clinic_file
+    from core.protected_media import serve_protected_file
+
+    attachment = get_object_or_404(
+        AppointmentAttachment.objects.select_related("appointment"),
+        pk=attachment_id,
+    )
+    appointment = attachment.appointment
+    if not user_can_access_clinic_file(
+        request.user, appointment.clinic_id, appointment.patient_id
+    ):
+        raise Http404
+
+    return serve_protected_file(attachment.file, attachment.original_name)

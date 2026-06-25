@@ -22,12 +22,12 @@ intake panel (_appointment_intake_panel.html).
           <div class="flex flex-wrap gap-2">
             {% for att in dg.list %}
               {% if att.mime_type|slice:":6" == "image/" %}
-              <a href="{{ att.file.url }}" target="_blank" rel="noopener" title="{{ att.original_name }}"
+              <a href="{% url 'appointments:download_attachment' att.id %}" target="_blank" rel="noopener" title="{{ att.original_name }}"
                  class="block w-20 h-20 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 hover:opacity-80 transition">
-                <img src="{{ att.file.url }}" alt="{{ att.original_name }}" class="w-full h-full object-cover">
+                <img src="{% url 'appointments:download_attachment' att.id %}" alt="{{ att.original_name }}" class="w-full h-full object-cover">
               </a>
               {% else %}
-              <a href="{{ att.file.url }}" download="{{ att.original_name }}"
+              <a href="{% url 'appointments:download_attachment' att.id %}" download="{{ att.original_name }}"
                  class="flex items-center gap-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition">
                 <i class="fa-solid fa-file-arrow-down text-xs"></i>
                 <span class="truncate max-w-[160px]">{{ att.original_name }}</span>
@@ -41,12 +41,12 @@ intake panel (_appointment_intake_panel.html).
         <div class="flex flex-wrap gap-2 mt-1">
           {% for att in item.attachments %}
             {% if att.mime_type|slice:":6" == "image/" %}
-            <a href="{{ att.file.url }}" target="_blank" rel="noopener" title="{{ att.original_name }}"
+            <a href="{% url 'appointments:download_attachment' att.id %}" target="_blank" rel="noopener" title="{{ att.original_name }}"
                class="block w-20 h-20 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 hover:opacity-80 transition">
-              <img src="{{ att.file.url }}" alt="{{ att.original_name }}" class="w-full h-full object-cover">
+              <img src="{% url 'appointments:download_attachment' att.id %}" alt="{{ att.original_name }}" class="w-full h-full object-cover">
             </a>
             {% else %}
-            <a href="{{ att.file.url }}" download="{{ att.original_name }}"
+            <a href="{% url 'appointments:download_attachment' att.id %}" download="{{ att.original_name }}"
                class="flex items-center gap-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition">
               <i class="fa-solid fa-file-arrow-down text-xs"></i>
               <span class="truncate max-w-[160px]">{{ att.original_name }}</span>

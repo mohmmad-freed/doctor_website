@@ -2849,6 +2849,24 @@ def ws_record_upload(request, patient_id):
             ctx["record_error"] = "Please select a file to upload."
             return render(request, "doctors/partials/ws_records.html", ctx)
 
+        # MedicalRecord is created via objects.create(), which bypasses model-field
+        # validators — enforce extension + magic-byte signature + size here so a
+        # renamed/oversized/disallowed file can never be stored.
+        from django.core.exceptions import ValidationError as _DjangoValidationError
+        from core.validators.file_validators import (
+            validate_file_extension,
+            validate_file_signature,
+            validate_file_size,
+        )
+        try:
+            validate_file_extension(uploaded_file)
+            validate_file_signature(uploaded_file)
+            validate_file_size(uploaded_file)
+        except _DjangoValidationError as exc:
+            ctx.update(_ws_records_data(ctx["patient"], ctx["shared_clinic_ids"], request))
+            ctx["record_error"] = "؛ ".join(exc.messages)
+            return render(request, "doctors/partials/ws_records.html", ctx)
+
         title = request.POST.get("title", "").strip() or uploaded_file.name
         category = request.POST.get("category", MedicalRecord.Category.GENERAL)
         if category not in [c[0] for c in MedicalRecord.Category.choices]:

@@ -262,7 +262,7 @@
             {% endif %}
           </div>
           {% if rec.file %}
-          <a href="{{ rec.file.url }}" target="_blank"
+          <a href="{% url 'patients:download_medical_record' rec.id %}" target="_blank"
              class="p-2 rounded-lg text-gray-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors flex-shrink-0"
              title="{% trans 'تنزيل' %}">
             <i class="fa-solid fa-download text-sm"></i>
