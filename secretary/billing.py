@@ -244,7 +244,7 @@ def patient_debtors(clinic):
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-def open_billing_session(appointment, by_user):
+def open_billing_session(appointment, by_user, ip=None):
     """Open a billing session (Invoice) for a checked-in patient.
 
     Guards that the patient is present in the clinic (CHECKED_IN or IN_PROGRESS)
@@ -288,10 +288,25 @@ def open_billing_session(appointment, by_user):
                 unit_price=appt_type.price,
             )
         recompute_invoice_totals(invoice)
+
+        # Audit trail: who opened this billing session.
+        from clinics.audit import log_activity
+        from clinics.models import ActivityLog
+        log_activity(
+            actor=by_user,
+            clinic=invoice.clinic,
+            action=ActivityLog.Action.INVOICE_OPENED,
+            target=invoice,
+            ip=ip,
+            metadata={
+                "invoice_number": invoice.invoice_number,
+                "appointment_id": appointment.id,
+            },
+        )
     return invoice
 
 
-def add_charge(invoice, *, description, quantity, unit_price):
+def add_charge(invoice, *, description, quantity, unit_price, actor=None, ip=None):
     """Add a line item to an open session and recompute totals."""
     if not is_editable(invoice):
         raise BillingError(_("لا يمكن تعديل الرسوم بعد إغلاق جلسة الفوترة."))
@@ -314,25 +329,79 @@ def add_charge(invoice, *, description, quantity, unit_price):
             unit_price=unit_price,
         )
         recompute_invoice_totals(invoice)
+
+        # Audit trail: who added this charge.
+        from clinics.audit import log_activity
+        from clinics.models import ActivityLog
+        log_activity(
+            actor=actor,
+            clinic=invoice.clinic,
+            action=ActivityLog.Action.INVOICE_CHARGE_ADDED,
+            target=invoice,
+            ip=ip,
+            metadata={
+                "invoice_number": invoice.invoice_number,
+                "description": description,
+                "quantity": int(quantity),
+                "unit_price": str(unit_price),
+            },
+        )
     return item
 
 
-def remove_charge(item):
+def remove_charge(item, actor=None, ip=None):
     """Delete a line item from an open session and recompute totals."""
     invoice = item.invoice
     if not is_editable(invoice):
         raise BillingError(_("لا يمكن تعديل الرسوم بعد إغلاق جلسة الفوترة."))
+    # Snapshot the line for the audit row before it cascades away.
+    line_desc = item.description
+    line_total = str(item.total)
     with transaction.atomic():
         item.delete()
         recompute_invoice_totals(invoice)
+
+        # Audit trail: who removed this charge.
+        from clinics.audit import log_activity
+        from clinics.models import ActivityLog
+        log_activity(
+            actor=actor,
+            clinic=invoice.clinic,
+            action=ActivityLog.Action.INVOICE_CHARGE_REMOVED,
+            target=invoice,
+            ip=ip,
+            metadata={
+                "invoice_number": invoice.invoice_number,
+                "description": line_desc,
+                "line_total": line_total,
+            },
+        )
     return invoice
 
 
-def delete_invoice(invoice):
+def delete_invoice(invoice, actor=None, ip=None):
     """Permanently delete a draft invoice (line items cascade). Guards eligibility."""
     if not invoice.can_be_deleted:
         raise BillingError(_("لا يمكن حذف هذه الفاتورة (مسودة فقط وبدون دفعات)."))
+    # Snapshot identity for the audit row before the row is gone.
+    clinic = invoice.clinic
+    invoice_number = invoice.invoice_number
+    patient_id = invoice.patient_id
+    invoice_id = invoice.pk
     invoice.delete()
+
+    # Audit trail: who deleted this invoice (target_id captured pre-delete).
+    from clinics.audit import log_activity
+    from clinics.models import ActivityLog
+    log_activity(
+        actor=actor,
+        clinic=clinic,
+        action=ActivityLog.Action.INVOICE_DELETED,
+        target_type="Invoice",
+        target_id=invoice_id,
+        ip=ip,
+        metadata={"invoice_number": invoice_number, "patient_id": patient_id},
+    )
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -341,7 +410,7 @@ def delete_invoice(invoice):
 
 
 @transaction.atomic
-def record_payment(*, primary_invoice, amount, method, reference="", breakdown="", by_user):
+def record_payment(*, primary_invoice, amount, method, reference="", breakdown="", by_user, ip=None):
     """Record a payment, guarding against overpayment and settling debt FIFO.
 
     The amount may never exceed the patient's *total* outstanding balance
@@ -410,6 +479,27 @@ def record_payment(*, primary_invoice, amount, method, reference="", breakdown="
         inv.amount_paid = (inv.amount_paid or ZERO) + portion
         recompute_invoice_totals(inv)
         remaining -= portion
+
+    # Audit trail: who recorded this payment and how it was allocated (FIFO).
+    if payments:
+        from clinics.audit import log_activity
+        from clinics.models import ActivityLog
+        log_activity(
+            actor=by_user,
+            clinic=clinic,
+            action=ActivityLog.Action.PAYMENT_RECORDED,
+            target=primary_invoice,
+            ip=ip,
+            metadata={
+                "amount": str(amount),
+                "method": method,
+                "primary_invoice": primary_invoice.invoice_number,
+                "allocations": [
+                    {"invoice_number": p.invoice.invoice_number, "amount": str(p.amount)}
+                    for p in payments
+                ],
+            },
+        )
 
     return payments
 

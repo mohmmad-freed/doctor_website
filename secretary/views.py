@@ -17,6 +17,9 @@ from django.views.decorators.http import require_POST
 from appointments.models import Appointment, AppointmentType
 from patients.models import ClinicPatient, PatientProfile, StaffNote
 from secretary.timefmt import format_clock
+from accounts.ratelimit import client_ip
+from clinics.audit import log_activity
+from clinics.models import ActivityLog
 
 User = get_user_model()
 
@@ -402,6 +405,14 @@ def checkin_appointment(request, staff, appointment_id):
         appointment.checked_in_at = timezone.now()
         appointment.queue_priority = _next_queue_priority(staff.clinic.id, date.today())
         appointment.save(update_fields=["status", "checked_in_at", "queue_priority", "updated_at"])
+        log_activity(
+            actor=request.user,
+            clinic=staff.clinic,
+            action=ActivityLog.Action.APPOINTMENT_STATUS_CHANGED,
+            target=appointment,
+            request=request,
+            metadata={"from": "CONFIRMED", "to": "CHECKED_IN"},
+        )
         messages.success(request, _("تم تسجيل وصول %(name)s بنجاح.") % {"name": appointment.patient.name})
     else:
         messages.warning(request, _("لا يمكن تسجيل الوصول إلا للمواعيد المؤكدة."))
@@ -589,6 +600,7 @@ def register_new_patient_only(request, staff, appointment_id):
                 Appointment.Status.CANCELLED,
                 cancellation_reason=reason,
                 actor=request.user,
+                ip=client_ip(request),
             )
         messages.success(request, _("تم تسجيل المريض وإلغاء طلب الموعد."))
     except BookingError as e:
@@ -1214,7 +1226,7 @@ def start_billing(request, staff, appointment_id):
         id=appointment_id, clinic=staff.clinic,
     )
     try:
-        invoice = billing.open_billing_session(appointment, by_user=request.user)
+        invoice = billing.open_billing_session(appointment, by_user=request.user, ip=client_ip(request))
     except billing.BillingError as e:
         messages.error(request, e.message)
         next_url = request.POST.get("next") or request.META.get("HTTP_REFERER")
@@ -1271,6 +1283,8 @@ def invoice_add_charge(request, staff, invoice_id):
                 description=form.cleaned_data["description"],
                 quantity=form.cleaned_data["quantity"],
                 unit_price=form.cleaned_data["unit_price"],
+                actor=request.user,
+                ip=client_ip(request),
             )
             messages.success(request, _("تمت إضافة الرسوم."))
         except billing.BillingError as e:
@@ -1291,7 +1305,7 @@ def invoice_remove_charge(request, staff, invoice_id, item_id):
     invoice = get_object_or_404(Invoice, id=invoice_id, clinic=staff.clinic)
     item = get_object_or_404(InvoiceItem, id=item_id, invoice=invoice)
     try:
-        billing.remove_charge(item)
+        billing.remove_charge(item, actor=request.user, ip=client_ip(request))
         messages.success(request, _("تم حذف الرسوم."))
     except billing.BillingError as e:
         messages.error(request, e.message)
@@ -1309,7 +1323,7 @@ def invoice_delete(request, staff, invoice_id):
     invoice = get_object_or_404(Invoice, id=invoice_id, clinic=staff.clinic)
     number = invoice.invoice_number  # capture before delete for the message
     try:
-        billing.delete_invoice(invoice)
+        billing.delete_invoice(invoice, actor=request.user, ip=client_ip(request))
         messages.success(request, _("تم حذف الفاتورة %(n)s.") % {"n": number})
     except billing.BillingError as e:
         messages.error(request, e.message)
@@ -1343,6 +1357,7 @@ def invoice_record_payment(request, staff, invoice_id):
                 reference=form.cleaned_data.get("reference", ""),
                 breakdown=form.cleaned_data.get("breakdown", ""),
                 by_user=request.user,
+                ip=client_ip(request),
             )
             messages.success(request, _("تم تسجيل الدفعة بنجاح."))
         except billing.BillingError as e:
@@ -2538,7 +2553,8 @@ def accept_new_patient_request(request, staff, appointment_id):
                 },
             )
             transition_appointment_status(
-                appointment, Appointment.Status.CONFIRMED, actor=request.user
+                appointment, Appointment.Status.CONFIRMED,
+                actor=request.user, ip=client_ip(request),
             )
         messages.success(request, _("تم قبول المريض الجديد وتأكيد الموعد."))
     except BookingError as e:
@@ -2574,6 +2590,7 @@ def reject_new_patient_request(request, staff, appointment_id):
             Appointment.Status.CANCELLED,
             cancellation_reason=reason,
             actor=request.user,
+            ip=client_ip(request),
         )
         messages.success(request, _("تم رفض طلب المريض الجديد."))
     except BookingError as e:
@@ -2602,7 +2619,8 @@ def update_appointment_status(request, staff, appointment_id):
     else:
         try:
             appointment = transition_appointment_status(
-                appointment, new_status, cancellation_reason=cancellation_reason, actor=request.user
+                appointment, new_status, cancellation_reason=cancellation_reason,
+                actor=request.user, ip=client_ip(request),
             )
         except BookingError as e:
             error = e.message
@@ -2664,7 +2682,17 @@ def remove_from_queue(request, staff, appointment_id):
         return _redirect_back()
 
     if appointment.is_walk_in:
+        appt_id = appointment.pk
         appointment.delete()
+        log_activity(
+            actor=request.user,
+            clinic=staff.clinic,
+            action=ActivityLog.Action.APPOINTMENT_DELETED,
+            target_type="Appointment",
+            target_id=appt_id,
+            request=request,
+            metadata={"is_walk_in": True},
+        )
         messages.success(request, _("تم حذف الحضور المباشر من السجلات."))
         return _redirect_back()
 
@@ -2673,6 +2701,7 @@ def remove_from_queue(request, staff, appointment_id):
             appointment,
             Appointment.Status.CONFIRMED,
             actor=request.user,
+            ip=client_ip(request),
         )
     except BookingError as e:
         messages.error(request, e.message)
@@ -3297,6 +3326,19 @@ def patient_detail(request, staff, patient_id):
 
     # Latest clinical note, only if the doctor allowed secretary access to it.
     latest_clinical_note = _secretary_visible_note(clinic, patient_id)
+    if latest_clinical_note is not None:
+        log_activity(
+            actor=request.user,
+            clinic=clinic,
+            action=ActivityLog.Action.CLINICAL_NOTE_VIEWED,
+            target=latest_clinical_note,
+            request=request,
+            metadata={
+                "note_id": latest_clinical_note.id,
+                "doctor_id": latest_clinical_note.doctor_id,
+                "via": "detail",
+            },
+        )
 
     tab_list = [
         ("info",         _("المعلومات الشخصية"), "fa-solid fa-user"),
@@ -3346,6 +3388,14 @@ def clinical_note_print(request, staff, patient_id):
 
     from doctors.views import _annotate_notes_with_labeled_extras
     _annotate_notes_with_labeled_extras([note])
+    log_activity(
+        actor=request.user,
+        clinic=clinic,
+        action=ActivityLog.Action.CLINICAL_NOTE_VIEWED,
+        target=note,
+        request=request,
+        metadata={"note_id": note.id, "doctor_id": note.doctor_id, "via": "print"},
+    )
     return render(
         request,
         "doctors/clinical_note_print.html",
@@ -3396,6 +3446,7 @@ def patient_pay_debt(request, staff, patient_id):
             amount=form.cleaned_data["amount"],
             method=form.cleaned_data["method"],
             by_user=request.user,
+            ip=client_ip(request),
         )
         messages.success(request, _("تم تسجيل الدفعة وتسديد الديون."))
     except billing.BillingError as e:
@@ -3506,9 +3557,20 @@ def edit_patient(request, staff, patient_id):
             profile.save(update_fields=profile_dirty)
 
         # Update clinic patient notes
-        if clinic_patient.notes != notes:
+        notes_changed = clinic_patient.notes != notes
+        if notes_changed:
             clinic_patient.notes = notes
             clinic_patient.save(update_fields=["notes"])
+
+        changed_fields = list(user_dirty) + list(profile_dirty) + (["notes"] if notes_changed else [])
+        log_activity(
+            actor=request.user,
+            clinic=clinic,
+            action=ActivityLog.Action.PATIENT_UPDATED,
+            target=patient,
+            request=request,
+            metadata={"changed_fields": changed_fields},
+        )
 
         messages.success(request, _("تم تحديث بيانات المريض %(name)s بنجاح.") % {"name": patient.name})
         return redirect("secretary:patient_detail", patient_id=patient.id)
@@ -3605,6 +3667,14 @@ def create_new_patient(request, staff):
                     file_number=file_number,
                     notes=request.POST.get("notes", "").strip(),
                 )
+                log_activity(
+                    actor=request.user,
+                    clinic=clinic,
+                    action=ActivityLog.Action.PATIENT_REGISTERED,
+                    target=existing_user,
+                    request=request,
+                    metadata={"file_number": file_number, "new_user": False},
+                )
                 return redirect("secretary:patient_detail", patient_id=existing_user.id)
 
         # Also check by national ID if provided
@@ -3678,6 +3748,14 @@ def create_new_patient(request, staff):
                 registered_by=request.user,
                 file_number=file_number,
                 notes=request.POST.get("notes", "").strip(),
+            )
+            log_activity(
+                actor=request.user,
+                clinic=clinic,
+                action=ActivityLog.Action.PATIENT_REGISTERED,
+                target=new_user,
+                request=request,
+                metadata={"file_number": file_number, "new_user": True},
             )
 
         messages.success(
@@ -3969,6 +4047,7 @@ def create_appointment(request, staff):
                 doctor_note=doctor_note_text,
                 status=Appointment.Status.CONFIRMED,
                 created_by=request.user,
+                ip=client_ip(request),
             )
 
             if fill_intake and intake_questions:
@@ -4087,6 +4166,7 @@ def register_walk_in(request, staff):
                 secretary_note=secretary_note_text,
                 doctor_note=doctor_note_text,
                 override_same_day_conflict=override_same_day,
+                ip=client_ip(request),
             )
 
             messages.success(
@@ -4214,6 +4294,7 @@ def edit_appointment(request, staff, appointment_id):
 
             old_date = appointment.appointment_date
             old_time = appointment.appointment_time
+            old_doctor_id = appointment.doctor_id
 
             appointment.doctor_id = new_doctor_id
             appointment.appointment_type = new_type
@@ -4225,6 +4306,22 @@ def edit_appointment(request, staff, appointment_id):
                 "doctor", "appointment_type", "appointment_date",
                 "appointment_time", "reason", "updated_at",
             ])
+
+            log_activity(
+                actor=request.user,
+                clinic=clinic,
+                action=ActivityLog.Action.APPOINTMENT_RESCHEDULED,
+                target=appointment,
+                request=request,
+                metadata={
+                    "old_doctor": old_doctor_id,
+                    "new_doctor": new_doctor_id,
+                    "old_date": old_date.isoformat() if old_date else None,
+                    "new_date": new_date.isoformat(),
+                    "old_time": old_time.strftime("%H:%M") if old_time else None,
+                    "new_time": new_time.strftime("%H:%M"),
+                },
+            )
 
             # Notify patient if doctor, date, or time changed
             if key_fields_changed:
@@ -4274,6 +4371,7 @@ def cancel_appointment(request, staff, appointment_id):
                 Appointment.Status.CANCELLED,
                 cancellation_reason=reason,
                 actor=request.user,
+                ip=client_ip(request),
             )
             if not is_htmx:
                 messages.success(request, _("تم إلغاء الموعد بنجاح."))
@@ -4781,6 +4879,14 @@ def register_patient_submit(request, staff):
         patient=patient,
         registered_by=request.user,
         notes=request.POST.get("notes", "").strip(),
+    )
+    log_activity(
+        actor=request.user,
+        clinic=clinic,
+        action=ActivityLog.Action.PATIENT_REGISTERED,
+        target=patient,
+        request=request,
+        metadata={"new_user": False},
     )
 
     messages.success(request, _("تم تسجيل المريض %(name)s في عيادة %(clinic)s بنجاح.") % {"name": patient.name, "clinic": clinic.name})

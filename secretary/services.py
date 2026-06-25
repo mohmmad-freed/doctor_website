@@ -72,6 +72,7 @@ def transition_appointment_status(
     new_status: str,
     cancellation_reason: str = "",
     actor=None,
+    ip=None,
 ) -> "Appointment":
     """
     Apply a status transition to an appointment.
@@ -85,7 +86,9 @@ def transition_appointment_status(
         appointment: The Appointment instance to update.
         new_status: Target status string (must be in Appointment.Status choices).
         cancellation_reason: Required when new_status == CANCELLED.
-        actor: The User performing the action (unused now, reserved for audit log).
+        actor: The User performing the action (recorded in the audit log).
+        ip: Client IP of the actor (recorded in the audit log; views thread it
+            via accounts.ratelimit.client_ip).
 
     Returns:
         The updated appointment instance.
@@ -126,6 +129,26 @@ def transition_appointment_status(
         update_fields.append("cancellation_reason")
 
     appointment.save(update_fields=update_fields)
+
+    # Audit trail: who moved this appointment from `current` → `new_status`.
+    from clinics.audit import log_activity
+    from clinics.models import ActivityLog
+    log_activity(
+        actor=actor,
+        clinic=appointment.clinic,
+        action=ActivityLog.Action.APPOINTMENT_STATUS_CHANGED,
+        target=appointment,
+        ip=ip,
+        metadata={
+            "from": current,
+            "to": new_status,
+            "cancellation_reason": (
+                appointment.cancellation_reason
+                if new_status == Appointment.Status.CANCELLED
+                else ""
+            ),
+        },
+    )
 
     # Keep any open billing session in lockstep with the appointment: lock charges
     # on COMPLETED, auto-void an untouched session on CANCELLED/NO_SHOW. Never raises.
@@ -171,6 +194,7 @@ def secretary_book_appointment(
     status: str = Appointment.Status.CONFIRMED,
     created_by,
     is_walk_in: bool = False,
+    ip=None,
 ) -> "Appointment":
     """
     Create an appointment on behalf of a patient, from the secretary's interface.
@@ -267,6 +291,24 @@ def secretary_book_appointment(
             is_walk_in=is_walk_in,
         )
 
+        # Audit trail: who created this appointment (booked or walk-in).
+        from clinics.audit import log_activity
+        from clinics.models import ActivityLog
+        log_activity(
+            actor=created_by,
+            clinic=clinic,
+            action=ActivityLog.Action.APPOINTMENT_CREATED,
+            target=appointment,
+            ip=ip,
+            metadata={
+                "is_walk_in": is_walk_in,
+                "status": status,
+                "doctor_id": doctor_id,
+                "date": appointment_date.isoformat(),
+                "time": appointment_time.strftime("%H:%M") if appointment_time else None,
+            },
+        )
+
         # Notify other clinic staff after commit (skip walk-ins — those are
         # already physically present and have their own queue UI).
         if not is_walk_in:
@@ -298,6 +340,7 @@ def register_walk_in(
     secretary_note: str = "",
     doctor_note: str = "",
     override_same_day_conflict: bool = False,
+    ip=None,
 ) -> "Appointment":
     """
     Register a walk-in patient: appointment for today/now, status CHECKED_IN,
@@ -365,6 +408,7 @@ def register_walk_in(
         status=Appointment.Status.CHECKED_IN,
         created_by=created_by,
         is_walk_in=True,
+        ip=ip,
     )
 
     if appointment.checked_in_at is None:

@@ -6,6 +6,7 @@ from .models import (
     ClinicVerification, ClinicBookingSettings, InvitationAuditLog,
     ClinicHoliday, DoctorAvailabilityException,
     DrugFamily, DrugProduct, OrderCatalogItem,
+    ActivityLog,
 )
 
 
@@ -244,6 +245,23 @@ class InvitationAuditLogAdmin(admin.ModelAdmin):
     list_filter = ['action', 'clinic', 'timestamp']
     search_fields = ['invitation__doctor_name', 'invitation__doctor_phone', 'clinic__name']
     readonly_fields = ['clinic', 'invitation', 'action', 'performed_by', 'timestamp']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(ActivityLog)
+class ActivityLogAdmin(admin.ModelAdmin):
+    list_display = ['timestamp', 'clinic', 'actor', 'action', 'target_type', 'target_id', 'ip']
+    list_filter = ['action', 'clinic', 'timestamp']
+    search_fields = ['actor__name', 'target_type', 'target_id', 'ip']
+    readonly_fields = ['actor', 'clinic', 'action', 'target_type', 'target_id', 'metadata', 'ip', 'timestamp']
 
     def has_add_permission(self, request):
         return False

@@ -247,6 +247,67 @@ class InvitationAuditLog(models.Model):
         return f"{self.action} - {self.invitation.doctor_name} @ {self.clinic.name}"
 
 
+class ActivityLog(models.Model):
+    """Append-only audit trail of staff actions on clinic data.
+
+    Generic by design: ``target_type`` + ``target_id`` point at whatever object
+    the action touched (Appointment, Invoice, Payment, ClinicalNote,
+    ClinicPatient…), and ``metadata`` carries the human-meaningful context
+    (from→to status, amount, invoice number) so a row reads on its own without
+    re-joining live tables that may have since changed or been deleted.
+
+    Written via :func:`clinics.audit.log_activity`. Append-only by convention —
+    nothing in the app edits or deletes rows, and the admin is read-only.
+    """
+
+    class Action(models.TextChoices):
+        APPOINTMENT_CREATED        = "APPOINTMENT_CREATED",        "Appointment created"
+        APPOINTMENT_RESCHEDULED    = "APPOINTMENT_RESCHEDULED",    "Appointment rescheduled"
+        APPOINTMENT_STATUS_CHANGED = "APPOINTMENT_STATUS_CHANGED", "Appointment status changed"
+        APPOINTMENT_DELETED        = "APPOINTMENT_DELETED",        "Appointment deleted"
+        INVOICE_OPENED             = "INVOICE_OPENED",             "Billing session opened"
+        INVOICE_CHARGE_ADDED       = "INVOICE_CHARGE_ADDED",       "Charge added"
+        INVOICE_CHARGE_REMOVED     = "INVOICE_CHARGE_REMOVED",     "Charge removed"
+        INVOICE_DELETED            = "INVOICE_DELETED",            "Invoice deleted"
+        PAYMENT_RECORDED           = "PAYMENT_RECORDED",           "Payment recorded"
+        CLINICAL_NOTE_VIEWED       = "CLINICAL_NOTE_VIEWED",       "Clinical note viewed"
+        PATIENT_REGISTERED         = "PATIENT_REGISTERED",         "Patient registered in clinic"
+        PATIENT_UPDATED            = "PATIENT_UPDATED",            "Patient record updated"
+
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="activity_logs",
+    )
+    clinic = models.ForeignKey(
+        Clinic, on_delete=models.CASCADE, related_name="activity_logs"
+    )
+    action = models.CharField(max_length=32, choices=Action.choices)
+    target_type = models.CharField(max_length=40, blank=True)
+    target_id = models.PositiveIntegerField(null=True, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-timestamp"]
+        verbose_name = "Activity Log"
+        verbose_name_plural = "Activity Logs"
+        indexes = [
+            models.Index(fields=["clinic", "-timestamp"], name="activity_clinic_time_idx"),
+            models.Index(fields=["clinic", "action"], name="activity_clinic_action_idx"),
+            models.Index(fields=["target_type", "target_id"], name="activity_target_idx"),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.action} {self.target_type}#{self.target_id} "
+            f"by {self.actor} @ {self.timestamp:%Y-%m-%d %H:%M}"
+        )
+
+
 class ClinicSubscription(models.Model):
     """Subscription plan bound to a clinic, seeded from the activation code."""
 
