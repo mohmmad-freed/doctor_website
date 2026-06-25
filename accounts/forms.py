@@ -5,6 +5,7 @@ from .models import CustomUser, City
 from clinics.models import ClinicActivationCode
 from doctors.models import Specialty
 from .backends import PhoneNumberAuthBackend
+from .validators import validate_human_name
 from .services.identity_claim_service import (
     get_effective_national_id_for_user,
     get_national_id_owner_user,
@@ -140,6 +141,7 @@ class ClinicRegStep2NewUserForm(forms.Form):
             raise ValidationError("الاسم الكامل يجب أن يكون حرفين على الأقل.")
         if not re.search(r"[a-zA-Z\u0600-\u06FF]", value):
             raise ValidationError("الاسم الكامل يجب أن يحتوي على حروف.")
+        validate_human_name(value)
         return value
 
     def clean_email(self):
@@ -257,6 +259,7 @@ class PatientRegistrationForm(forms.ModelForm):
             raise ValidationError("Name must be at least 3 characters long.")
         if not re.search(r"[a-zA-Z\u0600-\u06FF]", name):
             raise ValidationError("Name must contain at least one letter.")
+        validate_human_name(name, "Name contains invalid characters.")
         return name
 
     def clean_phone(self):
@@ -389,6 +392,7 @@ class MainDoctorRegistrationForm(forms.ModelForm):
             raise ValidationError("الاسم الكامل يجب أن يكون حرفين على الأقل.")
         if not re.search(r"[a-zA-Z\u0600-\u06FF]", value):
             raise ValidationError("الاسم الكامل يجب أن يحتوي على حروف.")
+        validate_human_name(value)
         return value
 
     def clean_phone(self):

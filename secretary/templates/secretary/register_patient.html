@@ -280,12 +280,29 @@
     }
   }
 
-  // Highlight matching text in search results
+  // Highlight matching text in search results.
+  // Built via text nodes (never innerHTML) so a patient name containing HTML
+  // can't be re-parsed as live markup — el.textContent decodes the server's
+  // autoescaped output, so assigning it back to innerHTML would reintroduce
+  // the tags. createTextNode keeps every untrusted segment inert.
   function highlightQuery(containerEl, query) {
     if (!query || query.length < 2) return;
     const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
     containerEl.querySelectorAll('[data-highlight]').forEach(function (el) {
-      el.innerHTML = el.textContent.replace(regex, '<mark class="bg-yellow-200 dark:bg-yellow-700/60 text-inherit rounded px-0.5">$1</mark>');
+      const text = el.textContent;
+      el.textContent = '';
+      let last = 0, m;
+      regex.lastIndex = 0;
+      while ((m = regex.exec(text)) !== null) {
+        if (m.index > last) el.appendChild(document.createTextNode(text.slice(last, m.index)));
+        const mark = document.createElement('mark');
+        mark.className = 'bg-yellow-200 dark:bg-yellow-700/60 text-inherit rounded px-0.5';
+        mark.textContent = m[0];
+        el.appendChild(mark);
+        last = m.index + m[0].length;
+        if (m[0].length === 0) regex.lastIndex++;  // guard against zero-width loops
+      }
+      if (last < text.length) el.appendChild(document.createTextNode(text.slice(last)));
     });
   }
 

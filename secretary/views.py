@@ -19,6 +19,7 @@ from appointments.models import Appointment, AppointmentType
 from patients.models import ClinicPatient, PatientProfile, StaffNote
 from secretary.timefmt import format_clock
 from accounts.ratelimit import client_ip, export_rate_limited
+from accounts.validators import name_has_disallowed_chars, NAME_DISALLOWED_MESSAGE
 from clinics.audit import log_activity
 from clinics.models import ActivityLog
 
@@ -2422,6 +2423,8 @@ def settings_profile(request, staff):
             city_id = request.POST.get("city", "").strip()
             profile_data = request.POST
 
+            if name_has_disallowed_chars(name):
+                profile_errors["name"] = NAME_DISALLOWED_MESSAGE
             if not name:
                 profile_errors["name"] = "الاسم مطلوب."
 
@@ -3553,6 +3556,8 @@ def edit_patient(request, staff, patient_id):
 
         # Name
         name = request.POST.get("name", "").strip()
+        if name_has_disallowed_chars(name):
+            errors["name"] = NAME_DISALLOWED_MESSAGE
         if not name:
             errors["name"] = "الاسم الكامل مطلوب."
 
