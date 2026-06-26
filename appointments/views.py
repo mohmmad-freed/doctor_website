@@ -212,12 +212,29 @@ def book_appointment_view(request, clinic_id):
             f"/appointments/book/{clinic_id}/?doctor_id={doctor_id}"
         )
 
+    # Prefill (guest-browse resume): pre-select the chosen service and carry the
+    # chosen date/time so the page opens ready to confirm. Only honor a service the
+    # doctor actually offers here; date/time are validated again on submit anyway.
+    appointment_types = list(appointment_types)
+    selected_type_id = None
+    _ptid = request.GET.get("appointment_type_id")
+    if _ptid:
+        try:
+            _ptid = int(_ptid)
+            if any(t.id == _ptid for t in appointment_types):
+                selected_type_id = _ptid
+        except (TypeError, ValueError):
+            pass
+
     context = {
         "clinic": clinic,
         "doctors": doctors,
         "selected_doctor": selected_doctor,
         "appointment_types": appointment_types,
         "today": date.today().isoformat(),
+        "selected_type_id": selected_type_id,
+        "prefill_date": (request.GET.get("prefill_date") or "").strip(),
+        "prefill_time": (request.GET.get("prefill_time") or "").strip(),
     }
     return render(request, "appointments/book_appointment.html", context)
 

@@ -29,6 +29,19 @@
         </div>
     </div>
 
+    {% if selected_type_id or prefill_date %}
+    <!-- Resume banner: a guest who picked a slot before signing in lands here pre-filled -->
+    <div class="glass-card p-4 flex items-start gap-3" style="border-inline-start:4px solid var(--color-secondary-500,#14b8a6);">
+        <i class="fa-solid fa-clock-rotate-left text-secondary-500 mt-0.5"></i>
+        <div class="text-sm text-gray-700 dark:text-gray-300">
+            {% if IS_RTL %}نُكمل حجزك المُختار. راجِع التفاصيل واضغط تأكيد الحجز.{% else %}Resuming your selected booking — review the details and confirm.{% endif %}
+            {% if prefill_date %}
+            <span class="font-semibold text-gray-900 dark:text-white">{{ prefill_date }}{% if prefill_time %} · {{ prefill_time }}{% endif %}</span>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Booking Form -->
     <form method="post" id="bookingForm" class="space-y-5" enctype="multipart/form-data">
         {% csrf_token %}
@@ -84,7 +97,7 @@
                    hx-trigger="change"
                    hx-include="[name='doctor_id'], [name='appointment_type_id'], [name='appointment_date']">
 
-            <div class="cal-wrap" id="cal-widget" data-today="{{ today }}"
+            <div class="cal-wrap" id="cal-widget" data-today="{{ today }}" data-prefill="{{ prefill_date }}"
                  style="--cal-accent:#3b82f6;
                         --cal-accent-strong:#14b8a6;
                         --cal-accent-soft:#60a5fa;
@@ -205,6 +218,14 @@
         allowed: "{% trans 'الصيغ المسموحة:' %}",
         fileTooLarge: "{% trans 'حجم الملف كبير جداً' %}",
         fieldRequired: "{% trans 'هذا الحقل مطلوب. يرجى اختيار ملف.' %}"
+    };
+
+    // Guest-browse resume prefill: doctor + service are pre-selected server-side;
+    // this carries the chosen date/time so we can auto-load slots + select the time.
+    var _BOOK_PREFILL = {
+        type: {{ selected_type_id|default:"null" }},
+        date: "{{ prefill_date|escapejs }}",
+        time: "{{ prefill_time|escapejs }}"
     };
 
     // Initialize the inline date picker
@@ -364,5 +385,28 @@
             if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     });
+
+    // ── Guest-browse resume: auto-load slots for the prefilled date and select
+    //    the chosen time once they render (best-effort; no-op if the slot is gone).
+    (function () {
+        if (!_BOOK_PREFILL.date && !_BOOK_PREFILL.type) return;
+        function fire(el) { if (el) el.dispatchEvent(new Event('change', { bubbles: true })); }
+        function kickoff() {
+            var typeEl = document.querySelector('input[name="appointment_type_id"]:checked');
+            if (typeEl) fire(typeEl);                            // loads intake + refreshes full-days
+            var dateInput = document.getElementById('dateInput');
+            if (dateInput && dateInput.value) fire(dateInput);   // HTMX-loads slots for the date
+        }
+        var picked = false;
+        document.body.addEventListener('htmx:afterSwap', function (e) {
+            if (picked || !_BOOK_PREFILL.time) return;
+            if (e.target && e.target.id === 'slotsContainer') {
+                var btn = document.querySelector('#slotsContainer .slot-btn[data-time="' + _BOOK_PREFILL.time + '"]:not([disabled])');
+                if (btn) { btn.click(); picked = true; }
+            }
+        });
+        // After the calendar init + DOMContentLoaded intake-load settle.
+        setTimeout(kickoff, 250);
+    })();
 </script>
 {% endblock %}

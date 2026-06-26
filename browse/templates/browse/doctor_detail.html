@@ -77,12 +77,12 @@
             {% if slots %}
             <div class="slots-grid">
                 {% for slot in slots %}
-                <a class="slot-pill" href="{% url 'accounts:login' %}?next={{ book_url|urlencode }}"
+                <a class="slot-pill" href="{% url 'browse:book_intent' %}?clinic_id={{ clinic.id }}&doctor_id={{ doctor.id }}&appointment_type_id={{ selected_type_id }}&date={{ selected_date }}&time={{ slot.time }}"
                    title="{% if IS_RTL %}سجّل الدخول للحجز{% else %}Sign in to book{% endif %}">{{ slot.time }}</a>
                 {% endfor %}
             </div>
             <p class="meta" style="margin-top:.75rem;"><i class="fa-solid fa-circle-info"></i>
-                {% if IS_RTL %}اختر موعداً وسجّل الدخول لإتمام الحجز.{% else %}Pick a time and sign in to complete your booking.{% endif %}</p>
+                {% if IS_RTL %}اختر موعداً ثم سجّل الدخول أو أنشئ حساباً — وسنكمل حجزك تلقائياً.{% else %}Pick a time, then sign in or sign up — we'll resume your booking automatically.{% endif %}</p>
             {% else %}
             <div class="browse-empty">{% if IS_RTL %}لا توجد مواعيد متاحة في هذا اليوم.{% else %}No open slots on this day.{% endif %}</div>
             {% endif %}

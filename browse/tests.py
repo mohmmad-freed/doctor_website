@@ -13,6 +13,7 @@ from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 
 from accounts.models import City, CustomUser
+from patients.models import PatientProfile
 from clinics.models import Clinic, ClinicStaff, ClinicWorkingHours
 from doctors.models import (
     DoctorAvailability,
@@ -29,6 +30,16 @@ LOCMEM = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"
 OWNER_PHONE = "0599000111"
 OWNER_NID = "123123123"
 PRICE = Decimal("77.00")  # distinctive: 77 should not appear anywhere for guests
+
+
+def make_patient(phone, password="StrongPass123!"):
+    """A verified PATIENT who can log in via the phone backend."""
+    u = CustomUser.objects.create_user(phone=phone, name="Patient", password=password)
+    u.role = "PATIENT"
+    u.roles = ["PATIENT"]
+    u.is_verified = True
+    u.save()
+    return u
 
 
 @override_settings(CACHES=LOCMEM)
@@ -213,3 +224,119 @@ class GuestBrowseTests(TestCase):
         resp = self.client.get(reverse("accounts:landing"))
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, reverse("browse:index"))
+
+
+# ===========================================================================
+# Phase 2 — booking-intent stash + resume after auth
+# ===========================================================================
+@override_settings(CACHES=LOCMEM, ENFORCE_PHONE_VERIFICATION=False)
+class BookingIntentTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.client = Client()
+        self.client.cookies["lang"] = "en"
+        self.city = City.objects.create(name="Hebron")
+        self.owner = CustomUser.objects.create_user(
+            phone="0598000001", name="Owner", password="StrongPass123!", role="MAIN_DOCTOR",
+        )
+        self.clinic = Clinic.objects.create(
+            name="C", address="A", main_doctor=self.owner, city=self.city,
+            status="ACTIVE", is_active=True,
+        )
+        self.doctor = CustomUser.objects.create_user(
+            phone="0598000002", name="Doc", password="StrongPass123!", role="DOCTOR",
+        )
+        DoctorProfile.objects.create(user=self.doctor, bio="b")
+        DoctorVerification.objects.create(user=self.doctor, identity_status="IDENTITY_VERIFIED")
+        ClinicStaff.objects.create(clinic=self.clinic, user=self.doctor, role="DOCTOR", is_active=True)
+        self.appt_type = AppointmentType.objects.create(
+            clinic=self.clinic, name="Consult", name_ar="استشارة",
+            duration_minutes=30, price=Decimal("50.00"), is_active=True,
+        )
+        self.future = date.today() + timedelta(days=5)
+        DoctorAvailability.objects.create(
+            doctor=self.doctor, clinic=self.clinic, day_of_week=self.future.weekday(),
+            start_time=time(9, 0), end_time=time(12, 0), is_active=True,
+        )
+        self.patient = make_patient("0598000003")
+        PatientProfile.objects.create(user=self.patient)
+        self.intent_url = reverse("browse:book_intent")
+        self.params = {
+            "clinic_id": self.clinic.id, "doctor_id": self.doctor.id,
+            "appointment_type_id": self.appt_type.id,
+            "date": self.future.isoformat(), "time": "09:30",
+        }
+
+    def _expected_intent(self):
+        return {
+            "clinic_id": self.clinic.id, "doctor_id": self.doctor.id,
+            "appointment_type_id": self.appt_type.id,
+            "date": self.future.isoformat(), "time": "09:30",
+        }
+
+    def _prefill_url(self):
+        return (
+            reverse("appointments:book_appointment", kwargs={"clinic_id": self.clinic.id})
+            + f"?doctor_id={self.doctor.id}&appointment_type_id={self.appt_type.id}"
+            + f"&prefill_date={self.future.isoformat()}&prefill_time=09:30"
+        )
+
+    # ── book_intent stash + validation ────────────────────────────────────
+    def test_anonymous_stashes_intent_and_redirects_to_login(self):
+        resp = self.client.get(self.intent_url, self.params)
+        self.assertRedirects(resp, reverse("accounts:login"), fetch_redirect_response=False)
+        self.assertEqual(self.client.session.get("booking_intent"), self._expected_intent())
+
+    def test_rejects_service_not_offered(self):
+        other = Clinic.objects.create(name="O", address="x", main_doctor=self.owner, is_active=True)
+        bad = AppointmentType.objects.create(
+            clinic=other, name="x", name_ar="x", duration_minutes=15,
+            price=Decimal("1.00"), is_active=True,
+        )
+        resp = self.client.get(self.intent_url, {**self.params, "appointment_type_id": bad.id})
+        self.assertEqual(resp.status_code, 404)
+        self.assertNotIn("booking_intent", self.client.session)
+
+    def test_rejects_doctor_not_at_clinic(self):
+        stranger = CustomUser.objects.create_user(phone="0598000009", name="X", password="p", role="DOCTOR")
+        resp = self.client.get(self.intent_url, {**self.params, "doctor_id": stranger.id})
+        self.assertEqual(resp.status_code, 404)
+
+    def test_authenticated_patient_skips_login_and_goes_to_prefill(self):
+        self.client.login(username="0598000003", password="StrongPass123!")
+        resp = self.client.get(self.intent_url, self.params)
+        self.assertRedirects(resp, self._prefill_url(), fetch_redirect_response=False)
+        self.assertNotIn("booking_intent", self.client.session)
+
+    # ── consume on auth ───────────────────────────────────────────────────
+    def test_login_consumes_intent_and_resumes(self):
+        s = self.client.session
+        s["booking_intent"] = self._expected_intent()
+        s.save()
+        resp = self.client.post(
+            reverse("accounts:login"),
+            {"phone": "0598000003", "password": "StrongPass123!"},
+        )
+        self.assertRedirects(resp, self._prefill_url(), fetch_redirect_response=False)
+        self.assertNotIn("booking_intent", self.client.session)
+
+    def test_signup_email_step_consumes_intent_and_resumes(self):
+        # Simulates the tail of patient sign-up (already logged-in, optional email step).
+        self.client.force_login(self.patient)
+        s = self.client.session
+        s["booking_intent"] = self._expected_intent()
+        s.save()
+        resp = self.client.post(reverse("accounts:register_patient_email"), {"action": "skip"})
+        self.assertRedirects(resp, self._prefill_url(), fetch_redirect_response=False)
+        self.assertNotIn("booking_intent", self.client.session)
+
+    # ── booking page is pre-filled ────────────────────────────────────────
+    def test_booking_page_is_prefilled(self):
+        self.client.login(username="0598000003", password="StrongPass123!")
+        resp = self.client.get(self._prefill_url())
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, f'value="{self.appt_type.id}"')   # the service radio
+        self.assertContains(resp, "checked")                         # ...is pre-checked
+        self.assertContains(resp, f'data-prefill="{self.future.isoformat()}"')  # calendar date
+        self.assertContains(resp, "09:30")                           # prefill time (JS + banner)
+        self.assertContains(resp, "fa-clock-rotate-left")            # resume banner (lang-independent)

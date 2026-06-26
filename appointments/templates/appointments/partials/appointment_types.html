@@ -4,6 +4,7 @@
     {% for type in appointment_types %}
     <label class="flex items-center gap-4 p-4 rounded-lg border border-gray-200 dark:border-slate-600 hover:border-primary-400 dark:hover:border-primary-500 cursor-pointer transition-colors has-[:checked]:border-primary-500 has-[:checked]:bg-primary-50 dark:has-[:checked]:bg-primary-900/20">
         <input type="radio" name="appointment_type_id" value="{{ type.id }}"
+               {% if selected_type_id and selected_type_id == type.id %}checked{% endif %}
                class="w-5 h-5 text-primary-500 focus:ring-primary-500"
                hx-get="{% url 'appointments:htmx_slots' clinic_id=type.clinic_id %}"
                hx-target="#slotsContainer"

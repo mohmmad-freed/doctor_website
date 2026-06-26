@@ -123,6 +123,31 @@ def handle_pending_invitation_redirect(request, default_url=None):
     return redirect("accounts:home")
 
 
+def _pop_booking_intent_redirect(request):
+    """Consume a guest's stashed booking intent (browse:book_intent) and return a
+    redirect to the pre-filled booking page, else None.
+
+    Shared by the login and patient-sign-up completion paths so a guest who picked
+    a slot before authenticating resumes their booking automatically afterwards.
+    The intent was validated server-side when stashed, so here we only rebuild the
+    URL — never trust it as a permission grant (the booking view re-checks).
+    """
+    intent = request.session.get("booking_intent")
+    if not isinstance(intent, dict) or not intent.get("clinic_id"):
+        return None
+    request.session.pop("booking_intent", None)
+    try:
+        url = reverse("appointments:book_appointment", kwargs={"clinic_id": intent["clinic_id"]})
+    except Exception:
+        return None
+    q = f"?doctor_id={intent.get('doctor_id')}&appointment_type_id={intent.get('appointment_type_id')}"
+    if intent.get("date"):
+        q += f"&prefill_date={intent['date']}"
+    if intent.get("time"):
+        q += f"&prefill_time={intent['time']}"
+    return redirect(url + q)
+
+
 def _is_staff(user):
     """True if *user* has portal access to multi-patient PHI and is therefore
     eligible for staff MFA: any active ClinicStaff post, or owns a clinic."""
@@ -247,7 +272,10 @@ def login_view(request):
                 request,
                 f"Welcome back, {user.name}!" if _lang == "en" else f"أهلاً بعودتك، {user.name}!",
             )
-            return handle_pending_invitation_redirect(request, default_url=next_url)
+            # A guest who picked a slot before logging in resumes their booking.
+            return _pop_booking_intent_redirect(request) or handle_pending_invitation_redirect(
+                request, default_url=next_url
+            )
         else:
             messages.error(request, correct_errors_msg)
     else:
@@ -843,7 +871,8 @@ def register_patient_email(request):
             # Clear just_registered flag and go to dashboard
             if "just_registered" in request.session:
                 del request.session["just_registered"]
-            return redirect("accounts:home")
+            # A guest who picked a slot before signing up resumes their booking.
+            return _pop_booking_intent_redirect(request) or redirect("accounts:home")
 
         # Handle email submission
         email = request.POST.get("email", "").strip()
@@ -884,7 +913,7 @@ def register_patient_email(request):
                 # Clear just_registered flag
                 if "just_registered" in request.session:
                     del request.session["just_registered"]
-                return redirect("accounts:home")
+                return _pop_booking_intent_redirect(request) or redirect("accounts:home")
             else:
                 messages.error(request, message)
 

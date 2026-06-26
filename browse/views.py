@@ -9,12 +9,13 @@ Security model (Option A — dedicated public namespace):
   or AppointmentType.price (guests must "sign in to see prices"; per product).
 - The gated patient/booking views are NOT touched.
 """
+import re
 from datetime import datetime, date
 
 from django.contrib.auth import get_user_model
 from django.db.models import Count, Q
 from django.http import Http404
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
 from accounts import ratelimit
@@ -299,3 +300,71 @@ def doctor_detail(request, doctor_id):
             "book_url": book_url,
         },
     )
+
+
+def booking_prefill_url(intent):
+    """Booking-page URL carrying a validated intent as prefill query params.
+
+    Shared by book_intent (authenticated fast-path) and the auth views that
+    consume a stashed intent after login / sign-up.
+    """
+    url = reverse("appointments:book_appointment", kwargs={"clinic_id": intent["clinic_id"]})
+    q = f"?doctor_id={intent['doctor_id']}&appointment_type_id={intent['appointment_type_id']}"
+    if intent.get("date"):
+        q += f"&prefill_date={intent['date']}"
+    if intent.get("time"):
+        q += f"&prefill_time={intent['time']}"
+    return url + q
+
+
+def book_intent(request):
+    """Stash a guest's chosen booking (clinic/doctor/service/date/time) then route
+    to auth. After login OR sign-up the intent is consumed and the booking page
+    opens pre-filled (see accounts.views._pop_booking_intent_redirect).
+
+    Everything is validated server-side against the SAME public visibility rules
+    as the browse pages, so the session can never hold an attacker-chosen pairing,
+    a service the doctor doesn't offer, or a past date.
+    """
+    clinic = get_object_or_404(Clinic, id=request.GET.get("clinic_id"), is_active=True)
+    doctor = get_object_or_404(
+        User, pk=request.GET.get("doctor_id"), role__in=["DOCTOR", "MAIN_DOCTOR"]
+    )
+
+    is_owner = clinic.main_doctor_id == doctor.id
+    is_staff = ClinicStaff.objects.filter(
+        clinic=clinic, user=doctor, role="DOCTOR", is_active=True
+    ).exists()
+    if not (is_owner or is_staff):
+        raise Http404("Doctor does not practise at this clinic")
+
+    offered = {t.id for t in get_appointment_types_for_doctor_in_clinic(doctor.id, clinic.id)}
+    try:
+        type_id = int(request.GET.get("appointment_type_id"))
+    except (TypeError, ValueError):
+        type_id = None
+    if type_id not in offered:
+        raise Http404("Service not offered by this doctor at this clinic")
+
+    intent = {"clinic_id": clinic.id, "doctor_id": doctor.id, "appointment_type_id": type_id}
+    date_str = (request.GET.get("date") or "").strip()
+    try:
+        if date_str and datetime.strptime(date_str, "%Y-%m-%d").date() >= date.today():
+            intent["date"] = date_str
+    except ValueError:
+        pass
+    time_str = (request.GET.get("time") or "").strip()
+    if re.match(r"^\d{2}:\d{2}$", time_str):
+        intent["time"] = time_str
+
+    request.session["booking_intent"] = intent
+    request.session.modified = True
+
+    # Already a signed-in patient → skip auth, go straight to the prefilled page.
+    if request.user.is_authenticated and request.user.has_role("PATIENT"):
+        request.session.pop("booking_intent", None)
+        return redirect(booking_prefill_url(intent))
+
+    # Guest (or non-patient): send to login. The session carries the intent
+    # through login OR the multi-step sign-up; it's consumed on auth completion.
+    return redirect("accounts:login")

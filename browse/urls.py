@@ -15,4 +15,6 @@ urlpatterns = [
     path("", views.clinic_list, name="index"),
     path("clinics/<int:clinic_id>/", views.clinic_detail, name="clinic_detail"),
     path("doctors/<int:doctor_id>/", views.doctor_detail, name="doctor_detail"),
+    # Stash a chosen slot, then route to auth; resumes pre-filled after login/sign-up.
+    path("book-intent/", views.book_intent, name="book_intent"),
 ]
