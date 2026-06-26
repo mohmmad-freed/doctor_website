@@ -39,3 +39,8 @@ env/
 .vscode/
 .idea/
 .DS_Store
+
+# =====================
+# Claude Code (local dev preview config — keep on disk, don't track)
+# =====================
+.claude/launch.json
