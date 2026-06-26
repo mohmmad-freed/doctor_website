@@ -448,6 +448,11 @@
                     <i class="fa-solid fa-note-medical w-4 text-center flex-shrink-0"></i>
                     {% trans "قوالب الملاحظات" %}
                 </a>
+                <a href="{% url 'doctors:my_reviews' %}"
+                   class="sidebar-link {% if request.resolver_match.url_name == 'my_reviews' %}active{% endif %}">
+                    <i class="fa-solid fa-star w-4 text-center flex-shrink-0"></i>
+                    {% if IS_RTL %}تقييماتي{% else %}My Reviews{% endif %}
+                </a>
 
                 <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500 px-3 pt-4 pb-2">{% trans "الحساب" %}</p>
 

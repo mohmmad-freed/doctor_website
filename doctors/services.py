@@ -242,3 +242,17 @@ def user_can_moderate_doctor_reviews(user, doctor_id):
         clinic_id__in=clinic_ids, user=user,
         role__in=["MAIN_DOCTOR", "SECRETARY"], is_active=True,
     ).exists()
+
+
+def doctor_rating_breakdown(doctor_id):
+    """{5: n, 4: n, 3: n, 2: n, 1: n} counts of VISIBLE reviews per star."""
+    from django.db.models import Count
+    from .models import DoctorReview
+    out = {s: 0 for s in (5, 4, 3, 2, 1)}
+    rows = (
+        DoctorReview.objects.filter(doctor_id=doctor_id, is_hidden=False)
+        .values("rating").annotate(n=Count("id"))
+    )
+    for r in rows:
+        out[r["rating"]] = r["n"]
+    return out

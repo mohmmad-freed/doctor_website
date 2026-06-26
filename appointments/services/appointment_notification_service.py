@@ -1019,3 +1019,33 @@ def notify_secretary_purchase_request_reviewed(purchase_request):
         )
     except Exception as exc:
         logger.error("[NOTIFICATION] notify_secretary_purchase_request_reviewed failed: %r", exc)
+
+
+def notify_doctor_new_review(review):
+    """In-app notification to a doctor when a patient leaves a NEW review.
+
+    Best-effort and ANONYMOUS: never raises to the caller, and never reveals the
+    reviewer's identity to the doctor (actor_name stays blank), consistent with
+    the public anonymity policy. Call only on brand-new reviews (created=True).
+    """
+    try:
+        stars = "★" * review.rating + "☆" * (5 - review.rating)
+        snippet = f' — "{review.comment[:120]}"' if review.comment else ""
+        AppointmentNotification.objects.create(
+            patient_id=review.doctor_id,  # generic recipient FK = the reviewed doctor
+            appointment=None,
+            context_role=AppointmentNotification.ContextRole.DOCTOR,
+            notification_type=AppointmentNotification.Type.DOCTOR_REVIEW_RECEIVED,
+            title=f"تقييم جديد ({review.rating}/5)",
+            message=f"تلقّيت تقييماً جديداً: {stars}{snippet}",
+            title_en=f"New review ({review.rating}/5)",
+            message_en=f"You received a new review: {stars}{snippet}",
+            actor_role=AppointmentNotification.ActorRole.PATIENT,
+            actor_name="",  # anonymous — never reveal the reviewer to the doctor
+            is_delivered=True,
+        )
+    except Exception:
+        logger.exception(
+            "Failed to create new-review notification for doctor_id=%s",
+            getattr(review, "doctor_id", None),
+        )

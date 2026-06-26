@@ -50,6 +50,9 @@ urlpatterns = [
     path('patients/<int:patient_id>/remove-block/', views.remove_patient_block, name='remove_patient_block'),
     path('patients/htmx/search/', views.patient_list_htmx, name='patient_list_htmx'),
     path('patients/search/', views.patient_search_htmx, name='patient_search'),
+
+    # --- Doctor Reviews moderation (hide/unhide reuse the /reviews/ endpoints) ---
+    path('reviews/', views.reviews_list, name='reviews'),
     path('patients/<int:patient_id>/card/', views.patient_detail_htmx, name='patient_card'),
 
     # --- Billing ---

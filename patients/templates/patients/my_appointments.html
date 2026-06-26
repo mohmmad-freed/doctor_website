@@ -128,7 +128,7 @@
                             <a href="{% url 'browse:doctor_detail' appt.doctor_id %}?clinic_id={{ appt.clinic_id }}"
                                class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl border border-amber-300 dark:border-amber-700 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors">
                                 <i class="fa-solid fa-star text-xs"></i>
-                                {% trans "قيّم الطبيب" %}
+                                {% if IS_RTL %}قيّم الطبيب{% else %}Rate this doctor{% endif %}
                             </a>
                         </div>
                         {% endif %}

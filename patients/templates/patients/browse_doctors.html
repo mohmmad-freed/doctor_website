@@ -151,6 +151,13 @@
 
                                 </span>
                                 {% endif %}
+                                {% if doc.rating.count %}
+                                <span class="text-xs text-gray-400 dark:text-gray-500">·</span>
+                                <span class="inline-flex items-center gap-1 text-xs text-amber-500" title="{{ doc.rating.count }} {% trans 'تقييم' %}">
+                                    <i class="fa-solid fa-star text-[10px]"></i>{{ doc.rating.avg }}
+                                    <span class="text-gray-400 dark:text-gray-500">({{ doc.rating.count }})</span>
+                                </span>
+                                {% endif %}
                             </div>
                         </div>
                     </div>

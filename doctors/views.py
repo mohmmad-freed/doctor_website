@@ -3580,3 +3580,36 @@ def clinical_note_template_delete(request, template_id):
     tpl.delete()
     messages.success(request, f'Template "{name}" deleted.')
     return redirect("doctors:clinical_note_templates")
+
+
+# ============================================
+# DOCTOR — MY REVIEWS (read + public reply)
+# ============================================
+
+
+@login_required
+@doctor_required
+def my_reviews(request):
+    """The doctor's own reviews with a public-reply box for each.
+
+    Reviews are shown ANONYMOUSLY to the doctor too (no reviewer name) — the
+    doctor replies publicly without learning who left it, which avoids any
+    retaliation against a patient for an honest review.
+    """
+    from django.core.paginator import Paginator
+    from .models import DoctorReview
+    from .services import doctor_rating_summary
+
+    qs = (
+        DoctorReview.objects.filter(doctor=request.user)
+        .order_by("-created_at")
+    )
+    page = Paginator(qs, 20).get_page(request.GET.get("page"))
+    return render(
+        request,
+        "doctors/my_reviews.html",
+        {
+            "reviews_page": page,
+            "rating": doctor_rating_summary(request.user.id),
+        },
+    )

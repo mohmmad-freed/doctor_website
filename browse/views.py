@@ -13,6 +13,7 @@ import re
 from datetime import datetime, date
 
 from django.contrib.auth import get_user_model
+from django.core.paginator import Paginator
 from django.db.models import Count, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
@@ -26,6 +27,7 @@ from appointments.services.appointment_type_service import (
 from clinics.models import Clinic, ClinicStaff
 from doctors.models import DoctorAvailability, DoctorProfile, DoctorReview, DoctorVerification
 from doctors.services import (
+    doctor_rating_breakdown,
     doctor_rating_summaries,
     doctor_rating_summary,
     generate_slots_for_date,
@@ -299,6 +301,12 @@ def doctor_detail(request, doctor_id):
 
     # ── Reviews / rating (Phase 3) ──────────────────────────────────────────
     rating = doctor_rating_summary(doctor.id)
+    _bd = doctor_rating_breakdown(doctor.id)  # {5..1: count} of visible reviews
+    _total = rating["count"] or 1
+    breakdown = [
+        {"star": s, "n": _bd[s], "pct": round(_bd[s] / _total * 100)}
+        for s in (5, 4, 3, 2, 1)
+    ]
     can_review = patient_can_review_doctor(request.user, doctor.id)
     can_moderate = user_can_moderate_doctor_reviews(request.user, doctor.id)
     # Moderators also see hidden reviews (to unhide); everyone else sees visible only.
@@ -309,6 +317,7 @@ def doctor_detail(request, doctor_id):
         )
     else:
         review_objs = visible_reviews_for_doctor(doctor.id)
+    review_page = Paginator(review_objs, 5).get_page(request.GET.get("rpage"))
     reviews = [
         {
             "id": r.id,
@@ -319,8 +328,10 @@ def doctor_detail(request, doctor_id):
             # are shown fully anonymously — no reviewer name is exposed at all.
             "created_at": r.created_at,
             "is_hidden": r.is_hidden,
+            "response": r.doctor_response,
+            "response_at": r.doctor_response_at,
         }
-        for r in review_objs
+        for r in review_page
     ]
     my_review = None
     if request.user.is_authenticated:
@@ -343,7 +354,9 @@ def doctor_detail(request, doctor_id):
             "today": date.today().isoformat(),
             "book_url": book_url,
             "rating": rating,
+            "breakdown": breakdown,
             "reviews": reviews,
+            "review_page": review_page,
             "can_review": can_review,
             "can_moderate": can_moderate,
             "my_review": my_review,

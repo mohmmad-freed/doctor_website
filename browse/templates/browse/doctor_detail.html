@@ -98,6 +98,18 @@
             {% if rating.count %}<span class="rating-badge" style="margin-inline-start:.5rem;"><i class="fa-solid fa-star"></i> {{ rating.avg }} <span class="count">({{ rating.count }})</span></span>{% endif %}
         </h2>
 
+        {% if rating.count %}
+        <div class="rating-breakdown">
+            {% for b in breakdown %}
+            <div class="rb-row">
+                <span class="lbl">{{ b.star }} <i class="fa-solid fa-star" style="color:#f59e0b;font-size:.7rem;"></i></span>
+                <span class="rb-bar"><span class="rb-fill" style="width:{{ b.pct }}%;"></span></span>
+                <span class="n">{{ b.n }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         {% if can_review %}
         <form class="review-form" method="post" action="{% url 'reviews:submit' doctor.id %}" style="margin-bottom:1rem;">
             {% csrf_token %}
@@ -129,6 +141,12 @@
                     </span>
                 </div>
                 {% if r.comment %}<div>{{ r.comment }}</div>{% endif %}
+                {% if r.response %}
+                <div class="review-response">
+                    <span class="who"><i class="fa-solid fa-reply"></i> {% if IS_RTL %}رد الطبيب{% else %}Doctor's reply{% endif %}</span>
+                    {{ r.response }}
+                </div>
+                {% endif %}
                 {% if user.is_authenticated %}
                 <div class="review-actions">
                     <form method="post" action="{% url 'reviews:report' r.id %}">
@@ -146,6 +164,13 @@
             </div>
             {% endfor %}
         </div>
+        {% if review_page.has_other_pages %}
+        <div class="review-pagination">
+            {% if review_page.has_previous %}<a href="?clinic_id={{ clinic.id }}&rpage={{ review_page.previous_page_number }}">{% if IS_RTL %}السابق{% else %}Prev{% endif %}</a>{% endif %}
+            <span class="cur">{{ review_page.number }} / {{ review_page.paginator.num_pages }}</span>
+            {% if review_page.has_next %}<a href="?clinic_id={{ clinic.id }}&rpage={{ review_page.next_page_number }}">{% if IS_RTL %}التالي{% else %}Next{% endif %}</a>{% endif %}
+        </div>
+        {% endif %}
         {% else %}
         <p class="browse-empty">{% if IS_RTL %}لا توجد تقييمات بعد.{% else %}No reviews yet.{% endif %}</p>
         {% endif %}

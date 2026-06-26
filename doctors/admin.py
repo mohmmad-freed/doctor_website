@@ -126,10 +126,40 @@ class DoctorFavouriteDrugAdmin(admin.ModelAdmin):
     ordering = ["-created_at"]
 
 
+# ─── Doctor Reviews Admin ─────────────────────────────────────────────────
+
+from .models import DoctorReview
+from django.utils import timezone
+
+
+@admin.register(DoctorReview)
+class DoctorReviewAdmin(admin.ModelAdmin):
+    list_display = ["id", "doctor", "patient", "rating", "is_hidden", "report_count", "has_response", "created_at"]
+    list_filter = ["is_hidden", "rating", "created_at"]
+    search_fields = ["doctor__name", "doctor__phone", "patient__name", "patient__phone", "comment"]
+    readonly_fields = ["doctor", "patient", "created_at", "updated_at", "hidden_by", "hidden_at", "report_count", "doctor_response_at"]
+    actions = ["hide_reviews", "unhide_reviews"]
+    ordering = ["-created_at"]
+
+    def has_response(self, obj):
+        return bool(obj.doctor_response)
+    has_response.boolean = True
+    has_response.short_description = "رد الطبيب"
+
+    @admin.action(description="🚫 Hide selected reviews")
+    def hide_reviews(self, request, queryset):
+        n = queryset.update(is_hidden=True, hidden_at=timezone.now(), hidden_by=request.user)
+        self.message_user(request, f"Hid {n} review(s).")
+
+    @admin.action(description="✅ Unhide selected reviews")
+    def unhide_reviews(self, request, queryset):
+        n = queryset.update(is_hidden=False, hidden_at=None, hidden_by=None)
+        self.message_user(request, f"Unhid {n} review(s).")
+
+
 # ─── Doctor Verification Admin (Dual-Layer) ──────────────────────────────
 
 from .models import DoctorVerification, ClinicDoctorCredential
-from django.utils import timezone
 
 
 @admin.register(DoctorVerification)

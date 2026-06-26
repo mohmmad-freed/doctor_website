@@ -77,4 +77,15 @@
     .star-input label { font-size: 1.9rem; line-height: 1; color: #d1d5db; cursor: pointer; padding: 0 2px; transition: color .12s; }
     .star-input label:hover, .star-input label:hover ~ label, .star-input input:checked ~ label { color: #f59e0b; }
     .star-input input:focus-visible + label { outline: 2px solid var(--primary, #667eea); outline-offset: 2px; border-radius: 4px; }
+    .rating-breakdown { display: flex; flex-direction: column; gap: .25rem; margin: .5rem 0 1.25rem; max-width: 340px; }
+    .rb-row { display: flex; align-items: center; gap: .5rem; font-size: .78rem; color: var(--text-muted, #718096); }
+    .rb-row .lbl { width: 2.4rem; white-space: nowrap; }
+    .rb-bar { flex: 1; height: 8px; background: var(--border-default, #eef0f4); border-radius: 999px; overflow: hidden; }
+    .rb-fill { height: 100%; background: #f59e0b; border-radius: 999px; }
+    .rb-row .n { width: 1.6rem; text-align: end; }
+    .review-response { margin-top: .45rem; padding: .55rem .8rem; border-inline-start: 3px solid var(--primary, #667eea); background: var(--primary-50, #eef2ff); border-radius: 8px; font-size: .85rem; }
+    .review-response .who { font-weight: 700; color: var(--primary, #667eea); display: block; margin-bottom: .15rem; }
+    .review-pagination { display: flex; gap: .75rem; align-items: center; justify-content: center; margin-top: 1rem; }
+    .review-pagination a { color: var(--primary, #667eea); text-decoration: none; font-weight: 600; font-size: .85rem; }
+    .review-pagination .cur { color: var(--text-muted, #718096); font-size: .85rem; }
 </style>

@@ -174,3 +174,90 @@ class DoctorReviewTests(TestCase):
         with self.assertRaises(IntegrityError):
             with transaction.atomic():
                 DoctorReview.objects.create(doctor=self.doctor, patient=self.p1, rating=5)
+
+
+@override_settings(CACHES=LOCMEM)
+class ReviewEnhancementsTests(DoctorReviewTests):
+    """Enhancements: doctor reply, notification, breakdown, portals (extends the
+    base setUp from DoctorReviewTests)."""
+
+    # ── Doctor reply (E3b) ────────────────────────────────────────────────
+    def test_doctor_replies_and_reply_shows_on_browse(self):
+        review = DoctorReview.objects.create(doctor=self.doctor, patient=self.p1, rating=4, comment="good")
+        self.client.force_login(self.doctor)
+        self.client.post(reverse("reviews:reply", kwargs={"review_id": review.id}), {"response": "Thanks REPLYBODY"})
+        review.refresh_from_db()
+        self.assertEqual(review.doctor_response, "Thanks REPLYBODY")
+        self.assertIsNotNone(review.doctor_response_at)
+        # The reply is shown publicly on the doctor page.
+        self.client.logout()
+        resp = self.client.get(
+            reverse("browse:doctor_detail", kwargs={"doctor_id": self.doctor.id}),
+            {"clinic_id": self.clinic.id},
+        )
+        self.assertContains(resp, "Thanks REPLYBODY")
+
+    def test_non_doctor_cannot_reply(self):
+        review = DoctorReview.objects.create(doctor=self.doctor, patient=self.p1, rating=4)
+        self.client.force_login(self.p2)
+        resp = self.client.post(reverse("reviews:reply", kwargs={"review_id": review.id}), {"response": "x"})
+        self.assertEqual(resp.status_code, 403)
+        review.refresh_from_db()
+        self.assertEqual(review.doctor_response, "")
+
+    # ── Notification (E3c) ────────────────────────────────────────────────
+    def test_new_review_notifies_doctor_once(self):
+        from appointments.models import AppointmentNotification
+        self.client.force_login(self.p1)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(reverse("reviews:submit", kwargs={"doctor_id": self.doctor.id}),
+                             {"rating": "5", "comment": "great"})
+        notifs = AppointmentNotification.objects.filter(
+            patient=self.doctor, notification_type="DOCTOR_REVIEW_RECEIVED")
+        self.assertEqual(notifs.count(), 1)
+        self.assertEqual(notifs.first().actor_name, "")  # reviewer stays anonymous
+        # Editing the review does NOT create a second notification.
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(reverse("reviews:submit", kwargs={"doctor_id": self.doctor.id}),
+                             {"rating": "2", "comment": "edited"})
+        self.assertEqual(notifs.count(), 1)
+
+    # ── Breakdown (E3a) ───────────────────────────────────────────────────
+    def test_rating_breakdown(self):
+        DoctorReview.objects.create(doctor=self.doctor, patient=self.p1, rating=5)
+        DoctorReview.objects.create(doctor=self.doctor, patient=self.p2, rating=3)
+        bd = doc_services.doctor_rating_breakdown(self.doctor.id)
+        self.assertEqual(bd[5], 1)
+        self.assertEqual(bd[3], 1)
+        self.assertEqual(bd[4], 0)
+
+    # ── Doctor "My reviews" page (E3b) ────────────────────────────────────
+    def test_doctor_my_reviews_page(self):
+        DoctorReview.objects.create(doctor=self.doctor, patient=self.p1, rating=4, comment="MYREVIEWBODY")
+        self.client.force_login(self.doctor)
+        resp = self.client.get(reverse("doctors:my_reviews"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "MYREVIEWBODY")
+
+    # ── Staff moderation page (E2b) ───────────────────────────────────────
+    def test_secretary_moderation_lists_and_hides(self):
+        sec = CustomUser.objects.create_user(phone="0597000055", name="Sec", password="p")
+        sec.role = "SECRETARY"
+        sec.roles = ["SECRETARY"]  # middleware derives staff status from roles[]
+        sec.save()
+        ClinicStaff.objects.create(clinic=self.clinic, user=sec, role="SECRETARY", is_active=True)
+        review = DoctorReview.objects.create(doctor=self.doctor, patient=self.p1, rating=2, comment="MODERATEME")
+        self.client.force_login(sec)
+        resp = self.client.get(reverse("secretary:reviews"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "MODERATEME")
+        # The secretary is authorized to hide it via the /reviews/ endpoint.
+        self.client.post(reverse("reviews:hide", kwargs={"review_id": review.id}))
+        review.refresh_from_db()
+        self.assertTrue(review.is_hidden)
+
+    # ── Patient browse smoke (E1) — view runs with rating wiring ──────────
+    def test_patient_browse_doctors_loads_with_ratings(self):
+        self.client.force_login(self.p1)
+        resp = self.client.get(reverse("patients:browse_doctors"))
+        self.assertEqual(resp.status_code, 200)

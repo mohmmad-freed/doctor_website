@@ -132,6 +132,12 @@ urlpatterns = [
         views.my_schedule,
         name="my_schedule",
     ),
+    # --- Doctor reviews (read + public reply) ---
+    path(
+        "my-reviews/",
+        views.my_reviews,
+        name="my_reviews",
+    ),
     # --- Doctor Appointment Types (self-service) ---
     path(
         "my-appointment-types/",

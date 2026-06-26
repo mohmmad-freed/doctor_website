@@ -365,6 +365,7 @@ class AppointmentNotification(models.Model):
         PURCHASE_REQUEST_SUBMITTED = "PURCHASE_REQUEST_SUBMITTED", "Purchase Request Submitted"
         PURCHASE_REQUEST_APPROVED = "PURCHASE_REQUEST_APPROVED", "Purchase Request Approved"
         PURCHASE_REQUEST_REJECTED = "PURCHASE_REQUEST_REJECTED", "Purchase Request Rejected"
+        DOCTOR_REVIEW_RECEIVED = "DOCTOR_REVIEW_RECEIVED", "Doctor Review Received"
 
     class ContextRole(models.TextChoices):
         PATIENT = "PATIENT", "Patient Context"

@@ -207,6 +207,15 @@ def browse_doctors(request):
                 }
             )
 
+    # Batched star-rating summaries for every listed doctor (no N+1).
+    from doctors.services import doctor_rating_summaries
+    _ratings = doctor_rating_summaries(
+        [d["user"].id for c in doctors_by_clinic for d in c["doctors"]]
+    )
+    for c in doctors_by_clinic:
+        for d in c["doctors"]:
+            d["rating"] = _ratings.get(d["user"].id, {"avg": None, "count": 0})
+
     # Count total doctors found
     total_doctors = sum(len(c["doctors"]) for c in doctors_by_clinic)
 

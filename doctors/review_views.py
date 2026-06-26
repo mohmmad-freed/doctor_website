@@ -65,10 +65,18 @@ def submit_review(request, doctor_id):
 
     comment = (request.POST.get("comment") or "").strip()[:2000]
     # defaults deliberately omit is_hidden so editing can't un-hide a moderated review.
-    DoctorReview.objects.update_or_create(
+    review, created = DoctorReview.objects.update_or_create(
         doctor=doctor, patient=request.user,
         defaults={"rating": rating, "comment": comment},
     )
+    if created:
+        # Notify the doctor only for a brand-new review (not edits). Best-effort,
+        # anonymous, after the transaction commits.
+        from django.db import transaction
+        from appointments.services.appointment_notification_service import (
+            notify_doctor_new_review,
+        )
+        transaction.on_commit(lambda: notify_doctor_new_review(review))
     messages.success(request, _t(
         request, "Thanks! Your review was published.", "شكراً! تم نشر تقييمك."))
     return redirect(_safe_back(request))
@@ -106,6 +114,27 @@ def hide_review(request, review_id):
     review.save(update_fields=["is_hidden", "hidden_at", "hidden_by"])
     messages.success(request, _t(request, "Review hidden.", "تم إخفاء التقييم."))
     return redirect(_safe_back(request))
+
+
+@login_required
+@require_POST
+def reply_review(request, review_id):
+    """The reviewed doctor posts (or edits/clears) a public reply to their review.
+
+    Doctor-scoped: a doctor may reply ONLY to reviews about themselves. This is
+    distinct from moderation — a doctor cannot hide their reviews, only respond.
+    """
+    review = get_object_or_404(DoctorReview, pk=review_id)
+    if review.doctor_id != request.user.id:
+        return HttpResponseForbidden("Only the reviewed doctor can reply.")
+    text = (request.POST.get("response") or "").strip()[:2000]
+    review.doctor_response = text
+    review.doctor_response_at = timezone.now() if text else None
+    review.save(update_fields=["doctor_response", "doctor_response_at"])
+    messages.success(request, _t(
+        request, "Your reply was saved." if text else "Your reply was removed.",
+        "تم حفظ ردّك." if text else "تم حذف ردّك."))
+    return redirect(_safe_back(request, fallback="doctors:my_reviews"))
 
 
 @login_required

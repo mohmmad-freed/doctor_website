@@ -4991,3 +4991,45 @@ def register_patient_submit(request, staff):
 
     messages.success(request, _("تم تسجيل المريض %(name)s في عيادة %(clinic)s بنجاح.") % {"name": patient.name, "clinic": clinic.name})
     return redirect("secretary:register_patient")
+
+@secretary_required
+def reviews_list(request, staff):
+    """Doctor reviews at this clinic — staff moderation (hide/unhide).
+
+    Shows reviewer-anonymous reviews of the clinic's doctors, INCLUDING hidden
+    ones (so staff can restore them). Hide/unhide reuse the /reviews/ endpoints,
+    which authorize via user_can_moderate_doctor_reviews.
+    """
+    from django.core.paginator import Paginator
+    from clinics.models import ClinicStaff
+    from doctors.models import DoctorReview
+
+    clinic = staff.clinic
+    doctor_ids = set(
+        ClinicStaff.objects.filter(
+            clinic=clinic, role__in=["DOCTOR", "MAIN_DOCTOR"], is_active=True
+        ).values_list("user_id", flat=True)
+    )
+    if clinic.main_doctor_id:
+        doctor_ids.add(clinic.main_doctor_id)
+
+    qs = (
+        DoctorReview.objects.filter(doctor_id__in=doctor_ids)
+        .select_related("doctor")
+        .order_by("-created_at")
+    )
+    show = request.GET.get("show")  # 'hidden' | 'reported' | None (all)
+    if show == "hidden":
+        qs = qs.filter(is_hidden=True)
+    elif show == "reported":
+        qs = qs.filter(report_count__gt=0)
+
+    paginator = Paginator(qs, 20)
+    page = paginator.get_page(request.GET.get("page", 1))
+    return render(request, "secretary/reviews/list.html", {
+        "clinic": clinic,
+        "page_obj": page,
+        "reviews": page.object_list,
+        "show": show,
+        "total_count": paginator.count,
+    })

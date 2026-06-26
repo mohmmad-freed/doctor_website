@@ -736,6 +736,10 @@ class DoctorReview(models.Model):
     )
     report_count = models.PositiveIntegerField(default=0)
 
+    # Optional public reply from the reviewed doctor.
+    doctor_response = models.TextField(blank=True, default="", max_length=2000)
+    doctor_response_at = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         verbose_name = "Doctor Review"
         verbose_name_plural = "Doctor Reviews"
