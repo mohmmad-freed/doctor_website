@@ -72,6 +72,10 @@
                             {% if appt.doctor_specialty %}
                             <span class="text-xs text-gray-400 dark:text-gray-500">· {{ appt.doctor_specialty }}</span>
                             {% endif %}
+                            {% if appt.status == 'COMPLETED' %}
+                                {% if appt.doctor_rating.count %}<span class="inline-flex items-center gap-1 text-xs text-amber-500"><i class="fa-solid fa-star text-[10px]"></i>{{ appt.doctor_rating.avg }}<span class="text-gray-400 dark:text-gray-500">({{ appt.doctor_rating.count }})</span></span>{% endif %}
+                                {% if appt.existing_review %}<span class="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400">{% if IS_RTL %}تقييمك{% else %}your rating{% endif %}: {{ appt.existing_review.rating }}★</span>{% endif %}
+                            {% endif %}
                         </div>
                         <div class="flex flex-wrap gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
                             <span><i class="fa-solid fa-hospital text-xs ms-1"></i>{{ appt.clinic_name }}</span>
@@ -122,16 +126,8 @@
                                 {% trans "إلغاء" %}
                             </button>
                         </div>
-                        {% elif appt.status == 'COMPLETED' and appt.doctor_id %}
-                        {# Completed → invite the patient to rate the doctor (review form lives on the public doctor page) #}
-                        <div class="flex items-center gap-2">
-                            <a href="{% url 'browse:doctor_detail' appt.doctor_id %}?clinic_id={{ appt.clinic_id }}"
-                               class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl border border-amber-300 dark:border-amber-700 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors">
-                                <i class="fa-solid fa-star text-xs"></i>
-                                {% if IS_RTL %}قيّم الطبيب{% else %}Rate this doctor{% endif %}
-                            </a>
-                        </div>
                         {% endif %}
+                        {# (Completed appointments show their "Rate this doctor" button in the past-appointments list below.) #}
 
                     </div>
                 </div>
@@ -213,6 +209,10 @@
                             {% if appt.doctor_specialty %}
                             <span class="text-xs text-gray-400 dark:text-gray-500">· {{ appt.doctor_specialty }}</span>
                             {% endif %}
+                            {% if appt.status == 'COMPLETED' %}
+                                {% if appt.doctor_rating.count %}<span class="inline-flex items-center gap-1 text-xs text-amber-500"><i class="fa-solid fa-star text-[10px]"></i>{{ appt.doctor_rating.avg }}<span class="text-gray-400 dark:text-gray-500">({{ appt.doctor_rating.count }})</span></span>{% endif %}
+                                {% if appt.existing_review %}<span class="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400">{% if IS_RTL %}تقييمك{% else %}your rating{% endif %}: {{ appt.existing_review.rating }}★</span>{% endif %}
+                            {% endif %}
                         </div>
                         <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-400 dark:text-gray-500">
                             <span>{{ appt.clinic_name }}</span>
@@ -236,6 +236,18 @@
                     </div>
 
                 </div>
+
+                {% if appt.status == 'COMPLETED' and appt.doctor_id %}
+                {# Rate the doctor IN-PORTAL via a modal (pre-filled if already reviewed) #}
+                <div class="mt-3">
+                    <button type="button"
+                            onclick="openRateModal('{% url 'reviews:submit' appt.doctor_id %}', '{{ appt.doctor_name|escapejs }}', {{ appt.existing_review.rating|default:0 }}, '{{ appt.existing_review.comment|escapejs }}')"
+                            class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl border border-amber-300 dark:border-amber-700 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors">
+                        <i class="fa-solid fa-star text-xs"></i>
+                        {% if appt.existing_review %}{% if IS_RTL %}عدّل تقييمك{% else %}Edit your rating{% endif %}{% else %}{% if IS_RTL %}قيّم الطبيب{% else %}Rate this doctor{% endif %}{% endif %}
+                    </button>
+                </div>
+                {% endif %}
 
                 {# Cancellation reason — shown for cancelled past appointments #}
                 {% if appt.status == 'CANCELLED' and appt.cancellation_reason %}
@@ -320,5 +332,93 @@
   document.getElementById('cancel-modal').addEventListener('click', function (e) {
     if (e.target === this) closeCancelModal();
   });
+</script>
+
+{# ── Rate-doctor modal — in-portal star rating + comment (reuses reviews:submit) ── #}
+<style>
+  .star-input { display: inline-flex; flex-direction: row-reverse; }
+  .star-input input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .star-input label { font-size: 2rem; line-height: 1; color: #d1d5db; cursor: pointer; padding: 0 3px; transition: color .12s; }
+  .star-input label:hover, .star-input label:hover ~ label, .star-input input:checked ~ label { color: #f59e0b; }
+  .star-input input:focus-visible + label { outline: 2px solid #3b82f6; outline-offset: 2px; border-radius: 4px; }
+</style>
+<div id="rate-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm hidden">
+  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6"
+       role="dialog" aria-modal="true" aria-labelledby="rate-modal-title">
+    <h3 id="rate-modal-title" class="font-bold text-gray-900 dark:text-white mb-1">{% if IS_RTL %}قيّم الطبيب{% else %}Rate the doctor{% endif %}</h3>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4" id="rate-modal-doctor-name"></p>
+    <form method="post" id="rate-modal-form">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{% url 'patients:my_appointments' %}">
+      <div class="mb-3 text-center">
+        <div class="star-input" role="radiogroup" aria-label="{% if IS_RTL %}التقييم{% else %}Rating{% endif %}">
+          <input type="radio" name="rating" value="5" id="rate5"><label for="rate5" title="5">★</label>
+          <input type="radio" name="rating" value="4" id="rate4"><label for="rate4" title="4">★</label>
+          <input type="radio" name="rating" value="3" id="rate3"><label for="rate3" title="3">★</label>
+          <input type="radio" name="rating" value="2" id="rate2"><label for="rate2" title="2">★</label>
+          <input type="radio" name="rating" value="1" id="rate1"><label for="rate1" title="1">★</label>
+        </div>
+      </div>
+      <div class="mb-4">
+        <textarea name="comment" rows="3" maxlength="2000" id="rate-modal-comment"
+                  placeholder="{% if IS_RTL %}شارك تجربتك (اختياري){% else %}Share your experience (optional){% endif %}"
+                  class="w-full text-sm rounded-xl border border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-100 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400 resize-none"></textarea>
+      </div>
+      <div class="flex gap-3">
+        <button type="submit"
+                class="flex-1 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-colors">
+          {% if IS_RTL %}نشر التقييم{% else %}Post review{% endif %}
+        </button>
+        <button type="button" id="rate-modal-cancel" onclick="closeRateModal()"
+                class="flex-1 px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-300 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+          {% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+  var _rateModalTrigger = null;
+  function openRateModal(action, doctorName, rating, comment) {
+    var modal = document.getElementById('rate-modal');
+    var form = document.getElementById('rate-modal-form');
+    form.action = action;
+    document.getElementById('rate-modal-doctor-name').textContent =
+      doctorName ? '{% if IS_RTL %}د.{% else %}Dr.{% endif %} ' + doctorName : '';
+    // Pre-fill an existing review (edit mode), else start blank.
+    var checked = null;
+    document.querySelectorAll('#rate-modal input[name="rating"]').forEach(function (el) {
+      el.checked = (parseInt(el.value, 10) === rating);
+      if (el.checked) checked = el;
+    });
+    document.getElementById('rate-modal-comment').value = comment || '';
+    _rateModalTrigger = document.activeElement;          // restore focus here on close
+    modal.classList.remove('hidden');
+    // Move focus into the dialog: the chosen star if editing, else the first star.
+    (checked || document.getElementById('rate5')).focus();
+  }
+  function closeRateModal() {
+    document.getElementById('rate-modal').classList.add('hidden');
+    if (_rateModalTrigger && _rateModalTrigger.focus) _rateModalTrigger.focus();
+    _rateModalTrigger = null;
+  }
+  (function () {
+    var modal = document.getElementById('rate-modal');
+    // Click on the backdrop closes.
+    modal.addEventListener('click', function (e) {
+      if (e.target === this) closeRateModal();
+    });
+    // Escape closes; Tab is trapped within the dialog while it is open.
+    modal.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { e.preventDefault(); closeRateModal(); return; }
+      if (e.key !== 'Tab') return;
+      var firstStop = modal.querySelector('input[name="rating"]:checked')
+                   || document.getElementById('rate5');           // radiogroup entry point
+      var lastStop = document.getElementById('rate-modal-cancel'); // last focusable control
+      var active = document.activeElement;
+      if (e.shiftKey && active && active.name === 'rating') { e.preventDefault(); lastStop.focus(); }
+      else if (!e.shiftKey && active === lastStop) { e.preventDefault(); firstStop.focus(); }
+    });
+  })();
 </script>
 {% endblock %}

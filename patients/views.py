@@ -325,6 +325,28 @@ def my_appointments(request):
 
     data = get_patient_appointments(request.user)
 
+    # Attach review data to completed past appointments so the page can offer an
+    # in-portal rating modal (pre-filled) and show the doctor's average. Batched —
+    # two queries total regardless of how many appointments are listed.
+    from doctors.models import DoctorReview
+    from doctors.services import doctor_rating_summaries
+    completed_doctor_ids = {
+        a["doctor_id"] for a in data["past"]
+        if a.get("status") == "COMPLETED" and a.get("doctor_id")
+    }
+    my_reviews = {
+        r.doctor_id: r
+        for r in DoctorReview.objects.filter(
+            patient=request.user, doctor_id__in=completed_doctor_ids
+        )
+    }
+    ratings = doctor_rating_summaries(list(completed_doctor_ids))
+    for a in data["past"]:
+        did = a.get("doctor_id")
+        rv = my_reviews.get(did) if did else None
+        a["existing_review"] = {"rating": rv.rating, "comment": rv.comment} if rv else None
+        a["doctor_rating"] = ratings.get(did) if did else None
+
     context = {
         "upcoming_appointments": data["upcoming"],
         "past_appointments": data["past"],

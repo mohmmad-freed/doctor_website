@@ -261,3 +261,18 @@ class ReviewEnhancementsTests(DoctorReviewTests):
         self.client.force_login(self.p1)
         resp = self.client.get(reverse("patients:browse_doctors"))
         self.assertEqual(resp.status_code, 200)
+
+    # ── In-portal rate modal on the patient appointments page (U2) ────────
+    def test_my_appointments_offers_inline_rating(self):
+        DoctorReview.objects.create(doctor=self.doctor, patient=self.p1, rating=4, comment="MYRATINGBODY")
+        self.client.force_login(self.p1)  # p1 has a COMPLETED appt with self.doctor
+        resp = self.client.get(reverse("patients:my_appointments"))
+        self.assertEqual(resp.status_code, 200)
+        # The in-portal modal + the existing submit endpoint are wired in (no bounce
+        # to the public browse page), and the patient's existing review is offered.
+        self.assertContains(resp, 'id="rate-modal"')
+        self.assertContains(resp, "openRateModal")
+        self.assertContains(resp, reverse("reviews:submit", kwargs={"doctor_id": self.doctor.id}))
+        # Accessible dialog semantics on the modal (focus-managed, labelled).
+        self.assertContains(resp, 'role="dialog"')
+        self.assertContains(resp, 'aria-modal="true"')
