@@ -1,0 +1,71 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}{{ clinic.name }}{% endblock %}
+
+{% block extra_css %}{% include 'browse/_styles.html' %}{% endblock %}
+
+{% block content %}
+<div class="browse-wrap">
+    <a class="browse-back" href="{% url 'browse:index' %}">
+        <i class="fa-solid fa-arrow-{% if IS_RTL %}right{% else %}left{% endif %}"></i>
+        {% if IS_RTL %}كل العيادات{% else %}All clinics{% endif %}
+    </a>
+    {% include 'browse/_guest_banner.html' %}
+
+    <div class="browse-header" style="display:flex;gap:1rem;align-items:center;">
+        <div class="logo" style="width:64px;height:64px;font-size:1.6rem;">
+            {% if clinic.logo %}<img src="{{ clinic.logo }}" alt="" style="width:100%;height:100%;border-radius:12px;object-fit:cover;">{% else %}<i class="fa-solid fa-hospital"></i>{% endif %}
+        </div>
+        <div>
+            <h1>{{ clinic.name }}</h1>
+            <p style="margin:0;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+                {% if clinic.specialization %}<span class="chip">{{ clinic.specialization }}</span>{% endif %}
+                {% if clinic.city %}<span class="meta"><i class="fa-solid fa-location-dot"></i> {{ clinic.city }}</span>{% endif %}
+            </p>
+        </div>
+    </div>
+
+    {% if clinic.description %}<p>{{ clinic.description }}</p>{% endif %}
+
+    <div class="browse-section">
+        <h2>{% if IS_RTL %}معلومات التواصل{% else %}Contact{% endif %}</h2>
+        <div class="meta"><i class="fa-solid fa-location-dot"></i> {{ clinic.address }}</div>
+        {% if clinic.phone %}<div class="meta"><i class="fa-solid fa-phone"></i> {{ clinic.phone }}</div>{% endif %}
+        {% if clinic.email %}<div class="meta"><i class="fa-solid fa-envelope"></i> {{ clinic.email }}</div>{% endif %}
+    </div>
+
+    {% if working_hours %}
+    <div class="browse-section">
+        <h2>{% if IS_RTL %}ساعات العمل{% else %}Working hours{% endif %}</h2>
+        <table class="hours-table">
+            {% for wh in working_hours %}
+            <tr>
+                <td>{{ wh.day }}</td>
+                <td>{% if wh.is_closed %}<span class="closed">{% if IS_RTL %}مغلق{% else %}Closed{% endif %}</span>{% else %}{{ wh.start }} – {{ wh.end }}{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% endif %}
+
+    <div class="browse-section">
+        <h2>{% if IS_RTL %}الأطباء{% else %}Doctors{% endif %}</h2>
+        {% if doctors %}
+        <div class="browse-grid">
+            {% for d in doctors %}
+            <a class="browse-card" href="{% url 'browse:doctor_detail' d.id %}?clinic_id={{ clinic.id }}">
+                <div class="logo"><i class="fa-solid fa-user-doctor"></i></div>
+                <div class="title">{% if IS_RTL %}د. {{ d.name }}{% else %}Dr. {{ d.name }}{% endif %}</div>
+                {% if d.specialties %}<div class="chips">{% for s in d.specialties %}<span class="chip">{{ s }}</span>{% endfor %}</div>{% endif %}
+                {% if d.years_of_experience %}<div class="meta"><i class="fa-solid fa-briefcase-medical"></i>
+                    {% if IS_RTL %}{{ d.years_of_experience }} سنة خبرة{% else %}{{ d.years_of_experience }} yrs experience{% endif %}</div>{% endif %}
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="browse-empty">{% if IS_RTL %}لا يوجد أطباء معروضون حالياً.{% else %}No doctors listed yet.{% endif %}</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

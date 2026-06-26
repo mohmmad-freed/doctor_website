@@ -1,0 +1,98 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}{% if IS_RTL %}د. {{ doctor.name }}{% else %}Dr. {{ doctor.name }}{% endif %}{% endblock %}
+
+{% block extra_css %}{% include 'browse/_styles.html' %}{% endblock %}
+
+{% block content %}
+<div class="browse-wrap">
+    <a class="browse-back" href="{% url 'browse:clinic_detail' clinic.id %}">
+        <i class="fa-solid fa-arrow-{% if IS_RTL %}right{% else %}left{% endif %}"></i> {{ clinic.name }}
+    </a>
+    {% include 'browse/_guest_banner.html' %}
+
+    <div class="browse-header" style="display:flex;gap:1rem;align-items:center;">
+        <div class="logo" style="width:64px;height:64px;font-size:1.6rem;"><i class="fa-solid fa-user-doctor"></i></div>
+        <div>
+            <h1>{% if IS_RTL %}د. {{ doctor.name }}{% else %}Dr. {{ doctor.name }}{% endif %}</h1>
+            <p style="margin:0;display:flex;gap:.35rem;flex-wrap:wrap;">
+                {% for s in doctor.specialties %}<span class="chip">{{ s }}</span>{% endfor %}
+            </p>
+        </div>
+    </div>
+
+    {% if doctor.bio %}<p>{{ doctor.bio }}</p>{% endif %}
+    {% if doctor.years_of_experience %}<div class="meta"><i class="fa-solid fa-briefcase-medical"></i>
+        {% if IS_RTL %}{{ doctor.years_of_experience }} سنة خبرة{% else %}{{ doctor.years_of_experience }} yrs experience{% endif %}</div>{% endif %}
+
+    {% if appointment_types %}
+    <div class="browse-section">
+        <h2>{% if IS_RTL %}الخدمات{% else %}Services{% endif %}</h2>
+        <div class="browse-grid">
+            {% for t in appointment_types %}
+            <div class="browse-card" style="cursor:default;">
+                <div class="title">{{ t.name }}</div>
+                <div class="meta"><i class="fa-solid fa-clock"></i>
+                    {% if IS_RTL %}{{ t.duration_minutes }} دقيقة{% else %}{{ t.duration_minutes }} min{% endif %}</div>
+                {% if t.description %}<div class="meta">{{ t.description }}</div>{% endif %}
+                <div class="price-locked"><i class="fa-solid fa-lock"></i>
+                    {% if IS_RTL %}سجّل الدخول لعرض السعر{% else %}Sign in to see price{% endif %}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if weekly_schedule %}
+    <div class="browse-section">
+        <h2>{% if IS_RTL %}جدول الدوام الأسبوعي{% else %}Weekly schedule{% endif %}</h2>
+        <table class="hours-table">
+            {% for s in weekly_schedule %}
+            <tr><td>{{ s.day }}</td><td>{{ s.start }} – {{ s.end }}</td></tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% endif %}
+
+    {% if appointment_types %}
+    <div class="browse-section">
+        <h2>{% if IS_RTL %}المواعيد المتاحة{% else %}Available appointments{% endif %}</h2>
+        <form method="get" class="browse-filter">
+            <input type="hidden" name="clinic_id" value="{{ clinic.id }}">
+            <select name="appointment_type_id">
+                <option value="">{% if IS_RTL %}اختر الخدمة{% else %}Choose a service{% endif %}</option>
+                {% for t in appointment_types %}
+                <option value="{{ t.id }}" {% if selected_type_id == t.id|stringformat:'s' %}selected{% endif %}>
+                    {{ t.name }} ({{ t.duration_minutes }} {% if IS_RTL %}د{% else %}min{% endif %})</option>
+                {% endfor %}
+            </select>
+            <input type="date" name="date" value="{{ selected_date }}" min="{{ today }}">
+            <button type="submit" class="btn btn-primary">{% if IS_RTL %}عرض المواعيد{% else %}Show slots{% endif %}</button>
+        </form>
+
+        {% if slot_error %}
+        <div class="browse-empty">{{ slot_error }}</div>
+        {% elif slots is not None %}
+            {% if slots %}
+            <div class="slots-grid">
+                {% for slot in slots %}
+                <a class="slot-pill" href="{% url 'accounts:login' %}?next={{ book_url|urlencode }}"
+                   title="{% if IS_RTL %}سجّل الدخول للحجز{% else %}Sign in to book{% endif %}">{{ slot.time }}</a>
+                {% endfor %}
+            </div>
+            <p class="meta" style="margin-top:.75rem;"><i class="fa-solid fa-circle-info"></i>
+                {% if IS_RTL %}اختر موعداً وسجّل الدخول لإتمام الحجز.{% else %}Pick a time and sign in to complete your booking.{% endif %}</p>
+            {% else %}
+            <div class="browse-empty">{% if IS_RTL %}لا توجد مواعيد متاحة في هذا اليوم.{% else %}No open slots on this day.{% endif %}</div>
+            {% endif %}
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="browse-section">
+        <a class="btn btn-primary" href="{% url 'accounts:login' %}?next={{ book_url|urlencode }}">
+            {% if IS_RTL %}سجّل الدخول للحجز{% else %}Sign in to book{% endif %}</a>
+    </div>
+</div>
+{% endblock %}

@@ -503,6 +503,7 @@
             </div>
 
             {% else %}
+            <a href="{% url 'browse:index' %}" class="btn btn-secondary">{% if IS_RTL %}تصفّح العيادات{% else %}Browse clinics{% endif %}</a>
             <a href="{% url 'accounts:login' %}" class="btn btn-secondary">{% if IS_RTL %}تسجيل الدخول{% else %}Login{% endif %}</a>
             <a href="{% url 'accounts:register' %}" class="btn btn-primary">{% if IS_RTL %}حساب جديد{% else %}New Account{% endif %}</a>
             {% endif %}

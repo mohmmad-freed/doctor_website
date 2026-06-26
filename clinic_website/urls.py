@@ -27,6 +27,8 @@ urlpatterns = [
     path("secretary/", include("secretary.urls")),
     path("clinics/", include("clinics.urls")),
     path("appointments/", include("appointments.urls")),
+    # Public guest browse (anonymous-accessible catalog of clinics & doctors)
+    path("browse/", include("browse.urls")),
     # API key modules
     path(
         "api/patient/profile/",

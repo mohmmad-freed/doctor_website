@@ -77,6 +77,9 @@
                     <a href="{% url 'accounts:register' %}" class="btn btn-primary btn-pulse">
                         {% if IS_RTL %}انضم إلينا الآن{% else %}Join Us Now{% endif %}
                     </a>
+                    <a href="{% url 'browse:index' %}" class="btn btn-secondary">
+                        {% if IS_RTL %}تصفّح بدون حساب{% else %}Browse without an account{% endif %}
+                    </a>
                     <a href="#features" class="btn btn-secondary">
                         {% if IS_RTL %}اكتشف المزيد{% else %}Explore Features{% endif %}
                     </a>
@@ -256,6 +259,10 @@
             <span class="text">{% if IS_RTL %}لوحة التحكم{% else %}Dashboard{% endif %}</span>
         </a>
         {% else %}
+        <a href="{% url 'browse:index' %}" class="mobile-nav-item {% if request.resolver_match.namespace == 'browse' %}active{% endif %}">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <span class="text">{% if IS_RTL %}تصفّح{% else %}Browse{% endif %}</span>
+        </a>
         <a href="{% url 'accounts:login' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'login' %}active{% endif %}">
             <i class="fa-solid fa-right-to-bracket"></i>
             <span class="text">{% if IS_RTL %}دخول{% else %}Login{% endif %}</span>

@@ -1,0 +1,63 @@
+<style>
+    .browse-wrap { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+    .browse-banner {
+        display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
+        background: var(--primary-50, #eef2ff); color: var(--text-strong, #1f2937);
+        border: 1px solid var(--border-default, #e2e8f0); border-radius: 14px;
+        padding: .75rem 1rem; margin-bottom: 1.25rem; font-size: .9rem;
+    }
+    .browse-banner .spacer { flex: 1; }
+    .browse-banner a { font-weight: 700; color: var(--primary, #667eea); text-decoration: none; }
+    .browse-header h1 { margin: 0 0 .25rem; font-size: 1.6rem; }
+    .browse-header p { margin: 0 0 1.25rem; color: var(--text-muted, #718096); }
+    .browse-filter {
+        display: flex; gap: .6rem; flex-wrap: wrap; margin-bottom: 1.5rem;
+    }
+    .browse-filter input[type=text], .browse-filter select {
+        flex: 1 1 200px; min-width: 0; padding: .6rem .85rem;
+        border: 1px solid var(--border-default, #e2e8f0); border-radius: 12px;
+        background: var(--surface, #fff); color: inherit; font: inherit;
+    }
+    .browse-grid {
+        display: grid; gap: 1rem;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    }
+    .browse-card {
+        display: flex; flex-direction: column; gap: .5rem;
+        background: var(--surface, #fff); border: 1px solid var(--border-default, #e2e8f0);
+        border-radius: 16px; padding: 1.1rem; text-decoration: none; color: inherit;
+        transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .browse-card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(2,6,23,.08); }
+    .browse-card .logo {
+        width: 48px; height: 48px; border-radius: 12px; object-fit: cover;
+        background: var(--primary-50, #eef2ff); display: flex; align-items: center;
+        justify-content: center; color: var(--primary, #667eea); font-size: 1.2rem;
+    }
+    .browse-card .title { font-weight: 700; font-size: 1.05rem; }
+    .browse-card .meta { color: var(--text-muted, #718096); font-size: .85rem; display: flex; align-items: center; gap: .4rem; }
+    .chip {
+        display: inline-block; padding: .15rem .6rem; border-radius: 999px;
+        background: var(--primary-50, #eef2ff); color: var(--primary, #667eea);
+        font-size: .75rem; font-weight: 600;
+    }
+    .chips { display: flex; flex-wrap: wrap; gap: .35rem; }
+    .browse-empty { text-align: center; color: var(--text-muted, #718096); padding: 3rem 1rem; }
+    .browse-section { margin-top: 2rem; }
+    .browse-section h2 { font-size: 1.2rem; margin: 0 0 .85rem; }
+    .hours-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    .hours-table td { padding: .5rem .25rem; border-bottom: 1px solid var(--border-default, #eef0f4); }
+    .hours-table .closed { color: var(--text-muted, #9aa3b2); }
+    .slots-grid { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
+    .slot-pill {
+        display: block; text-align: center; padding: .55rem .25rem; border-radius: 10px;
+        border: 1px solid var(--border-default, #e2e8f0); background: var(--surface, #fff);
+        font-weight: 600; font-size: .9rem; text-decoration: none; color: inherit;
+    }
+    .slot-pill:hover { border-color: var(--primary, #667eea); color: var(--primary, #667eea); }
+    .price-locked {
+        display: inline-flex; align-items: center; gap: .35rem;
+        color: var(--text-muted, #718096); font-size: .82rem; font-weight: 600;
+    }
+    .browse-back { display: inline-flex; align-items: center; gap: .4rem; color: var(--text-muted, #718096); text-decoration: none; font-size: .9rem; margin-bottom: 1rem; }
+</style>

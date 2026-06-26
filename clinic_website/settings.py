@@ -124,6 +124,7 @@ INSTALLED_APPS = [
     "secretary",
     "clinics",
     "compliance",
+    "browse",
     "rest_framework",
     "rest_framework_simplejwt",
     "django.contrib.postgres",

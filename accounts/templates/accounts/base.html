@@ -186,6 +186,10 @@
         </a>
         {% endif %}
         {% else %}
+        <a href="{% url 'browse:index' %}" class="mobile-nav-item {% if request.resolver_match.namespace == 'browse' %}active{% endif %}">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <span class="text">{% if IS_RTL %}تصفّح{% else %}Browse{% endif %}</span>
+        </a>
         <a href="{% url 'accounts:login' %}" class="mobile-nav-item {% if request.resolver_match.url_name == 'login' %}active{% endif %}">
             <i class="fa-solid fa-right-to-bracket"></i>
             <span class="text">{% trans "دخول" %}</span>

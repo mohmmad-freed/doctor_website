@@ -1,0 +1,49 @@
+{% extends 'accounts/base.html' %}
+{% load static %}
+
+{% block title %}{% if IS_RTL %}تصفّح العيادات{% else %}Browse clinics{% endif %}{% endblock %}
+
+{% block extra_css %}{% include 'browse/_styles.html' %}{% endblock %}
+
+{% block content %}
+<div class="browse-wrap">
+    {% include 'browse/_guest_banner.html' %}
+
+    <div class="browse-header">
+        <h1>{% if IS_RTL %}العيادات الطبية{% else %}Medical clinics{% endif %}</h1>
+        <p>{% if IS_RTL %}ابحث عن العيادة المناسبة وتصفّح الأطباء والخدمات.{% else %}Find the right clinic and explore its doctors and services.{% endif %}</p>
+    </div>
+
+    <form method="get" class="browse-filter">
+        <input type="text" name="q" value="{{ search_query }}"
+               placeholder="{% if IS_RTL %}ابحث بالاسم أو العنوان أو التخصص{% else %}Search by name, address, or specialty{% endif %}">
+        <select name="city_id" onchange="this.form.submit()">
+            <option value="">{% if IS_RTL %}كل المدن{% else %}All cities{% endif %}</option>
+            {% for city in cities %}
+            <option value="{{ city.id }}" {% if selected_city_id == city.id|stringformat:'s' %}selected{% endif %}>{{ city.name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary">{% if IS_RTL %}بحث{% else %}Search{% endif %}</button>
+    </form>
+
+    {% if clinics %}
+    <div class="browse-grid">
+        {% for c in clinics %}
+        <a class="browse-card" href="{% url 'browse:clinic_detail' c.id %}">
+            <div class="logo">
+                {% if c.logo %}<img src="{{ c.logo }}" alt="" style="width:100%;height:100%;border-radius:12px;object-fit:cover;">{% else %}<i class="fa-solid fa-hospital"></i>{% endif %}
+            </div>
+            <div class="title">{{ c.name }}</div>
+            {% if c.specialization %}<div class="chips"><span class="chip">{{ c.specialization }}</span></div>{% endif %}
+            {% if c.city %}<div class="meta"><i class="fa-solid fa-location-dot"></i> {{ c.city }}</div>{% endif %}
+            <div class="meta"><i class="fa-solid fa-user-doctor"></i>
+                {% if IS_RTL %}{{ c.doctor_count }} طبيب{% else %}{{ c.doctor_count }} doctor{{ c.doctor_count|pluralize }}{% endif %}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="browse-empty">{% if IS_RTL %}لا توجد عيادات مطابقة لبحثك.{% else %}No clinics match your search.{% endif %}</div>
+    {% endif %}
+</div>
+{% endblock %}
