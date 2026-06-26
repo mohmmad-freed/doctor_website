@@ -11,6 +11,7 @@
  *   data-confirm="msg"        on <form>      → window.confirm() before submit
  *   data-confirm="msg"        on <a>/button  → window.confirm() before click/navigation
  *   data-action="print"                       → window.print()
+ *   data-action="back"                        → history.back() (replaces href="javascript:")
  *   data-href="/url"                          → navigate to url on click
  *   data-click-target="id"                    → forward click to #id (e.g. hidden file input)
  *   data-autosubmit  (+ optional data-form="id") → submit the form on change
@@ -23,6 +24,8 @@
  *   data-hide-self                            → add .hidden to the clicked element
  *   data-tab-pill                             → exclusive active state among .filter-pill buttons
  *   data-stop-propagation                     → stopPropagation() (element-bound, HTMX-aware)
+ *   data-cn-insert  (on a button w/ data-med) → mousedown: dispatch 'cn-insert' CustomEvent({text})
+ *   data-locked-tooltip="msg"                 → hover: fixed-position #lbb-tooltip showing msg
  *
  * Page-specific behaviour that doesn't fit these hooks stays in each page's own
  * nonce'd <script> (full pages) or its externalized static file (HTMX fragments).
@@ -75,6 +78,8 @@
     if (!el) { return; }
 
     if (el.getAttribute('data-action') === 'print') { window.print(); return; }
+
+    if (el.getAttribute('data-action') === 'back') { e.preventDefault(); window.history.back(); return; }
 
     if (el.hasAttribute('data-href')) { window.location = el.getAttribute('data-href'); return; }
 
@@ -145,4 +150,48 @@
   else { document.addEventListener('DOMContentLoaded', function () { bindStop(document); }); }
   document.addEventListener('htmx:afterSwap', function (e) { bindStop(e.target); });
   document.addEventListener('htmx:load', function (e) { bindStop(e.target); });
+
+  // ---- mousedown: "insert into notes" buttons (preserve editor focus) --
+  document.addEventListener('mousedown', function (e) {
+    var el = e.target.closest('[data-cn-insert]');
+    if (!el) { return; }
+    e.preventDefault();
+    window.dispatchEvent(new CustomEvent('cn-insert', { detail: { text: el.getAttribute('data-med') || '' } }));
+  });
+
+  // ---- hover tooltip that escapes overflow-hidden parents (fixed pos) ---
+  // Used by the "locked" book-appointment CTA. mouseover/mouseout bubble
+  // (unlike mouseenter/leave) so they delegate; relatedTarget guards flicker.
+  function lbbTooltip() {
+    var t = document.getElementById('lbb-tooltip');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'lbb-tooltip';
+      t.style.cssText = 'position:fixed;z-index:9999;background:#111827;color:#fff;font-size:0.75rem;padding:6px 12px;border-radius:6px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.3);pointer-events:none;transition:opacity .15s;opacity:0;';
+      document.body.appendChild(t);
+    }
+    return t;
+  }
+  document.addEventListener('mouseover', function (e) {
+    var el = e.target.closest('[data-locked-tooltip]');
+    if (!el || el.contains(e.relatedTarget)) { return; }
+    var t = lbbTooltip();
+    t.textContent = el.getAttribute('data-locked-tooltip') || '';
+    var r = el.getBoundingClientRect();
+    t.style.display = 'block';
+    t.style.opacity = '0';
+    var tw = t.offsetWidth;
+    var left = r.left + r.width / 2 - tw / 2;
+    if (left < 8) { left = 8; }
+    if (left + tw > window.innerWidth - 8) { left = window.innerWidth - 8 - tw; }
+    t.style.left = left + 'px';
+    t.style.top = (r.top - t.offsetHeight - 8) + 'px';
+    t.style.opacity = '1';
+  });
+  document.addEventListener('mouseout', function (e) {
+    var el = e.target.closest('[data-locked-tooltip]');
+    if (!el || el.contains(e.relatedTarget)) { return; }
+    var t = document.getElementById('lbb-tooltip');
+    if (t) { t.style.opacity = '0'; }
+  });
 })();

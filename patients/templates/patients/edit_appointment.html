@@ -173,6 +173,9 @@
 
 {% block scripts %}
 <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+{# CSP: intake-form widgets — externalized from the included/HTMX-swapped partial
+   (patients/partials/edit_intake_form.html); re-inits on htmx:afterSwap/load. #}
+<script defer src="{% static 'appointments/js/intake_form.js' %}"></script>
 <script nonce="{{ request.csp_nonce }}">
     function loadSlots() {
         const dateVal = document.getElementById('editDateInput').value;

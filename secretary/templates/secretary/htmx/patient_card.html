@@ -11,7 +11,7 @@
       <span class="font-semibold text-gray-800 dark:text-gray-100 text-sm">{% trans "تأكيد هوية المريض" %}</span>
     </div>
     <button type="button"
-      onclick="document.getElementById('patient-detail-section').innerHTML=''; document.getElementById('patient-search-input').value=''; document.getElementById('patient-search-input').focus();"
+      data-clear-patient-detail
       class="text-xs text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors flex items-center gap-1">
       <i class="fa-solid fa-xmark"></i> {% trans "تغيير" %}
     </button>
@@ -249,7 +249,7 @@
         </button>
         <button
           type="button"
-          onclick="document.getElementById('patient-detail-section').innerHTML=''; document.getElementById('patient-search-input').value=''; document.getElementById('patient-search-input').focus();"
+          data-clear-patient-detail
           class="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 font-medium text-sm transition-colors"
         >
           {% trans "إلغاء" %}
@@ -261,48 +261,7 @@
 </div>
 {% endif %}
 
-<script nonce="{{ request.csp_nonce }}">
-  // Trigger step 3 in the parent page
-  if (typeof onFormReady === 'function') {
-    onFormReady();
-  }
-
-  // Client-side validation
-  document.getElementById('registration-form') && document.getElementById('registration-form').addEventListener('submit', function (e) {
-    let valid = true;
-    const nidField = document.getElementById('field-nid');
-    const nidErr = document.getElementById('err-nid');
-
-    // NID is only required if it was not pre-filled (empty value)
-    if (nidField && !nidField.value.trim()) {
-      nidField.classList.add('field-error-state');
-      if (nidErr) { nidErr.classList.remove('hidden'); }
-      valid = false;
-    } else if (nidField) {
-      nidField.classList.remove('field-error-state');
-      if (nidErr) { nidErr.classList.add('hidden'); }
-    }
-
-    if (!valid) {
-      e.preventDefault();
-      return;
-    }
-
-    // Loading state on submit button
-    const btn = document.getElementById('submit-btn');
-    if (btn) {
-      btn.disabled = true;
-      btn.innerHTML = '<svg class="animate-spin w-4 h-4 me-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg> {% trans "جاري التسجيل..." %}';
-    }
-  });
-
-  // Clear error on input
-  const nidField = document.getElementById('field-nid');
-  if (nidField) {
-    nidField.addEventListener('input', function () {
-      this.classList.remove('field-error-state');
-      const err = document.getElementById('err-nid');
-      if (err) err.classList.add('hidden');
-    });
-  }
-</script>
+{# Form-ready step advance, NID validation, submit loading-state and the
+   "تغيير/إلغاء" clear buttons are handled by delegated listeners in the parent
+   page (secretary/register_patient.html) — this fragment is HTMX-swapped, so an
+   inline <script> here would lose its nonce and be blocked under CSP enforcement. #}

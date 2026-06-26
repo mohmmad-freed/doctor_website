@@ -384,6 +384,8 @@
 
 {% block extra_js %}
 <script src="{% static 'accounts/js/calendar_widget.js' %}"></script>
+{# CSP: intake-form widgets — externalized from the HTMX-swapped partial. #}
+<script defer src="{% static 'appointments/js/intake_form.js' %}"></script>
 <script nonce="{{ request.csp_nonce }}">
 // ── State ────────────────────────────────────────────────────────────────────
 var selectedPatient = null;
