@@ -117,7 +117,7 @@
                               title="{% if IS_RTL %}انقر للكشف{% else %}Click to reveal{% endif %}"
                               data-nid="{{ p.patient__national_id }}"
                               data-masked="{{ p.patient__national_id|slice:':3' }}••••{{ p.patient__national_id|slice:'-2:' }}"
-                              onclick="this.textContent = this.dataset.nid; this.title=''; this.classList.add('text-slate-700','dark:text-slate-200'); this.onclick=null;"
+                              data-reveal-nid
                               style="cursor:pointer;">
                             {{ p.patient__national_id|slice:":3" }}••••{{ p.patient__national_id|slice:"-2:" }}
                         </span>

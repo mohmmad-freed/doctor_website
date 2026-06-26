@@ -23,7 +23,7 @@
 
             <!-- Avatar Section -->
             <div class="flex flex-col items-center justify-center mb-8">
-                <div class="relative group cursor-pointer" onclick="document.getElementById('id_avatar').click()">
+                <div class="relative group cursor-pointer" data-click-target="id_avatar">
                     <div
                         class="w-32 h-32 rounded-full overflow-hidden border-4 border-white dark:border-slate-700 shadow-lg bg-gray-100 dark:bg-slate-700">
                         {% if p_form.instance.avatar %}
@@ -181,7 +181,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
     (function () {
         var form = document.getElementById('editProfileForm');
         var overlay = document.getElementById('editProfileOverlay');
@@ -199,7 +199,7 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ar.js"></script>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
     document.addEventListener('DOMContentLoaded', function() {
         flatpickr(".datepicker", {
             locale: "{{ CURRENT_LANG|default:'ar' }}",
@@ -223,7 +223,7 @@
     }
 </style>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
     document.addEventListener('DOMContentLoaded', function () {
         const avatarInput = document.getElementById('id_avatar');
         const deleteInput = document.getElementById('delete_avatar');

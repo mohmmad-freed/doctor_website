@@ -56,7 +56,7 @@
         </div>
     </div>
 
-    <script>
+    <script nonce="{{ request.csp_nonce }}">
     (function () {
         var APPT_PANEL_URL = "{% url 'clinics:appointments_panel' clinic_id=clinic.id %}";
         var _pickerYear = {{ appt_year }};

@@ -5,6 +5,9 @@
 
 {% block extra_css %}
 <style>
+/* CSP: hover styles moved off inline onmouseover/onmouseout handlers */
+.hover-scale:hover { transform: scale(1.05); }
+.hover-row-bg:hover { background: rgba(0,120,212,0.06) !important; }
 /* ─── Layout ──────────────────────────────────────────────────────── */
 .clinic-dash {
     max-width: 1060px;
@@ -1009,7 +1012,7 @@
                     <p style="margin:0.2rem 0 0;font-size:0.8rem;color:#c2410c;">{% blocktrans with count=pending_appointments %}يوجد {{ count }} موعد بانتظار التأكيد.{% endblocktrans %}</p>
                 </div>
             </div>
-            <a href="#appointments-section" style="padding:0.4rem 0.9rem;border-radius:8px;background:#f97316;color:white;font-size:0.8rem;font-weight:700;text-decoration:none;transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='none'">{% trans "مراجعة" %}</a>
+            <a href="#appointments-section" style="padding:0.4rem 0.9rem;border-radius:8px;background:#f97316;color:white;font-size:0.8rem;font-weight:700;text-decoration:none;transition:transform 0.15s;" class="hover-scale">{% trans "مراجعة" %}</a>
         </div>
         {% endif %}
         
@@ -1024,7 +1027,7 @@
                     <p style="margin:0.2rem 0 0;font-size:0.8rem;color:#1d4ed8;">{% blocktrans with count=pending_credentials %}يوجد {{ count }} طلب اعتماد مؤهلات لأطباء في العيادة.{% endblocktrans %}</p>
                 </div>
             </div>
-            <a href="{% url 'clinics:credentials_list' clinic_id=clinic.id %}" style="padding:0.4rem 0.9rem;border-radius:8px;background:#3b82f6;color:white;font-size:0.8rem;font-weight:700;text-decoration:none;transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='none'">{% trans "مراجعة" %}</a>
+            <a href="{% url 'clinics:credentials_list' clinic_id=clinic.id %}" style="padding:0.4rem 0.9rem;border-radius:8px;background:#3b82f6;color:white;font-size:0.8rem;font-weight:700;text-decoration:none;transition:transform 0.15s;" class="hover-scale">{% trans "مراجعة" %}</a>
         </div>
         {% endif %}
 
@@ -1039,7 +1042,7 @@
                     <p style="margin:0.2rem 0 0;font-size:0.8rem;color:#16a34a;">{% blocktrans with count=pending_invitations %}يوجد {{ count }} دعوة بانتظار القبول.{% endblocktrans %}</p>
                 </div>
             </div>
-            <a href="{% url 'clinics:invitations_list' clinic_id=clinic.id %}" style="padding:0.4rem 0.9rem;border-radius:8px;background:#16a34a;color:white;font-size:0.8rem;font-weight:700;text-decoration:none;transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='none'">{% trans "عرض" %}</a>
+            <a href="{% url 'clinics:invitations_list' clinic_id=clinic.id %}" style="padding:0.4rem 0.9rem;border-radius:8px;background:#16a34a;color:white;font-size:0.8rem;font-weight:700;text-decoration:none;transition:transform 0.15s;" class="hover-scale">{% trans "عرض" %}</a>
         </div>
         {% endif %}
 
@@ -1082,7 +1085,7 @@
                     <p style="margin:0.2rem 0 0;font-size:0.8rem;color:#dc2626;">{% blocktrans with count=blocked_patients_count %}يوجد {{ count }} مريض محظور حالياً من الحجز.{% endblocktrans %}</p>
                 </div>
             </div>
-            <a href="{% url 'clinics:compliance_settings' clinic_id=clinic.id %}" style="padding:0.4rem 0.9rem;border-radius:8px;background:#dc2626;color:white;font-size:0.8rem;font-weight:700;text-decoration:none;transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='none'">{% trans "إدارة" %}</a>
+            <a href="{% url 'clinics:compliance_settings' clinic_id=clinic.id %}" style="padding:0.4rem 0.9rem;border-radius:8px;background:#dc2626;color:white;font-size:0.8rem;font-weight:700;text-decoration:none;transition:transform 0.15s;" class="hover-scale">{% trans "إدارة" %}</a>
         </div>
         {% endif %}
     </div>
@@ -1397,8 +1400,8 @@
             <h2 class="p-card-title"><i class="fa-solid fa-user-group"></i> {% trans "الكادر الطبي والإداري" %}</h2>
             <div style="display:flex;gap:0.5rem;">
                 <a href="{% url 'clinics:create_invitation' clinic_id=clinic.id %}"
-                   style="font-size:0.8rem;font-weight:700;color:var(--color-primary-500);text-decoration:none;display:flex;align-items:center;gap:0.3rem;padding:4px 10px;border:1px solid var(--color-primary-500);border-radius:7px;transition:background 0.15s;"
-                   onmouseover="this.style.background='rgba(0,120,212,0.06)'" onmouseout="this.style.background='transparent'">
+                   class="hover-row-bg"
+                   style="font-size:0.8rem;font-weight:700;color:var(--color-primary-500);text-decoration:none;display:flex;align-items:center;gap:0.3rem;padding:4px 10px;border:1px solid var(--color-primary-500);border-radius:7px;transition:background 0.15s;">
                     <i class="fa-solid fa-user-plus"></i> {% trans "دعوة طبيب" %}
                 </a>
             </div>
@@ -1461,10 +1464,10 @@
                     {% endwith %}
                     <span class="schedule-hint"><i class="fa-regular fa-calendar-days"></i> {% trans "جدول العمل" %}</span>
                     <form method="post" action="{% url 'clinics:remove_staff' clinic_id=clinic.id staff_id=staff_member.id %}"
-                          style="margin-top:0.35rem;" onclick="event.stopPropagation();">
+                          style="margin-top:0.35rem;" data-stop-propagation
+                          data-confirm="{% trans 'هل أنت متأكد من إزالة هذا الطبيب من الكادر؟' %}">
                         {% csrf_token %}
                         <button type="submit" class="staff-remove-btn"
-                                onclick="return confirm('{% trans "هل أنت متأكد من إزالة هذا الطبيب من الكادر؟" %}')"
                                 title="{% trans 'إزالة من الكادر' %}">
                             <i class="fa-solid fa-user-minus"></i> {% trans "إزالة" %}
                         </button>
@@ -1507,10 +1510,10 @@
                     <span class="staff-sub">{{ staff_member.user.phone }}</span>
                     {% endif %}
                     <form method="post" action="{% url 'clinics:remove_staff' clinic_id=clinic.id staff_id=staff_member.id %}"
-                          style="margin-top:0.35rem;">
+                          style="margin-top:0.35rem;"
+                          data-confirm="{% trans 'هل أنت متأكد من إزالة هذا السكرتير/ة من الكادر؟' %}">
                         {% csrf_token %}
                         <button type="submit" class="staff-remove-btn"
-                                onclick="return confirm('{% trans "هل أنت متأكد من إزالة هذا السكرتير/ة من الكادر؟" %}')"
                                 title="{% trans 'إزالة من الكادر' %}">
                             <i class="fa-solid fa-user-minus"></i> {% trans "إزالة" %}
                         </button>
@@ -1584,14 +1587,14 @@
 </div>
 
 <!-- ── Doctor Schedule Drawer ──────────────────────────────────────── -->
-<div class="schedule-backdrop" id="scheduleBackdrop" onclick="closeScheduleDrawer()"></div>
+<div class="schedule-backdrop" id="scheduleBackdrop" data-close-drawer></div>
 <div class="schedule-drawer" id="scheduleDrawer" role="dialog" aria-modal="true" aria-label="{% trans 'جدول عمل الطبيب' %}">
     <div class="drawer-topbar">
         <div class="drawer-title">
             <i class="fa-regular fa-calendar-days"></i>
             {% trans "جدول العمل" %}
         </div>
-        <button class="drawer-close-btn" onclick="closeScheduleDrawer()" aria-label="{% trans 'إغلاق' %}">
+        <button type="button" class="drawer-close-btn" data-close-drawer aria-label="{% trans 'إغلاق' %}">
             <i class="fa-solid fa-xmark"></i>
         </button>
     </div>
@@ -1608,7 +1611,7 @@
 
 {% block extra_js %}
 <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-<script>
+<script nonce="{{ request.csp_nonce }}">
 function openScheduleDrawer() {
     document.getElementById('scheduleDrawer').classList.add('drawer-open');
     document.getElementById('scheduleBackdrop').classList.add('backdrop-visible');
@@ -1621,6 +1624,10 @@ function closeScheduleDrawer() {
 }
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeScheduleDrawer();
+});
+// CSP: bind schedule-drawer close (replaces inline onclick)
+document.addEventListener('click', function (e) {
+    if (e.target.closest('[data-close-drawer]')) { closeScheduleDrawer(); }
 });
 </script>
 {% endblock %}

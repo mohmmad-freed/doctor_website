@@ -151,7 +151,7 @@
                   </div>
 
                     <script id="ortho-edit-init-overview" type="application/json">[]</script>
-                    <script>
+                    <script nonce="{{ request.csp_nonce }}">
                     if (typeof orthoWorkspace === 'undefined') {
                       function orthoWorkspace() {
                         const REGIONS = [
@@ -538,7 +538,7 @@
             </div><!-- /new note form -->
 
             <!-- Existing note viewer -->
-            <script>
+            <script nonce="{{ request.csp_nonce }}">
             if (typeof orthoReadView === 'undefined') {
               function orthoReadView(findingsJson) {
                 const FRONT_IDS = ['cervical', 'r_shoulder', 'l_shoulder', 'r_elbow', 'l_elbow', 'r_wrist', 'l_wrist', 'r_hip', 'l_hip', 'r_knee', 'l_knee', 'r_ankle', 'l_ankle'];
@@ -786,8 +786,8 @@
           <i class="fa-solid fa-prescription text-emerald-500 text-sm"></i>
           <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">{% if IS_RTL %}الوصفات الفعّالة{% else %}Active Prescriptions{% endif %}</span>
         </div>
-        <button class="text-xs text-primary-600 dark:text-primary-400 font-medium hover:underline"
-                onclick="switchTab('prescriptions')">{% if IS_RTL %}عرض الكل{% else %}View all{% endif %}</button>
+        <button type="button" class="text-xs text-primary-600 dark:text-primary-400 font-medium hover:underline"
+                data-switch-tab="prescriptions">{% if IS_RTL %}عرض الكل{% else %}View all{% endif %}</button>
       </div>
       {% if latest_rx %}
       <div class="px-4 py-4">
@@ -822,8 +822,8 @@
           <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">{% if IS_RTL %}الطلبات الفعّالة{% else %}Active Orders{% endif %}</span>
           <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 text-xs font-bold">{{ active_orders|length }}</span>
         </div>
-        <button class="text-xs text-primary-600 dark:text-primary-400 font-medium hover:underline"
-                onclick="switchTab('orders')">{% if IS_RTL %}عرض الكل{% else %}View all{% endif %}</button>
+        <button type="button" class="text-xs text-primary-600 dark:text-primary-400 font-medium hover:underline"
+                data-switch-tab="orders">{% if IS_RTL %}عرض الكل{% else %}View all{% endif %}</button>
       </div>
       <div class="divide-y divide-slate-100 dark:divide-slate-700">
         {% for order in active_orders %}
@@ -853,8 +853,8 @@
           <i class="fa-solid fa-vial text-purple-500 text-sm"></i>
           <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">{% if IS_RTL %}المختبر{% else %}Labs{% endif %}</span>
         </div>
-        <button class="text-xs text-primary-600 dark:text-primary-400 font-medium hover:underline"
-                onclick="switchTab('records')">{% if IS_RTL %}عرض الكل{% else %}View all{% endif %}</button>
+        <button type="button" class="text-xs text-primary-600 dark:text-primary-400 font-medium hover:underline"
+                data-switch-tab="records">{% if IS_RTL %}عرض الكل{% else %}View all{% endif %}</button>
       </div>
       {% if lab_records %}
       <ul class="divide-y divide-slate-100 dark:divide-slate-700">

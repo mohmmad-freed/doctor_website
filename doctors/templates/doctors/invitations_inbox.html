@@ -88,7 +88,7 @@
       {% if not inv.is_expired %}
       <div class="border-t border-gray-100 dark:border-gray-700 px-5 py-4 bg-gray-50/50 dark:bg-gray-700/30 flex items-center justify-end gap-3">
         <form method="post" action="{% url 'doctors:reject_invitation' inv.id %}"
-              onsubmit="return confirm('{% if IS_RTL %}هل أنت متأكد من رفض هذه الدعوة؟{% else %}Are you sure you want to reject this invitation?{% endif %}');">
+              data-confirm="{% if IS_RTL %}هل أنت متأكد من رفض هذه الدعوة؟{% else %}Are you sure you want to reject this invitation?{% endif %}">
           {% csrf_token %}
           <button type="submit"
                   class="inline-flex items-center gap-2 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-red-400 hover:text-red-600 dark:hover:text-red-400 dark:hover:border-red-500 bg-white dark:bg-gray-800 text-sm font-semibold px-4 py-2 rounded-xl transition-colors">

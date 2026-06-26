@@ -307,7 +307,7 @@
 
 {% block extra_js %}
 <script src="{% static 'accounts/js/calendar_widget.js' %}"></script>
-<script>
+<script nonce="{{ request.csp_nonce }}">
 (function() {
   // ── State ────────────────────────────────────────────────────────────
   var initialTime = '{{ appointment.appointment_time|time:"H:i" }}';

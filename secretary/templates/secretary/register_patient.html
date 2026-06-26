@@ -242,7 +242,7 @@
 
 </div>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
   // Keyboard shortcut: / to focus search
   document.addEventListener('keydown', function (e) {
     if ((e.key === '/' || e.key === 'k' && (e.ctrlKey || e.metaKey)) && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {

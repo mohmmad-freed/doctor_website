@@ -261,7 +261,7 @@
 </div>
 {% endif %}
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
   // Trigger step 3 in the parent page
   if (typeof onFormReady === 'function') {
     onFormReady();

@@ -8,7 +8,7 @@
   <title>{% if display_is_rtl %}غرفة الانتظار{% else %}Waiting Room{% endif %} — {{ clinic.name }}</title>
 
   <!-- No-FOUC: apply display_theme before paint; defaults to dark if unset -->
-  <script>
+  <script nonce="{{ request.csp_nonce }}">
     (function () {
       try {
         var t = localStorage.getItem('display_theme') || 'dark';
@@ -18,7 +18,7 @@
   </script>
 
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
+  <script nonce="{{ request.csp_nonce }}">
     tailwind.config = {
       darkMode: 'class',
       theme: {
@@ -209,7 +209,7 @@
     <span>{{ clinic.name }} — {% if display_is_rtl %}نظام العيادة{% else %}Clinic System{% endif %}</span>
   </footer>
 
-  <script>
+  <script nonce="{{ request.csp_nonce }}">
     // Live clock
     function updateClock() {
       var now = new Date();

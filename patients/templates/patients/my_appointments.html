@@ -116,7 +116,7 @@
 
                             {# Cancel button — opens modal that collects a required reason #}
                             <button type="button"
-                                    onclick="openCancelModal('{% url 'patients:cancel_appointment' appt.id %}', '{{ appt.doctor_name|escapejs }}')"
+                                    data-open-cancel data-cancel-url="{% url 'patients:cancel_appointment' appt.id %}" data-doctor-name="{{ appt.doctor_name }}"
                                     class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
                                 <i class="fa-solid fa-xmark text-xs"></i>
                                 {% trans "إلغاء" %}
@@ -286,7 +286,7 @@
                 class="flex-1 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors">
           {% trans "تأكيد الإلغاء" %}
         </button>
-        <button type="button" onclick="closeCancelModal()"
+        <button type="button" data-close-cancel
                 class="flex-1 px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-300 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
           {% trans "تراجع" %}
         </button>
@@ -295,7 +295,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
   function openCancelModal(action, doctorName) {
     var modal = document.getElementById('cancel-modal');
     var form = document.getElementById('cancel-modal-form');
@@ -310,6 +310,12 @@
   }
   document.getElementById('cancel-modal').addEventListener('click', function (e) {
     if (e.target === this) closeCancelModal();
+  });
+  // CSP: bind cancel modal triggers (replaces inline on* handlers)
+  document.addEventListener('click', function (e) {
+    var o = e.target.closest('[data-open-cancel]');
+    if (o) { openCancelModal(o.getAttribute('data-cancel-url'), o.getAttribute('data-doctor-name')); return; }
+    if (e.target.closest('[data-close-cancel]')) { closeCancelModal(); }
   });
 </script>
 {% endblock %}

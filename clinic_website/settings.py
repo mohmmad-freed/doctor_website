@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
+from csp.constants import NONCE
 
 # Load .env file
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -131,6 +132,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "csp.middleware.CSPMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
@@ -311,6 +313,71 @@ SESSION_SAVE_EVERY_REQUEST = True
 # machines). The cookie becomes a browser-session cookie; the server-side idle
 # timeout above still applies within an open browser.
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+# ============================================
+# SECURITY RESPONSE HEADERS
+# These apply in ALL environments (not HTTPS-dependent).
+# ============================================
+
+# Referrer-Policy and X-Frame-Options already resolve to these values via Django
+# defaults; set explicitly so the posture is greppable and pinned against any future
+# change to Django's defaults. (Verified active by `manage.py check --deploy`.)
+SECURE_REFERRER_POLICY = "same-origin"  # already the effective default; explicit for audit
+X_FRAME_OPTIONS = "DENY"                # already the effective default; explicit for audit
+
+# ---- Content-Security-Policy (django-csp) ----
+# Shipped in REPORT-ONLY: the browser only reports violations (console / report
+# endpoint) and enforces nothing, so the UI cannot break while the policy is tuned.
+# Promote to the enforcing `CONTENT_SECURITY_POLICY` key once the report stream is
+# clean (see the HTMX caveat below).
+#
+# Tier B (script-src nonce-based). `NONCE` emits a per-request `'nonce-<rand>'`;
+# every inline <script> in the templates carries nonce="{{ request.csp_nonce }}",
+# so 'unsafe-inline' has been DROPPED from script-src — injected inline <script>
+# without the nonce is now reported (and, once enforced, blocked). Still present,
+# and not removable without large refactors:
+#   * 'unsafe-eval'  — Alpine.js (standard build) and the Tailwind Play CDN both
+#                      evaluate expressions via new Function(); removing it means
+#                      migrating Alpine to @alpinejs/csp + compiling Tailwind.
+#   * style-src 'unsafe-inline' — 600+ inline style="" attributes (nonces don't
+#                      cover style attributes).
+#
+# HTMX caveat before enforcing: inline <script> inside HTMX-swapped partials loses
+# its nonce on re-injection (browsers strip the nonce attribute), so it will be
+# REPORTED here and would be BLOCKED under enforcement. Externalize those scripts
+# (or keep them out of partials) before flipping to the enforcing key.
+CONTENT_SECURITY_POLICY_REPORT_ONLY = {
+    "DIRECTIVES": {
+        "default-src": ["'self'"],
+        "script-src": [
+            "'self'",
+            NONCE,
+            "'unsafe-eval'",  # required by Alpine.js + Tailwind Play CDN (not yet removable)
+            "https://cdn.tailwindcss.com",
+            "https://cdn.jsdelivr.net",   # flatpickr, fullcalendar, chart.js, sortable.js
+            "https://cdnjs.cloudflare.com",  # font-awesome, cropper.js
+            "https://unpkg.com",          # alpine.js
+        ],
+        "style-src": [
+            "'self'",
+            "'unsafe-inline'",
+            "https://fonts.googleapis.com",
+            "https://cdnjs.cloudflare.com",
+            "https://cdn.jsdelivr.net",
+        ],
+        "font-src": [
+            "'self'",
+            "https://fonts.gstatic.com",
+            "https://cdnjs.cloudflare.com",
+        ],
+        "img-src": ["'self'", "data:"],
+        "connect-src": ["'self'"],
+        "frame-ancestors": ["'none'"],  # complements X-Frame-Options on modern browsers
+        "object-src": ["'none'"],
+        "base-uri": ["'self'"],
+        "form-action": ["'self'"],
+    },
+}
 
 # ============================================
 # PRODUCTION SECURITY HARDENING (HTTPS)

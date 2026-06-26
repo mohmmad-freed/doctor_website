@@ -13,7 +13,7 @@ open across the 30s polls. Trigger: any [data-view-notes] button (delegated).
         <i class="fa-solid fa-note-sticky text-amber-500"></i>
         <span class="truncate">{% if IS_RTL %}ملاحظات{% else %}Notes{% endif %}: <span id="notes-modal-title"></span></span>
       </h3>
-      <button type="button" onclick="closeNotesModal()"
+      <button type="button" data-notes-modal-close
               title="{% if IS_RTL %}إغلاق{% else %}Close{% endif %}"
               class="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0">
         <i class="fa-solid fa-xmark"></i>
@@ -24,7 +24,7 @@ open across the 30s polls. Trigger: any [data-view-notes] button (delegated).
   </div>
 </div>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
   (function () {
     var modal = document.getElementById('notes-modal');
     var title = document.getElementById('notes-modal-title');
@@ -49,6 +49,9 @@ open across the 30s polls. Trigger: any [data-view-notes] button (delegated).
     };
 
     // Close on backdrop click + Escape.
+    modal.querySelectorAll('[data-notes-modal-close]').forEach(function (b) {
+      b.addEventListener('click', closeNotesModal);
+    });
     modal.addEventListener('click', function (e) { if (e.target === this) closeNotesModal(); });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeNotesModal();

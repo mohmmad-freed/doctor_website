@@ -244,7 +244,7 @@
                       hx-target="#todays-appointments-body"
                       hx-swap="innerHTML"
                       hx-push-url="{% url 'secretary:dashboard' %}?filter=all"
-                      onclick="document.querySelectorAll('.filter-pill').forEach(b=>b.classList.remove('filter-pill-active'));this.classList.add('filter-pill-active');document.querySelectorAll('.filter-pill').forEach(b=>b.setAttribute('aria-selected','false'));this.setAttribute('aria-selected','true');">
+                      data-tab-pill>
                 <i class="fa-solid fa-list text-[11px]"></i>
                 {% trans "الكل" %}
                 <span id="filter-count-all" class="filter-count">{{ count_all }}</span>
@@ -256,7 +256,7 @@
                       hx-target="#todays-appointments-body"
                       hx-swap="innerHTML"
                       hx-push-url="{% url 'secretary:dashboard' %}?filter=confirmed"
-                      onclick="document.querySelectorAll('.filter-pill').forEach(b=>b.classList.remove('filter-pill-active'));this.classList.add('filter-pill-active');document.querySelectorAll('.filter-pill').forEach(b=>b.setAttribute('aria-selected','false'));this.setAttribute('aria-selected','true');">
+                      data-tab-pill>
                 <i class="fa-solid fa-circle-check text-[11px]"></i>
                 {% trans "مؤكدة" %}
                 <span id="filter-count-confirmed" class="filter-count">{{ count_confirmed }}</span>
@@ -268,7 +268,7 @@
                       hx-target="#todays-appointments-body"
                       hx-swap="innerHTML"
                       hx-push-url="{% url 'secretary:dashboard' %}?filter=available"
-                      onclick="document.querySelectorAll('.filter-pill').forEach(b=>b.classList.remove('filter-pill-active'));this.classList.add('filter-pill-active');document.querySelectorAll('.filter-pill').forEach(b=>b.setAttribute('aria-selected','false'));this.setAttribute('aria-selected','true');">
+                      data-tab-pill>
                 <i class="fa-regular fa-calendar-plus text-[11px]"></i>
                 {% trans "الفترات المتاحة" %}
                 <span id="filter-count-available" class="filter-count">{{ count_available }}</span>

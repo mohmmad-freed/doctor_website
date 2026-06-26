@@ -53,7 +53,7 @@
     {% if all_clinics|length > 1 %}
     <form method="get" class="flex items-center gap-2">
       <label class="text-xs text-gray-500 dark:text-slate-400 font-medium flex-shrink-0">{% if IS_RTL %}العيادة:{% else %}Clinic:{% endif %}</label>
-      <select name="clinic_id" onchange="this.form.submit()"
+      <select name="clinic_id" data-autosubmit
               class="text-sm bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg px-3 py-1.5 text-gray-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500">
         {% for c in all_clinics %}
         <option value="{{ c.id }}" {% if c.id == clinic.id %}selected{% endif %}>{{ c.name }}</option>
@@ -207,7 +207,7 @@
                 <i class="fa-solid fa-pen text-xs"></i>
               </button>
               <form method="post" action="{% url 'doctors:drug_family_delete' fam.id %}"
-                    onsubmit="return confirm('{% if IS_RTL %}حذف «{{ fam.name }}»؟\nستصبح الأدوية غير مصنفة.{% else %}Delete «{{ fam.name }}»?\nDrugs will become uncategorized.{% endif %}')">
+                    data-confirm="{% if IS_RTL %}حذف «{{ fam.name }}»؟\nستصبح الأدوية غير مصنفة.{% else %}Delete «{{ fam.name }}»?\nDrugs will become uncategorized.{% endif %}">
                 {% csrf_token %}
                 <button type="submit" title="{% if IS_RTL %}حذف{% else %}Delete{% endif %}"
                         class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
@@ -374,7 +374,7 @@
                 <i class="fa-solid fa-pen text-xs"></i>
               </button>
               <form method="post" action="{% url 'doctors:drug_product_delete' drug.id %}"
-                    onsubmit="return confirm('{% if IS_RTL %}حذف «{{ drug.generic_name }}»؟{% else %}Delete «{{ drug.generic_name }}»?{% endif %}')">
+                    data-confirm="{% if IS_RTL %}حذف «{{ drug.generic_name }}»؟{% else %}Delete «{{ drug.generic_name }}»?{% endif %}">
                 {% csrf_token %}
                 <button type="submit" title="{% if IS_RTL %}حذف{% else %}Delete{% endif %}"
                         class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
@@ -516,7 +516,7 @@
                 <i class="fa-solid fa-pen text-xs"></i>
               </button>
               <form method="post" action="{% url 'doctors:catalog_item_delete' item.id %}"
-                    onsubmit="return confirm('{% if IS_RTL %}حذف «{{ item.name }}»؟{% else %}Delete «{{ item.name }}»?{% endif %}')">
+                    data-confirm="{% if IS_RTL %}حذف «{{ item.name }}»؟{% else %}Delete «{{ item.name }}»?{% endif %}">
                 {% csrf_token %}
                 <button type="submit" title="{% if IS_RTL %}حذف{% else %}Delete{% endif %}"
                         class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
@@ -639,7 +639,7 @@
                 <i class="fa-solid fa-pen text-xs"></i>
               </button>
               <form method="post" action="{% url 'doctors:catalog_item_delete' item.id %}"
-                    onsubmit="return confirm('{% if IS_RTL %}حذف «{{ item.name }}»؟{% else %}Delete «{{ item.name }}»?{% endif %}')">
+                    data-confirm="{% if IS_RTL %}حذف «{{ item.name }}»؟{% else %}Delete «{{ item.name }}»?{% endif %}">
                 {% csrf_token %}
                 <button type="submit" title="{% if IS_RTL %}حذف{% else %}Delete{% endif %}"
                         class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
@@ -762,7 +762,7 @@
                 <i class="fa-solid fa-pen text-xs"></i>
               </button>
               <form method="post" action="{% url 'doctors:catalog_item_delete' item.id %}"
-                    onsubmit="return confirm('{% if IS_RTL %}حذف «{{ item.name }}»؟{% else %}Delete «{{ item.name }}»?{% endif %}')">
+                    data-confirm="{% if IS_RTL %}حذف «{{ item.name }}»؟{% else %}Delete «{{ item.name }}»?{% endif %}">
                 {% csrf_token %}
                 <button type="submit" title="{% if IS_RTL %}حذف{% else %}Delete{% endif %}"
                         class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
@@ -885,7 +885,7 @@
                 <i class="fa-solid fa-pen text-xs"></i>
               </button>
               <form method="post" action="{% url 'doctors:catalog_item_delete' item.id %}"
-                    onsubmit="return confirm('{% if IS_RTL %}حذف «{{ item.name }}»؟{% else %}Delete «{{ item.name }}»?{% endif %}')">
+                    data-confirm="{% if IS_RTL %}حذف «{{ item.name }}»؟{% else %}Delete «{{ item.name }}»?{% endif %}">
                 {% csrf_token %}
                 <button type="submit" title="{% if IS_RTL %}حذف{% else %}Delete{% endif %}"
                         class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">

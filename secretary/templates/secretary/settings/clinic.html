@@ -268,7 +268,7 @@
             {% trans "أنشئ رابطاً جديداً إذا تسرّب الرابط الحالي أو لم تعد شاشة قيد الاستخدام. سيتوقف الرابط القديم فوراً عن العمل." %}
           </p>
           <form method="post" novalidate class="mt-2"
-                onsubmit="return confirm('{% trans "سيتوقف الرابط الحالي عن العمل وستحتاج إلى تحديث أي شاشة تستخدمه. هل تريد المتابعة؟" %}');">
+                data-confirm="{% trans 'سيتوقف الرابط الحالي عن العمل وستحتاج إلى تحديث أي شاشة تستخدمه. هل تريد المتابعة؟' %}">
             {% csrf_token %}
             <input type="hidden" name="form_section" value="kiosk">
             <button type="submit"
@@ -284,7 +284,7 @@
 
 </div>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
   (function () {
     var auto = document.getElementById('id_auto_confirm_patient_bookings');
     var multi = document.getElementById('id_allow_multiple_bookings_same_day');

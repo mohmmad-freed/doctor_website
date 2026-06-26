@@ -173,7 +173,7 @@
 
 {% block scripts %}
 <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-<script>
+<script nonce="{{ request.csp_nonce }}">
     function loadSlots() {
         const dateVal = document.getElementById('editDateInput').value;
         const typeEl = document.querySelector('input[name="appointment_type_id"]:checked');

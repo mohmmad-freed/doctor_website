@@ -152,7 +152,7 @@
 </div>
 
 <!-- Dated Files Widget JS -->
-<script>
+<script nonce="{{ request.csp_nonce }}">
 var _DFW_TRANS = {
     dragFiles: "{% trans 'اسحب الملفات هنا أو انقر للرفع' %}",
     maxFilesOf: "{% trans 'الحد الأقصى' %}",
@@ -325,7 +325,7 @@ var _DFW_TRANS = {
 <!-- Simple FILE field: preview + type/size validation on change.
      Lives in the partial so every booking flow (patient + secretary) shares it.
      Bound once on document via a window guard, since the partial may be re-injected. -->
-<script>
+<script nonce="{{ request.csp_nonce }}">
 var _FILE_TRANS = {
     invalidFormat: "{% trans 'صيغة غير مسموحة' %}",
     allowed: "{% trans 'الصيغ المسموحة:' %}",
@@ -398,7 +398,7 @@ if (!window.__intakeFileHandlerInit) {
 
 <!-- Conditional Rules (client-side) -->
 {% if rules_json and rules_json != "[]" %}
-<script>
+<script nonce="{{ request.csp_nonce }}">
 (function() {
     var rules = {{ rules_json|safe }};
     if (!rules || !rules.length) return;

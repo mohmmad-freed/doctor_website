@@ -93,7 +93,7 @@
           <script id="ortho-edit-init" type="application/json">[]</script>
           {% endif %}
 
-          <script>
+          <script nonce="{{ request.csp_nonce }}">
           function orthoWorkspace(initObjective) {
             const REGIONS = [
               { id: 'cervical',      label: '{% if IS_RTL %}العمود الفقري العنقي{% else %}Cervical Spine{% endif %}',      labelEn: 'Cervical Spine',      group: 'spine' },
@@ -876,7 +876,7 @@
 </div>
 
 <!-- Notes List -->
-<script>
+<script nonce="{{ request.csp_nonce }}">
 if (typeof orthoReadView === 'undefined') {
   function orthoReadView(findingsJson) {
     const FRONT_IDS = ['cervical', 'r_shoulder', 'l_shoulder', 'r_elbow', 'l_elbow', 'r_wrist', 'l_wrist', 'r_hip', 'l_hip', 'r_knee', 'l_knee', 'r_ankle', 'l_ankle'];

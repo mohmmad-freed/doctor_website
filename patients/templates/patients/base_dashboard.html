@@ -19,7 +19,7 @@
 
     <!-- Tailwind CSS (CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
+    <script nonce="{{ request.csp_nonce }}">
         tailwind.config = {
             darkMode: 'class',
             theme: {
@@ -215,7 +215,7 @@
     </style>
     {% block extra_head %}{% endblock %}
 
-    <script>
+    <script nonce="{{ request.csp_nonce }}">
         // Check for saved theme preference
         const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
         if (savedTheme === 'dark') {
@@ -328,7 +328,7 @@
 
                     <!-- User dropdown -->
                     <div class="relative" id="patientUserMenu">
-                        <button onclick="document.getElementById('patientUserMenu').classList.toggle('pum-open')"
+                        <button type="button" data-toggle-class="pum-open" data-toggle-target="patientUserMenu"
                             class="flex items-center gap-2 px-2.5 py-1.5 rounded-full border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-primary-500 transition-all cursor-pointer">
                             <div class="w-7 h-7 rounded-full overflow-hidden flex-shrink-0">
                                 {% if request.user.patient_profile.avatar %}
@@ -480,7 +480,7 @@
         </div>
     </footer>
 
-    <script>
+    <script nonce="{{ request.csp_nonce }}">
         document.addEventListener('DOMContentLoaded', () => {
             const themeToggleBtn = document.getElementById('theme-toggle');
 
@@ -505,7 +505,7 @@
         });
     </script>
 
-    <script>
+    <script nonce="{{ request.csp_nonce }}">
         (function () {
             var bar = document.getElementById('ptBar');
             var skel = document.getElementById('ptSkeleton');
@@ -551,7 +551,7 @@
     </script>
 
     <!-- Keep the mobile bottom nav pinned above the browser's dynamic toolbar -->
-    <script>
+    <script nonce="{{ request.csp_nonce }}">
         (function () {
             var nav = document.querySelector('.mobile-nav-glass');
             var vv = window.visualViewport;
@@ -571,7 +571,7 @@
     </script>
 
     <!-- Patient user menu dropdown toggle -->
-    <script>
+    <script nonce="{{ request.csp_nonce }}">
         document.addEventListener('click', function(e) {
             var menu = document.getElementById('patientUserMenu');
             if (!menu) return;
@@ -596,6 +596,7 @@
     <!-- Mobile menu logic removed -->
 
     <script src="{% static 'accounts/js/phone_validator.js' %}"></script>
+    <script src="{% static 'js/csp_delegation.js' %}"></script>
     {% block scripts %}{% endblock %}
 
 </body>

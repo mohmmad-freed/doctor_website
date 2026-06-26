@@ -19,7 +19,7 @@
       {# Doctor filter #}
       <form method="get" class="flex items-center gap-2">
         {% if week_start_str %}<input type="hidden" name="week" value="{{ week_start|date:'Y-m-d' }}">{% endif %}
-        <select name="doctor_id" onchange="this.form.submit()"
+        <select name="doctor_id" data-autosubmit
                 class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
           <option value="">{% trans "جميع الأطباء" %}</option>
           {% for doc in doctors %}
@@ -143,7 +143,7 @@
               {% for exc in day_cell.exceptions %}
               {% if exc.start_date == day_cell.date %}
               <form method="post" action="{% url 'secretary:delete_doctor_block' exc.id %}"
-                    onsubmit="return confirm('{% trans "هل تريد إلغاء حجب الوقت هذا؟" %}')">
+                    data-confirm="{% trans 'هل تريد إلغاء حجب الوقت هذا؟' %}">
                 {% csrf_token %}
                 <input type="hidden" name="next" value="{{ request.get_full_path }}">
                 <button type="submit"
@@ -229,7 +229,7 @@
           </div>
         </div>
         <form method="post" action="{% url 'secretary:delete_doctor_block' block.id %}"
-              onsubmit="return confirm('{% trans "هل تريد إلغاء هذا الحجب؟" %}')">
+              data-confirm="{% trans 'هل تريد إلغاء هذا الحجب؟' %}">
           {% csrf_token %}
           <button type="submit"
                   class="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"

@@ -132,7 +132,7 @@
                               dir="ltr">
                             {{ slot.start_time|time:"g:i A" }} – {{ slot.end_time|time:"g:i A" }}
                         </span>
-                        <form method="post" class="inline" onsubmit="return confirm('{% if IS_RTL %}حذف هذا الوقت؟{% else %}Delete this time slot?{% endif %}')">
+                        <form method="post" class="inline" data-confirm="{% if IS_RTL %}حذف هذا الوقت؟{% else %}Delete this time slot?{% endif %}">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="delete">
                             <input type="hidden" name="clinic_id" value="{{ selected_clinic.id }}">

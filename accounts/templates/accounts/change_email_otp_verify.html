@@ -177,7 +177,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ request.csp_nonce }}">
 document.addEventListener('DOMContentLoaded', function () {
     const inputs = document.querySelectorAll('.otp-input');
     const hiddenInput = document.getElementById('full_otp_code');

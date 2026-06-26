@@ -103,7 +103,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ request.csp_nonce }}">
 (function () {
   const container = document.getElementById('items-container');
   const tpl = document.getElementById('item-row-template');

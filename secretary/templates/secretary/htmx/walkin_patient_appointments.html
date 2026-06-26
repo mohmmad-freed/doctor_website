@@ -31,7 +31,7 @@
               hx-post="{% url 'secretary:cancel_appointment' appointment_id=appt.id %}"
               hx-target="#walkin-future-appts"
               hx-swap="innerHTML"
-              onsubmit="return confirm('{% trans "هل تريد إلغاء هذا الموعد؟" %}');">
+              hx-confirm="{% trans 'هل تريد إلغاء هذا الموعد؟' %}">
           {% csrf_token %}
           <input type="hidden" name="walkin_patient_id" value="{{ patient.id }}">
           <input type="hidden" name="cancellation_reason" value="{% trans 'إلغاء قبل تسجيل حضور مباشر' %}">
@@ -80,7 +80,7 @@
               hx-post="{% url 'secretary:cancel_appointment' appointment_id=appt.id %}"
               hx-target="#walkin-future-appts"
               hx-swap="innerHTML"
-              onsubmit="return confirm('{% trans "هل تريد إلغاء هذا الموعد؟" %}');">
+              hx-confirm="{% trans 'هل تريد إلغاء هذا الموعد؟' %}">
           {% csrf_token %}
           <input type="hidden" name="walkin_patient_id" value="{{ patient.id }}">
           <input type="hidden" name="cancellation_reason" value="{% trans 'إلغاء من قِبل السكرتارية' %}">

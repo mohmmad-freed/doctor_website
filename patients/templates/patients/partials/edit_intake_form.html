@@ -147,7 +147,7 @@
 </div>
 
 <!-- File Upload JS -->
-<script>
+<script nonce="{{ request.csp_nonce }}">
 (function() {
     function initMFU(w) {
         var input = w.querySelector('input[type="file"]');
@@ -205,7 +205,7 @@
 </script>
 
 <!-- Dated Files Widget JS (with pre-fill support) -->
-<script>
+<script nonce="{{ request.csp_nonce }}">
 (function() {
     function initDFW(widget) {
         var qId = widget.dataset.questionId;
@@ -388,7 +388,7 @@
 
 <!-- Conditional Rules (client-side) -->
 {% if rules_json and rules_json != "[]" %}
-<script>
+<script nonce="{{ request.csp_nonce }}">
 (function() {
     var rules = {{ rules_json|safe }};
     if (!rules || !rules.length) return;

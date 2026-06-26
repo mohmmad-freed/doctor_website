@@ -16,7 +16,7 @@
       {% csrf_token %}
       <input type="hidden" name="next" value="{{ request.get_full_path }}">
       <div class="flex items-center justify-end gap-3">
-        <button type="button" onclick="closeRemoveModal()"
+        <button type="button" data-remove-modal-close
                 class="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
           {% trans "إلغاء" %}
         </button>
@@ -29,7 +29,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
   (function () {
     var modal = document.getElementById('remove-modal');
     var form = document.getElementById('remove-form');
@@ -63,6 +63,10 @@
       modal.classList.add('hidden');
       modal.classList.remove('flex');
     };
+
+    modal.querySelectorAll('[data-remove-modal-close]').forEach(function (b) {
+      b.addEventListener('click', closeRemoveModal);
+    });
 
     modal.addEventListener('click', function (e) {
       if (e.target === this) closeRemoveModal();

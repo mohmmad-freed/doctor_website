@@ -198,7 +198,7 @@
 {% block scripts %}
 <script src="https://unpkg.com/htmx.org@1.9.12"></script>
 <script src="{% static 'accounts/js/calendar_widget.js' %}"></script>
-<script>
+<script nonce="{{ request.csp_nonce }}">
     // Translation strings rendered server-side
     var _BOOK_TRANS = {
         invalidFormat: "{% trans 'صيغة غير مسموحة' %}",

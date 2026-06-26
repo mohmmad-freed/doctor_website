@@ -126,7 +126,7 @@
 
 {% block content %}
 {# ── Multi-Patient Workspace: inline pre-registration (runs before DOMContentLoaded) ── #}
-<script>
+<script nonce="{{ request.csp_nonce }}">
     // Set current patient ID globally so the sidebar can mark this patient as active
     window.CURRENT_PATIENT_ID = {{ patient.id }};
     // Dirty-form flag — set to true when user edits a form in the tab content area
@@ -167,7 +167,7 @@
       <div class="flex items-center gap-4 min-w-0">
         <!-- Back -->
         <a href="{% url 'doctors:patients' %}"
-           onclick="return mpwBackGuard()"
+           data-back-guard
            class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
            title="{% if IS_RTL %}رجوع إلى مرضاي{% else %}Back to My Patients{% endif %}">
           <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %} text-sm"></i>
@@ -220,19 +220,19 @@
 
       <!-- Right: Quick Actions -->
       <div class="flex items-center gap-2 flex-wrap flex-shrink-0">
-        <button onclick="switchTab('notes', true)"
+        <button type="button" data-switch-tab="notes" data-open-form
                 class="qa-btn qa-btn-primary">
           <i class="fa-solid fa-file-medical text-xs"></i> {% if IS_RTL %}إضافة ملاحظة{% else %}Add Note{% endif %}
         </button>
-        <button onclick="switchTab('orders', true)"
+        <button type="button" data-switch-tab="orders" data-open-form
                 class="qa-btn qa-btn-outline">
           <i class="fa-solid fa-flask text-xs"></i> {% if IS_RTL %}إضافة طلب{% else %}Add Order{% endif %}
         </button>
-        <button onclick="switchTab('prescriptions', true)"
+        <button type="button" data-switch-tab="prescriptions" data-open-form
                 class="qa-btn qa-btn-outline">
           <i class="fa-solid fa-prescription text-xs"></i> {% if IS_RTL %}وصفة طبية{% else %}Prescribe{% endif %}
         </button>
-        <button onclick="switchTab('records', true)"
+        <button type="button" data-switch-tab="records" data-open-form
                 class="qa-btn qa-btn-outline">
           <i class="fa-solid fa-upload text-xs"></i> {% if IS_RTL %}رفع ملف{% else %}Upload{% endif %}
         </button>
@@ -256,7 +256,7 @@
         hx-target="#tab-content"
         hx-push-url="true"
         hx-indicator="#tab-content"
-        onclick="setActiveTab('{{ tab_id }}')"
+        data-set-active-tab="{{ tab_id }}"
       >
         <i class="{{ tab_icon }} me-1.5 text-xs"></i>{{ tab_label }}
       </button>
@@ -284,12 +284,12 @@
 
 </div>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
   // ── Clinical Notes panel (Overview tab) ───────────────────────────────
   // Defined here, in the always-loaded parent page, rather than inside the
   // swappable ws_overview.html partial. Otherwise, when Overview is reached
   // via an HTMX innerHTML swap (and the page first loaded on another tab),
-  // Alpine evaluates x-data="cnPanel()" before the partial's inline <script>
+  // Alpine evaluates x-data="cnPanel()" before the partial's inline <script nonce="{{ request.csp_nonce }}">
   // has defined cnPanel — leaving the panel uninitialised ("reserved").
   function cnPanel() {
     return {
@@ -421,6 +421,17 @@
       htmx.ajax('GET', fullUrl, { target: '#tab-content', swap: 'innerHTML' });
     }
   }
+
+  // CSP: bind tab buttons, quick actions, and back guard (replaces inline on* handlers).
+  // Delegated on document so it also covers switchTab buttons inside HTMX-swapped tabs.
+  document.addEventListener('click', function (e) {
+    var bg = e.target.closest('[data-back-guard]');
+    if (bg && typeof mpwBackGuard === 'function' && !mpwBackGuard()) { e.preventDefault(); return; }
+    var st = e.target.closest('[data-switch-tab]');
+    if (st) { switchTab(st.getAttribute('data-switch-tab'), st.hasAttribute('data-open-form')); return; }
+    var at = e.target.closest('[data-set-active-tab]');
+    if (at) { setActiveTab(at.getAttribute('data-set-active-tab')); }
+  });
 
   // Sticky header shadow on scroll
   (function () {
@@ -636,7 +647,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ request.csp_nonce }}">
   // Pass tabs data to template context via view
 </script>
 {% endblock %}

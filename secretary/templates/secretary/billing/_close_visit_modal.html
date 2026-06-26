@@ -31,7 +31,7 @@ keeps working for HTMX-swapped rows (e.g. the waiting-room in-progress column).
   </div>
 </div>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
   (function () {
     var modal = document.getElementById('close-visit-modal');
     var confirmBtn = document.getElementById('close-visit-confirm');

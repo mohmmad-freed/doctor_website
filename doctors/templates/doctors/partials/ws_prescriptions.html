@@ -177,7 +177,7 @@
 </div>
 {% endif %}
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
 (function () {
   const csrf = document.querySelector('#rx-csrf-form [name=csrfmiddlewaretoken]')?.value || '';
 
