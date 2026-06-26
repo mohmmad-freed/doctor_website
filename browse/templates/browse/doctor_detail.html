@@ -84,7 +84,7 @@
                 {% endfor %}
             </div>
             <p class="meta" style="margin-top:.75rem;"><i class="fa-solid fa-circle-info"></i>
-                {% if IS_RTL %}اختر موعداً ثم سجّل الدخول أو أنشئ حساباً — وسنكمل حجزك تلقائياً.{% else %}Pick a time, then sign in or sign up — we'll resume your booking automatically.{% endif %}</p>
+                {% if user.is_authenticated and "PATIENT" in user.roles %}{% if IS_RTL %}اختر موعداً لإتمام الحجز.{% else %}Pick a time to complete your booking.{% endif %}{% else %}{% if IS_RTL %}اختر موعداً ثم سجّل الدخول أو أنشئ حساباً — وسنكمل حجزك تلقائياً.{% else %}Pick a time, then sign in or sign up — we'll resume your booking automatically.{% endif %}{% endif %}</p>
             {% else %}
             <div class="browse-empty">{% if IS_RTL %}لا توجد مواعيد متاحة في هذا اليوم.{% else %}No open slots on this day.{% endif %}</div>
             {% endif %}
@@ -103,13 +103,13 @@
             {% csrf_token %}
             <input type="hidden" name="next" value="{{ review_next }}">
             <label style="font-weight:600;">{% if my_review %}{% if IS_RTL %}عدّل تقييمك{% else %}Edit your review{% endif %}{% else %}{% if IS_RTL %}قيّم تجربتك{% else %}Rate your experience{% endif %}{% endif %}</label>
-            <select name="rating">
-                <option value="5" {% if my_review.rating == 5 %}selected{% endif %}>★★★★★ (5)</option>
-                <option value="4" {% if my_review.rating == 4 %}selected{% endif %}>★★★★☆ (4)</option>
-                <option value="3" {% if my_review.rating == 3 %}selected{% endif %}>★★★☆☆ (3)</option>
-                <option value="2" {% if my_review.rating == 2 %}selected{% endif %}>★★☆☆☆ (2)</option>
-                <option value="1" {% if my_review.rating == 1 %}selected{% endif %}>★☆☆☆☆ (1)</option>
-            </select>
+            <div class="star-input" role="radiogroup" aria-label="{% if IS_RTL %}التقييم{% else %}Rating{% endif %}">
+                <input type="radio" name="rating" value="5" id="star5" {% if my_review.rating == 5 %}checked{% endif %}><label for="star5" title="5">★</label>
+                <input type="radio" name="rating" value="4" id="star4" {% if my_review.rating == 4 %}checked{% endif %}><label for="star4" title="4">★</label>
+                <input type="radio" name="rating" value="3" id="star3" {% if my_review.rating == 3 %}checked{% endif %}><label for="star3" title="3">★</label>
+                <input type="radio" name="rating" value="2" id="star2" {% if my_review.rating == 2 %}checked{% endif %}><label for="star2" title="2">★</label>
+                <input type="radio" name="rating" value="1" id="star1" {% if my_review.rating == 1 %}checked{% endif %}><label for="star1" title="1">★</label>
+            </div>
             <textarea name="comment" rows="3" maxlength="2000"
                       placeholder="{% if IS_RTL %}شارك تجربتك (اختياري){% else %}Share your experience (optional){% endif %}">{{ my_review.comment }}</textarea>
             <button type="submit" class="btn btn-primary">{% if my_review %}{% if IS_RTL %}تحديث التقييم{% else %}Update review{% endif %}{% else %}{% if IS_RTL %}نشر التقييم{% else %}Post review{% endif %}{% endif %}</button>
@@ -152,8 +152,11 @@
     </div>
 
     <div class="browse-section">
-        <a class="btn btn-primary" href="{% url 'accounts:login' %}?next={{ book_url|urlencode }}">
-            {% if IS_RTL %}سجّل الدخول للحجز{% else %}Sign in to book{% endif %}</a>
+        {% if user.is_authenticated and "PATIENT" in user.roles %}
+        <a class="btn btn-primary" href="{{ book_url }}">{% if IS_RTL %}احجز الآن{% else %}Book now{% endif %}</a>
+        {% else %}
+        <a class="btn btn-primary" href="{% url 'accounts:login' %}?next={{ book_url|urlencode }}">{% if IS_RTL %}سجّل الدخول للحجز{% else %}Sign in to book{% endif %}</a>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

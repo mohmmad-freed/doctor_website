@@ -219,6 +219,17 @@ class GuestBrowseTests(TestCase):
         self.assertNotContains(resp, 'class="slot-pill"')    # slot links suppressed
         self.assertContains(resp, "Too many requests")       # guest sees a notice
 
+    def test_book_cta_is_contextual(self):
+        url = reverse("browse:doctor_detail", kwargs={"doctor_id": self.doctor.id})
+        book_path = reverse("appointments:book_appointment", kwargs={"clinic_id": self.clinic.id})
+        # Anonymous: the book CTA routes through login (next carries the booking path).
+        anon = self.client.get(url, {"clinic_id": self.clinic.id})
+        self.assertContains(anon, f"next={book_path}")
+        # Logged-in patient: a direct "book now" link to the booking page (no login).
+        self.client.force_login(make_patient("0599000777"))
+        authed = self.client.get(url, {"clinic_id": self.clinic.id})
+        self.assertContains(authed, f'href="{book_path}?doctor_id={self.doctor.id}"')
+
     # ── Entry point ───────────────────────────────────────────────────────
     def test_landing_exposes_browse_entry_point(self):
         resp = self.client.get(reverse("accounts:landing"))

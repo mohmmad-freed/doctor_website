@@ -71,4 +71,10 @@
     .review-actions button { background: none; border: none; color: var(--text-muted, #718096); font-size: .8rem; cursor: pointer; padding: 0; text-decoration: underline; }
     .review-form { border: 1px solid var(--border-default, #e2e8f0); border-radius: 14px; padding: 1rem; background: var(--surface, #fff); display: flex; flex-direction: column; gap: .6rem; }
     .review-form select, .review-form textarea { width: 100%; padding: .55rem .75rem; border: 1px solid var(--border-default, #e2e8f0); border-radius: 10px; font: inherit; background: var(--surface, #fff); color: inherit; }
+    /* Pure-CSS star rating input (row-reverse so hover/check fills this star + lower) */
+    .star-input { display: inline-flex; flex-direction: row-reverse; justify-content: flex-end; }
+    .star-input input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .star-input label { font-size: 1.9rem; line-height: 1; color: #d1d5db; cursor: pointer; padding: 0 2px; transition: color .12s; }
+    .star-input label:hover, .star-input label:hover ~ label, .star-input input:checked ~ label { color: #f59e0b; }
+    .star-input input:focus-visible + label { outline: 2px solid var(--primary, #667eea); outline-offset: 2px; border-radius: 4px; }
 </style>
