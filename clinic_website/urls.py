@@ -40,3 +40,10 @@ from django.conf.urls.static import static
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# Custom error handlers (used when DEBUG=False). Branded, bilingual, and — for
+# 500 — context-safe. See clinic_website/errors.py.
+handler400 = "clinic_website.errors.handler400"
+handler403 = "clinic_website.errors.handler403"
+handler404 = "clinic_website.errors.handler404"
+handler500 = "clinic_website.errors.handler500"

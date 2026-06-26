@@ -1,0 +1,5 @@
+{% extends '_error_base.html' %}
+{% block title %}{% if lang == 'en' %}Bad request{% else %}طلب غير صالح{% endif %}{% endblock %}
+{% block code %}400{% endblock %}
+{% block heading %}{% if lang == 'en' %}Bad request{% else %}طلب غير صالح{% endif %}{% endblock %}
+{% block message %}{% if lang == 'en' %}Your request could not be processed. Please check and try again.{% else %}تعذّر معالجة طلبك. يرجى التحقق والمحاولة مرة أخرى.{% endif %}{% endblock %}

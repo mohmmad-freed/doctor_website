@@ -2433,3 +2433,28 @@ msgstr ""
 
 msgid "اليوم التالي"
 msgstr ""
+
+# Two-factor authentication (MFA) profile settings
+msgid "المصادقة الثنائية"
+msgstr ""
+
+msgid "مُفعّلة"
+msgstr ""
+
+msgid "غير مُفعّلة"
+msgstr ""
+
+msgid "أضِف طبقة حماية ثانية لحسابك عبر تطبيق مصادقة (مثل Google Authenticator). يُطلب رمز إضافي عند تسجيل الدخول بجانب كلمة المرور."
+msgstr ""
+
+msgid "الرموز الاحتياطية"
+msgstr ""
+
+msgid "إيقاف"
+msgstr ""
+
+msgid "تفعيل المصادقة الثنائية"
+msgstr ""
+
+msgid "اطلب رمزاً إضافياً من تطبيق مصادقة عند تسجيل الدخول لحماية بيانات العيادة والمرضى."
+msgstr ""

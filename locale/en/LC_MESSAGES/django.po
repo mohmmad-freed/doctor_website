@@ -4244,3 +4244,28 @@ msgstr "Previous day"
 
 msgid "اليوم التالي"
 msgstr "Next day"
+
+# Two-factor authentication (MFA) profile settings
+msgid "المصادقة الثنائية"
+msgstr "Two-factor authentication"
+
+msgid "مُفعّلة"
+msgstr "Enabled"
+
+msgid "غير مُفعّلة"
+msgstr "Not enabled"
+
+msgid "أضِف طبقة حماية ثانية لحسابك عبر تطبيق مصادقة (مثل Google Authenticator). يُطلب رمز إضافي عند تسجيل الدخول بجانب كلمة المرور."
+msgstr "Add a second layer of protection to your account using an authenticator app (e.g. Google Authenticator). An extra code is required at sign-in alongside your password."
+
+msgid "الرموز الاحتياطية"
+msgstr "Backup codes"
+
+msgid "إيقاف"
+msgstr "Disable"
+
+msgid "تفعيل المصادقة الثنائية"
+msgstr "Enable two-factor authentication"
+
+msgid "اطلب رمزاً إضافياً من تطبيق مصادقة عند تسجيل الدخول لحماية بيانات العيادة والمرضى."
+msgstr "Require an extra code from an authenticator app at sign-in to protect clinic and patient data."

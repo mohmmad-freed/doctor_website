@@ -206,6 +206,69 @@ def request_otp(phone):
     return True, "ط·ع¾ط¸â€¦ ط·آ¥ط·آ±ط·آ³ط·آ§ط¸â€‍ ط·آ±ط¸â€¦ط·آ² ط·آ§ط¸â€‍ط·ع¾ط·آ­ط¸â€ڑط¸â€ڑ ط·آ¨ط¸â€ ط·آ¬ط·آ§ط·آ­."
 
 
+def send_account_exists_sms(phone):
+    """Notify an ALREADY-registered phone, out of band, that it has an account.
+
+    Used by the patient-registration phone step so the on-screen response can be
+    identical for registered and unregistered numbers (closing the account-
+    enumeration oracle) while the real owner still gets a useful nudge to log in
+    or reset their password instead. Deliberately stores NO verifiable OTP, so a
+    registered number can't be driven through the registration flow to create a
+    duplicate account.
+
+    Mirrors ``request_otp``'s throttle contract (shares the cooldown + daily-cap
+    cache keys) and its mock/not-configured fallbacks, so the success/failure
+    *outcome* matches ``request_otp`` for the same cache + environment state — an
+    attacker can't distinguish the two paths by resubmitting. Returns a bool.
+    """
+    # Shared cooldown with request_otp (same key) — keeps the two paths
+    # indistinguishable when a number is resubmitted within the cooldown window.
+    if cache.get(_otp_cooldown_key(phone)):
+        logger.warning("[ACCOUNT-EXISTS] Cooldown active for phone=%s", phone)
+        return False
+
+    resend_count = cache.get(_otp_resend_count_key(phone)) or 0
+    if getattr(settings, "ENFORCE_OTP_LIMITS", False) and resend_count >= OTP_MAX_RESEND_PER_DAY:
+        logger.warning("[ACCOUNT-EXISTS] Daily limit reached for phone=%s", phone)
+        return False
+
+    message = (
+        "لديك حساب مسجّل بهذا الرقم بالفعل. يرجى تسجيل الدخول أو استخدام "
+        'خيار "نسيت كلمة المرور".'
+    )
+
+    delivered = False
+    if _is_using_tweetsms():
+        sms_phone = _normalize_phone(phone)
+        try:
+            tweetsms_send_sms(sms_phone, message)
+            delivered = True
+        except Exception as e:
+            logger.exception("[ACCOUNT-EXISTS] Failed to notify %s (as %s): %r", phone, sms_phone, e)
+            return False
+
+    if not delivered:
+        # No SMS provider: hard failure in production (mirrors request_otp), mock
+        # fallback (log only) in DEBUG so local dev still reports success.
+        if not getattr(settings, "DEBUG", False):
+            logger.error("[ACCOUNT-EXISTS] SMS provider not configured in production.")
+            return False
+        logger.warning("[ACCOUNT-EXISTS] (mock) would notify existing account phone=%s", phone)
+
+    # Share the throttle bookkeeping with request_otp so the cooldown/daily-cap
+    # state advances identically on both paths.
+    if resend_count == 0:
+        cache.set(_otp_resend_count_key(phone), 1, timeout=24 * 60 * 60)
+    else:
+        cache.incr(_otp_resend_count_key(phone))
+    cache.set(
+        _otp_cooldown_key(phone),
+        time.time() + OTP_RESEND_COOLDOWN_SECONDS,
+        timeout=OTP_RESEND_COOLDOWN_SECONDS,
+    )
+    return True
+
+
 def verify_otp(phone, entered_otp):
     """
     Main function to verify OTP.
