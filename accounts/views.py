@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.contrib.auth import login, logout, authenticate, get_user_model
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.hashers import make_password
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.conf import settings
@@ -896,7 +897,7 @@ def register_clinic_step1(request):
                 reg["stage2_done"] = True
                 reg["name"] = None
                 reg["email"] = existing.email
-                reg["password"] = None
+                reg["password_hash"] = None
 
             request.session["clinic_reg"] = reg
 
@@ -929,7 +930,7 @@ def register_clinic_step2(request):
     if request.method == "POST":
         if request.POST.get("action") == "back":
             # Clear everything beyond stage 1.
-            for k in ("stage2_done", "name", "email", "password",
+            for k in ("stage2_done", "name", "email", "password_hash",
                       "stage3_done", "clinic_name", "clinic_address", "clinic_city_id",
                       "specialty_ids", "clinic_description", "phone_verified"):
                 reg.pop(k, None)
@@ -943,10 +944,13 @@ def register_clinic_step2(request):
             reg["email"] = d["email"]
             if user_exists:
                 reg["name"] = None
-                reg["password"] = None
+                reg["password_hash"] = None
             else:
                 reg["name"] = d["name"]
-                reg["password"] = d["password"]
+                # Never persist the raw password in the session (DB-backed sessions
+                # would store it in cleartext in django_session). Hash it now and
+                # assign the encoded value straight to user.password at creation.
+                reg["password_hash"] = make_password(d["password"])
             request.session["clinic_reg"] = reg
             return redirect("accounts:register_clinic_step3")
     else:
@@ -1143,7 +1147,9 @@ def register_clinic_verify_email(request):
                         role="MAIN_DOCTOR",
                         roles=["PATIENT", "MAIN_DOCTOR"],
                     )
-                    user.set_password(reg["password"])
+                    # password_hash was produced with make_password() at step 2,
+                    # so assign it directly (set_password would double-hash).
+                    user.password = reg["password_hash"]
                     user.save()
 
                 assign_national_id(user, reg["national_id"])

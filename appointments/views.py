@@ -56,6 +56,7 @@ def format_date_ar(d):
 
 
 
+@login_required
 def book_appointment_view(request, clinic_id):
     """
     Patient-facing booking page (multi-step HTMX form).
