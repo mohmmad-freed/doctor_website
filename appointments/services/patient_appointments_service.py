@@ -104,6 +104,7 @@ def _serialize_appointment(appointment):
         "doctor_specialty": doctor_specialty,
         "clinic_name": appointment.clinic.name,
         "clinic_id": appointment.clinic_id,
+        "doctor_id": appointment.doctor_id,
         "clinic_address": appointment.clinic.address,
         "appointment_type": apt_type_name,
         "appointment_date": appointment.appointment_date,

@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import gettext_lazy as _
 from clinics.models import Clinic
 
@@ -685,3 +686,70 @@ class DoctorFavouriteDrug(models.Model):
 
     def __str__(self):
         return f"{self.user.name} ★ {self.drug_product.generic_name}"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Doctor reviews / ratings (Phase 3 — guest-browse social proof)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+class DoctorReview(models.Model):
+    """A patient's star rating + comment for a doctor.
+
+    Product rules (see services.py for the helpers that enforce them):
+    - Eligibility: only a patient who has a COMPLETED appointment with that doctor
+      may review — checked at submit time, not on the model.
+    - Auto-publish: a new review is immediately visible (is_hidden=False).
+    - Moderation: clinic staff who employ the doctor (or an admin) can hide a
+      review; any signed-in user can report one (auto-hides past a threshold).
+    - One review per (patient, doctor); a patient may update their own.
+    Attached to the DOCTOR only (not the clinic), per product decision.
+    """
+
+    doctor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="reviews_received",
+        limit_choices_to={"role__in": ["DOCTOR", "MAIN_DOCTOR"]},
+    )
+    patient = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="reviews_written",
+    )
+    rating = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        help_text="1–5 stars.",
+    )
+    comment = models.TextField(blank=True, max_length=2000)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # Moderation — visible by default (auto-publish).
+    is_hidden = models.BooleanField(
+        default=False, help_text="Hidden reviews are never shown publicly."
+    )
+    hidden_at = models.DateTimeField(null=True, blank=True)
+    hidden_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="reviews_hidden",
+    )
+    report_count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        verbose_name = "Doctor Review"
+        verbose_name_plural = "Doctor Reviews"
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["doctor", "patient"], name="unique_review_per_patient_doctor"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(rating__gte=1) & models.Q(rating__lte=5),
+                name="review_rating_between_1_and_5",
+            ),
+        ]
+        indexes = [models.Index(fields=["doctor", "is_hidden"])]
+
+    def __str__(self):
+        return f"Review {self.rating}★ patient={self.patient_id} doctor={self.doctor_id}"

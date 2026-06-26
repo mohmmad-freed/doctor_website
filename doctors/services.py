@@ -156,3 +156,89 @@ def _add_minutes_to_time(t: time, minutes: int) -> time:
     dt = datetime.combine(datetime.today(), t)
     dt += timedelta(minutes=minutes)
     return dt.time()
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Doctor reviews (Phase 3)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# A review auto-hides once this many distinct reports accumulate (staff can still
+# unhide). Manual staff hiding is independent of this threshold.
+REVIEW_AUTOHIDE_REPORTS = 5
+
+
+def patient_can_review_doctor(patient, doctor_id):
+    """True iff *patient* has a COMPLETED appointment with the doctor — the only
+    eligibility to leave a review (enforced at submit time, not on the model)."""
+    if not getattr(patient, "is_authenticated", False):
+        return False
+    return Appointment.objects.filter(
+        patient=patient, doctor_id=doctor_id, status="COMPLETED"
+    ).exists()
+
+
+def doctor_rating_summary(doctor_id):
+    """{'avg': float|None, 'count': int} over VISIBLE reviews — for a doctor header."""
+    from django.db.models import Avg, Count
+    from .models import DoctorReview
+    agg = DoctorReview.objects.filter(doctor_id=doctor_id, is_hidden=False).aggregate(
+        avg=Avg("rating"), count=Count("id")
+    )
+    avg = agg["avg"]
+    return {"avg": round(avg, 1) if avg is not None else None, "count": agg["count"] or 0}
+
+
+def doctor_rating_summaries(doctor_ids):
+    """Batched {doctor_id: {'avg', 'count'}} for a set of doctors (no N+1 on cards)."""
+    from django.db.models import Avg, Count
+    from .models import DoctorReview
+    out = {did: {"avg": None, "count": 0} for did in doctor_ids}
+    rows = (
+        DoctorReview.objects.filter(doctor_id__in=doctor_ids, is_hidden=False)
+        .values("doctor_id")
+        .annotate(avg=Avg("rating"), count=Count("id"))
+    )
+    for r in rows:
+        out[r["doctor_id"]] = {
+            "avg": round(r["avg"], 1) if r["avg"] is not None else None,
+            "count": r["count"],
+        }
+    return out
+
+
+def visible_reviews_for_doctor(doctor_id, limit=None):
+    """Visible reviews, newest first, with the reviewing patient prefetched."""
+    from .models import DoctorReview
+    qs = (
+        DoctorReview.objects.filter(doctor_id=doctor_id, is_hidden=False)
+        .select_related("patient")
+        .order_by("-created_at")
+    )
+    return list(qs[:limit]) if limit else qs
+
+
+def user_can_moderate_doctor_reviews(user, doctor_id):
+    """Who may hide/unhide a doctor's reviews: an admin, or clinic staff (owner /
+    secretary) at a clinic where the doctor works. A doctor can NEVER moderate
+    reviews about themselves (conflict of interest)."""
+    if not getattr(user, "is_authenticated", False):
+        return False
+    if user.id == doctor_id:
+        return False
+    if user.is_superuser or user.is_staff:
+        return True
+    from clinics.models import Clinic, ClinicStaff
+    clinic_ids = set(
+        ClinicStaff.objects.filter(
+            user_id=doctor_id, role__in=["DOCTOR", "MAIN_DOCTOR"], is_active=True
+        ).values_list("clinic_id", flat=True)
+    ) | set(
+        Clinic.objects.filter(main_doctor_id=doctor_id).values_list("id", flat=True)
+    )
+    if not clinic_ids:
+        return False
+    if Clinic.objects.filter(id__in=clinic_ids, main_doctor=user).exists():
+        return True
+    return ClinicStaff.objects.filter(
+        clinic_id__in=clinic_ids, user=user,
+        role__in=["MAIN_DOCTOR", "SECRETARY"], is_active=True,
+    ).exists()

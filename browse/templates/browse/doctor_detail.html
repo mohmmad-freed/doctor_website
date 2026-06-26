@@ -16,6 +16,8 @@
         <div class="logo" style="width:64px;height:64px;font-size:1.6rem;"><i class="fa-solid fa-user-doctor"></i></div>
         <div>
             <h1>{% if IS_RTL %}د. {{ doctor.name }}{% else %}Dr. {{ doctor.name }}{% endif %}</h1>
+            {% if rating.count %}<div class="rating-badge" style="margin:.15rem 0;"><i class="fa-solid fa-star"></i> {{ rating.avg }}
+                <span class="count">({{ rating.count }} {% if IS_RTL %}تقييم{% else %}reviews{% endif %})</span></div>{% endif %}
             <p style="margin:0;display:flex;gap:.35rem;flex-wrap:wrap;">
                 {% for s in doctor.specialties %}<span class="chip">{{ s }}</span>{% endfor %}
             </p>
@@ -89,6 +91,65 @@
         {% endif %}
     </div>
     {% endif %}
+
+    <!-- Reviews -->
+    <div class="browse-section">
+        <h2>{% if IS_RTL %}التقييمات{% else %}Reviews{% endif %}
+            {% if rating.count %}<span class="rating-badge" style="margin-inline-start:.5rem;"><i class="fa-solid fa-star"></i> {{ rating.avg }} <span class="count">({{ rating.count }})</span></span>{% endif %}
+        </h2>
+
+        {% if can_review %}
+        <form class="review-form" method="post" action="{% url 'reviews:submit' doctor.id %}" style="margin-bottom:1rem;">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ review_next }}">
+            <label style="font-weight:600;">{% if my_review %}{% if IS_RTL %}عدّل تقييمك{% else %}Edit your review{% endif %}{% else %}{% if IS_RTL %}قيّم تجربتك{% else %}Rate your experience{% endif %}{% endif %}</label>
+            <select name="rating">
+                <option value="5" {% if my_review.rating == 5 %}selected{% endif %}>★★★★★ (5)</option>
+                <option value="4" {% if my_review.rating == 4 %}selected{% endif %}>★★★★☆ (4)</option>
+                <option value="3" {% if my_review.rating == 3 %}selected{% endif %}>★★★☆☆ (3)</option>
+                <option value="2" {% if my_review.rating == 2 %}selected{% endif %}>★★☆☆☆ (2)</option>
+                <option value="1" {% if my_review.rating == 1 %}selected{% endif %}>★☆☆☆☆ (1)</option>
+            </select>
+            <textarea name="comment" rows="3" maxlength="2000"
+                      placeholder="{% if IS_RTL %}شارك تجربتك (اختياري){% else %}Share your experience (optional){% endif %}">{{ my_review.comment }}</textarea>
+            <button type="submit" class="btn btn-primary">{% if my_review %}{% if IS_RTL %}تحديث التقييم{% else %}Update review{% endif %}{% else %}{% if IS_RTL %}نشر التقييم{% else %}Post review{% endif %}{% endif %}</button>
+        </form>
+        {% elif not user.is_authenticated %}
+        <p class="meta" style="margin-bottom:1rem;">{% if IS_RTL %}سجّل الدخول بعد موعد مكتمل لتقييم الطبيب.{% else %}Sign in after a completed appointment to review this doctor.{% endif %}</p>
+        {% endif %}
+
+        {% if reviews %}
+        <div style="display:flex;flex-direction:column;gap:.6rem;">
+            {% for r in reviews %}
+            <div class="review-card {% if r.is_hidden %}is-hidden{% endif %}">
+                <div class="review-head">
+                    <span class="review-stars" title="{{ r.rating }}/5">{{ r.stars }}</span>
+                    <span class="review-meta">
+                        {% if IS_RTL %}مريض موثّق{% else %}Verified patient{% endif %} · {{ r.created_at|date:"Y-m-d" }}{% if r.is_hidden %} · <em>{% if IS_RTL %}مخفي{% else %}hidden{% endif %}</em>{% endif %}
+                    </span>
+                </div>
+                {% if r.comment %}<div>{{ r.comment }}</div>{% endif %}
+                {% if user.is_authenticated %}
+                <div class="review-actions">
+                    <form method="post" action="{% url 'reviews:report' r.id %}">
+                        {% csrf_token %}<input type="hidden" name="next" value="{{ review_next }}">
+                        <button type="submit">{% if IS_RTL %}إبلاغ{% else %}Report{% endif %}</button>
+                    </form>
+                    {% if can_moderate %}
+                    <form method="post" action="{% if r.is_hidden %}{% url 'reviews:unhide' r.id %}{% else %}{% url 'reviews:hide' r.id %}{% endif %}">
+                        {% csrf_token %}<input type="hidden" name="next" value="{{ review_next }}">
+                        <button type="submit">{% if r.is_hidden %}{% if IS_RTL %}إظهار{% else %}Unhide{% endif %}{% else %}{% if IS_RTL %}إخفاء{% else %}Hide{% endif %}{% endif %}</button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="browse-empty">{% if IS_RTL %}لا توجد تقييمات بعد.{% else %}No reviews yet.{% endif %}</p>
+        {% endif %}
+    </div>
 
     <div class="browse-section">
         <a class="btn btn-primary" href="{% url 'accounts:login' %}?next={{ book_url|urlencode }}">

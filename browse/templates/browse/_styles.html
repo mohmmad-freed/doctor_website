@@ -60,4 +60,15 @@
         color: var(--text-muted, #718096); font-size: .82rem; font-weight: 600;
     }
     .browse-back { display: inline-flex; align-items: center; gap: .4rem; color: var(--text-muted, #718096); text-decoration: none; font-size: .9rem; margin-bottom: 1rem; }
+    .rating-badge { display: inline-flex; align-items: center; gap: .3rem; color: #f59e0b; font-weight: 700; font-size: .85rem; }
+    .rating-badge .count { color: var(--text-muted, #718096); font-weight: 600; }
+    .review-card { border: 1px solid var(--border-default, #e2e8f0); border-radius: 14px; padding: .9rem 1rem; display: flex; flex-direction: column; gap: .35rem; }
+    .review-card.is-hidden { opacity: .55; }
+    .review-stars { color: #f59e0b; letter-spacing: 2px; font-size: 1rem; }
+    .review-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; flex-wrap: wrap; }
+    .review-meta { color: var(--text-muted, #718096); font-size: .8rem; }
+    .review-actions { display: flex; gap: .5rem; }
+    .review-actions button { background: none; border: none; color: var(--text-muted, #718096); font-size: .8rem; cursor: pointer; padding: 0; text-decoration: underline; }
+    .review-form { border: 1px solid var(--border-default, #e2e8f0); border-radius: 14px; padding: 1rem; background: var(--surface, #fff); display: flex; flex-direction: column; gap: .6rem; }
+    .review-form select, .review-form textarea { width: 100%; padding: .55rem .75rem; border: 1px solid var(--border-default, #e2e8f0); border-radius: 10px; font: inherit; background: var(--surface, #fff); color: inherit; }
 </style>

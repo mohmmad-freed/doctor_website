@@ -29,6 +29,9 @@ urlpatterns = [
     path("appointments/", include("appointments.urls")),
     # Public guest browse (anonymous-accessible catalog of clinics & doctors)
     path("browse/", include("browse.urls")),
+    # Doctor-review write actions (submit/report/hide) — at /reviews/ so patients
+    # aren't blocked by ClinicIsolationMiddleware's /doctors/ prefix rule.
+    path("reviews/", include("doctors.review_urls")),
     # API key modules
     path(
         "api/patient/profile/",

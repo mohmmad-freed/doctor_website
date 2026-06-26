@@ -24,8 +24,15 @@ from appointments.services.appointment_type_service import (
     get_appointment_types_for_doctor_in_clinic,
 )
 from clinics.models import Clinic, ClinicStaff
-from doctors.models import DoctorAvailability, DoctorProfile, DoctorVerification
-from doctors.services import generate_slots_for_date
+from doctors.models import DoctorAvailability, DoctorProfile, DoctorReview, DoctorVerification
+from doctors.services import (
+    doctor_rating_summaries,
+    doctor_rating_summary,
+    generate_slots_for_date,
+    patient_can_review_doctor,
+    user_can_moderate_doctor_reviews,
+    visible_reviews_for_doctor,
+)
 
 User = get_user_model()
 
@@ -89,7 +96,13 @@ def _verified_clinic_doctors(clinic):
             user_id__in=[u.id for u in doctor_users]
         ).prefetch_related("specialties")
     }
-    return [_doctor_card(u, profiles.get(u.id)) for u in doctor_users]
+    ratings = doctor_rating_summaries([u.id for u in doctor_users])  # batched, no N+1
+    cards = []
+    for u in doctor_users:
+        card = _doctor_card(u, profiles.get(u.id))
+        card["rating"] = ratings.get(u.id, {"avg": None, "count": 0})
+        cards.append(card)
+    return cards
 
 
 def clinic_list(request):
@@ -284,6 +297,37 @@ def doctor_detail(request, doctor_id):
         + f"?doctor_id={doctor.id}"
     )
 
+    # ── Reviews / rating (Phase 3) ──────────────────────────────────────────
+    rating = doctor_rating_summary(doctor.id)
+    can_review = patient_can_review_doctor(request.user, doctor.id)
+    can_moderate = user_can_moderate_doctor_reviews(request.user, doctor.id)
+    # Moderators also see hidden reviews (to unhide); everyone else sees visible only.
+    if can_moderate:
+        review_objs = (
+            DoctorReview.objects.filter(doctor_id=doctor.id)
+            .select_related("patient").order_by("-created_at")
+        )
+    else:
+        review_objs = visible_reviews_for_doctor(doctor.id)
+    reviews = [
+        {
+            "id": r.id,
+            "rating": r.rating,
+            "stars": "★" * r.rating + "☆" * (5 - r.rating),
+            "comment": r.comment,
+            # Privacy: a review reveals a patient-of-doctor relationship, so reviews
+            # are shown fully anonymously — no reviewer name is exposed at all.
+            "created_at": r.created_at,
+            "is_hidden": r.is_hidden,
+        }
+        for r in review_objs
+    ]
+    my_review = None
+    if request.user.is_authenticated:
+        mr = DoctorReview.objects.filter(doctor_id=doctor.id, patient=request.user).first()
+        if mr:
+            my_review = {"rating": mr.rating, "comment": mr.comment}
+
     return render(
         request,
         "browse/doctor_detail.html",
@@ -298,6 +342,12 @@ def doctor_detail(request, doctor_id):
             "selected_type_id": selected_type_id,
             "today": date.today().isoformat(),
             "book_url": book_url,
+            "rating": rating,
+            "reviews": reviews,
+            "can_review": can_review,
+            "can_moderate": can_moderate,
+            "my_review": my_review,
+            "review_next": request.get_full_path(),
         },
     )
 

@@ -57,6 +57,7 @@
             <a class="browse-card" href="{% url 'browse:doctor_detail' d.id %}?clinic_id={{ clinic.id }}">
                 <div class="logo"><i class="fa-solid fa-user-doctor"></i></div>
                 <div class="title">{% if IS_RTL %}د. {{ d.name }}{% else %}Dr. {{ d.name }}{% endif %}</div>
+                {% if d.rating.count %}<div class="rating-badge"><i class="fa-solid fa-star"></i> {{ d.rating.avg }} <span class="count">({{ d.rating.count }})</span></div>{% endif %}
                 {% if d.specialties %}<div class="chips">{% for s in d.specialties %}<span class="chip">{{ s }}</span>{% endfor %}</div>{% endif %}
                 {% if d.years_of_experience %}<div class="meta"><i class="fa-solid fa-briefcase-medical"></i>
                     {% if IS_RTL %}{{ d.years_of_experience }} سنة خبرة{% else %}{{ d.years_of_experience }} yrs experience{% endif %}</div>{% endif %}
