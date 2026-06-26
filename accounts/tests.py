@@ -372,25 +372,58 @@ class MainDoctorSignupTest(TestCase):
         data.update(overrides)
         return data
 
-    # ── 1. Happy path ─────────────────────────────────────────────────────
-    def test_valid_signup_creates_clinic_with_pending_status(self):
-        """Full valid form submission creates user + clinic with status=PENDING."""
+    # ── 1. Legacy view retired (Phase 0 security) ─────────────────────────
+    # The single-page register_main_doctor view created/updated accounts with NO
+    # OTP verification and, via the form's reuse-by-phone + set_password, could
+    # reset an existing user's password from just a valid activation code (account
+    # takeover). It now redirects to the OTP-verified wizard and mutates nothing.
+    def test_legacy_view_get_redirects_to_wizard(self):
+        """GET on the retired endpoint redirects to wizard step 1."""
+        response = self.client.get(self.url)
+        self.assertRedirects(
+            response, reverse("accounts:register_clinic_step1"),
+            fetch_redirect_response=False,
+        )
+
+    def test_legacy_view_post_creates_nothing(self):
+        """POSTing full valid data no longer creates a user/clinic or consumes the code."""
         response = self.client.post(self.url, self._valid_data())
-        self.assertEqual(response.status_code, 302, f"Expected redirect but got errors: {response.context['form'].errors if response.context and 'form' in response.context else ''}")
-
-        user = CustomUser.objects.get(phone=self.OWNER_PHONE)
-        self.assertEqual(user.role, "MAIN_DOCTOR")
-        self.assertEqual(user.national_id, self.OWNER_NID)
-        self.assertTrue(user.is_verified)
-
-        clinic = Clinic.objects.get(main_doctor=user)
-        self.assertEqual(clinic.status, "PENDING")
-        self.assertIn(self.specialty, clinic.specialties.all())
-
-        # Activation code marked as used
+        self.assertRedirects(
+            response, reverse("accounts:register_clinic_step1"),
+            fetch_redirect_response=False,
+        )
+        self.assertFalse(CustomUser.objects.filter(phone=self.OWNER_PHONE).exists())
+        self.assertEqual(Clinic.objects.count(), 0)
         self.activation_code.refresh_from_db()
-        self.assertTrue(self.activation_code.is_used)
-        self.assertEqual(self.activation_code.used_by, user)
+        self.assertFalse(self.activation_code.is_used)
+
+    def test_legacy_view_does_not_reset_existing_user_password(self):
+        """SECURITY: the retired endpoint must not reset an existing user's password.
+
+        Previously a valid activation code + known phone could overwrite the password
+        here (no OTP) and elevate the account — a full takeover. It must now leave the
+        account completely untouched.
+        """
+        patient = CustomUser.objects.create_user(
+            phone=self.OWNER_PHONE,
+            name="Patient User",
+            national_id=self.OWNER_NID,
+            password="OldPassword123!",
+            role="PATIENT",
+        )
+        response = self.client.post(
+            self.url,
+            self._valid_data(password="Attacker123!", confirm_password="Attacker123!"),
+        )
+        self.assertRedirects(
+            response, reverse("accounts:register_clinic_step1"),
+            fetch_redirect_response=False,
+        )
+        patient.refresh_from_db()
+        self.assertTrue(patient.check_password("OldPassword123!"))   # unchanged
+        self.assertFalse(patient.check_password("Attacker123!"))
+        self.assertEqual(patient.role, "PATIENT")                    # not elevated
+        self.assertEqual(Clinic.objects.count(), 0)
 
     # ── 2. Activation code checks ─────────────────────────────────────────
     def test_invalid_code_blocked(self):
@@ -487,27 +520,6 @@ class MainDoctorSignupTest(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("clinic_phone", form.errors)
 
-    def test_existing_patient_without_nid_is_reused(self):
-        """Existing user with same phone (no national_id set) is reused — not duplicated."""
-        patient = CustomUser.objects.create_user(
-            phone=self.OWNER_PHONE, name="Existing Patient", password="pass12345"
-        )
-        response = self.client.post(self.url, self._valid_data())
-        self.assertEqual(
-            response.status_code,
-            302,
-            f"Expected redirect but got errors: "
-            f"{response.context['form'].errors if response.context and 'form' in response.context else ''}",
-        )
-        # Exactly one user with this phone — no duplicate created
-        self.assertEqual(CustomUser.objects.filter(phone=self.OWNER_PHONE).count(), 1)
-        patient.refresh_from_db()
-        self.assertEqual(patient.role, "MAIN_DOCTOR")
-        self.assertEqual(patient.national_id, self.OWNER_NID)
-        # Both roles present
-        self.assertIn("PATIENT", patient.roles)
-        self.assertIn("MAIN_DOCTOR", patient.roles)
-
     # ── 4. Existing user identity scenarios ──────────────────────────────
 
     def test_existing_user_blocked_if_national_id_conflicts(self):
@@ -521,73 +533,6 @@ class MainDoctorSignupTest(TestCase):
         form = MainDoctorRegistrationForm(data=self._valid_data())
         self.assertFalse(form.is_valid())
         self.assertIn("national_id", form.errors)
-
-    def test_existing_patient_role_updated_to_main_doctor(self):
-        """Existing PATIENT primary role is set to MAIN_DOCTOR after clinic signup."""
-        patient = CustomUser.objects.create_user(
-            phone=self.OWNER_PHONE,
-            name="Patient User",
-            national_id=self.OWNER_NID,
-            password="pass12345",
-            role="PATIENT",
-        )
-        response = self.client.post(self.url, self._valid_data())
-        self.assertEqual(response.status_code, 302)
-        patient.refresh_from_db()
-        self.assertEqual(patient.role, "MAIN_DOCTOR")
-        # PATIENT role is preserved in the roles list
-        self.assertIn("PATIENT", patient.roles)
-        self.assertIn("MAIN_DOCTOR", patient.roles)
-
-    def test_new_clinic_owner_has_both_roles(self):
-        """A brand-new clinic owner gets both PATIENT and MAIN_DOCTOR in their roles list."""
-        response = self.client.post(self.url, self._valid_data())
-        self.assertEqual(response.status_code, 302)
-        user = CustomUser.objects.get(phone=self.OWNER_PHONE)
-        self.assertIn("PATIENT", user.roles)
-        self.assertIn("MAIN_DOCTOR", user.roles)
-
-    def test_existing_patient_password_updated(self):
-        """Existing user's password is replaced by the one submitted in the signup form."""
-        patient = CustomUser.objects.create_user(
-            phone=self.OWNER_PHONE,
-            name="Patient User",
-            national_id=self.OWNER_NID,
-            password="OldPassword123!",
-        )
-        response = self.client.post(self.url, self._valid_data())
-        self.assertEqual(response.status_code, 302)
-        patient.refresh_from_db()
-        self.assertTrue(patient.check_password("StrongPass123!"))
-
-    def test_existing_patient_email_preserved_when_already_set(self):
-        """Existing user's email is NOT overwritten even if a different email is submitted."""
-        original_email = "original@patient.com"
-        patient = CustomUser.objects.create_user(
-            phone=self.OWNER_PHONE,
-            name="Patient User",
-            national_id=self.OWNER_NID,
-            email=original_email,
-            password="pass12345",
-        )
-        response = self.client.post(self.url, self._valid_data(email="new@doctor.com"))
-        self.assertEqual(response.status_code, 302)
-        patient.refresh_from_db()
-        self.assertEqual(patient.email, original_email)  # original preserved
-
-    def test_existing_patient_email_filled_when_missing(self):
-        """Form email is written to existing user when they have no email yet."""
-        patient = CustomUser.objects.create_user(
-            phone=self.OWNER_PHONE,
-            name="Patient User",
-            national_id=self.OWNER_NID,
-            email=None,
-            password="pass12345",
-        )
-        response = self.client.post(self.url, self._valid_data(email="doctor@test.com"))
-        self.assertEqual(response.status_code, 302)
-        patient.refresh_from_db()
-        self.assertEqual(patient.email, "doctor@test.com")
 
     def test_national_id_invalid_format(self):
         """National ID that is not 9 digits is rejected."""
@@ -613,40 +558,6 @@ class MainDoctorSignupTest(TestCase):
         self.activation_code.save()
         form = MainDoctorRegistrationForm(data=self._valid_data(phone="+970594073100"))
         self.assertTrue(form.is_valid(), f"Form should be valid: {form.errors}")
-
-    # ── 5. PatientProfile auto-creation ──────────────────────────────────
-
-    def test_new_clinic_owner_gets_patient_profile(self):
-        """A brand-new clinic owner user automatically gets a PatientProfile."""
-        response = self.client.post(self.url, self._valid_data())
-        self.assertEqual(response.status_code, 302)
-        user = CustomUser.objects.get(phone=self.OWNER_PHONE)
-        self.assertTrue(
-            PatientProfile.objects.filter(user=user).exists(),
-            "PatientProfile must be created for a new clinic owner.",
-        )
-
-    def test_existing_patient_profile_reused_not_duplicated(self):
-        """
-        Existing patient who registers as clinic owner keeps their PatientProfile
-        — no duplicate is created and no error is raised.
-        """
-        patient = CustomUser.objects.create_user(
-            phone=self.OWNER_PHONE,
-            name="Patient User",
-            national_id=self.OWNER_NID,
-            password="pass12345",
-        )
-        original_profile = PatientProfile.objects.create(user=patient)
-
-        response = self.client.post(self.url, self._valid_data())
-        self.assertEqual(response.status_code, 302)
-
-        # Still exactly one PatientProfile for this user
-        self.assertEqual(PatientProfile.objects.filter(user=patient).count(), 1)
-        # Same row — pk unchanged
-        patient.refresh_from_db()
-        self.assertEqual(patient.patient_profile.pk, original_profile.pk)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -811,17 +722,17 @@ class CreateClinicServiceTest(TestCase):
         self.assertEqual(Clinic.objects.count(), 0)
         self.assertEqual(ClinicStaff.objects.count(), 0)
 
-    # ── Integration: view still creates ClinicStaff ───────────────────────
+    # ── Integration: the retired legacy view creates nothing ──────────────
+    # ClinicStaff creation by the service is covered by
+    # test_creates_clinic_staff_main_doctor above. The legacy single-page view is
+    # retired (Phase 0 security); here we assert it no longer creates records.
 
-    def test_signup_view_creates_clinic_staff(self):
-        """
-        End-to-end: POST to register_main_doctor creates a ClinicStaff row
-        with role=MAIN_DOCTOR for the new owner.
-        """
+    def test_legacy_signup_view_creates_no_records(self):
+        """POST to the retired register_main_doctor redirects and creates no rows."""
         client = Client()
         city = City.objects.create(name="Nablus")
         specialty = Specialty.objects.create(name="Dermatology", name_ar="الجلدية")
-        activation_code = ClinicActivationCode.objects.create(
+        ClinicActivationCode.objects.create(
             code="VIEW001",
             clinic_name="عيادة المشهد",
             phone="0592222222",
@@ -845,16 +756,14 @@ class CreateClinicServiceTest(TestCase):
             "clinic_city": city.id,
             "specialties": [specialty.id],
         }
+        before = Clinic.objects.count()
         response = client.post(reverse("accounts:register_main_doctor"), data)
-        self.assertEqual(response.status_code, 302)
-
-        user = CustomUser.objects.get(phone="0592222222")
-        clinic = Clinic.objects.get(main_doctor=user)
-        self.assertTrue(
-            ClinicStaff.objects.filter(
-                clinic=clinic, user=user, role="MAIN_DOCTOR"
-            ).exists()
+        self.assertRedirects(
+            response, reverse("accounts:register_clinic_step1"),
+            fetch_redirect_response=False,
         )
+        self.assertFalse(CustomUser.objects.filter(phone="0592222222").exists())
+        self.assertEqual(Clinic.objects.count(), before)
 
 
 class ClinicSubscriptionTest(TestCase):

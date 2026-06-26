@@ -618,9 +618,10 @@ class ForgotPasswordPhoneForm(forms.Form):
                 "رقم الهاتف غير صحيح. يجب أن يبدأ بـ 05 ويتكون من 10 أرقام."
             )
 
-        if not CustomUser.objects.filter(phone=phone).exists():
-            raise ValidationError("لا يوجد حساب مرتبط بهذا الرقم.")
-
+        # NOTE: deliberately NO "account exists" check here. Disclosing whether a
+        # number is registered turns this form into an account-enumeration oracle.
+        # Existence is checked server-side in the view, which sends an OTP only to
+        # a real account but returns an identical response either way.
         return phone
 
 

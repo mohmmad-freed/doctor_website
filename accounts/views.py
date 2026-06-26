@@ -16,7 +16,6 @@ import time
 from .forms import (
     LoginForm,
     PatientRegistrationForm,
-    MainDoctorRegistrationForm,
     ForgotPasswordPhoneForm,
     ResetPasswordForm,
     ClinicRegStep1Form,
@@ -167,6 +166,12 @@ def login_view(request):
         else "محاولات تسجيل دخول كثيرة فاشلة. يرجى المحاولة لاحقاً."
     )
 
+    # Validated deep-link target, rendered as a hidden field so it survives the
+    # POST (the login form posts to /login/ and would otherwise drop ?next=).
+    # Empty string when there is no safe target. This is what makes the
+    # guest → login → resume-booking handoff work.
+    safe_next = _safe_next(request, fallback="")
+
     if request.method == "POST":
         form = LoginForm(request.POST)
         if form.is_valid():
@@ -184,7 +189,7 @@ def login_view(request):
                 "login", normalized_phone, ratelimit.LOGIN_MAX_ATTEMPTS
             ) or ratelimit.is_blocked("login_ip", ip, ratelimit.LOGIN_IP_MAX_ATTEMPTS):
                 messages.error(request, too_many_attempts_msg)
-                return render(request, "accounts/login.html", {"form": form})
+                return render(request, "accounts/login.html", {"form": form, "next_url": safe_next})
 
             # authenticate() returns the user iff the password is correct (the
             # backend also runs a dummy hash for unknown phones to flatten timing).
@@ -202,18 +207,22 @@ def login_view(request):
                     ratelimit.LOGIN_IP_WINDOW_SECONDS, limit=ratelimit.LOGIN_IP_MAX_ATTEMPTS,
                 )
                 messages.error(request, invalid_credentials_msg)
-                return render(request, "accounts/login.html", {"form": form})
+                return render(request, "accounts/login.html", {"form": form, "next_url": safe_next})
 
             # Only now that the password is proven correct is it safe to reveal
             # the account's verification state (avoids unverified-account enumeration).
             if settings.ENFORCE_PHONE_VERIFICATION and not user.is_verified:
                 messages.error(request, unverified_phone_msg)
-                return render(request, "accounts/login.html", {"form": form})
+                return render(request, "accounts/login.html", {"form": form, "next_url": safe_next})
 
             # Password is proven correct — clear the brute-force counters for it.
             ratelimit.clear_failures("login", normalized_phone)
 
-            next_url = request.GET.get("next")
+            # Use the validated target (host/scheme-checked, read from POST so it
+            # survives the form submit). "" when there's no safe next → fall back
+            # to home. This is what closes the open redirect AND powers the
+            # guest → login → resume-booking handoff.
+            next_url = safe_next
 
             # Opt-in second factor (staff): if MFA is enabled and this browser is
             # not already a trusted device, defer login() until the challenge is
@@ -238,7 +247,7 @@ def login_view(request):
     else:
         form = LoginForm()
 
-    return render(request, "accounts/login.html", {"form": form})
+    return render(request, "accounts/login.html", {"form": form, "next_url": safe_next})
 
 
 # ============================================================================
@@ -515,19 +524,20 @@ def register_patient_phone(request):
             )
             return render(request, "accounts/register_patient_phone.html")
 
-        # Check if already registered
-        if User.objects.filter(phone=phone).exists():
-            messages.error(request, "هذا الرقم مسجل مسبقاً.")
-            return render(request, "accounts/register_patient_phone.html")
+        # Account-enumeration guard: respond identically whether or not the number
+        # is already registered. A real registration OTP is issued ONLY for a NEW
+        # number; an already-registered number gets the same on-screen result but
+        # no code, so it can't be driven through the flow to duplicate an account —
+        # and the response never discloses that the number exists. (The owner of an
+        # existing number should log in / reset their password instead.)
+        if not User.objects.filter(phone=phone).exists():
+            request_otp(phone)  # best-effort; the verify page offers resend
 
-        # Request OTP
-        success, message = request_otp(phone)
-        if success:
-            request.session["registration_phone"] = phone
-            messages.success(request, message)
-            return redirect("accounts:register_patient_verify")
-        else:
-            messages.error(request, message)
+        request.session["registration_phone"] = phone
+        messages.success(
+            request, "تم إرسال رمز التحقق. يرجى إدخال الرمز للمتابعة."
+        )
+        return redirect("accounts:register_patient_verify")
 
     return render(request, "accounts/register_patient_phone.html")
 
@@ -809,54 +819,23 @@ def register_patient_email(request):
 
 
 def register_main_doctor(request):
-    """Handle main doctor registration with clinic creation"""
+    """Deprecated single-page clinic-owner registration — retired for security.
+
+    This path created/updated accounts with NO phone or email OTP verification.
+    Because MainDoctorRegistrationForm reuses an existing user by phone and calls
+    set_password() on them, a valid activation code alone was enough to reset an
+    existing user's password and seize their account — possession of the phone was
+    never proven (full account takeover).
+
+    All clinic-owner onboarding now goes through the OTP-verified wizard
+    (register_clinic_step1 → … → register_clinic_verify_email), which proves both
+    the owner phone and email and never overwrites an existing user's password.
+    This route is kept only so old links/bookmarks resolve; it now redirects to
+    the wizard and performs NO account mutation on either GET or POST.
+    """
     if request.user.is_authenticated:
         return redirect("accounts:home")
-
-    if request.method == "POST":
-        form = MainDoctorRegistrationForm(request.POST)
-        if form.is_valid():
-            try:
-                user = form.save(commit=False)
-                user.national_id = getattr(form, "_existing_original", {}).get("national_id")
-                user.save()
-                assign_national_id(user, form.cleaned_data["national_id"])
-
-                # Every registered user is also a potential patient —
-                # create their PatientProfile if it doesn't exist yet
-                # (existing patients who register as clinic owners keep theirs).
-                ensure_patient_profile(user)
-
-                activation_code_obj = form.cleaned_data["activation_code_obj"]
-
-                clinic = create_clinic_for_main_doctor(
-                    user=user,
-                    cleaned_data=form.cleaned_data,
-                    activation_code_obj=activation_code_obj,
-                )
-
-                login(request, user, backend="accounts.backends.PhoneNumberAuthBackend")
-
-                # Kick off verification — send OTP for step 1 (owner phone)
-                request_otp(user.phone)
-
-                # Store welcome name in session so verify_owner_phone can show it
-                # once with proper styling (avoids base.html's messages area)
-                request.session["clinic_welcome_name"] = user.name
-
-                from django.urls import reverse
-                default_url = reverse("clinics:verify_owner_phone", kwargs={"clinic_id": clinic.id})
-                return handle_pending_invitation_redirect(request, default_url=default_url)
-
-            except Exception as e:
-                messages.error(
-                    request,
-                    f"حدث خطأ أثناء التسجيل. يرجى المحاولة مرة أخرى. ({str(e)})",
-                )
-    else:
-        form = MainDoctorRegistrationForm()
-
-    return render(request, "accounts/register_main_doctor.html", {"form": form})
+    return redirect("accounts:register_clinic_step1")
 
 
 # ============================================================
@@ -1495,16 +1474,23 @@ def forgot_password_phone(request):
         if form.is_valid():
             phone = form.cleaned_data["phone"]
 
-            # Request OTP
-            success, message = request_otp(phone)
-            if success:
-                request.session["reset_phone"] = phone
-                messages.success(request, message)
-                return redirect("accounts:forgot_password_verify")
-            else:
-                messages.error(request, message)
+            # Account-enumeration guard: respond identically whether or not an
+            # account exists. A reset OTP is sent ONLY to a registered number;
+            # the on-screen result (same message + redirect to the verify step)
+            # never discloses account existence. A non-existent number simply
+            # never receives a code and cannot clear the verify step. We avoid
+            # sending any SMS to numbers without an account (no SMS-trigger abuse).
+            if User.objects.filter(phone=phone).exists():
+                request_otp(phone)
+
+            request.session["reset_phone"] = phone
+            messages.success(
+                request,
+                "إذا كان هناك حساب مرتبط بهذا الرقم، فقد تم إرسال رمز التحقق إليه.",
+            )
+            return redirect("accounts:forgot_password_verify")
         else:
-            # Show form-level errors via messages for consistency
+            # Only format errors reach here now (existence is never surfaced).
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, error)

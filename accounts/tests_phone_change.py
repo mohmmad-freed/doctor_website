@@ -1,4 +1,4 @@
-from django.test import TestCase, Client
+from django.test import TestCase, Client, override_settings
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.core.cache import cache
@@ -51,6 +51,11 @@ class PhoneChangeTest(TestCase):
         messages = list(response.context["messages"])
         self.assertTrue(any("مسجل بالفعل" in str(m) for m in messages))
 
+    # Force the local OTP mock path (store code in cache, return success) so this
+    # flow is deterministic regardless of SMS_PROVIDER and never sends a real SMS.
+    # The test runner forces DEBUG=False, and .env points OTP at a live provider;
+    # without this the request either hits the network or returns failure (200).
+    @override_settings(DEBUG=True, SMS_PROVIDER="")
     def test_change_phone_flow_success(self):
         new_phone = "0599999999"
 
