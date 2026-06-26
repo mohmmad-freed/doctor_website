@@ -14,6 +14,33 @@ from patients.models import PatientProfile
 from patients.services import ensure_patient_profile
 
 
+# Isolated locmem cache for OTP-send flows so the 60s resend cooldown / daily
+# cap can't leak in from the real Redis the dev app shares. (The live SMS send
+# itself is neutralised per-test by patching accounts.otp_utils.tweetsms_send_sms
+# — see _mock_sms below — because TweetsMS is "configured" in this env but its
+# gateway rejects the send, which otherwise makes request_otp return False and
+# the phone-submit step re-render with 200 instead of the expected 302.)
+_OTP_SEND_TEST_OVERRIDES = dict(
+    CACHES={
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "otp-send-tests",
+        }
+    },
+    ENFORCE_OTP_LIMITS=False,
+)
+
+
+def _mock_sms(testcase):
+    """Neutralise the live TweetsMS send for the duration of *testcase*.
+
+    request_otp still generates + stores the OTP in cache and returns success;
+    it just doesn't hit the real gateway."""
+    p = patch("accounts.otp_utils.tweetsms_send_sms", return_value=None)
+    p.start()
+    testcase.addCleanup(p.stop)
+
+
 class PhoneNumberValidationTest(TestCase):
     """Test phone number validation"""
     
@@ -231,10 +258,13 @@ class LoginWithPhoneTest(TestCase):
         self.assertEqual(response.status_code, 302)  # Should redirect after login
 
 
+@override_settings(**_OTP_SEND_TEST_OVERRIDES)
 class PatientRegistrationFlowTest(TestCase):
     """Test complete patient registration flow"""
-    
+
     def setUp(self):
+        cache.clear()  # isolate the per-IP register throttle + OTP cooldown
+        _mock_sms(self)
         self.client = Client()
         self.city = City.objects.create(name="Nablus")
         self.register_url = reverse('accounts:register_patient_phone')

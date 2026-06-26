@@ -12,6 +12,7 @@ from django.db import transaction
 from django.db.models import F, Q, Sum
 from django.http import Http404, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext as _, get_language
 from django.views.decorators.http import require_POST
 
@@ -26,6 +27,19 @@ from clinics.models import ActivityLog
 User = get_user_model()
 
 logger = logging.getLogger(__name__)
+
+
+def _is_safe_next(request, url):
+    """True if *url* is a same-host, in-app redirect target.
+
+    Guards every ``?next=`` / POST ``next`` / Referer redirect in this portal
+    against open redirects. A bare ``url.startswith("/")`` check is NOT enough:
+    ``//evil.com`` and ``/\\evil.com`` both start with ``/`` yet send the browser
+    off-site (protocol-relative). ``url_has_allowed_host_and_scheme`` rejects all
+    of those against the request host."""
+    return bool(url) and url_has_allowed_host_and_scheme(
+        url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    )
 
 
 def _clock(request, value):
@@ -478,7 +492,7 @@ def checkin_appointment(request, staff, appointment_id):
         messages.warning(request, _("لا يمكن تسجيل الوصول إلا للمواعيد المؤكدة."))
 
     next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or "secretary:dashboard"
-    if next_url.startswith("/"):
+    if _is_safe_next(request, next_url):
         return redirect(next_url)
     return redirect("secretary:dashboard")
 
@@ -636,7 +650,7 @@ def register_new_patient_only(request, staff, appointment_id):
         clinic=clinic, patient=appointment.patient
     ).exists()
     next_url = request.POST.get("next") or ""
-    redirect_to = next_url if next_url.startswith("/") else "secretary:appointments"
+    redirect_to = next_url if _is_safe_next(request, next_url) else "secretary:appointments"
 
     if appointment.status != Appointment.Status.PENDING or already_registered:
         messages.error(request, _("لم يعد هذا الطلب بحاجة إلى مراجعة."))
@@ -1290,7 +1304,7 @@ def start_billing(request, staff, appointment_id):
     except billing.BillingError as e:
         messages.error(request, e.message)
         next_url = request.POST.get("next") or request.META.get("HTTP_REFERER")
-        if next_url and next_url.startswith("/"):
+        if _is_safe_next(request, next_url):
             return redirect(next_url)
         return redirect("secretary:waiting_room")
     return redirect("secretary:invoice_detail", invoice_id=invoice.id)
@@ -1391,7 +1405,7 @@ def invoice_delete(request, staff, invoice_id):
 
     # Return to where the delete was triggered (the filtered list), else the list.
     next_url = request.POST.get("next", "")
-    if next_url.startswith("/") and f"/invoice/{invoice_id}/" not in next_url:
+    if _is_safe_next(request, next_url) and f"/invoice/{invoice_id}/" not in next_url:
         return redirect(next_url)
     return redirect("secretary:billing_invoices")
 
@@ -2388,7 +2402,7 @@ def delete_doctor_block(request, staff, exception_id):
     exc.save(update_fields=["is_active", "updated_at"])
     messages.success(request, _("تم إلغاء حجب الوقت للدكتور %(name)s.") % {"name": doctor_name})
     next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or ""
-    if next_url.startswith("/"):
+    if _is_safe_next(request, next_url):
         return redirect(next_url)
     return redirect("secretary:doctor_schedule")
 
@@ -2620,7 +2634,7 @@ def accept_new_patient_request(request, staff, appointment_id):
         clinic=clinic, patient=appointment.patient
     ).exists()
     next_url = request.POST.get("next") or ""
-    redirect_to = next_url if next_url.startswith("/") else "secretary:appointments"
+    redirect_to = next_url if _is_safe_next(request, next_url) else "secretary:appointments"
 
     if appointment.status != Appointment.Status.PENDING or already_registered:
         messages.error(request, _("لم يعد هذا الطلب بحاجة إلى مراجعة."))
@@ -2659,7 +2673,7 @@ def reject_new_patient_request(request, staff, appointment_id):
     appointment = get_object_or_404(Appointment, id=appointment_id, clinic=clinic)
 
     next_url = request.POST.get("next") or ""
-    redirect_to = next_url if next_url.startswith("/") else "secretary:appointments"
+    redirect_to = next_url if _is_safe_next(request, next_url) else "secretary:appointments"
 
     if appointment.status != Appointment.Status.PENDING:
         messages.error(request, _("لم يعد هذا الطلب بحاجة إلى مراجعة."))
@@ -2719,7 +2733,7 @@ def update_appointment_status(request, staff, appointment_id):
         else:
             messages.success(request, _("تم تحديث حالة الموعد بنجاح."))
         next_url = request.POST.get("next") or request.META.get("HTTP_REFERER")
-        if next_url and next_url.startswith("/"):
+        if _is_safe_next(request, next_url):
             return redirect(next_url)
         return redirect("secretary:waiting_room")
 
@@ -2757,7 +2771,7 @@ def remove_from_queue(request, staff, appointment_id):
     next_url = request.POST.get("next") or request.META.get("HTTP_REFERER")
 
     def _redirect_back():
-        if next_url and next_url.startswith("/"):
+        if _is_safe_next(request, next_url):
             return redirect(next_url)
         return redirect("secretary:waiting_room")
 
@@ -4475,7 +4489,7 @@ def cancel_appointment(request, staff, appointment_id):
         return _render_walkin_patient_appointments(request, staff, htmx_target_patient_id)
 
     next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or ""
-    if next_url.startswith("/"):
+    if _is_safe_next(request, next_url):
         return redirect(next_url)
     return redirect("secretary:appointments")
 
@@ -4491,9 +4505,9 @@ def _bilingual(ar, en):
 
 
 def _safe_redirect(request, fallback):
-    """Redirect to POSTed ``next`` only when it is a local path; else ``fallback``."""
+    """Redirect to POSTed ``next`` only when it is a same-host target; else ``fallback``."""
     next_url = request.POST.get("next") or ""
-    if next_url.startswith("/"):
+    if _is_safe_next(request, next_url):
         return redirect(next_url)
     return redirect(fallback)
 

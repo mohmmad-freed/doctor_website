@@ -218,7 +218,11 @@ def login_view(request):
             # Password is proven correct — clear the brute-force counters for it.
             ratelimit.clear_failures("login", normalized_phone)
 
-            next_url = request.GET.get("next")
+            # Validate the user-supplied ``next`` against the request host before
+            # it is ever used as a redirect target or stashed for the MFA step,
+            # so off-site / protocol-relative URLs can't drive a post-login
+            # open redirect. None == no safe target → fall back to home.
+            next_url = _safe_next(request, fallback=None)
 
             # Opt-in second factor (staff): if MFA is enabled and this browser is
             # not already a trusted device, defer login() until the challenge is
@@ -261,7 +265,12 @@ def _clear_mfa_pending(request):
 
 
 def _safe_next(request, fallback="accounts:home"):
-    """Return a validated internal ``next`` URL, else *fallback* (a view name)."""
+    """Return a validated internal ``next`` URL, else *fallback*.
+
+    Validates the user-supplied ``next`` against the request host with
+    ``url_has_allowed_host_and_scheme`` so off-site / protocol-relative targets
+    (``//evil.com``, ``/\\evil.com``, ``https://evil.com``) are rejected. Pass
+    ``fallback=None`` to get ``None`` when there is no safe target."""
     nxt = request.POST.get("next") or request.GET.get("next")
     if nxt and url_has_allowed_host_and_scheme(
         nxt, allowed_hosts={request.get_host()}, require_https=request.is_secure()
@@ -289,7 +298,13 @@ def _complete_mfa_login(request, user, remember_device=False):
     # We authenticated by password in a previous request, so set the backend
     # explicitly (two backends are configured, login() can't infer it).
     user.backend = "accounts.backends.PhoneNumberAuthBackend"
+    # The stashed ``next`` was validated at login intake, but re-check it here
+    # (defense in depth) before using it as a redirect target.
     next_url = request.session.get("mfa_next") or None
+    if next_url and not url_has_allowed_host_and_scheme(
+        next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        next_url = None
     _clear_mfa_pending(request)
     login(request, user)  # rotates the session key — fixation-safe
     _lang = user.preferred_language or get_default_language_for_role(
@@ -1701,8 +1716,12 @@ def set_language_preference(request):
         User.objects.filter(pk=request.user.pk).update(preferred_language=lang)
 
     next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or "/"
-    # Prevent open-redirect: only allow relative URLs
-    if next_url.startswith("http"):
+    # Prevent open-redirect: only honour same-host targets. A bare
+    # ``startswith("http")`` check misses protocol-relative ``//evil.com`` and
+    # cased ``HTTPS://`` schemes, so validate against the request host instead.
+    if not url_has_allowed_host_and_scheme(
+        next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
         next_url = "/"
 
     response = redirect(next_url)

@@ -1,4 +1,6 @@
-from django.test import TestCase, Client
+from unittest.mock import patch
+
+from django.test import TestCase, Client, override_settings
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.core.cache import cache
@@ -7,8 +9,30 @@ from accounts.models import City
 User = get_user_model()
 
 
+# Isolated locmem cache so the change-phone OTP step is deterministic and the
+# OTP cooldown can't leak in from the real Redis the dev app shares. The live
+# TweetsMS send is neutralised per-test in setUp (it's "configured" in this env
+# but the gateway rejects the send, which otherwise makes request_otp return
+# False and the request step re-render with 200 instead of redirecting).
+_OTP_SEND_TEST_OVERRIDES = dict(
+    CACHES={
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "phone-change-tests",
+        }
+    },
+    ENFORCE_OTP_LIMITS=False,
+)
+
+
+@override_settings(**_OTP_SEND_TEST_OVERRIDES)
 class PhoneChangeTest(TestCase):
     def setUp(self):
+        cache.clear()  # isolate OTP cooldown from prior tests / the dev Redis
+        # request_otp still stores the OTP in cache; it just doesn't hit TweetsMS.
+        p = patch("accounts.otp_utils.tweetsms_send_sms", return_value=None)
+        p.start()
+        self.addCleanup(p.stop)
         # Create a city (referenced in some user signals or forms?)
         self.city = City.objects.create(name="Gaza")
 
