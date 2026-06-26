@@ -25,7 +25,13 @@ from .forms import (
 )
 from . import ratelimit
 from . import mfa_utils
-from .otp_utils import request_otp, verify_otp, is_in_cooldown, get_remaining_resends
+from .otp_utils import (
+    request_otp,
+    verify_otp,
+    is_in_cooldown,
+    get_remaining_resends,
+    send_account_exists_sms,
+)
 from .email_utils import (
     generate_email_verification_token,
     send_verification_email,
@@ -219,9 +225,9 @@ def login_view(request):
             ratelimit.clear_failures("login", normalized_phone)
 
             # Use the validated target (host/scheme-checked, read from POST so it
-            # survives the form submit). "" when there's no safe next → fall back
-            # to home. This is what closes the open redirect AND powers the
-            # guest → login → resume-booking handoff.
+            # survives the form submit; same _safe_next as the open-redirect audit).
+            # "" when there's no safe next → fall back to home. This is what closes
+            # the open redirect AND powers the guest → login → resume-booking handoff.
             next_url = safe_next
 
             # Opt-in second factor (staff): if MFA is enabled and this browser is
@@ -265,7 +271,12 @@ def _clear_mfa_pending(request):
 
 
 def _safe_next(request, fallback="accounts:home"):
-    """Return a validated internal ``next`` URL, else *fallback* (a view name)."""
+    """Return a validated internal ``next`` URL, else *fallback*.
+
+    Validates the user-supplied ``next`` against the request host with
+    ``url_has_allowed_host_and_scheme`` so off-site / protocol-relative targets
+    (``//evil.com``, ``/\\evil.com``, ``https://evil.com``) are rejected. Pass
+    ``fallback=None`` to get ``None`` when there is no safe target."""
     nxt = request.POST.get("next") or request.GET.get("next")
     if nxt and url_has_allowed_host_and_scheme(
         nxt, allowed_hosts={request.get_host()}, require_https=request.is_secure()
@@ -293,7 +304,13 @@ def _complete_mfa_login(request, user, remember_device=False):
     # We authenticated by password in a previous request, so set the backend
     # explicitly (two backends are configured, login() can't infer it).
     user.backend = "accounts.backends.PhoneNumberAuthBackend"
+    # The stashed ``next`` was validated at login intake, but re-check it here
+    # (defense in depth) before using it as a redirect target.
     next_url = request.session.get("mfa_next") or None
+    if next_url and not url_has_allowed_host_and_scheme(
+        next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        next_url = None
     _clear_mfa_pending(request)
     login(request, user)  # rotates the session key — fixation-safe
     _lang = user.preferred_language or get_default_language_for_role(
@@ -516,6 +533,14 @@ def register_patient_phone(request):
 
         phone = PhoneNumberAuthBackend.normalize_phone_number(phone)
 
+        # Per-IP throttle (defense-in-depth) on this public endpoint: bounds both
+        # account enumeration and SMS-trigger abuse. Dedicated "register_ip" scope
+        # so it never interferes with the login counters. Fail-open if Redis down.
+        ip = ratelimit.client_ip(request)
+        if ratelimit.is_blocked("register_ip", ip, ratelimit.LOGIN_IP_MAX_ATTEMPTS):
+            messages.error(request, "محاولات كثيرة. يرجى المحاولة لاحقاً.")
+            return render(request, "accounts/register_patient_phone.html")
+
         # Validate format
         if not PhoneNumberAuthBackend.is_valid_phone_number(phone):
             messages.error(
@@ -524,20 +549,35 @@ def register_patient_phone(request):
             )
             return render(request, "accounts/register_patient_phone.html")
 
-        # Account-enumeration guard: respond identically whether or not the number
-        # is already registered. A real registration OTP is issued ONLY for a NEW
-        # number; an already-registered number gets the same on-screen result but
-        # no code, so it can't be driven through the flow to duplicate an account —
-        # and the response never discloses that the number exists. (The owner of an
-        # existing number should log in / reset their password instead.)
-        if not User.objects.filter(phone=phone).exists():
-            request_otp(phone)  # best-effort; the verify page offers resend
-
-        request.session["registration_phone"] = phone
-        messages.success(
-            request, "تم إرسال رمز التحقق. يرجى إدخال الرمز للمتابعة."
+        ratelimit.register_failure(
+            "register_ip", ip, ratelimit.LOGIN_IP_WINDOW_SECONDS,
+            limit=ratelimit.LOGIN_IP_MAX_ATTEMPTS,
         )
-        return redirect("accounts:register_patient_verify")
+
+        # Account-enumeration guard: do NOT reveal whether this phone already has
+        # an account. Both branches produce an identical on-screen response (same
+        # message + redirect to the verify step). A registered number is nudged
+        # out of band by SMS to log in instead, and is issued NO verifiable OTP —
+        # so it can't be driven through the flow to create a duplicate account.
+        # The session phone is still set in both cases so the verify page loads
+        # identically (otherwise the registered case would bounce back here and
+        # re-open the oracle).
+        already = User.objects.filter(phone=phone).exists()
+        if already:
+            sent = send_account_exists_sms(phone)
+        else:
+            sent, _msg = request_otp(phone)
+
+        if sent:
+            request.session["registration_phone"] = phone
+            messages.success(
+                request, "تم إرسال رمز التحقق. يرجى إدخال الرمز للمتابعة."
+            )
+            return redirect("accounts:register_patient_verify")
+        else:
+            messages.error(
+                request, "تعذّر إرسال رمز التحقق حالياً. يرجى المحاولة لاحقاً."
+            )
 
     return render(request, "accounts/register_patient_phone.html")
 
@@ -591,6 +631,20 @@ def register_patient_verify(request):
         success, message = verify_otp(phone, entered_otp)
 
         if success:
+            # Owner-only branch: a correct OTP proves phone ownership. If this
+            # number already has an account, redirect to login with a nudge
+            # instead of driving the user through the whole details form only to
+            # reject the duplicate at creation. Not an enumeration oracle — an
+            # attacker without the OTP can never reach here.
+            if User.objects.filter(phone=phone).exists():
+                for key in ("registration_phone", "phone_verified"):
+                    request.session.pop(key, None)
+                messages.info(
+                    request,
+                    "لديك حساب مسجّل بهذا الرقم بالفعل. يرجى تسجيل الدخول.",
+                )
+                return redirect("accounts:login")
+
             request.session["phone_verified"] = True
             messages.success(request, message)
 
@@ -702,6 +756,17 @@ def register_patient_details(request):
         messages.error(request, "يرجى التحقق من رقم هاتفك أولاً.")
         return redirect("accounts:register_patient_phone")
 
+    # Defense-in-depth: never let an already-registered phone reach the creation
+    # form (the verify step redirects these to login, but this guards any other
+    # path into the details step). Owner-only, so not an enumeration oracle.
+    if User.objects.filter(phone=phone).exists():
+        for key in ("registration_phone", "phone_verified"):
+            request.session.pop(key, None)
+        messages.info(
+            request, "لديك حساب مسجّل بهذا الرقم بالفعل. يرجى تسجيل الدخول."
+        )
+        return redirect("accounts:login")
+
     if request.method == "POST":
         form = PatientRegistrationForm(request.POST)
         form.data = form.data.copy()
@@ -786,6 +851,14 @@ def register_patient_email(request):
         if email:
             if not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", email):
                 messages.error(request, "تنسيق البريد الإلكتروني غير صحيح.")
+                return render(request, "accounts/register_patient_email.html")
+
+            # Per-user throttle: the "already in use" hint below is legitimate for
+            # the user's own action, but without a cap any logged-in user could
+            # bulk-probe which emails are registered. 10 checks / 10 min is plenty
+            # for self-service; fail-open if the cache is down.
+            if ratelimit.hit_rate_limit("email_check", user.pk, 10, 600):
+                messages.error(request, "محاولات كثيرة. يرجى المحاولة لاحقاً.")
                 return render(request, "accounts/register_patient_email.html")
 
             # Check if email is already used by another user
@@ -1630,8 +1703,12 @@ def set_language_preference(request):
         User.objects.filter(pk=request.user.pk).update(preferred_language=lang)
 
     next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or "/"
-    # Prevent open-redirect: only allow relative URLs
-    if next_url.startswith("http"):
+    # Prevent open-redirect: only honour same-host targets. A bare
+    # ``startswith("http")`` check misses protocol-relative ``//evil.com`` and
+    # cased ``HTTPS://`` schemes, so validate against the request host instead.
+    if not url_has_allowed_host_and_scheme(
+        next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
         next_url = "/"
 
     response = redirect(next_url)

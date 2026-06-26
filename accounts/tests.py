@@ -14,6 +14,33 @@ from patients.models import PatientProfile
 from patients.services import ensure_patient_profile
 
 
+# Isolated locmem cache for OTP-send flows so the 60s resend cooldown / daily
+# cap can't leak in from the real Redis the dev app shares. (The live SMS send
+# itself is neutralised per-test by patching accounts.otp_utils.tweetsms_send_sms
+# — see _mock_sms below — because TweetsMS is "configured" in this env but its
+# gateway rejects the send, which otherwise makes request_otp return False and
+# the phone-submit step re-render with 200 instead of the expected 302.)
+_OTP_SEND_TEST_OVERRIDES = dict(
+    CACHES={
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "otp-send-tests",
+        }
+    },
+    ENFORCE_OTP_LIMITS=False,
+)
+
+
+def _mock_sms(testcase):
+    """Neutralise the live TweetsMS send for the duration of *testcase*.
+
+    request_otp still generates + stores the OTP in cache and returns success;
+    it just doesn't hit the real gateway."""
+    p = patch("accounts.otp_utils.tweetsms_send_sms", return_value=None)
+    p.start()
+    testcase.addCleanup(p.stop)
+
+
 class PhoneNumberValidationTest(TestCase):
     """Test phone number validation"""
     
@@ -231,10 +258,18 @@ class LoginWithPhoneTest(TestCase):
         self.assertEqual(response.status_code, 302)  # Should redirect after login
 
 
+@override_settings(**_OTP_SEND_TEST_OVERRIDES)
+# Force the local OTP mock path so the phone step is deterministic regardless of
+# SMS_PROVIDER: passes whether the suite runs with the live provider configured
+# (_mock_sms patches the sender) or with SMS neutralised (SMS_PROVIDER=""). Never
+# sends a real SMS. The runner forces DEBUG=False; this re-enables the mock fallback.
+@override_settings(DEBUG=True, SMS_PROVIDER="")
 class PatientRegistrationFlowTest(TestCase):
     """Test complete patient registration flow"""
-    
+
     def setUp(self):
+        cache.clear()  # isolate the per-IP register throttle + OTP cooldown
+        _mock_sms(self)
         self.client = Client()
         self.city = City.objects.create(name="Nablus")
         self.register_url = reverse('accounts:register_patient_phone')
@@ -2217,3 +2252,138 @@ class LoginThrottleExtensionsTest(TestCase):
     def test_system_check_silent_in_dev(self):
         from accounts.checks import insecure_flags_in_production
         self.assertEqual(insecure_flags_in_production(None), [])
+
+
+# Isolate the cache so the per-IP register throttle counter can't leak across
+# tests (and never touches the real Redis used by the running app).
+_LOCMEM = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+
+
+class CustomErrorHandlerTests(TestCase):
+    """The production (DEBUG=False) error handlers render branded, leak-free pages."""
+
+    def _factory_request(self, path="/boom/"):
+        from django.test import RequestFactory
+        return RequestFactory().get(path)
+
+    def test_handlers_return_correct_status_and_branding(self):
+        from clinic_website import errors
+        cases = [
+            (errors.handler400, 400, "400"),
+            (errors.handler403, 403, "403"),
+            (errors.handler404, 404, "404"),
+        ]
+        for handler, status, code in cases:
+            with self.subTest(code=code):
+                resp = handler(self._factory_request(), exception=Exception("x"))
+                self.assertEqual(resp.status_code, status)
+                body = resp.content.decode()
+                self.assertIn(code, body)
+                self.assertIn("error-card", body)
+
+    def test_500_handler_is_leak_free_and_context_safe(self):
+        from clinic_website import errors
+        resp = errors.handler500(self._factory_request())
+        self.assertEqual(resp.status_code, 500)
+        body = resp.content.decode()
+        self.assertIn("500", body)
+        # The whole point: no traceback / settings dump in the response.
+        for leak in ("SECRET_KEY", "Traceback", "DATABASES", "BREVO_API_KEY"):
+            self.assertNotIn(leak, body)
+
+    @override_settings(DEBUG=False)
+    def test_404_is_wired_end_to_end(self):
+        resp = self.client.get("/definitely-not-a-real-url-12345/")
+        self.assertEqual(resp.status_code, 404)
+        body = resp.content.decode()
+        self.assertIn("404", body)
+        self.assertNotIn("SECRET_KEY", body)
+
+
+@override_settings(CACHES=_LOCMEM)
+class RegistrationEnumerationTests(TestCase):
+    """register_patient_phone must not reveal whether a phone already has an account."""
+
+    def setUp(self):
+        cache.clear()
+        self.url = reverse("accounts:register_patient_phone")
+        self.existing = CustomUser.objects.create_user(
+            phone="0591111111", name="Existing Patient",
+            national_id="111111111", password="TestPass123!@#",
+        )
+
+    @patch("accounts.views.send_account_exists_sms", return_value=True)
+    @patch("accounts.views.request_otp", return_value=(True, "sent"))
+    def test_registered_and_new_phone_are_indistinguishable(self, mock_req, mock_exists):
+        new_phone = "0592222222"
+
+        resp_existing = self.client.post(self.url, {"phone": self.existing.phone})
+        session_after_existing = self.client.session.get("registration_phone")
+
+        # Fresh session for the second probe so they don't influence each other.
+        self.client = self.client.__class__()
+        resp_new = self.client.post(self.url, {"phone": new_phone})
+        session_after_new = self.client.session.get("registration_phone")
+
+        # Identical observable response: status + redirect target.
+        self.assertEqual(resp_existing.status_code, resp_new.status_code)
+        self.assertEqual(resp_existing.status_code, 302)
+        self.assertEqual(resp_existing["Location"], resp_new["Location"])
+        self.assertEqual(resp_existing["Location"], reverse("accounts:register_patient_verify"))
+
+        # Session phone set in both cases (so the verify page loads identically).
+        self.assertEqual(session_after_existing, self.existing.phone)
+        self.assertEqual(session_after_new, new_phone)
+
+        # Internally, the registered number takes the no-OTP nudge path, the new
+        # one the real-OTP path — but this is invisible to the client.
+        mock_exists.assert_called_once_with(self.existing.phone)
+        mock_req.assert_called_once_with(new_phone)
+
+    @patch("accounts.views.send_account_exists_sms", return_value=True)
+    @patch("accounts.views.request_otp", return_value=(True, "sent"))
+    def test_no_already_registered_message_is_leaked(self, mock_req, mock_exists):
+        resp = self.client.post(self.url, {"phone": self.existing.phone}, follow=True)
+        self.assertEqual(resp.status_code, 200)
+        # The old enumeration tell ("this number is already registered") is gone.
+        self.assertNotContains(resp, "مسجل مسبقا")
+
+    @patch("accounts.views.verify_otp", return_value=(True, "ok"))
+    def test_registered_phone_passing_otp_is_redirected_to_login(self, mock_verify):
+        # Owner-only path: with a valid OTP a registered number is nudged to login
+        # at the verify step instead of being driven into the details form.
+        session = self.client.session
+        session["registration_phone"] = self.existing.phone
+        session.save()
+        resp = self.client.post(
+            reverse("accounts:register_patient_verify"), {"otp": "123456"}
+        )
+        self.assertRedirects(resp, reverse("accounts:login"))
+        self.assertNotIn("registration_phone", self.client.session)
+        self.assertNotIn("phone_verified", self.client.session)
+
+    def test_registered_phone_blocked_at_details_entry(self):
+        # Defense-in-depth: a verified session for a registered phone can't reach
+        # the creation form — it's redirected to login.
+        session = self.client.session
+        session["registration_phone"] = self.existing.phone
+        session["phone_verified"] = True
+        session.save()
+        resp = self.client.get(reverse("accounts:register_patient_details"))
+        self.assertRedirects(resp, reverse("accounts:login"))
+        self.assertNotIn("registration_phone", self.client.session)
+
+
+class AccountExistsSmsHelperTests(TestCase):
+    """send_account_exists_sms shares request_otp's throttle and stores no OTP."""
+
+    @override_settings(CACHES=_LOCMEM, DEBUG=True, SMS_PROVIDER="")
+    def test_mock_mode_succeeds_and_stores_no_otp(self):
+        from accounts import otp_utils
+        cache.clear()
+        phone = "0593333333"
+        self.assertTrue(otp_utils.send_account_exists_sms(phone))
+        # No verifiable OTP was stored — a registered number can't pass verify.
+        self.assertIsNone(cache.get(otp_utils._otp_key(phone)))
+        # Cooldown engaged (shared with request_otp) → a second call is blocked.
+        self.assertFalse(otp_utils.send_account_exists_sms(phone))

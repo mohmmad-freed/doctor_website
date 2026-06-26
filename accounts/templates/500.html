@@ -1,0 +1,5 @@
+{% extends '_error_base.html' %}
+{% block title %}{% if lang == 'en' %}Something went wrong{% else %}حدث خطأ ما{% endif %}{% endblock %}
+{% block code %}500{% endblock %}
+{% block heading %}{% if lang == 'en' %}Something went wrong{% else %}حدث خطأ ما{% endif %}{% endblock %}
+{% block message %}{% if lang == 'en' %}An unexpected error occurred on our side. Please try again in a moment.{% else %}حدث خطأ غير متوقع من جهتنا. يرجى المحاولة مرة أخرى بعد قليل.{% endif %}{% endblock %}

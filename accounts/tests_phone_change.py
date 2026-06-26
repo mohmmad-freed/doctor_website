@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.test import TestCase, Client, override_settings
 from django.contrib.auth import get_user_model
 from django.urls import reverse
@@ -7,8 +9,30 @@ from accounts.models import City
 User = get_user_model()
 
 
+# Isolated locmem cache so the change-phone OTP step is deterministic and the
+# OTP cooldown can't leak in from the real Redis the dev app shares. The live
+# TweetsMS send is neutralised per-test in setUp (it's "configured" in this env
+# but the gateway rejects the send, which otherwise makes request_otp return
+# False and the request step re-render with 200 instead of redirecting).
+_OTP_SEND_TEST_OVERRIDES = dict(
+    CACHES={
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "phone-change-tests",
+        }
+    },
+    ENFORCE_OTP_LIMITS=False,
+)
+
+
+@override_settings(**_OTP_SEND_TEST_OVERRIDES)
 class PhoneChangeTest(TestCase):
     def setUp(self):
+        cache.clear()  # isolate OTP cooldown from prior tests / the dev Redis
+        # request_otp still stores the OTP in cache; it just doesn't hit TweetsMS.
+        p = patch("accounts.otp_utils.tweetsms_send_sms", return_value=None)
+        p.start()
+        self.addCleanup(p.stop)
         # Create a city (referenced in some user signals or forms?)
         self.city = City.objects.create(name="Gaza")
 
@@ -51,10 +75,11 @@ class PhoneChangeTest(TestCase):
         messages = list(response.context["messages"])
         self.assertTrue(any("مسجل بالفعل" in str(m) for m in messages))
 
-    # Force the local OTP mock path (store code in cache, return success) so this
-    # flow is deterministic regardless of SMS_PROVIDER and never sends a real SMS.
-    # The test runner forces DEBUG=False, and .env points OTP at a live provider;
-    # without this the request either hits the network or returns failure (200).
+    # Force the local OTP mock path so this flow is deterministic regardless of
+    # SMS_PROVIDER — passes whether the suite runs with the live provider
+    # configured (friend's class setup patches the sender) or with SMS neutralised
+    # (SMS_PROVIDER=""). The runner forces DEBUG=False; this re-enables the mock
+    # fallback for this one flow so request_otp stores the code and returns True.
     @override_settings(DEBUG=True, SMS_PROVIDER="")
     def test_change_phone_flow_success(self):
         new_phone = "0599999999"

@@ -1,0 +1,71 @@
+{% comment %}
+Standalone base for production error pages (DEBUG=False).
+
+Deliberately self-contained: no {% extends %} of accounts/base.html and no
+context-processor dependence, so it renders safely even while the app is in the
+middle of handling a 500 (when a DB-backed context processor could itself raise).
+The only context variable is `lang` ("ar" | "en"), passed by the handlers in
+clinic_website/errors.py.
+{% endcomment %}<!DOCTYPE html>
+<html lang="{{ lang|default:'ar' }}" dir="{% if lang == 'en' %}ltr{% else %}rtl{% endif %}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>{% block title %}{% endblock %}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+            background: radial-gradient(circle at top right, #fff5f5, transparent),
+                        radial-gradient(circle at bottom left, #ebf4ff, transparent),
+                        #f7fafc;
+            color: #2d3748;
+            padding: 24px;
+        }
+        .error-card {
+            background: #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+            padding: 48px;
+            max-width: 480px;
+            width: 100%;
+            text-align: center;
+        }
+        .error-code {
+            font-size: 5rem;
+            font-weight: 800;
+            line-height: 1;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+        }
+        h1 { font-size: 1.5rem; margin: 0 0 12px; }
+        p { color: #718096; font-size: 1rem; line-height: 1.7; margin: 0 0 28px; }
+        a.home-link {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+            text-decoration: none;
+            padding: 14px 28px;
+            border-radius: 14px;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-card">
+        <div class="error-code">{% block code %}{% endblock %}</div>
+        <h1>{% block heading %}{% endblock %}</h1>
+        <p>{% block message %}{% endblock %}</p>
+        <a class="home-link" href="/">{% if lang == 'en' %}Back to home{% else %}العودة إلى الصفحة الرئيسية{% endif %}</a>
+    </div>
+</body>
+</html>

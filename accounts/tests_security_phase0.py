@@ -143,8 +143,9 @@ class SignupEnumerationTest(TestCase):
         self.verify_url = reverse("accounts:register_patient_verify")
         self.existing = make_patient("0599000030")
 
+    @patch("accounts.views.send_account_exists_sms", return_value=True)
     @patch("accounts.views.request_otp", return_value=(True, "sent"))
-    def test_existing_and_new_phone_get_identical_response(self, mock_req):
+    def test_existing_and_new_phone_get_identical_response(self, mock_req, mock_exists):
         new_resp = self.client.post(self.url, {"phone": "0599000031"})
         self.assertRedirects(new_resp, self.verify_url, fetch_redirect_response=False)
         self.assertEqual(self.client.session.get("registration_phone"), "0599000031")
@@ -157,17 +158,22 @@ class SignupEnumerationTest(TestCase):
         # Same on-screen outcome (same redirect target) — no enumeration oracle.
         self.assertEqual(new_resp["Location"], exist_resp["Location"])
 
+    @patch("accounts.views.send_account_exists_sms", return_value=True)
     @patch("accounts.views.request_otp", return_value=(True, "sent"))
-    def test_existing_phone_issues_no_verifiable_otp(self, mock_req):
-        """A registered number advances identically but gets NO real OTP, so it
-        can't be driven through the flow to create a duplicate account."""
+    def test_existing_phone_issues_no_verifiable_otp(self, mock_req, mock_exists):
+        """A registered number is nudged out of band (send_account_exists_sms) but
+        gets NO real OTP, so it can't be driven through the flow to duplicate an
+        account."""
         self.client.post(self.url, {"phone": "0599000030"})
+        mock_exists.assert_called_once()
         mock_req.assert_not_called()
 
+    @patch("accounts.views.send_account_exists_sms", return_value=True)
     @patch("accounts.views.request_otp", return_value=(True, "sent"))
-    def test_new_phone_issues_real_otp(self, mock_req):
+    def test_new_phone_issues_real_otp(self, mock_req, mock_exists):
         self.client.post(self.url, {"phone": "0599000031"})
         mock_req.assert_called_once()
+        mock_exists.assert_not_called()
 
 
 # ===========================================================================

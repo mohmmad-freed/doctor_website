@@ -1,0 +1,5 @@
+{% extends '_error_base.html' %}
+{% block title %}{% if lang == 'en' %}Access denied{% else %}غير مصرّح بالوصول{% endif %}{% endblock %}
+{% block code %}403{% endblock %}
+{% block heading %}{% if lang == 'en' %}Access denied{% else %}غير مصرّح بالوصول{% endif %}{% endblock %}
+{% block message %}{% if lang == 'en' %}You do not have permission to view this page.{% else %}ليس لديك صلاحية لعرض هذه الصفحة.{% endif %}{% endblock %}

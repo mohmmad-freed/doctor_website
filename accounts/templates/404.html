@@ -1,0 +1,5 @@
+{% extends '_error_base.html' %}
+{% block title %}{% if lang == 'en' %}Page not found{% else %}الصفحة غير موجودة{% endif %}{% endblock %}
+{% block code %}404{% endblock %}
+{% block heading %}{% if lang == 'en' %}Page not found{% else %}الصفحة غير موجودة{% endif %}{% endblock %}
+{% block message %}{% if lang == 'en' %}Sorry, the page you were looking for could not be found or you do not have access to it.{% else %}عذراً، تعذّر العثور على الصفحة التي تبحث عنها أو لا تملك صلاحية الوصول إليها.{% endif %}{% endblock %}
