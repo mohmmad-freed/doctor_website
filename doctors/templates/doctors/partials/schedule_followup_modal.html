@@ -221,7 +221,7 @@
             {% for apt_type in appointment_types %}
             <option value="{{ apt_type.id }}"
               {% if post_data.appointment_type_id == apt_type.id|stringformat:"s" %}selected{% elif not post_data.appointment_type_id and default_type_id == apt_type.id %}selected{% endif %}>
-              {{ apt_type.display_name }} ({{ apt_type.duration_minutes }} min)
+              {{ apt_type.display_name }} ({{ apt_type.duration_minutes }}{% if IS_RTL %} دقيقة{% else %} min{% endif %})
             </option>
             {% endfor %}
           </select>
