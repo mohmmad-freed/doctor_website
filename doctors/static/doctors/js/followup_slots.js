@@ -1,11 +1,17 @@
-/* followup_slots.js — CSP-safe slot picker for the doctor "schedule follow-up" modal.
+/* followup_slots.js — CSP-safe slot picker for the doctor "Schedule Follow-up" modal.
  *
  * Externalized from doctors/partials/schedule_followup_slots.html, which is an
  * HTMX-swapped fragment (its inline <script> + nonce would be stripped on
- * re-injection and blocked under CSP enforcement). Loaded once on the always
- * present parent (doctors/patient_workspace.html). Click is delegated on
- * document so it keeps working across every slot-grid re-swap — no re-init hook
- * needed. Behaviour is identical to the old inline selectFollowupSlot().
+ * re-injection and blocked under CSP enforcement). Loaded once on the always-present
+ * parent (doctors/patient_workspace.html).
+ *
+ * The slot grid lives inside an Alpine modal panel that uses @click.stop (so clicks
+ * inside the panel don't dismiss the backdrop). That stopPropagation() means a
+ * delegated document listener — bubble OR capture — is unreliable here. So we bind a
+ * click listener directly on each .followup-slot-btn as it is swapped in: a listener
+ * on the button itself fires in the target phase, before any ancestor's bubble-phase
+ * @click.stop. This mirrors the original inline onclick="selectFollowupSlot(this)"
+ * exactly. Binding is idempotent (data-fs-bound) and re-runs on htmx:afterSwap/load.
  */
 (function () {
   'use strict';
@@ -15,14 +21,7 @@
     'text-indigo-700', 'dark:text-indigo-300', 'border-indigo-400'
   ];
 
-  // Capture phase: the slot grid lives inside the follow-up modal panel, which
-  // uses Alpine @click.stop (so clicks inside don't close the backdrop). That
-  // stopPropagation() kills a normal bubble-phase document listener, so we listen
-  // in the capture phase — it runs top-down before the panel's @click.stop fires.
-  document.addEventListener('click', function (e) {
-    var btn = e.target.closest('.followup-slot-btn');
-    if (!btn) { return; }
-
+  function selectSlot(btn) {
     // Deselect every slot, then select the clicked one.
     document.querySelectorAll('.followup-slot-btn').forEach(function (b) {
       SELECTED_CLASSES.forEach(function (c) { b.classList.remove(c); });
@@ -40,5 +39,19 @@
       hintText.textContent = t + (hint.getAttribute('data-selected-suffix') || '');
       hint.classList.remove('hidden');
     }
-  }, true);
+  }
+
+  function bindSlots() {
+    document.querySelectorAll('.followup-slot-btn:not([data-fs-bound])').forEach(function (btn) {
+      btn.setAttribute('data-fs-bound', '');
+      btn.addEventListener('click', function () { selectSlot(btn); });
+    });
+  }
+
+  if (document.readyState !== 'loading') { bindSlots(); }
+  else { document.addEventListener('DOMContentLoaded', bindSlots); }
+  // Slots are swapped into #followup-slots via HTMX whenever the date/clinic/type
+  // changes — re-bind any freshly-injected buttons.
+  document.addEventListener('htmx:afterSwap', bindSlots);
+  document.addEventListener('htmx:load', bindSlots);
 })();
