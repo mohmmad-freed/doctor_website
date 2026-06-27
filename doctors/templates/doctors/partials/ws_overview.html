@@ -107,7 +107,9 @@
                     action="{% url 'doctors:ws_note_add' patient.id %}"
                     hx-post="{% url 'doctors:ws_note_add' patient.id %}"
                     hx-swap="none"
-                    hx-on:htmx:after-request="if(event.detail.successful){ panelOpen=false; htmx.ajax('GET','{% url 'doctors:patient_workspace' patient.id %}?tab=overview',{target:'#tab-content',swap:'innerHTML'}); }"
+                    {# CSP Phase 2c: hx-on:htmx:after-request externalized to a delegated handler in patient_workspace.html (this partial is HTMX-swapped, so its nonce is stripped on re-inject). #}
+                    data-ws-note-form
+                    data-overview-reload-url="{% url 'doctors:patient_workspace' patient.id %}?tab=overview"
                     class="space-y-3">
                 {% csrf_token %}
                 {% if clinics|length > 1 %}

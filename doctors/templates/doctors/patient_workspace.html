@@ -387,6 +387,19 @@
     }
   });
 
+  // CSP Phase 2c: externalized the overview new-note form's inline
+  // hx-on:htmx:after-request. ws_overview.html is HTMX-swapped (its nonce is
+  // stripped on re-injection), so reload-on-save is wired here on the parent
+  // page. Reloading the overview tab re-renders a fresh cnPanel, so the
+  // original `panelOpen=false` is reproduced implicitly.
+  document.body.addEventListener('htmx:afterRequest', function (e) {
+    var form = e.detail && e.detail.elt;
+    if (e.detail.successful && form && form.matches && form.matches('[data-ws-note-form]')) {
+      var url = form.getAttribute('data-overview-reload-url');
+      if (url) htmx.ajax('GET', url, { target: '#tab-content', swap: 'innerHTML' });
+    }
+  });
+
   // Guard for back button — warns if there are unsaved changes
   window.mpwBackGuard = function () {
     if (window.wsFormDirty) {

@@ -1599,8 +1599,7 @@
             <i class="fa-solid fa-xmark"></i>
         </button>
     </div>
-    <div id="schedule-drawer-content"
-         hx-on::after-swap="openScheduleDrawer()">
+    <div id="schedule-drawer-content">
         <div class="drawer-loading" style="display:none;">
             <i class="fa-solid fa-circle-notch"></i>
             {% trans "جاري التحميل..." %}
@@ -1631,6 +1630,13 @@ document.addEventListener('keydown', function(e) {
 // CSP: bind schedule-drawer close (replaces inline onclick)
 document.addEventListener('click', function (e) {
     if (e.target.closest('[data-close-drawer]')) { closeScheduleDrawer(); }
+});
+// CSP Phase 2c: externalized hx-on::after-swap on #schedule-drawer-content
+// (open the drawer once its content has been HTMX-swapped in).
+document.body.addEventListener('htmx:afterSwap', function (e) {
+    if (e.detail && e.detail.target && e.detail.target.id === 'schedule-drawer-content') {
+        openScheduleDrawer();
+    }
 });
 </script>
 {% endblock %}
