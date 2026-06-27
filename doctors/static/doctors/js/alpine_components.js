@@ -438,11 +438,84 @@
     };
   }
 
+  // ──────────────────────────────────────────────────────────────────────
+  // Add-order form (ws_orders.html) — inline x-data had methods + a $watch
+  // init; :hx-vals used JSON.stringify (a global). All move into the component.
+  // ──────────────────────────────────────────────────────────────────────
+  function wsOrderForm() {
+    return {
+      open: false,
+      orderType: 'DRUG',
+      catalogMode: 'generic',
+
+      get isDrug() { return this.orderType === 'DRUG'; },
+
+      // :hx-vals getters — JSON is a global (excluded from CSP scope), so keep it
+      // in a method/getter rather than an inline expression.
+      get drugHxVals() { return JSON.stringify({ mode: this.catalogMode }); },
+      get nondrugHxVals() { return JSON.stringify({ category: this.orderType }); },
+
+      pickDrug(genericName, commercialName, mode) {
+        this.$refs.titleInput.value = (mode === 'commercial' && commercialName) ? commercialName : genericName;
+      },
+      pickItem(name) {
+        this.$refs.titleInput.value = name;
+      },
+
+      init() {
+        var self = this;
+        this.$watch('open', function (val) {
+          if (val && self.isDrug) self.$nextTick(function () { htmx.trigger(self.$refs.drugFamilySelect, 'change'); });
+        });
+        this.$watch('orderType', function (val) {
+          if (val === 'DRUG') self.$nextTick(function () { htmx.trigger(self.$refs.drugFamilySelect, 'change'); });
+        });
+        this.$watch('catalogMode', function () {
+          if (self.$refs.drugSearchInput) self.$refs.drugSearchInput.value = '';
+          self.$nextTick(function () { htmx.trigger(self.$refs.drugFamilySelect, 'change'); });
+        });
+      },
+
+      cancelOrder() {
+        this.open = false;
+        var form = this.$root.querySelector('form');
+        if (form) form.reset();
+        if (typeof window.wsDraftClearCurrent === 'function') window.wsDraftClearCurrent();
+      }
+    };
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // Create-prescription form (ws_prescriptions.html) — inline x-data had a meds
+  // array + addMed/removeMed methods; Cancel re-seeded the array (object literal
+  // in a multi-statement handler). All move into the component.
+  // ──────────────────────────────────────────────────────────────────────
+  function blankMed() {
+    return { name: '', dosage: '', frequency: '', duration: '', instructions: '' };
+  }
+  function wsRxForm() {
+    return {
+      open: false,
+      meds: [blankMed()],
+      addMed() { this.meds.push(blankMed()); },
+      removeMed(i) { if (this.meds.length > 1) this.meds.splice(i, 1); },
+      cancelRx() {
+        this.open = false;
+        this.meds = [blankMed()];
+        var form = this.$root.querySelector('form');
+        if (form) form.reset();
+        if (typeof window.wsDraftClearCurrent === 'function') window.wsDraftClearCurrent();
+      }
+    };
+  }
+
   document.addEventListener('alpine:init', function () {
     Alpine.data('orthoWorkspace', orthoWorkspace);
     Alpine.data('orthoReadView', orthoReadView);
     Alpine.data('cnPanel', cnPanel);
     Alpine.data('noteForm', noteForm);
     Alpine.data('orderCatalog', orderCatalog);
+    Alpine.data('wsOrderForm', wsOrderForm);
+    Alpine.data('wsRxForm', wsRxForm);
   });
 })();

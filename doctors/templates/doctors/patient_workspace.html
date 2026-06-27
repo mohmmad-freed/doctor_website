@@ -418,8 +418,8 @@
     // Return the collapsible form container for a given tab
     function _formContainer(tab, root) {
       if (tab === 'notes')         return root.querySelector('#note-form-section');
-      if (tab === 'orders')        return root.querySelector('[x-data*="orderType"]');
-      if (tab === 'prescriptions') return root.querySelector('[x-data*="meds"]');
+      if (tab === 'orders')        return root.querySelector('[data-order-form]');
+      if (tab === 'prescriptions') return root.querySelector('[data-rx-form]');
       return null;
     }
 
@@ -437,7 +437,7 @@
 
       // Prescriptions: also snapshot the Alpine meds array
       if (tab === 'prescriptions') {
-        var rxEl = root.querySelector('[x-data*="meds"]');
+        var rxEl = root.querySelector('[data-rx-form]');
         if (rxEl && rxEl._x_dataStack) {
           var meds = rxEl._x_dataStack[0].meds || [];
           if (meds.some(function (m) { return m.name || m.dosage || m.frequency; })) {
