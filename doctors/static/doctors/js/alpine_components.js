@@ -509,6 +509,100 @@
     };
   }
 
+  // ──────────────────────────────────────────────────────────────────────
+  // Upload medical record form (ws_records.html) — drop + filename handlers did
+  // DOM assignment / optional chaining (prohibited in inline CSP expressions).
+  // ──────────────────────────────────────────────────────────────────────
+  function wsRecordsForm() {
+    return {
+      open: false,
+      dragover: false,
+      // e = the @drop event; e.currentTarget is the drop-zone label (matches the
+      // prior inline $el + $dispatch('change') semantics, which fed the page-level
+      // change listener for draft autosave).
+      handleDrop(e) {
+        this.dragover = false;
+        this.$refs.fileInput.files = e.dataTransfer.files;
+        e.currentTarget.dispatchEvent(new Event('change', { bubbles: true }));
+      },
+      showFileName(input) {
+        var label = input.closest('label');
+        if (!label) return;
+        var span = label.querySelector('span:first-of-type');
+        if (span) span.textContent = (input.files[0] && input.files[0].name) || 'No file chosen';
+      }
+    };
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // Schedule-follow-up modal (schedule_followup_modal.html) — init/close used
+  // setTimeout + document (globals) in method shorthand.
+  // ──────────────────────────────────────────────────────────────────────
+  function followupModal() {
+    return {
+      open: false,
+      init() {
+        var self = this;
+        this.$nextTick(function () { self.open = true; });
+      },
+      close() {
+        this.open = false;
+        setTimeout(function () {
+          var root = document.getElementById('followup-modal-root');
+          if (root) root.innerHTML = '';
+        }, 250);
+      }
+    };
+  }
+
+  // Follow-up success modal (schedule_followup_success.html) — auto-open, fire
+  // 'followup-scheduled', then auto-dismiss. Globals/arrows → method.
+  function followupSuccess() {
+    function clearRoot() {
+      var root = document.getElementById('followup-modal-root');
+      if (root) root.innerHTML = '';
+    }
+    return {
+      open: false,
+      init() {
+        var self = this;
+        this.$nextTick(function () {
+          self.open = true;
+          document.dispatchEvent(new CustomEvent('followup-scheduled'));
+          setTimeout(function () {
+            self.open = false;
+            setTimeout(clearRoot, 250);
+          }, 3200);
+        });
+      },
+      dismiss() {
+        this.open = false;
+        setTimeout(clearRoot, 250);
+      }
+    };
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // Patients-table row action menu (patients_table.html) — positioning used
+  // let + window globals; :style used a template literal.
+  // ──────────────────────────────────────────────────────────────────────
+  function patientRowMenu() {
+    return {
+      open: false,
+      top: 0,
+      right: 0,
+      get menuStyle() {
+        return 'position:fixed; top:' + this.top + 'px; right:' + this.right + 'px;';
+      },
+      toggleMenu(btn) {
+        var r = btn.getBoundingClientRect();
+        this.top = r.bottom + window.scrollY + 4;
+        this.right = window.innerWidth - r.right;
+        this.open = !this.open;
+      }
+    };
+  }
+
   document.addEventListener('alpine:init', function () {
     Alpine.data('orthoWorkspace', orthoWorkspace);
     Alpine.data('orthoReadView', orthoReadView);
@@ -517,5 +611,9 @@
     Alpine.data('orderCatalog', orderCatalog);
     Alpine.data('wsOrderForm', wsOrderForm);
     Alpine.data('wsRxForm', wsRxForm);
+    Alpine.data('wsRecordsForm', wsRecordsForm);
+    Alpine.data('followupModal', followupModal);
+    Alpine.data('followupSuccess', followupSuccess);
+    Alpine.data('patientRowMenu', patientRowMenu);
   });
 })();

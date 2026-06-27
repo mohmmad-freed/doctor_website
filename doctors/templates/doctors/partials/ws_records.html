@@ -11,7 +11,7 @@
 {% endif %}
 
 <!-- Upload Form -->
-<div class="ws-card mb-5" x-data="{ open: false, dragover: false }">
+<div class="ws-card mb-5" x-data="wsRecordsForm">
   <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-slate-700 cursor-pointer select-none"
        @click="open = !open">
     <div class="flex items-center gap-2">
@@ -66,14 +66,14 @@
                :class="dragover ? 'border-primary-500 bg-primary-50/60 dark:bg-primary-900/20' : ''"
                @dragover.prevent="dragover = true"
                @dragleave.prevent="dragover = false"
-               @drop.prevent="dragover = false; $refs.fileInput.files = $event.dataTransfer.files; $dispatch('change')">
+               @drop.prevent="handleDrop($event)">
           <i class="fa-solid fa-cloud-arrow-up fa-lg text-slate-400 dark:text-slate-500 mb-2"></i>
           <span class="text-sm text-slate-500 dark:text-slate-400">
             <span class="font-semibold text-primary-600 dark:text-primary-400">{% if IS_RTL %}انقر للاستعراض{% else %}Click to browse{% endif %}</span> {% if IS_RTL %}أو اسحب وأفلت{% else %}or drag & drop{% endif %}
           </span>
           <span class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{% if IS_RTL %}PDF، PNG، JPG، JPEG — الحد الأقصى 20 ميغابايت{% else %}PDF, PNG, JPG, JPEG — max 20 MB{% endif %}</span>
           <input type="file" name="record_file" accept=".pdf,.png,.jpg,.jpeg" required class="hidden" x-ref="fileInput"
-                 @change="$el.closest('label').querySelector('span:first-of-type').textContent = $el.files[0]?.name || 'No file chosen'">
+                 @change="showFileName($event.target)">
         </label>
       </div>
 

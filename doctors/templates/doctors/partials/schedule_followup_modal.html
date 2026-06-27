@@ -1,16 +1,6 @@
 {% load i18n %}
 <div id="followup-modal"
-     x-data="{
-       open: false,
-       init() { this.$nextTick(() => { this.open = true; }); },
-       close() {
-         this.open = false;
-         setTimeout(() => {
-           const root = document.getElementById('followup-modal-root');
-           if (root) root.innerHTML = '';
-         }, 250);
-       }
-     }"
+     x-data="followupModal"
      x-show="open"
      x-cloak
      x-transition:enter="transition ease-out duration-200"
