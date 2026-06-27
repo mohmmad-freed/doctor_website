@@ -6,7 +6,8 @@
 <script src="https://unpkg.com/htmx.org@1.9.10" crossorigin="anonymous"></script>
 {# CSP Phase 2a: Alpine.data('orderCatalog') registration; loaded eagerly before Alpine. #}
 <script src="{% static 'doctors/js/alpine_components.js' %}"></script>
-<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+{# CSP Phase 2a: self-hosted @alpinejs/csp build (no 'unsafe-eval', drops unpkg.com). #}
+<script defer src="{% static 'js/vendor/alpine-csp.min.js' %}"></script>
 <style>
   .ws-input, .ws-select {
     width: 100%; padding: .5rem .75rem; font-size: .875rem;

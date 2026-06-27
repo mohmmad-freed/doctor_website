@@ -4,7 +4,8 @@
 
 {% block extra_head %}
 <script src="https://unpkg.com/htmx.org@1.9.10" crossorigin="anonymous"></script>
-<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+{# CSP Phase 2a: self-hosted @alpinejs/csp build (no 'unsafe-eval', drops unpkg.com). Components registered in alpine_components.js above (loaded before this). #}
+<script defer src="{% static 'js/vendor/alpine-csp.min.js' %}"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 {# CSP Phase 2a: Alpine components registered via Alpine.data() on 'alpine:init' (cnPanel/orthoWorkspace/orthoReadView/noteForm + the per-tab form components). Loaded eagerly, BEFORE Alpine, so the alpine:init listener is registered in time. Required by the @alpinejs/csp build (scope excludes window globals) and works under the standard build too. #}
 <script src="{% static 'doctors/js/alpine_components.js' %}"></script>
