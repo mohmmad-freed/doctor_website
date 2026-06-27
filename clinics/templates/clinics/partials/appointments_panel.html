@@ -5,8 +5,7 @@
      data-panel-url="{% url 'clinics:appointments_panel' clinic_id=clinic.id %}"
      data-month="{{ appt_month }}"
      data-year="{{ appt_year }}">
-    {# Localized month names for the picker — read by clinics/js/appointments_panel.js.
-       CSP-safe JSON data island (type="application/json" is never executed). #}
+    {# Localized month names for the picker — read by clinics/js/appointments_panel.js. CSP-safe JSON data island (type="application/json" is never executed). #}
     <script type="application/json" id="appt-picker-months">["{% trans "يناير" %}","{% trans "فبراير" %}","{% trans "مارس" %}","{% trans "أبريل" %}","{% trans "مايو" %}","{% trans "يونيو" %}","{% trans "يوليو" %}","{% trans "أغسطس" %}","{% trans "سبتمبر" %}","{% trans "أكتوبر" %}","{% trans "نوفمبر" %}","{% trans "ديسمبر" %}"]</script>
 
     {# ── Header: title + month navigation ── #}
@@ -62,8 +61,7 @@
         </div>
     </div>
 
-    {# Picker behaviour lives in clinics/js/appointments_panel.js (loaded once on
-       my_clinic.html; delegated on document so it survives this panel's re-swaps). #}
+    {# Picker behaviour lives in clinics/js/appointments_panel.js (loaded once on my_clinic.html; delegated on document so it survives this panel's re-swaps). #}
 
     {# ── Stats row ── #}
     <div class="appt-stats">

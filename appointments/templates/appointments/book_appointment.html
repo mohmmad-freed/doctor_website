@@ -198,8 +198,7 @@
 {% block scripts %}
 <script src="https://unpkg.com/htmx.org@1.9.12"></script>
 <script src="{% static 'accounts/js/calendar_widget.js' %}"></script>
-{# CSP: intake-form widgets (DATED_FILES, file validation, conditional rules) —
-   externalized from the HTMX-swapped partial; re-inits on htmx:afterSwap/load. #}
+{# CSP: intake-form widgets (DATED_FILES, file validation, conditional rules) — externalized from the HTMX-swapped partial; re-inits on htmx:afterSwap/load. #}
 <script defer src="{% static 'appointments/js/intake_form.js' %}"></script>
 <script nonce="{{ request.csp_nonce }}">
     // Translation strings rendered server-side

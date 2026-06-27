@@ -6,9 +6,7 @@
 <script src="https://unpkg.com/htmx.org@1.9.10" crossorigin="anonymous"></script>
 <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
-{# CSP: externalized JS from HTMX-swapped workspace fragments (formerly inline <script>).
-   orthoWorkspace/orthoReadView must be defined before Alpine initializes the swapped tabs;
-   loaded eagerly (not deferred) so the globals exist for Alpine's MutationObserver. #}
+{# CSP: externalized JS from HTMX-swapped workspace fragments (formerly inline <script>). orthoWorkspace/orthoReadView must be defined before Alpine initializes the swapped tabs; loaded eagerly (not deferred) so the globals exist for Alpine's MutationObserver. #}
 <script src="{% static 'doctors/js/ortho_workspace.js' %}"></script>
 <script defer src="{% static 'doctors/js/ws_prescriptions.js' %}"></script>
 <script defer src="{% static 'doctors/js/followup_slots.js' %}"></script>

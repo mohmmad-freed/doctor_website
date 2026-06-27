@@ -1612,8 +1612,7 @@
 
 {% block extra_js %}
 <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-{# CSP: month/year picker for the appointments panel (externalized from the
-   HTMX-swapped partial; delegated, survives the panel's outerHTML re-swaps). #}
+{# CSP: month/year picker for the appointments panel (externalized from the HTMX-swapped partial; delegated, survives the panel's outerHTML re-swaps). #}
 <script defer src="{% static 'clinics/js/appointments_panel.js' %}"></script>
 <script nonce="{{ request.csp_nonce }}">
 function openScheduleDrawer() {
