@@ -7,7 +7,20 @@
       "Bash(DJANGO_SETTINGS_MODULE=clinic_website.settings venv/Scripts/python.exe -c ' *)",
       "Bash(PYTHONIOENCODING=utf-8 DJANGO_SETTINGS_MODULE=clinic_website.settings venv/Scripts/python.exe -c ' *)",
       "Bash(python -c \"import json; d=json.load\\(open\\('w7r0qbfw6.output',encoding='utf-8'\\)\\); print\\(d['synthesis']\\)\")",
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "WebSearch",
+      "Bash(grep -n \"_get_active_note_sections\\\\|_annotate_notes_with_labeled\\\\|_collect_extra_sections\" \"F:\\\\ملفات الc\\\\buيsniss\\\\clink app\\\\doctors\\\\views.py\" | head -10)",
+      "Bash(xargs grep -l \"openai\\\\|anthropic\\\\|claude\")",
+      "WebFetch(domain:www.okadoc.com)",
+      "Bash(xargs grep -l \"vital\\\\|trend\")",
+      "Bash(grep -n \"def.*appointment\" \"F:\\\\ملفات الc\\\\buيsniss\\\\clink app\\\\doctors\\\\views.py\" | head -30)",
+      "Bash(xargs grep -l \"day.*view\\\\|week.*view\\\\|calendar\")",
+      "Bash(xargs grep -l \"copy.*note\\\\|reuse.*note\\\\|last.*note\\\\|from_note\\\\|start_from\")",
+      "Bash(xargs grep -l \"fullcalendar\\\\|FullCalendar\")",
+      "Bash(xargs grep -l \"Vital\")",
+      "Bash(xargs grep -l \"sparkline\\\\|trend\\\\|chart\\\\|graph\")",
+      "Bash(xargs grep \"sparkline\\\\|trend\\\\|chart\\\\|graph\")",
+      "Bash(cd \"F:\\\\ملفات الc\\\\buيsniss\\\\clink app\" && grep -r \"DoctorAvailabilityException\" secretary/ clinics/admin.py --include=\"*.py\" | head -20)"
     ]
   }
 }
