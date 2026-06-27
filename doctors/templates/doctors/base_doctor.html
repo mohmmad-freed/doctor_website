@@ -124,6 +124,10 @@
             box-shadow: 0 12px 32px rgba(0,0,0,0.12);
             z-index: 50;
         }
+        /* CSP Phase 2b: the compiled tailwind.css is flat (no @layer), so this inline
+           .mobile-nav-glass rule would otherwise override `md:hidden` by source order
+           and show the mobile nav on desktop. Reproduce md:hidden deterministically. */
+        @media (min-width: 768px) { .mobile-nav-glass { display: none; } }
         .dark .mobile-nav-glass {
             background: rgba(30,41,59,0.82);
             border-color: rgba(255,255,255,0.08);
