@@ -326,69 +326,30 @@ SECURE_REFERRER_POLICY = "same-origin"  # already the effective default; explici
 X_FRAME_OPTIONS = "DENY"                # already the effective default; explicit for audit
 
 # ---- Content-Security-Policy (django-csp) ----
-# ENFORCED as of Phase 1C. django-csp 4.0 emits BOTH headers below:
-#   * CONTENT_SECURITY_POLICY            -> Content-Security-Policy        (ENFORCED)
-#   * CONTENT_SECURITY_POLICY_REPORT_ONLY -> ...-Report-Only              (Phase-2 PREVIEW)
-# The enforced policy is exactly the set that was validated in Report-Only through
-# Phases 1A/1B (nonce-based script-src; 'unsafe-inline' dropped; all inline <script>
-# externalized out of HTMX-swapped partials), so flipping it on cannot break the UI.
+# ENFORCED, fully hardened as of Phase 2c (the CSP effort is complete).
+# A single CONTENT_SECURITY_POLICY dict -> the Content-Security-Policy header.
 #
-# Tier B (script-src nonce-based). `NONCE` emits a per-request `'nonce-<rand>'`;
-# every inline <script> in the templates carries nonce="{{ request.csp_nonce }}",
-# so 'unsafe-inline' has been DROPPED from script-src — injected inline <script>
-# without the nonce is now BLOCKED. Still present in the ENFORCED policy, and not
-# removable without the Phase 2 refactors:
-#   * 'unsafe-eval'  — Alpine.js (standard build) and the Tailwind Play CDN both
-#                      evaluate expressions via new Function(). Phase 2a migrates
-#                      Alpine -> @alpinejs/csp; Phase 2b compiles Tailwind; Phase 2c
-#                      then drops 'unsafe-eval' + the two CDNs from the enforced key.
+# script-src is nonce-based with NO eval source:
+#   * `NONCE` emits a per-request `'nonce-<rand>'`; every inline <script> carries
+#     nonce="{{ request.csp_nonce }}", so 'unsafe-inline' is DROPPED — an injected
+#     inline <script> without the nonce is blocked. (Nonces never apply to on*=
+#     attributes either, so those were all delegated to JS in Phase 1B.)
+#   * 'unsafe-eval' is GONE. The three things that needed it were removed:
+#       - Alpine.js  -> self-hosted @alpinejs/csp build (Phase 2a), which has no eval.
+#       - Tailwind   -> compiled, self-hosted static/css/tailwind.css (Phase 2b),
+#                       replacing the Tailwind Play CDN (cdn.tailwindcss.com).
+#       - htmx       -> self-hosted static/js/vendor/htmx.min.js (Phase 2c-a),
+#                       replacing unpkg.com; its 2 hx-on attrs (eval'd via
+#                       new Function) were externalized to delegated JS (Phase 2c-b).
+#   * Remaining allowed hosts: 'self' (nonced inline + self-hosted vendor/static),
+#     cdn.jsdelivr.net (flatpickr/fullcalendar/chart.js/sortable.js) and
+#     cdnjs.cloudflare.com (font-awesome/cropper.js). Neither library set uses eval;
+#     self-hosting those too is an optional future follow-up.
+#
+# Known, intentional exception still in the policy:
 #   * style-src 'unsafe-inline' — 600+ inline style="" attributes (nonces don't
-#                      cover style attributes); explicitly out of scope.
-#
-# The Report-Only header is the PHASE-2 PREVIEW: it is the enforced policy MINUS
-# the three things Phase 2 will remove ('unsafe-eval', cdn.tailwindcss.com,
-# unpkg.com). It enforces nothing, but keeps the browser console reporting exactly
-# the violations Phase 2 still has to fix. When Phase 2a/2b land clean, fold those
-# removals into CONTENT_SECURITY_POLICY (2c) and this preview becomes a no-op.
+#     cover style attributes); explicitly out of scope for this effort.
 CONTENT_SECURITY_POLICY = {
-    "DIRECTIVES": {
-        "default-src": ["'self'"],
-        "script-src": [
-            "'self'",
-            NONCE,
-            "'unsafe-eval'",  # Alpine.js (standard build) + Tailwind Play CDN — removed in Phase 2c
-            "https://cdn.tailwindcss.com",   # Tailwind Play CDN — removed in Phase 2c (2b compiles it)
-            "https://cdn.jsdelivr.net",   # flatpickr, fullcalendar, chart.js, sortable.js
-            "https://cdnjs.cloudflare.com",  # font-awesome, cropper.js
-            "https://unpkg.com",          # alpine.js — removed in Phase 2c (2a self-hosts it)
-        ],
-        "style-src": [
-            "'self'",
-            "'unsafe-inline'",
-            "https://fonts.googleapis.com",
-            "https://cdnjs.cloudflare.com",
-            "https://cdn.jsdelivr.net",
-        ],
-        "font-src": [
-            "'self'",
-            "https://fonts.gstatic.com",
-            "https://cdnjs.cloudflare.com",
-        ],
-        "img-src": ["'self'", "data:"],
-        "connect-src": ["'self'"],
-        "frame-ancestors": ["'none'"],  # complements X-Frame-Options on modern browsers
-        "object-src": ["'none'"],
-        "base-uri": ["'self'"],
-        "form-action": ["'self'"],
-    },
-}
-
-# Phase-2 PREVIEW (Report-Only). Mirrors CONTENT_SECURITY_POLICY above EXCEPT
-# script-src drops the three Phase-2 removals: 'unsafe-eval', cdn.tailwindcss.com,
-# unpkg.com. Keeps cdn.jsdelivr.net (flatpickr/fullcalendar/chart/sortable) and
-# cdnjs.cloudflare.com (font-awesome/cropper). Keep this in sync with the enforced
-# dict for every directive other than script-src.
-CONTENT_SECURITY_POLICY_REPORT_ONLY = {
     "DIRECTIVES": {
         "default-src": ["'self'"],
         "script-src": [
