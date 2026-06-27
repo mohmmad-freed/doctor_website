@@ -3,7 +3,7 @@
 {% block title %}{% if IS_RTL %}مرضاي | بوابة الطبيب{% else %}My Patients | Doctor Portal{% endif %}{% endblock %}
 
 {% block extra_head %}
-<script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5ViYgSibmK" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/htmx.org@1.9.10" crossorigin="anonymous"></script>
 {# CSP Phase 2a: Alpine.data('patientRowMenu') registration; loaded eagerly before Alpine. #}
 <script src="{% static 'doctors/js/alpine_components.js' %}"></script>
 {# CSP Phase 2a: self-hosted @alpinejs/csp build (no 'unsafe-eval', drops unpkg.com). #}
