@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Shared brand-neutral component utilities, migrated from the doctor + patient
+   <style type="text/tailwindcss"> blocks (CSP Phase 2b). These are the ONLY rules
+   that used @apply, so they must be compiled here; the rest of those blocks is plain
+   CSS that stays inline per base. Kept in @layer utilities to preserve their original
+   cascade precedence. */
+@layer utilities {
+  .glass {
+    @apply bg-white/80 backdrop-blur-lg border border-white/20 shadow-xl;
+  }
+  .dark .glass {
+    @apply bg-slate-900/80 border-slate-700/50;
+  }
+
+  .glass-card {
+    @apply bg-white border border-gray-100 shadow-sm rounded-2xl;
+  }
+  .dark .glass-card {
+    @apply bg-slate-800 border-slate-700;
+  }
+
+  .dr-badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold;
+  }
+}

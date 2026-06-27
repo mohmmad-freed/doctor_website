@@ -1,0 +1,13 @@
+{
+  "name": "clinic-website-css",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Build tooling for the self-hosted Tailwind CSS (CSP Phase 2b). Dev-only; the compiled static/css/tailwind.css is committed so production needs no Node.",
+  "scripts": {
+    "build:css": "tailwindcss -i ./static/css/src/input.css -o ./static/css/tailwind.css --minify",
+    "watch:css": "tailwindcss -i ./static/css/src/input.css -o ./static/css/tailwind.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "3.4.17"
+  }
+}
