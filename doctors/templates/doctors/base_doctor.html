@@ -12,55 +12,32 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cairo:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Tailwind CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script nonce="{{ request.csp_nonce }}">
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: {
-                        primary: {
-                            50:  '#eef2ff',
-                            100: '#e0e7ff',
-                            400: '#818cf8',
-                            500: '#6366f1',
-                            600: '#4f46e5',
-                            700: '#4338ca',
-                            900: '#1e1b4b',
-                        },
-                        accent: {
-                            50:  '#f0fdfa',
-                            100: '#ccfbf1',
-                            500: '#14b8a6',
-                            600: '#0d9488',
-                        }
-                    }
-                }
-            }
+    <!-- Self-hosted compiled Tailwind (CSP Phase 2b; replaces cdn.tailwindcss.com) -->
+    <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
+    <style>
+        /* Doctor portal palette (indigo). Space-separated RGB channels consumed by the
+           CSS-variable-driven Tailwind config (primary-NN). Only the shades the original
+           inline config defined are set; others stay colorless, as before. */
+        :root {
+            --color-primary-50:  238 242 255;
+            --color-primary-100: 224 231 255;
+            --color-primary-400: 129 140 248;
+            --color-primary-500: 99 102 241;
+            --color-primary-600: 79 70 229;
+            --color-primary-700: 67 56 202;
+            --color-primary-900: 30 27 75;
         }
-    </script>
+    </style>
 
-    <style type="text/tailwindcss">
+    <style>
         /* Alpine x-cloak: hide elements until Alpine initialises them */
         [x-cloak] { display: none !important; }
 
-        @layer utilities {
-            .scrollbar-none::-webkit-scrollbar { display: none; }
-            .scrollbar-none { scrollbar-width: none; }
-            .glass-card {
-                @apply bg-white border border-gray-100 shadow-sm rounded-2xl;
-            }
-            .dark .glass-card {
-                @apply bg-slate-800 border-slate-700;
-            }
-            .animate-fade-in-up {
-                animation: fadeInUp 0.4s ease-out forwards;
-            }
-            .dr-badge {
-                @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold;
-            }
+        /* .glass-card / .dr-badge used @apply -> now compiled into tailwind.css. */
+        .scrollbar-none::-webkit-scrollbar { display: none; }
+        .scrollbar-none { scrollbar-width: none; }
+        .animate-fade-in-up {
+            animation: fadeInUp 0.4s ease-out forwards;
         }
         @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(16px); }
