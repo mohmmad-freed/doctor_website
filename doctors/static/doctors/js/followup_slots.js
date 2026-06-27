@@ -15,6 +15,10 @@
     'text-indigo-700', 'dark:text-indigo-300', 'border-indigo-400'
   ];
 
+  // Capture phase: the slot grid lives inside the follow-up modal panel, which
+  // uses Alpine @click.stop (so clicks inside don't close the backdrop). That
+  // stopPropagation() kills a normal bubble-phase document listener, so we listen
+  // in the capture phase — it runs top-down before the panel's @click.stop fires.
   document.addEventListener('click', function (e) {
     var btn = e.target.closest('.followup-slot-btn');
     if (!btn) { return; }
@@ -36,5 +40,5 @@
       hintText.textContent = t + (hint.getAttribute('data-selected-suffix') || '');
       hint.classList.remove('hidden');
     }
-  });
+  }, true);
 })();
