@@ -388,10 +388,61 @@
     };
   }
 
+  // ──────────────────────────────────────────────────────────────────────
+  // Order catalog page (order_catalog.html) — was an inline x-data="{...}" with
+  // multi-statement tab/toggle @click handlers (unsupported by the CSP parser).
+  // ──────────────────────────────────────────────────────────────────────
+  function orderCatalog(initTab) {
+    return {
+      tab: initTab || 'drugs',
+      showAddFamily: false,
+      showAddDrug: false,
+      showAddLab: false,
+      showAddRadiology: false,
+      showAddMicrobiology: false,
+      showAddProcedure: false,
+      editingFamilyId: null,
+      editingDrugId: null,
+      editingItemId: null,
+      drugFamilyFilter: '',
+
+      // Switch tab + reset that tab's add/edit state (mirrors the prior per-tab
+      // inline resets exactly).
+      selectTab(t) {
+        this.tab = t;
+        if (t === 'drugs') {
+          this.showAddFamily = false; this.showAddDrug = false;
+          this.editingFamilyId = null; this.editingDrugId = null;
+        } else if (t === 'lab') {
+          this.showAddLab = false; this.editingItemId = null;
+        } else if (t === 'radiology') {
+          this.showAddRadiology = false; this.editingItemId = null;
+        } else if (t === 'microbiology') {
+          this.showAddMicrobiology = false; this.editingItemId = null;
+        } else if (t === 'procedure') {
+          this.showAddProcedure = false; this.editingItemId = null;
+        }
+      },
+
+      // Toggle an add-form panel and, when opening, focus its first field.
+      toggleAdd(flag, refName) {
+        this[flag] = !this[flag];
+        if (this[flag]) {
+          var self = this;
+          this.$nextTick(function () {
+            var el = self.$refs[refName];
+            if (el) el.focus();
+          });
+        }
+      }
+    };
+  }
+
   document.addEventListener('alpine:init', function () {
     Alpine.data('orthoWorkspace', orthoWorkspace);
     Alpine.data('orthoReadView', orthoReadView);
     Alpine.data('cnPanel', cnPanel);
     Alpine.data('noteForm', noteForm);
+    Alpine.data('orderCatalog', orderCatalog);
   });
 })();

@@ -1,8 +1,11 @@
 {% extends "doctors/base_doctor.html" %}
+{% load static %}
 {% block title %}{% if IS_RTL %}كتالوج الطلبات | بوابة الطبيب{% else %}Order Catalog | Doctor Portal{% endif %}{% endblock %}
 
 {% block extra_head %}
 <script src="https://unpkg.com/htmx.org@1.9.10" crossorigin="anonymous"></script>
+{# CSP Phase 2a: Alpine.data('orderCatalog') registration; loaded eagerly before Alpine. #}
+<script src="{% static 'doctors/js/alpine_components.js' %}"></script>
 <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 <style>
   .ws-input, .ws-select {
@@ -27,19 +30,7 @@
 {% endblock %}
 
 {% block content %}
-<div x-data="{
-  tab: '{{ active_tab }}',
-  showAddFamily: false,
-  showAddDrug: false,
-  showAddLab: false,
-  showAddRadiology: false,
-  showAddMicrobiology: false,
-  showAddProcedure: false,
-  editingFamilyId: null,
-  editingDrugId: null,
-  editingItemId: null,
-  drugFamilyFilter: '',
-}" x-cloak class="max-w-5xl mx-auto">
+<div x-data="orderCatalog('{{ active_tab|escapejs }}')" x-cloak class="max-w-5xl mx-auto">
 
   <!-- ── Page header ───────────────────────────────────── -->
   <div class="mb-6 flex items-start justify-between gap-4 flex-wrap">
@@ -68,7 +59,7 @@
 
     {% with tabs_data="drugs:fa-pills:blue:Drugs,lab:fa-flask:purple:Lab,radiology:fa-x-ray:indigo:Radiology,microbiology:fa-microscope:teal:Microbiology,procedure:fa-stethoscope:orange:Procedures" %}
 
-    <button @click="tab='drugs'; showAddFamily=false; showAddDrug=false; editingFamilyId=null; editingDrugId=null"
+    <button @click="selectTab('drugs')"
             :class="tab==='drugs' ? 'border-primary-500 text-primary-600 dark:text-primary-400 font-bold' : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'"
             class="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
       <i class="fa-solid fa-pills opacity-75 text-[13px]"></i> {% if IS_RTL %}الأدوية{% else %}Drugs{% endif %}
@@ -78,7 +69,7 @@
       </span>
     </button>
 
-    <button @click="tab='lab'; showAddLab=false; editingItemId=null"
+    <button @click="selectTab('lab')"
             :class="tab==='lab' ? 'border-primary-500 text-primary-600 dark:text-primary-400 font-bold' : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'"
             class="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
       <i class="fa-solid fa-flask opacity-75 text-[13px]"></i> {% if IS_RTL %}المختبر{% else %}Lab{% endif %}
@@ -88,7 +79,7 @@
       </span>
     </button>
 
-    <button @click="tab='radiology'; showAddRadiology=false; editingItemId=null"
+    <button @click="selectTab('radiology')"
             :class="tab==='radiology' ? 'border-primary-500 text-primary-600 dark:text-primary-400 font-bold' : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'"
             class="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
       <i class="fa-solid fa-x-ray opacity-75 text-[13px]"></i> {% if IS_RTL %}الأشعة{% else %}Radiology{% endif %}
@@ -98,7 +89,7 @@
       </span>
     </button>
 
-    <button @click="tab='microbiology'; showAddMicrobiology=false; editingItemId=null"
+    <button @click="selectTab('microbiology')"
             :class="tab==='microbiology' ? 'border-primary-500 text-primary-600 dark:text-primary-400 font-bold' : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'"
             class="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
       <i class="fa-solid fa-microscope opacity-75 text-[13px]"></i> {% if IS_RTL %}علم الأحياء الدقيقة{% else %}Microbiology{% endif %}
@@ -108,7 +99,7 @@
       </span>
     </button>
 
-    <button @click="tab='procedure'; showAddProcedure=false; editingItemId=null"
+    <button @click="selectTab('procedure')"
             :class="tab==='procedure' ? 'border-primary-500 text-primary-600 dark:text-primary-400 font-bold' : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'"
             class="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap">
       <i class="fa-solid fa-stethoscope opacity-75 text-[13px]"></i> {% if IS_RTL %}الإجراءات{% else %}Procedures{% endif %}
@@ -143,7 +134,7 @@
           </div>
         </div>
         {% if can_edit %}
-        <button @click="showAddFamily = !showAddFamily; if(showAddFamily) $nextTick(() => $refs.newFamilyName && $refs.newFamilyName.focus())"
+        <button @click="toggleAdd('showAddFamily','newFamilyName')"
                 :class="showAddFamily ? 'bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-slate-200' : 'bg-primary-600 hover:bg-primary-700 active:scale-95 text-white shadow-sm'"
                 class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
           <i class="fa-solid" :class="showAddFamily ? 'fa-xmark' : 'fa-plus'"></i>
@@ -291,7 +282,7 @@
             {% endfor %}
           </select>
           {% if can_edit %}
-          <button @click="showAddDrug = !showAddDrug; if(showAddDrug) $nextTick(() => $refs.newDrugName && $refs.newDrugName.focus())"
+          <button @click="toggleAdd('showAddDrug','newDrugName')"
                   :class="showAddDrug ? 'bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-slate-200' : 'bg-primary-600 hover:bg-primary-700 active:scale-95 text-white shadow-sm'"
                   class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
             <i class="fa-solid" :class="showAddDrug ? 'fa-xmark' : 'fa-plus'"></i>
@@ -467,7 +458,7 @@
           </div>
         </div>
         {% if can_edit %}
-        <button @click="showAddLab = !showAddLab; if(showAddLab) $nextTick(() => $refs.newLabName && $refs.newLabName.focus())"
+        <button @click="toggleAdd('showAddLab','newLabName')"
                 :class="showAddLab ? 'bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-slate-200' : 'bg-primary-600 hover:bg-primary-700 active:scale-95 text-white shadow-sm'"
                 class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
           <i class="fa-solid" :class="showAddLab ? 'fa-xmark' : 'fa-plus'"></i>
@@ -590,7 +581,7 @@
           </div>
         </div>
         {% if can_edit %}
-        <button @click="showAddRadiology = !showAddRadiology; if(showAddRadiology) $nextTick(() => $refs.newRadiologyName && $refs.newRadiologyName.focus())"
+        <button @click="toggleAdd('showAddRadiology','newRadiologyName')"
                 :class="showAddRadiology ? 'bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-slate-200' : 'bg-primary-600 hover:bg-primary-700 active:scale-95 text-white shadow-sm'"
                 class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
           <i class="fa-solid" :class="showAddRadiology ? 'fa-xmark' : 'fa-plus'"></i>
@@ -713,7 +704,7 @@
           </div>
         </div>
         {% if can_edit %}
-        <button @click="showAddMicrobiology = !showAddMicrobiology; if(showAddMicrobiology) $nextTick(() => $refs.newMicroName && $refs.newMicroName.focus())"
+        <button @click="toggleAdd('showAddMicrobiology','newMicroName')"
                 :class="showAddMicrobiology ? 'bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-slate-200' : 'bg-primary-600 hover:bg-primary-700 active:scale-95 text-white shadow-sm'"
                 class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
           <i class="fa-solid" :class="showAddMicrobiology ? 'fa-xmark' : 'fa-plus'"></i>
@@ -836,7 +827,7 @@
           </div>
         </div>
         {% if can_edit %}
-        <button @click="showAddProcedure = !showAddProcedure; if(showAddProcedure) $nextTick(() => $refs.newProcName && $refs.newProcName.focus())"
+        <button @click="toggleAdd('showAddProcedure','newProcName')"
                 :class="showAddProcedure ? 'bg-gray-100 dark:bg-slate-600 text-gray-600 dark:text-slate-200' : 'bg-primary-600 hover:bg-primary-700 active:scale-95 text-white shadow-sm'"
                 class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all">
           <i class="fa-solid" :class="showAddProcedure ? 'fa-xmark' : 'fa-plus'"></i>
