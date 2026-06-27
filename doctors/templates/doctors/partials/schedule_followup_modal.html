@@ -206,7 +206,7 @@
         <div>
           <label for="followup-type"
                  class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-            {% if IS_RTL %}النوع <span class="font-normal text-slate-400 normal-case tracking-normal">(اختياري)</span>{% else %}Type <span class="font-normal text-slate-400 normal-case tracking-normal">(optional)</span>{% endif %}
+            {% if IS_RTL %}النوع{% else %}Type{% endif %}
           </label>
           <select name="appointment_type_id" id="followup-type"
                   hx-get="{% url 'doctors:htmx_followup_slots' patient.id %}"
