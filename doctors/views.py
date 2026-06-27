@@ -2915,6 +2915,22 @@ def ws_record_delete(request, patient_id, record_id):
 # ══════════════════════════════════════════════════════════════════════════════
 
 
+def _followup_default_type_id(appointment_types):
+    """Return the id of the clinic's follow-up appointment type, or None.
+
+    The Schedule Follow-up modal should default to the actual follow-up type so
+    its real duration drives slot slicing (e.g. 15-min slots), instead of a
+    generic no-type fallback. Matched by name since AppointmentType has no
+    dedicated flag — English "follow" or Arabic "متابعة".
+    """
+    for t in appointment_types:
+        name = (t.name or "")
+        name_ar = (t.name_ar or "")
+        if "follow" in name.lower() or "متابعة" in name or "متابعة" in name_ar:
+            return t.id
+    return None
+
+
 @login_required
 def ws_schedule_followup(request, patient_id):
     """
@@ -2950,6 +2966,7 @@ def ws_schedule_followup(request, patient_id):
             "default_clinic":    default_clinic,
             "default_clinic_id": default_clinic.id if default_clinic else None,
             "appointment_types": appointment_types,
+            "default_type_id":   _followup_default_type_id(appointment_types),
             "today":             date.today().isoformat(),
             "last_visit":        _ws_last_visit(patient_id, doctor),
         })
@@ -3006,6 +3023,7 @@ def ws_schedule_followup(request, patient_id):
             "clinics":           clinics,
             "default_clinic_id": clinic_id,
             "appointment_types": apt,
+            "default_type_id":   _followup_default_type_id(apt),
             "today":             date.today().isoformat(),
             "post_data":         request.POST,
         }
