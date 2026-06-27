@@ -1,9 +1,9 @@
 {% extends "secretary/base_secretary.html" %}
-{% load i18n %}
+{% load i18n static %}
 {% block title %}{% trans "تسجيل مريض جديد" %}{% endblock %}
 
 {% block extra_css %}
-<script src="https://unpkg.com/htmx.org@1.9.12"></script>
+<script src="{% static 'js/vendor/htmx.min.js' %}"></script>
 <style>
   /* Step indicator */
   .step-dot {

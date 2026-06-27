@@ -3,7 +3,7 @@
 {% block title %}{{ patient.name }} – {% if IS_RTL %}مساحة العمل | بوابة الطبيب{% else %}Workspace | MedPortal{% endif %}{% endblock %}
 
 {% block extra_head %}
-<script src="https://unpkg.com/htmx.org@1.9.10" crossorigin="anonymous"></script>
+<script src="{% static 'js/vendor/htmx.min.js' %}"></script>
 {# CSP Phase 2a: self-hosted Alpine collapse plugin (powers x-collapse on the ws_* forms; was never loaded before so x-collapse silently warned). Must precede the Alpine build so its alpine:init hook registers first. #}
 <script defer src="{% static 'js/vendor/alpine-collapse.min.js' %}"></script>
 {# CSP Phase 2a: self-hosted @alpinejs/csp build (no 'unsafe-eval', drops unpkg.com). Components registered via alpine_components.js (loaded eagerly below, before this deferred build runs). #}

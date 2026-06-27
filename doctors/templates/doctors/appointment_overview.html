@@ -1,8 +1,9 @@
 {% extends "doctors/base_doctor.html" %}
+{% load static %}
 {% block title %}{% if IS_RTL %}نظرة عامة على الموعد | بوابة الطبيب{% else %}Appointment Overview | Doctor Portal{% endif %}{% endblock %}
 
 {% block extra_head %}
-<script src="https://unpkg.com/htmx.org@1.9.10" crossorigin="anonymous"></script>
+<script src="{% static 'js/vendor/htmx.min.js' %}"></script>
 {% endblock %}
 
 {% block content %}
