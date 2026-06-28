@@ -1,0 +1,60 @@
+{% extends "admin/base_site.html" %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Home</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+  &rsaquo; <a href="{% url 'admin:ai_scribe_aimodel_changelist' %}">AI Models</a>
+  &rsaquo; Test transcription
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+
+  <p style="margin-bottom:1em;">
+    Provider: <strong>{{ provider }}</strong> &middot;
+    Model: <code>{{ model_id }}</code> &middot;
+    {% if configured %}
+      <span style="color:#2e7d32;font-weight:600;">configured ✓</span>
+    {% else %}
+      <span style="color:#b00020;font-weight:600;">NOT configured — set the provider's API key</span>
+    {% endif %}
+  </p>
+  <p class="help" style="margin-bottom:1.5em;">
+    Admin-only diagnostic. This calls the live STT provider with the uploaded clip and shows the
+    transcript, duration, and cost. It is <strong>not</strong> charged to any doctor's budget.
+  </p>
+
+  {% if error %}
+  <p class="errornote">{{ error }}</p>
+  {% endif %}
+
+  {% if result %}
+  <div class="module aligned" style="padding:12px 14px;margin-bottom:1.5em;">
+    <h2 style="margin-top:0;">Result — {{ result.filename }}</h2>
+    <p>Duration: <strong>{{ result.duration }}s</strong> &middot; Cost: <strong>${{ result.cost }}</strong></p>
+    <textarea rows="8" readonly style="width:100%;box-sizing:border-box;">{{ result.text }}</textarea>
+  </div>
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <fieldset class="module aligned">
+      <div class="form-row field-audio">
+        <label for="id_audio">Audio file:</label>
+        <input type="file" name="audio" id="id_audio" accept="audio/*" required>
+        <p class="help">wav / mp3 / m4a / ogg / webm. Keep clips short for a quick test.</p>
+      </div>
+      <div class="form-row field-language">
+        <label for="id_language">Language (optional):</label>
+        <input type="text" name="language" id="id_language" maxlength="5" placeholder="ar / en">
+        <p class="help">ISO-639-1 hint to improve accuracy (e.g. <code>ar</code> for Arabic).</p>
+      </div>
+    </fieldset>
+    <div class="submit-row">
+      <input type="submit" value="Transcribe" class="default">
+    </div>
+  </form>
+</div>
+{% endblock %}

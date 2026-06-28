@@ -313,3 +313,42 @@ class STTEndpointTests(DoctorViewTestBase):
         self.client.force_login(self.doctor_b)
         resp = self.client.post(self.url, {"clinic_id": self.clinic_a.id, "audio": self._audio()})
         self.assertEqual(resp.status_code, 403)
+
+
+# ════════════════════════════════════════════════════════════════════
+#  Phase 2 — admin "Test transcription" diagnostic
+# ════════════════════════════════════════════════════════════════════
+
+class STTAdminTestViewTests(DoctorViewTestBase):
+
+    def setUp(self):
+        super().setUp()
+        # Promote the clinic owner to a Django-admin superuser.
+        self.main_doc_a.is_staff = True
+        self.main_doc_a.is_superuser = True
+        self.main_doc_a.save(update_fields=["is_staff", "is_superuser"])
+        self.url = reverse("admin:ai_scribe_stt_test")
+
+    def test_non_staff_denied(self):
+        self.client.force_login(self.doctor_a)  # not staff
+        resp = self.client.get(self.url)
+        self.assertIn(resp.status_code, (302, 403))
+
+    def test_staff_get_renders(self):
+        self.client.force_login(self.main_doc_a)
+        resp = self.client.get(self.url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Test transcription")
+
+    @override_settings(STT_PROVIDER="openai", STT_API_KEY="k", STT_PRICE_PER_MINUTE="0")
+    @patch("ai_scribe.services._stt_transcribe")
+    def test_staff_can_transcribe(self, mock_stt):
+        mock_stt.return_value = ("admin test transcript", 5.0, None)
+        self.client.force_login(self.main_doc_a)
+        audio = SimpleUploadedFile("t.webm", b"abc", content_type="audio/webm")
+        resp = self.client.post(self.url, {"audio": audio, "language": "en"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "admin test transcript")
+        # Diagnostic must not write usage / spend rows.
+        self.assertEqual(AIUsageRecord.objects.count(), 0)
+        self.assertEqual(DoctorMonthlySpend.objects.count(), 0)

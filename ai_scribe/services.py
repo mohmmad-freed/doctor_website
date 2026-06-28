@@ -328,6 +328,18 @@ def transcribe_audio(*, config, file_obj, filename, content_type, language=None)
     return text, cost, duration
 
 
+def transcribe_preview(file_obj, filename, content_type, language=None):
+    """Admin/diagnostic transcription — no doctor config, budget, or metering.
+    Calls the live STT provider and returns ``(text, cost, duration_seconds)``."""
+    if not stt_configured():
+        raise STTError("Voice transcription isn't configured (no provider key set).")
+    text, duration, cost = _stt_transcribe(file_obj, filename, content_type, language=language)
+    if cost is None:
+        price = _stt_price_per_minute()
+        cost = (Decimal(str(duration)) / Decimal(60) * price) if price > ZERO else ZERO
+    return text, Decimal(cost or 0), duration
+
+
 def _stt_transcribe(file_obj, filename, content_type, language=None):
     """Dispatch to the configured STT provider. Returns ``(text, duration, cost)``
     where ``cost`` is a Decimal (OpenRouter) or None (derive from price)."""
