@@ -386,7 +386,7 @@
                         placeholder="000000000"
                         value="{{ form.doctor_national_id.value|default:'' }}"
                         maxlength="9" inputmode="numeric" dir="ltr"
-                        oninput="checkNID(this, 'nidIndicator')">
+                        data-check-nid="nidIndicator">
                     <div class="phone-indicator" id="nidIndicator">
                         <span class="dot"></span>
                         <span class="msg">{% trans "9 أرقام" %}</span>
@@ -441,7 +441,7 @@
     </form>
 </div>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
     function checkNID(input, indicatorId) {
         var val = input.value.replace(/\D/g, '');
         // strip any non-digits as user types

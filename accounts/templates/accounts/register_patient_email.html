@@ -383,7 +383,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ request.csp_nonce }}">
     (function () {
         var form = document.getElementById('emailForm');
         var overlay = document.getElementById('emailOverlay');
@@ -401,7 +401,7 @@
         });
     })();
 </script>
-<script>
+<script nonce="{{ request.csp_nonce }}">
     document.addEventListener('DOMContentLoaded', function () {
         const emailInput = document.getElementById('email');
         const submitBtn = document.querySelector('.btn-submit');

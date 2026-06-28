@@ -1,5 +1,10 @@
 {% load static i18n %}
 <style>
+    /* CSP: hover styles moved off inline onmouseover/onmouseout handlers */
+    .nav-bell:hover {
+        background: var(--color-surface-ground, #f9fafb) !important;
+        color: var(--color-text-main, #111827) !important;
+    }
     .clinic-switcher {
         position: relative;
     }
@@ -357,12 +362,11 @@
             {# Notification bell #}
             {% if request.resolver_match.namespace == 'clinics' or request.resolver_match.url_name == 'clinic_owner_notifications' %}
             <a href="{% url 'appointments:clinic_owner_notifications' %}"
+               class="nav-bell"
                style="position:relative;display:inline-flex;align-items:center;justify-content:center;
                       width:36px;height:36px;border-radius:50%;
                       color:var(--color-text-muted,#9ca3af);
                       transition:background 0.15s,color 0.15s;text-decoration:none;"
-               onmouseover="this.style.background='var(--color-surface-ground,#f9fafb)';this.style.color='var(--color-text-main,#111827)';"
-               onmouseout="this.style.background='';this.style.color='var(--color-text-muted,#9ca3af)';"
                title="الإشعارات (العيادة)"
                aria-label="الإشعارات (العيادة)">
                 <i class="fa-regular fa-bell" style="font-size:1.05rem;"></i>
@@ -378,12 +382,11 @@
             </a>
             {% else %}
             <a href="{% url 'appointments:patient_notifications' %}"
+               class="nav-bell"
                style="position:relative;display:inline-flex;align-items:center;justify-content:center;
                       width:36px;height:36px;border-radius:50%;
                       color:var(--color-text-muted,#9ca3af);
                       transition:background 0.15s,color 0.15s;text-decoration:none;"
-               onmouseover="this.style.background='var(--color-surface-ground,#f9fafb)';this.style.color='var(--color-text-main,#111827)';"
-               onmouseout="this.style.background='';this.style.color='var(--color-text-muted,#9ca3af)';"
                title="الإشعارات"
                aria-label="الإشعارات">
                 <i class="fa-regular fa-bell" style="font-size:1.05rem;"></i>
@@ -402,8 +405,8 @@
             {# Clinic switcher — only shown when owner has 2+ clinics #}
             {% if owned_clinics|length > 1 %}{% if request.resolver_match.namespace == 'clinics' or request.resolver_match.url_name == 'clinic_owner_notifications' %}
             <div class="clinic-switcher" id="clinicSwitcher">
-                <button class="clinic-switcher-btn"
-                        onclick="document.getElementById('clinicSwitcher').classList.toggle('open')">
+                <button type="button" class="clinic-switcher-btn"
+                        data-toggle-class="open" data-toggle-target="clinicSwitcher">
                     <i class="fa-solid fa-hospital" style="font-size:0.85rem;flex-shrink:0;"></i>
                     <span style="overflow:hidden;text-overflow:ellipsis;">
                         {{ selected_clinic.name|default:"اختر العيادة" }}
@@ -434,7 +437,7 @@
 
             {# User avatar dropdown #}
             <div class="user-menu" id="userMenu">
-                <button class="user-menu-btn" onclick="document.getElementById('userMenu').classList.toggle('open')" aria-label="قائمة المستخدم">
+                <button type="button" class="user-menu-btn" data-toggle-class="open" data-toggle-target="userMenu" aria-label="قائمة المستخدم">
                     <span class="user-avatar">{{ user.name|first }}</span>
                     <span class="user-menu-btn-name">{{ user.name }}</span>
                     <i class="fa-solid fa-chevron-down chevron" style="font-size:0.65rem;"></i>
@@ -511,7 +514,7 @@
     </div>
 </nav>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
 // Close dropdowns when clicking outside
 document.addEventListener('click', function (e) {
     var sw = document.getElementById('clinicSwitcher');

@@ -23,7 +23,6 @@
     {% for slot in slots %}
     <button type="button"
             data-time="{{ slot.time|time:'H:i' }}"
-            onclick="selectFollowupSlot(this)"
             class="followup-slot-btn px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all
                    {% if slot.is_available %}
                    bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600
@@ -47,37 +46,11 @@
 
   {# Hidden input carries the selected time to the form #}
   <input type="hidden" name="appointment_time" id="followup-time-hidden" value="">
-  <p id="followup-slot-hint" class="text-xs text-slate-400 dark:text-slate-500 hidden">
+  <p id="followup-slot-hint" class="text-xs text-slate-400 dark:text-slate-500 hidden"
+     data-selected-suffix="{% if IS_RTL %} تم الاختيار{% else %} selected{% endif %}">
     <i class="fa-regular fa-clock mr-1"></i>
     <span id="followup-slot-hint-text"></span>
   </p>
 </div>
-
-<script>
-(function () {
-  function selectFollowupSlot(btn) {
-    // Deselect all
-    document.querySelectorAll('.followup-slot-btn').forEach(function (b) {
-      b.classList.remove('ring-2', 'ring-indigo-500', 'bg-indigo-50', 'dark:bg-indigo-900/30',
-                          'text-indigo-700', 'dark:text-indigo-300', 'border-indigo-400');
-    });
-    // Select clicked
-    btn.classList.add('ring-2', 'ring-indigo-500', 'bg-indigo-50', 'dark:bg-indigo-900/30',
-                       'text-indigo-700', 'dark:text-indigo-300', 'border-indigo-400');
-
-    var t = btn.dataset.time;
-    var hidden = document.getElementById('followup-time-hidden');
-    if (hidden) hidden.value = t;
-
-    var hint = document.getElementById('followup-slot-hint');
-    var hintText = document.getElementById('followup-slot-hint-text');
-    if (hint && hintText) {
-      hintText.textContent = t + '{% if IS_RTL %} تم الاختيار{% else %} selected{% endif %}';
-      hint.classList.remove('hidden');
-    }
-  }
-  // Expose globally so inline onclick works
-  window.selectFollowupSlot = selectFollowupSlot;
-})();
-</script>
+{# Slot-select behaviour lives in doctors/js/followup_slots.js (loaded once on patient_workspace.html; delegated on document so it survives HTMX slot swaps). #}
 {% endif %}

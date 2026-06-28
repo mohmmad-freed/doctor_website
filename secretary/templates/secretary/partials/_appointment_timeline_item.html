@@ -33,7 +33,7 @@ Expects `appt`.
             hx-target="#intake-{{ appt.id }}"
             hx-swap="innerHTML"
             hx-trigger="click once"
-            onclick="this.querySelector('.chev').classList.toggle('rotate-180'); document.getElementById('intake-{{ appt.id }}').classList.toggle('hidden')"
+            data-toggle-hidden="intake-{{ appt.id }}" data-rotate-chev
             class="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors">
       <i class="fa-solid fa-clipboard-list text-[11px]"></i>
       {% if IS_RTL %}عرض النموذج{% else %}View form{% endif %}

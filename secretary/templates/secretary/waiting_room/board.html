@@ -202,7 +202,7 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
-<script>
+<script nonce="{{ request.csp_nonce }}">
 (function () {
   const REORDER_URL = "{% url 'secretary:reorder_queue' %}";
   const CSRF_COOKIE_NAME = "csrftoken";

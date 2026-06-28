@@ -83,22 +83,8 @@
                 {% trans "لا يمكنك حجز موعد مع نفسك" as self_tooltip_types %}
                 <span aria-disabled="true"
                       title="{{ self_tooltip_types }}"
-                      class="{% if IS_RTL %}mr-auto{% else %}ml-auto{% endif %} inline-flex items-center gap-1.5 text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed select-none opacity-0 group-hover:opacity-100 transition-all"
-                      onmouseenter="(function(el){
-                          var t=document.getElementById('lbb-tooltip');
-                          if(!t){t=document.createElement('div');t.id='lbb-tooltip';t.style.cssText='position:fixed;z-index:9999;background:#111827;color:#fff;font-size:0.75rem;padding:6px 12px;border-radius:6px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.3);pointer-events:none;transition:opacity .15s;opacity:0;';document.body.appendChild(t);}
-                          t.textContent='{{ self_tooltip_types|escapejs }}';
-                          var r=el.getBoundingClientRect();
-                          t.style.display='block';t.style.opacity='0';
-                          var tw=t.offsetWidth;
-                          var left=r.left+r.width/2-tw/2;
-                          if(left<8)left=8;
-                          if(left+tw>window.innerWidth-8)left=window.innerWidth-8-tw;
-                          t.style.left=left+'px';
-                          t.style.top=(r.top-t.offsetHeight-8)+'px';
-                          t.style.opacity='1';
-                      })(this)"
-                      onmouseleave="var t=document.getElementById('lbb-tooltip');if(t)t.style.opacity='0';">
+                      data-locked-tooltip="{{ self_tooltip_types }}"
+                      class="{% if IS_RTL %}mr-auto{% else %}ml-auto{% endif %} inline-flex items-center gap-1.5 text-sm font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed select-none opacity-0 group-hover:opacity-100 transition-all">
                     <i class="fa-solid fa-lock text-xs"></i>
                     <span>{% if IS_RTL %}احجز الآن{% else %}Book Now{% endif %}</span>
                 </span>

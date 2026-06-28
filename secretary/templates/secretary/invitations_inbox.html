@@ -84,7 +84,7 @@
           </button>
         </form>
         <form method="post" action="{% url 'secretary:reject_invitation' inv.id %}"
-              onsubmit="return confirm('{% trans "هل أنت متأكد من رفض هذه الدعوة؟" %}');">
+              data-confirm="{% trans 'هل أنت متأكد من رفض هذه الدعوة؟' %}">
           {% csrf_token %}
           <button type="submit"
                   class="inline-flex items-center gap-2 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-red-400 hover:text-red-600 dark:hover:text-red-400 dark:hover:border-red-500 bg-white dark:bg-gray-800 text-sm font-semibold px-4 py-2 rounded-xl transition-colors">

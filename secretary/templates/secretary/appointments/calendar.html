@@ -484,7 +484,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ request.csp_nonce }}">
 var selectedDoctorId = '';
 var calendarInstance = null;
 var currentLang = '{{ CURRENT_LANG }}';

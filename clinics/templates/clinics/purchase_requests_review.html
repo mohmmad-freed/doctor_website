@@ -364,10 +364,10 @@
             <!-- Action buttons (only while pending) -->
             {% if pr.status == "PENDING" %}
             <div class="cred-actions">
-                <button type="button" class="btn-approve" onclick="toggleForm('approve-{{ pr.id }}')">
+                <button type="button" class="btn-approve" data-toggle-form="approve-{{ pr.id }}">
                     <i class="fa-solid fa-check"></i> {% trans "موافقة" %}
                 </button>
-                <button type="button" class="btn-reject-trigger" onclick="toggleForm('reject-{{ pr.id }}')">
+                <button type="button" class="btn-reject-trigger" data-toggle-form="reject-{{ pr.id }}">
                     <i class="fa-solid fa-times"></i> {% trans "رفض" %}
                 </button>
             </div>
@@ -411,7 +411,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ request.csp_nonce }}">
 function toggleForm(key) {
     var form = document.getElementById('form-' + key);
     if (!form) return;
@@ -421,5 +421,10 @@ function toggleForm(key) {
         if (ta) ta.focus();
     }
 }
+// CSP: bind approve/reject form toggles (replaces inline onclick)
+document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-toggle-form]');
+    if (t) { toggleForm(t.getAttribute('data-toggle-form')); }
+});
 </script>
 {% endblock %}

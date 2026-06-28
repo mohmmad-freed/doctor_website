@@ -641,9 +641,10 @@
                 {% if inv.status == 'PENDING' and not inv.is_expired %}
                 <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.3rem;">
                     <button
+                        type="button"
                         class="btn-cancel-inv"
                         id="cancelBtn-{{ inv.id }}"
-                        onclick="showCancelConfirm('{{ inv.id }}')"
+                        data-show-cancel data-inv-id="{{ inv.id }}"
                     >
                         <i class="fa-solid fa-xmark"></i> {% trans "إلغاء الدعوة" %}
                     </button>
@@ -655,7 +656,7 @@
                                 <i class="fa-solid fa-check"></i> {% trans "نعم" %}
                             </button>
                         </form>
-                        <button class="btn-confirm-no" onclick="hideCancelConfirm('{{ inv.id }}')">
+                        <button type="button" class="btn-confirm-no" data-hide-cancel data-inv-id="{{ inv.id }}">
                             {% trans "تراجع" %}
                         </button>
                     </div>
@@ -695,7 +696,7 @@
 
 </div>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
     // ── Stats ──
     (function() {
         var cards = document.querySelectorAll('.inv-card');
@@ -723,6 +724,13 @@
         document.getElementById('cancelBtn-' + id).style.display = '';
         document.getElementById('cancelConfirm-' + id).classList.remove('show');
     }
+    // CSP: bind inline cancel-confirm toggles (replaces inline onclick)
+    document.addEventListener('click', function (e) {
+        var s = e.target.closest('[data-show-cancel]');
+        if (s) { showCancelConfirm(s.getAttribute('data-inv-id')); return; }
+        var h = e.target.closest('[data-hide-cancel]');
+        if (h) { hideCancelConfirm(h.getAttribute('data-inv-id')); }
+    });
 
     // ── Filter ──
     var activeRole = 'all', activeStatus = 'all';

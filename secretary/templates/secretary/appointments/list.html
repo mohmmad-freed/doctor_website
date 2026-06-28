@@ -136,7 +136,7 @@
                     <i class="fa-solid fa-user-check text-xs"></i>
                   </button>
                 </form>
-                <button type="button" aria-label="{% trans 'رفض طلب المريض الجديد' %}" onclick="openRejectModal({{ appt.id }}, '{{ appt.patient.name|escapejs }}')"
+                <button type="button" aria-label="{% trans 'رفض طلب المريض الجديد' %}" data-open-reject data-appt-id="{{ appt.id }}" data-patient-name="{{ appt.patient.name }}"
                         class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="{% trans 'رفض' %}">
                   <i class="fa-solid fa-user-xmark text-xs"></i>
                 </button>
@@ -155,7 +155,7 @@
                    class="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors" title="{% trans 'تعديل' %}">
                   <i class="fa-solid fa-pen-to-square text-xs"></i>
                 </a>
-                <button type="button" aria-label="{% trans 'إلغاء الموعد' %}" onclick="openCancelModal({{ appt.id }}, '{{ appt.patient.name|escapejs }}')"
+                <button type="button" aria-label="{% trans 'إلغاء الموعد' %}" data-open-cancel data-appt-id="{{ appt.id }}" data-patient-name="{{ appt.patient.name }}"
                         class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="{% trans 'إلغاء' %}">
                   <i class="fa-solid fa-xmark text-xs"></i>
                 </button>
@@ -232,7 +232,7 @@
                 class="flex-1 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors">
           {% trans "تأكيد الإلغاء" %}
         </button>
-        <button type="button" onclick="closeCancelModal()"
+        <button type="button" data-close-cancel
                 class="flex-1 px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-300 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
           {% trans "تراجع" %}
         </button>
@@ -244,7 +244,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ request.csp_nonce }}">
 function openCancelModal(apptId, patientName) {
   var title = document.getElementById('cancel-modal-title');
   var submit = document.getElementById('cancel-modal-submit');
@@ -268,6 +268,14 @@ function closeCancelModal() {
 }
 document.getElementById('cancel-modal').addEventListener('click', function(e) {
   if (e.target === this) closeCancelModal();
+});
+// CSP: bind modal triggers (replaces inline on* handlers)
+document.addEventListener('click', function (e) {
+  var r = e.target.closest('[data-open-reject]');
+  if (r) { openRejectModal(parseInt(r.dataset.apptId, 10), r.dataset.patientName); return; }
+  var c = e.target.closest('[data-open-cancel]');
+  if (c) { openCancelModal(parseInt(c.dataset.apptId, 10), c.dataset.patientName); return; }
+  if (e.target.closest('[data-close-cancel]')) { closeCancelModal(); }
 });
 </script>
 {% endblock %}

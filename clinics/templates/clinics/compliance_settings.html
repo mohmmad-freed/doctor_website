@@ -160,7 +160,7 @@
                        name="forgiveness_enabled"
                        id="id_forgiveness_enabled"
                        {% if settings.auto_forgive_enabled %}checked{% endif %}
-                       onchange="toggleForgivenessFields()">
+                       data-toggle-forgiveness>
                 <label for="id_forgiveness_enabled">{% trans "تفعيل المسامحة التلقائية" %}</label>
             </div>
 
@@ -186,7 +186,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
     function toggleForgivenessFields() {
         const enabled = document.getElementById('id_forgiveness_enabled').checked;
         const fields = document.getElementById('forgiveness_fields');
@@ -200,5 +200,9 @@
             daysInput.value = '';
         }
     }
+    // CSP: bind forgiveness toggle (replaces inline onchange)
+    document.addEventListener('change', function (e) {
+        if (e.target.closest('[data-toggle-forgiveness]')) { toggleForgivenessFields(); }
+    });
 </script>
 {% endblock %}

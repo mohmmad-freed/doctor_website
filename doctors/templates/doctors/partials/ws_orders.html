@@ -75,34 +75,7 @@
 {% endif %}
 
 <!-- Add Order Form -->
-<div class="ws-card mb-5" x-data="{
-  open: false,
-  orderType: 'DRUG',
-  catalogMode: 'generic',
-
-  pickDrug(genericName, commercialName, mode) {
-    $refs.titleInput.value = (mode === 'commercial' && commercialName) ? commercialName : genericName;
-  },
-
-  pickItem(name) {
-    $refs.titleInput.value = name;
-  },
-
-  get isDrug() { return this.orderType === 'DRUG'; },
-
-  init() {
-    $watch('open', val => {
-      if (val && this.isDrug) $nextTick(() => htmx.trigger($refs.drugFamilySelect, 'change'));
-    });
-    $watch('orderType', val => {
-      if (val === 'DRUG') $nextTick(() => htmx.trigger($refs.drugFamilySelect, 'change'));
-    });
-    $watch('catalogMode', () => {
-      if ($refs.drugSearchInput) $refs.drugSearchInput.value = '';
-      $nextTick(() => htmx.trigger($refs.drugFamilySelect, 'change'));
-    });
-  }
-}">
+<div class="ws-card mb-5" x-data="wsOrderForm" data-order-form>
   <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-slate-700 cursor-pointer select-none"
        @click="open = !open">
     <div class="flex items-center gap-2">
@@ -169,7 +142,7 @@
                   hx-target="#drug-results"
                   hx-trigger="change"
                   hx-include="[name='clinic_id'], [name='family_id'], [name='drug_q']"
-                  :hx-vals='JSON.stringify({mode: catalogMode})'
+                  :hx-vals="drugHxVals"
                   class="ws-select text-sm flex-1 min-w-[140px]">
             <option value="">{% if IS_RTL %}جميع العائلات{% else %}All Families{% endif %}</option>
             {% for fam in drug_families %}
@@ -188,7 +161,7 @@
                  hx-target="#drug-results"
                  hx-trigger="input changed delay:250ms"
                  hx-include="[name='clinic_id'], [name='family_id'], [name='drug_q']"
-                 :hx-vals='JSON.stringify({mode: catalogMode})'
+                 :hx-vals="drugHxVals"
                  :placeholder="catalogMode === 'commercial' ? '{% if IS_RTL %}بحث بالاسم التجاري...{% else %}Search by commercial name…{% endif %}' : '{% if IS_RTL %}بحث بالاسم الجنيسي...{% else %}Search by generic name…{% endif %}'"
                  class="ws-input text-sm pl-8">
         </div>
@@ -212,7 +185,7 @@
                hx-target="#nondrug-results"
                hx-trigger="focus, input changed delay:300ms"
                hx-include="[name='clinic_id']"
-               :hx-vals='JSON.stringify({category: orderType})'
+               :hx-vals="nondrugHxVals"
                placeholder="{% if IS_RTL %}اكتب للبحث...{% else %}Type to search…{% endif %}"
                class="ws-input text-sm">
         <div id="nondrug-results"
@@ -255,7 +228,7 @@
                 class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-colors shadow-sm">
           <i class="fa-solid fa-flask text-xs"></i> {% if IS_RTL %}إنشاء طلب{% else %}Create Order{% endif %}
         </button>
-        <button type="button" @click="open = false; $el.closest('form').reset(); typeof wsDraftClearCurrent === 'function' && wsDraftClearCurrent()"
+        <button type="button" @click="cancelOrder()"
                 class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
           {% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}
         </button>

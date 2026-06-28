@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import timedelta
+from csp.constants import NONCE
 
 # Load .env file
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -179,6 +180,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "csp.middleware.CSPMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
@@ -359,6 +361,71 @@ SESSION_SAVE_EVERY_REQUEST = True
 # machines). The cookie becomes a browser-session cookie; the server-side idle
 # timeout above still applies within an open browser.
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+# ============================================
+# SECURITY RESPONSE HEADERS
+# These apply in ALL environments (not HTTPS-dependent).
+# ============================================
+
+# Referrer-Policy and X-Frame-Options already resolve to these values via Django
+# defaults; set explicitly so the posture is greppable and pinned against any future
+# change to Django's defaults. (Verified active by `manage.py check --deploy`.)
+SECURE_REFERRER_POLICY = "same-origin"  # already the effective default; explicit for audit
+X_FRAME_OPTIONS = "DENY"                # already the effective default; explicit for audit
+
+# ---- Content-Security-Policy (django-csp) ----
+# ENFORCED, fully hardened as of Phase 2c (the CSP effort is complete).
+# A single CONTENT_SECURITY_POLICY dict -> the Content-Security-Policy header.
+#
+# script-src is nonce-based with NO eval source:
+#   * `NONCE` emits a per-request `'nonce-<rand>'`; every inline <script> carries
+#     nonce="{{ request.csp_nonce }}", so 'unsafe-inline' is DROPPED — an injected
+#     inline <script> without the nonce is blocked. (Nonces never apply to on*=
+#     attributes either, so those were all delegated to JS in Phase 1B.)
+#   * 'unsafe-eval' is GONE. The three things that needed it were removed:
+#       - Alpine.js  -> self-hosted @alpinejs/csp build (Phase 2a), which has no eval.
+#       - Tailwind   -> compiled, self-hosted static/css/tailwind.css (Phase 2b),
+#                       replacing the Tailwind Play CDN (cdn.tailwindcss.com).
+#       - htmx       -> self-hosted static/js/vendor/htmx.min.js (Phase 2c-a),
+#                       replacing unpkg.com; its 2 hx-on attrs (eval'd via
+#                       new Function) were externalized to delegated JS (Phase 2c-b).
+#   * Remaining allowed hosts: 'self' (nonced inline + self-hosted vendor/static),
+#     cdn.jsdelivr.net (flatpickr/fullcalendar/chart.js/sortable.js) and
+#     cdnjs.cloudflare.com (font-awesome/cropper.js). Neither library set uses eval;
+#     self-hosting those too is an optional future follow-up.
+#
+# Known, intentional exception still in the policy:
+#   * style-src 'unsafe-inline' — 600+ inline style="" attributes (nonces don't
+#     cover style attributes); explicitly out of scope for this effort.
+CONTENT_SECURITY_POLICY = {
+    "DIRECTIVES": {
+        "default-src": ["'self'"],
+        "script-src": [
+            "'self'",
+            NONCE,
+            "https://cdn.jsdelivr.net",   # flatpickr, fullcalendar, chart.js, sortable.js
+            "https://cdnjs.cloudflare.com",  # font-awesome, cropper.js
+        ],
+        "style-src": [
+            "'self'",
+            "'unsafe-inline'",
+            "https://fonts.googleapis.com",
+            "https://cdnjs.cloudflare.com",
+            "https://cdn.jsdelivr.net",
+        ],
+        "font-src": [
+            "'self'",
+            "https://fonts.gstatic.com",
+            "https://cdnjs.cloudflare.com",
+        ],
+        "img-src": ["'self'", "data:"],
+        "connect-src": ["'self'"],
+        "frame-ancestors": ["'none'"],  # complements X-Frame-Options on modern browsers
+        "object-src": ["'none'"],
+        "base-uri": ["'self'"],
+        "form-action": ["'self'"],
+    },
+}
 
 # ============================================
 # PRODUCTION SECURITY HARDENING (HTTPS)

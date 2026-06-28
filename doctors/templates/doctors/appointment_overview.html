@@ -1,8 +1,9 @@
 {% extends "doctors/base_doctor.html" %}
+{% load static %}
 {% block title %}{% if IS_RTL %}نظرة عامة على الموعد | بوابة الطبيب{% else %}Appointment Overview | Doctor Portal{% endif %}{% endblock %}
 
 {% block extra_head %}
-<script src="https://unpkg.com/htmx.org@1.9.10" crossorigin="anonymous"></script>
+<script src="{% static 'js/vendor/htmx.min.js' %}"></script>
 {% endblock %}
 
 {% block content %}
@@ -194,8 +195,8 @@
       </div>
       <div class="px-5 py-5">
         {# Reveal the reason field only after the doctor opts to cancel. #}
-        <button type="button"
-                onclick="document.getElementById('doc-ov-cancel-panel').classList.toggle('hidden');this.classList.add('hidden');"
+        <button type="button" id="doc-ov-cancel-trigger"
+                data-toggle-hidden="doc-ov-cancel-panel" data-hide-self
                 class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 dark:border-red-900/40 bg-white dark:bg-slate-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-semibold transition-colors">
           <i class="fa-solid fa-xmark text-xs"></i> {% if IS_RTL %}إلغاء الموعد{% else %}Cancel Appointment{% endif %}
         </button>
@@ -217,7 +218,7 @@
               {% if IS_RTL %}تأكيد الإلغاء{% else %}Confirm Cancellation{% endif %}
             </button>
             <button type="button"
-                    onclick="var f=document.getElementById('doc-ov-cancel-panel');f.classList.add('hidden');f.previousElementSibling.classList.remove('hidden');"
+                    data-hide="doc-ov-cancel-panel" data-show="doc-ov-cancel-trigger"
                     class="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-300 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
               {% if IS_RTL %}تراجع{% else %}Back{% endif %}
             </button>

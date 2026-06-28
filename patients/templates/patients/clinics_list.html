@@ -39,7 +39,7 @@
                 <div class="sm:w-56">
                     <select name="city_id"
                             class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-sm appearance-none"
-                            onchange="document.getElementById('searchForm').submit();">
+                            data-autosubmit data-form="searchForm">
                         <option value="">{% trans "كل المدن" %}</option>
                         {% for city in all_cities %}
                         <option value="{{ city.id }}" {% if selected_city and selected_city.id == city.id %}selected{% endif %}>

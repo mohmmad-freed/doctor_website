@@ -172,7 +172,7 @@
     </div>
 
     <form method="post" action="{% url 'doctors:intake_question_add' template.id %}" class="px-5 py-4 space-y-4"
-          onsubmit="collectChoices('main-choices-list', 'main-choices-raw')">
+          data-collect-choices="main-choices-list,main-choices-raw">
       {% csrf_token %}
 
       <div>
@@ -213,19 +213,19 @@
           <div class="choice-row flex items-center gap-2">
             <div class="w-6 h-6 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-xs font-bold text-indigo-600 dark:text-indigo-400 flex-shrink-0 choice-num">1</div>
             <input type="text" class="choice-input flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition" placeholder="Option 1">
-            <button type="button" class="remove-choice w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors hidden" onclick="removeChoice(this)" title="Remove">
+            <button type="button" class="remove-choice w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors hidden" data-remove-choice title="Remove">
               <i class="fa-solid fa-xmark text-xs"></i>
             </button>
           </div>
           <div class="choice-row flex items-center gap-2">
             <div class="w-6 h-6 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-xs font-bold text-indigo-600 dark:text-indigo-400 flex-shrink-0 choice-num">2</div>
             <input type="text" class="choice-input flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition" placeholder="Option 2">
-            <button type="button" class="remove-choice w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors hidden" onclick="removeChoice(this)" title="Remove">
+            <button type="button" class="remove-choice w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors hidden" data-remove-choice title="Remove">
               <i class="fa-solid fa-xmark text-xs"></i>
             </button>
           </div>
         </div>
-        <button type="button" onclick="addChoice('main-choices-list', 'indigo')"
+        <button type="button" data-add-choice data-choice-list="main-choices-list" data-choice-color="indigo"
                 class="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 px-2.5 py-1.5 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors border border-dashed border-indigo-300 dark:border-indigo-700/40">
           <i class="fa-solid fa-plus text-[10px]"></i>
           {% if IS_RTL %}إضافة خيار{% else %}Add option{% endif %}
@@ -267,7 +267,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
+<script nonce="{{ request.csp_nonce }}">
   // ══════════════════════════════════════════════════════════
   // Choices builder — shared helpers
   // ══════════════════════════════════════════════════════════
@@ -293,7 +293,7 @@
     div.innerHTML =
       `<div class="${numSz} ${numBg} flex items-center justify-center font-bold flex-shrink-0 choice-num">${num}</div>` +
       `<input type="text" class="choice-input flex-1 ${inputSz} rounded-lg border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700/60 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 ${ring} transition" placeholder="New option">` +
-      `<button type="button" class="remove-choice ${btnSz} flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" onclick="removeChoice(this)" title="Remove">` +
+      `<button type="button" class="remove-choice ${btnSz} flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" data-remove-choice title="Remove">` +
         `<i class="fa-solid fa-xmark text-xs"></i>` +
       `</button>`;
     list.appendChild(div);
@@ -391,6 +391,20 @@
 
     sel.addEventListener('change', toggleFuChoices);
     toggleFuChoices();
+  });
+
+  // CSP: bind choice-builder controls (replaces inline on* handlers, incl. _intake_question_node partial)
+  document.addEventListener('click', function (e) {
+    var rc = e.target.closest('[data-remove-choice]');
+    if (rc) { removeChoice(rc); return; }
+    var ac = e.target.closest('[data-add-choice]');
+    if (ac) { addChoice(ac.getAttribute('data-choice-list'), ac.getAttribute('data-choice-color')); return; }
+    var tf = e.target.closest('[data-toggle-followup]');
+    if (tf) { toggleFollowupForm(tf.getAttribute('data-node-id')); return; }
+  });
+  document.addEventListener('submit', function (e) {
+    var f = e.target.closest('[data-collect-choices]');
+    if (f) { var p = f.getAttribute('data-collect-choices').split(','); collectChoices(p[0].trim(), p[1].trim()); }
   });
 </script>
 {% endblock %}

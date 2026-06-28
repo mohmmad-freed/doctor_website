@@ -55,18 +55,24 @@
   </a>
   <button type="button"
           aria-label="{% trans 'إخفاء' %}"
-          onclick="(function(b){try{localStorage.setItem(b.dataset.bbKey,'1')}catch(e){}b.remove();})(document.getElementById('blocked-banner'))"
+          data-bb-dismiss
           class="flex-shrink-0 p-1.5 rounded-lg text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors">
     <i class="fa-solid fa-xmark"></i>
   </button>
 </div>
-<script>
+<script nonce="{{ request.csp_nonce }}">
   (function () {
     var b = document.getElementById('blocked-banner');
     if (!b) return;
     try {
       if (!localStorage.getItem(b.dataset.bbKey)) b.classList.remove('hidden');
     } catch (e) { b.classList.remove('hidden'); }
+    // CSP: dismiss button (replaces inline onclick)
+    var x = b.querySelector('[data-bb-dismiss]');
+    if (x) x.addEventListener('click', function () {
+      try { localStorage.setItem(b.dataset.bbKey, '1'); } catch (e) {}
+      b.remove();
+    });
   })();
 </script>
 {% endif %}

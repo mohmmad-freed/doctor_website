@@ -12,55 +12,32 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cairo:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Tailwind CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: {
-                        primary: {
-                            50:  '#eef2ff',
-                            100: '#e0e7ff',
-                            400: '#818cf8',
-                            500: '#6366f1',
-                            600: '#4f46e5',
-                            700: '#4338ca',
-                            900: '#1e1b4b',
-                        },
-                        accent: {
-                            50:  '#f0fdfa',
-                            100: '#ccfbf1',
-                            500: '#14b8a6',
-                            600: '#0d9488',
-                        }
-                    }
-                }
-            }
+    <!-- Self-hosted compiled Tailwind (CSP Phase 2b; replaces cdn.tailwindcss.com) -->
+    <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
+    <style>
+        /* Doctor portal palette (indigo). Space-separated RGB channels consumed by the
+           CSS-variable-driven Tailwind config (primary-NN). Only the shades the original
+           inline config defined are set; others stay colorless, as before. */
+        :root {
+            --color-primary-50:  238 242 255;
+            --color-primary-100: 224 231 255;
+            --color-primary-400: 129 140 248;
+            --color-primary-500: 99 102 241;
+            --color-primary-600: 79 70 229;
+            --color-primary-700: 67 56 202;
+            --color-primary-900: 30 27 75;
         }
-    </script>
+    </style>
 
-    <style type="text/tailwindcss">
+    <style>
         /* Alpine x-cloak: hide elements until Alpine initialises them */
         [x-cloak] { display: none !important; }
 
-        @layer utilities {
-            .scrollbar-none::-webkit-scrollbar { display: none; }
-            .scrollbar-none { scrollbar-width: none; }
-            .glass-card {
-                @apply bg-white border border-gray-100 shadow-sm rounded-2xl;
-            }
-            .dark .glass-card {
-                @apply bg-slate-800 border-slate-700;
-            }
-            .animate-fade-in-up {
-                animation: fadeInUp 0.4s ease-out forwards;
-            }
-            .dr-badge {
-                @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold;
-            }
+        /* .glass-card / .dr-badge used @apply -> now compiled into tailwind.css. */
+        .scrollbar-none::-webkit-scrollbar { display: none; }
+        .scrollbar-none { scrollbar-width: none; }
+        .animate-fade-in-up {
+            animation: fadeInUp 0.4s ease-out forwards;
         }
         @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(16px); }
@@ -147,6 +124,10 @@
             box-shadow: 0 12px 32px rgba(0,0,0,0.12);
             z-index: 50;
         }
+        /* CSP Phase 2b: the compiled tailwind.css is flat (no @layer), so this inline
+           .mobile-nav-glass rule would otherwise override `md:hidden` by source order
+           and show the mobile nav on desktop. Reproduce md:hidden deterministically. */
+        @media (min-width: 768px) { .mobile-nav-glass { display: none; } }
         .dark .mobile-nav-glass {
             background: rgba(30,41,59,0.82);
             border-color: rgba(255,255,255,0.08);
@@ -341,7 +322,7 @@
     </style>
 
     <!-- Dark-mode + sidebar pre-script (no FOUC) -->
-    <script>
+    <script nonce="{{ request.csp_nonce }}">
         const _t = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
         if (_t === 'dark') document.documentElement.classList.add('dark');
         if (localStorage.getItem('sidebar_collapsed') !== '0') document.documentElement.classList.add('sidebar-collapsed');
@@ -368,10 +349,10 @@
     </div>
 
     <!-- Mobile drawer backdrop -->
-    <div id="sidebarBackdrop" onclick="closeSidebarMobile()"></div>
+    <div id="sidebarBackdrop" data-sidebar="close-mobile"></div>
 
     <!-- Floating re-open button (desktop, shown when collapsed) -->
-    <button id="sidebarReopen" onclick="expandSidebar()" aria-label="{% trans 'فتح القائمة' %}" title="{% trans 'فتح القائمة' %}">
+    <button id="sidebarReopen" data-sidebar="reopen" aria-label="{% trans 'فتح القائمة' %}" title="{% trans 'فتح القائمة' %}">
         <i class="fa-solid fa-bars-staggered"></i>
     </button>
 
@@ -391,7 +372,7 @@
                     <span class="font-bold text-base text-gray-900 dark:text-white tracking-tight">MedPortal</span>
                     <span class="text-[10px] font-semibold text-primary-600 dark:text-primary-400 uppercase tracking-wider">{% trans "بوابة الأطباء" %}</span>
                 </div>
-                <button class="sidebar-toggle-btn ms-auto" onclick="toggleSidebarFromHeader()" aria-label="{% trans 'طي القائمة' %}" title="{% trans 'طي القائمة' %}">
+                <button class="sidebar-toggle-btn ms-auto" data-sidebar="toggle-header" aria-label="{% trans 'طي القائمة' %}" title="{% trans 'طي القائمة' %}">
                     <i class="fa-solid fa-angles-left"></i>
                 </button>
             </div>
@@ -502,7 +483,7 @@
             <!-- User section (bottom) -->
             <div class="flex-shrink-0 border-t border-gray-100 dark:border-slate-700 p-3 relative" id="sidebarUserMenu">
 
-                <button onclick="document.getElementById('sidebarUserMenu').classList.toggle('open')"
+                <button type="button" data-toggle-class="open" data-toggle-target="sidebarUserMenu"
                         class="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl
                                hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors text-start group">
                     <div class="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center text-primary-600 dark:text-primary-300 font-bold text-sm flex-shrink-0">
@@ -513,7 +494,7 @@
                         <p class="text-xs text-gray-500 dark:text-gray-400 truncate{% if IS_RTL %} text-right{% endif %}" dir="ltr">{{ request.user.phone }}</p>
                     </div>
                     <div class="flex items-center gap-2 flex-shrink-0">
-                        <form method="post" action="{% url 'accounts:set_language' %}" style="display:inline;" onclick="event.stopPropagation()">
+                        <form method="post" action="{% url 'accounts:set_language' %}" style="display:inline;" data-stop-propagation>
                           {% csrf_token %}
                           <input type="hidden" name="next" value="{{ request.get_full_path }}">
                           {% if IS_RTL %}
@@ -524,7 +505,7 @@
                           <button type="submit" class="lang-toggle-btn" style="height:26px;padding:2px 8px;font-size:0.72rem;border-radius:6px;gap:4px;"><i class="fa-solid fa-globe" style="font-size:0.65rem;"></i> EN</button>
                           {% endif %}
                         </form>
-                        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle Dark Mode" onclick="event.stopPropagation()">
+                        <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle Dark Mode" data-stop-propagation>
                             <span class="toggle-background">
                                 <span class="star star-1"></span>
                                 <span class="star star-2"></span>
@@ -581,7 +562,7 @@
             <!-- Mobile top bar -->
             <header class="md:hidden sticky top-0 z-30 h-14 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-gray-200 dark:border-slate-700 flex items-center justify-between px-4">
                 <div class="flex items-center gap-2">
-                    <button onclick="openSidebarMobile()" class="inline-flex items-center justify-center w-9 h-9 -ms-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors" aria-label="{% trans 'فتح القائمة' %}">
+                    <button type="button" data-sidebar="open-mobile" class="inline-flex items-center justify-center w-9 h-9 -ms-1.5 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors" aria-label="{% trans 'فتح القائمة' %}">
                         <i class="fa-solid fa-bars text-lg"></i>
                     </button>
                     <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white text-xs">
@@ -683,7 +664,7 @@
     </nav>
 
     <!-- ═══════════════ SCRIPTS ═══════════════ -->
-    <script>
+    <script nonce="{{ request.csp_nonce }}">
         // ── Sidebar open / close ──────────────────────────────
         const _isDesktop = () => window.matchMedia('(min-width: 768px)').matches;
         function openSidebarMobile()  { document.documentElement.classList.add('sidebar-open'); }
@@ -709,6 +690,17 @@
             });
         });
         document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSidebarMobile(); });
+
+        // CSP: sidebar controls (replaces inline onclick handlers)
+        document.addEventListener('click', function (e) {
+            const t = e.target.closest('[data-sidebar]');
+            if (!t) return;
+            const a = t.getAttribute('data-sidebar');
+            if (a === 'open-mobile') openSidebarMobile();
+            else if (a === 'close-mobile') closeSidebarMobile();
+            else if (a === 'reopen') expandSidebar();
+            else if (a === 'toggle-header') toggleSidebarFromHeader();
+        });
 
         // Theme toggle (sidebar desktop)
         document.addEventListener('DOMContentLoaded', () => {
@@ -756,7 +748,7 @@
     </script>
 
     <!-- ═══════════════ MULTI-PATIENT WORKSPACE (MPW) ═══════════════ -->
-    <script>
+    <script nonce="{{ request.csp_nonce }}">
     (function () {
         'use strict';
 
@@ -836,11 +828,18 @@
                         '<p class="mpw-name' + activeTextClass + '">' + esc(p.name) + '</p>' +
                         '<p class="mpw-phone">' + esc(p.phone || '') + '</p>' +
                     '</a>' +
-                    '<button class="mpw-close-btn" onclick="mpwHandleClose(' + p.id + ', event)" title="Close workspace" type="button">' +
+                    '<button class="mpw-close-btn" data-mpw-close="' + p.id + '" title="Close workspace" type="button">' +
                         '<i class="fa-solid fa-xmark"></i>' +
                     '</button>' +
                 '</div>';
             }).join('');
+
+            // CSP: bind close buttons (replaces inline onclick in generated markup)
+            container.querySelectorAll('[data-mpw-close]').forEach(function (b) {
+                b.addEventListener('click', function (ev) {
+                    window.mpwHandleClose(parseInt(b.getAttribute('data-mpw-close'), 10), ev);
+                });
+            });
         };
 
         // ── Close button handler ───────────────────────────────────────
@@ -889,7 +888,7 @@
     </script>
 
     <!-- Keep the mobile bottom nav pinned above the browser's dynamic toolbar -->
-    <script>
+    <script nonce="{{ request.csp_nonce }}">
         (function () {
             var nav = document.querySelector('.mobile-nav-glass');
             var vv = window.visualViewport;
@@ -906,6 +905,7 @@
         })();
     </script>
 
+    <script src="{% static 'js/csp_delegation.js' %}"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

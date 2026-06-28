@@ -17,58 +17,30 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Tailwind CSS (CDN) -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Cairo', 'Inter', 'sans-serif'],
-                    },
-                    colors: {
-                        primary: {
-                            50: '#eff6ff',
-                            100: '#dbeafe',
-                            200: '#bfdbfe',
-                            300: '#93c5fd',
-                            400: '#60a5fa',
-                            500: '#3b82f6',
-                            600: '#2563eb',
-                            700: '#1d4ed8',
-                            800: '#1e40af',
-                            900: '#1e3a8a',
-                        },
-                        secondary: {
-                            50: '#f0fdfa',
-                            100: '#ccfbf1',
-                            500: '#14b8a6',
-                            600: '#0d9488',
-                        }
-                    }
-                }
-            }
+    <!-- Self-hosted compiled Tailwind (CSP Phase 2b; replaces cdn.tailwindcss.com) -->
+    <link rel="stylesheet" href="{% static 'css/tailwind.css' %}">
+    <style>
+        /* Patient portal palette (blue). Space-separated RGB channels consumed by the
+           CSS-variable-driven Tailwind config (primary-NN); exact values from the
+           previous inline config. */
+        :root {
+            --color-primary-50:  239 246 255;
+            --color-primary-100: 219 234 254;
+            --color-primary-200: 191 219 254;
+            --color-primary-300: 147 197 253;
+            --color-primary-400: 96 165 250;
+            --color-primary-500: 59 130 246;
+            --color-primary-600: 37 99 235;
+            --color-primary-700: 29 78 216;
+            --color-primary-800: 30 64 175;
+            --color-primary-900: 30 58 138;
         }
-    </script>
+    </style>
 
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .glass {
-                @apply bg-white/80 backdrop-blur-lg border border-white/20 shadow-xl;
-            }
-            .dark .glass {
-                @apply bg-slate-900/80 border-slate-700/50;
-            }
-            .glass-card {
-                @apply bg-white border border-gray-100 shadow-sm rounded-2xl;
-            }
-            .dark .glass-card {
-                @apply bg-slate-800 border-slate-700;
-            }
-            .animate-fade-in-up {
-                animation: fadeInUp 0.5s ease-out forwards;
-            }
+    <style>
+        /* .glass / .glass-card used @apply -> now compiled into tailwind.css. */
+        .animate-fade-in-up {
+            animation: fadeInUp 0.5s ease-out forwards;
         }
         @keyframes fadeInUp {
             from {
@@ -150,6 +122,10 @@
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
             z-index: 50;
         }
+        /* CSP Phase 2b: compiled tailwind.css is flat (no @layer), so this inline
+           .mobile-nav-glass rule would otherwise override `md:hidden` on desktop.
+           Reproduce md:hidden deterministically. */
+        @media (min-width: 768px) { .mobile-nav-glass { display: none; } }
         .dark .mobile-nav-glass {
             background: rgba(30, 41, 59, 0.75);
             border-color: rgba(255, 255, 255, 0.1);
@@ -215,7 +191,7 @@
     </style>
     {% block extra_head %}{% endblock %}
 
-    <script>
+    <script nonce="{{ request.csp_nonce }}">
         // Check for saved theme preference
         const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
         if (savedTheme === 'dark') {
@@ -328,7 +304,7 @@
 
                     <!-- User dropdown -->
                     <div class="relative" id="patientUserMenu">
-                        <button onclick="document.getElementById('patientUserMenu').classList.toggle('pum-open')"
+                        <button type="button" data-toggle-class="pum-open" data-toggle-target="patientUserMenu"
                             class="flex items-center gap-2 px-2.5 py-1.5 rounded-full border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-primary-500 transition-all cursor-pointer">
                             <div class="w-7 h-7 rounded-full overflow-hidden flex-shrink-0">
                                 {% if request.user.patient_profile.avatar %}
@@ -480,7 +456,7 @@
         </div>
     </footer>
 
-    <script>
+    <script nonce="{{ request.csp_nonce }}">
         document.addEventListener('DOMContentLoaded', () => {
             const themeToggleBtn = document.getElementById('theme-toggle');
 
@@ -505,7 +481,7 @@
         });
     </script>
 
-    <script>
+    <script nonce="{{ request.csp_nonce }}">
         (function () {
             var bar = document.getElementById('ptBar');
             var skel = document.getElementById('ptSkeleton');
@@ -551,7 +527,7 @@
     </script>
 
     <!-- Keep the mobile bottom nav pinned above the browser's dynamic toolbar -->
-    <script>
+    <script nonce="{{ request.csp_nonce }}">
         (function () {
             var nav = document.querySelector('.mobile-nav-glass');
             var vv = window.visualViewport;
@@ -571,7 +547,7 @@
     </script>
 
     <!-- Patient user menu dropdown toggle -->
-    <script>
+    <script nonce="{{ request.csp_nonce }}">
         document.addEventListener('click', function(e) {
             var menu = document.getElementById('patientUserMenu');
             if (!menu) return;
@@ -596,6 +572,7 @@
     <!-- Mobile menu logic removed -->
 
     <script src="{% static 'accounts/js/phone_validator.js' %}"></script>
+    <script src="{% static 'js/csp_delegation.js' %}"></script>
     {% block scripts %}{% endblock %}
 
 </body>

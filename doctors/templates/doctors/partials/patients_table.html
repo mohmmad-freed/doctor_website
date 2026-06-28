@@ -117,7 +117,7 @@
                               title="{% if IS_RTL %}انقر للكشف{% else %}Click to reveal{% endif %}"
                               data-nid="{{ p.patient__national_id }}"
                               data-masked="{{ p.patient__national_id|slice:':3' }}••••{{ p.patient__national_id|slice:'-2:' }}"
-                              onclick="this.textContent = this.dataset.nid; this.title=''; this.classList.add('text-slate-700','dark:text-slate-200'); this.onclick=null;"
+                              data-reveal-nid
                               style="cursor:pointer;">
                             {{ p.patient__national_id|slice:":3" }}••••{{ p.patient__national_id|slice:"-2:" }}
                         </span>
@@ -176,13 +176,9 @@
 
                     <td class="px-4 py-4 text-end">
                         <div class="inline-block"
-                             x-data="{ open: false, top: 0, right: 0 }"
+                             x-data="patientRowMenu"
                              @click.outside="open = false">
-                            <button @click="
-                                    let r = $el.getBoundingClientRect();
-                                    top = r.bottom + window.scrollY + 4;
-                                    right = window.innerWidth - r.right;
-                                    open = !open;"
+                            <button @click="toggleMenu($el)"
                                     class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                                 <i class="fa-solid fa-ellipsis-vertical"></i>
                             </button>
@@ -193,7 +189,7 @@
                                  x-transition:leave="transition ease-in duration-75"
                                  x-transition:leave-start="opacity-100 scale-100"
                                  x-transition:leave-end="opacity-0 scale-95"
-                                 :style="`position:fixed; top:${top}px; right:${right}px;`"
+                                 :style="menuStyle"
                                  class="w-52 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg z-50 overflow-hidden"
                                  style="display:none;">
                                 <a href="{% url 'doctors:patient_workspace' p.patient_id %}"
