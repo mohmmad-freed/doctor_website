@@ -1,5 +1,14 @@
 {% extends "doctors/base_doctor.html" %}
+{% load static %}
 {% block title %}{% if IS_RTL %}تفاصيل الموعد | بوابة الطبيب{% else %}Appointment Details | Doctor Portal{% endif %}{% endblock %}
+
+{% block extra_head %}
+{# Reschedule modal: self-hosted HTMX loads the modal/slots; @alpinejs/csp drives the modal (registered rescheduleModal, loaded eagerly before Alpine); reschedule.js delegates slot selection. No CDN/eval. #}
+<script src="{% static 'js/vendor/htmx.min.js' %}"></script>
+<script src="{% static 'doctors/js/alpine_components.js' %}"></script>
+<script defer src="{% static 'js/vendor/alpine-csp.min.js' %}"></script>
+<script defer src="{% static 'doctors/js/reschedule.js' %}"></script>
+{% endblock %}
 
 {% block content %}
 <div class="max-w-3xl mx-auto px-4 pt-5 pb-8">

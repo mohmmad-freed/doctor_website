@@ -1,6 +1,12 @@
 {% extends "doctors/base_doctor.html" %}
+{% load static %}
 
 {% block title %}{% if IS_RTL %}يومي | بوابة الطبيب{% else %}My Day | Doctor Portal{% endif %}{% endblock %}
+
+{% block extra_head %}
+{# Self-hosted HTMX drives the live queue (every-30s poll) + the status-transition buttons (base_doctor doesn't load HTMX). No CDN/eval. #}
+<script src="{% static 'js/vendor/htmx.min.js' %}"></script>
+{% endblock %}
 
 {% block content %}
 <div class="max-w-5xl mx-auto space-y-6 animate-fade-in-up">

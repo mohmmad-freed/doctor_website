@@ -17,7 +17,7 @@
     <form method="get" class="browse-filter">
         <input type="text" name="q" value="{{ search_query }}"
                placeholder="{% if IS_RTL %}ابحث بالاسم أو العنوان أو التخصص{% else %}Search by name, address, or specialty{% endif %}">
-        <select name="city_id" onchange="this.form.submit()">
+        <select name="city_id" data-autosubmit>
             <option value="">{% if IS_RTL %}كل المدن{% else %}All cities{% endif %}</option>
             {% for city in cities %}
             <option value="{{ city.id }}" {% if selected_city_id == city.id|stringformat:'s' %}selected{% endif %}>{{ city.name }}</option>

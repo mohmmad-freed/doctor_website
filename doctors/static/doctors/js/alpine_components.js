@@ -603,6 +603,29 @@
     };
   }
 
+  // ──────────────────────────────────────────────────────────────────────
+  // Reschedule-appointment modal (_reschedule_modal.html) — was an inline
+  // x-data="{...}" whose init()/close() used method shorthand + arrow fns +
+  // setTimeout/document (globals) → unparseable by the CSP build. Same shape as
+  // followupModal, on the #reschedule-modal-root host.
+  // ──────────────────────────────────────────────────────────────────────
+  function rescheduleModal() {
+    return {
+      open: false,
+      init() {
+        var self = this;
+        this.$nextTick(function () { self.open = true; });
+      },
+      close() {
+        this.open = false;
+        setTimeout(function () {
+          var root = document.getElementById('reschedule-modal-root');
+          if (root) root.innerHTML = '';
+        }, 250);
+      }
+    };
+  }
+
   document.addEventListener('alpine:init', function () {
     Alpine.data('orthoWorkspace', orthoWorkspace);
     Alpine.data('orthoReadView', orthoReadView);
@@ -615,5 +638,6 @@
     Alpine.data('followupModal', followupModal);
     Alpine.data('followupSuccess', followupSuccess);
     Alpine.data('patientRowMenu', patientRowMenu);
+    Alpine.data('rescheduleModal', rescheduleModal);
   });
 })();

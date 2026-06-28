@@ -13,6 +13,9 @@
 <script src="{% static 'doctors/js/alpine_components.js' %}"></script>
 <script defer src="{% static 'doctors/js/ws_prescriptions.js' %}"></script>
 <script defer src="{% static 'doctors/js/followup_slots.js' %}"></script>
+{# CSP: externalized handlers for the HTMX-swapped tab partials (inline scripts there lose the nonce on re-inject). Both self-guard + re-init on swap. #}
+<script defer src="{% static 'doctors/js/ai_scribe.js' %}"></script>
+<script defer src="{% static 'doctors/js/med_safety.js' %}"></script>
 <style>
   /* ── Sticky workspace header ─────────────────────────────────────────── */
   .ws-header {

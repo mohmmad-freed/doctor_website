@@ -79,7 +79,7 @@
                         <span class="text-sm font-semibold text-gray-800 dark:text-gray-100" dir="ltr">{{ exc.start_date|date:"d M Y" }} – {{ exc.end_date|date:"d M Y" }}</span>
                         {% if exc.reason %}<span class="text-xs text-gray-500 dark:text-gray-400 ms-2">{{ exc.reason }}</span>{% endif %}
                     </div>
-                    <form method="post" class="inline" onsubmit="return confirm('{% if IS_RTL %}حذف فترة التوقف هذه؟{% else %}Remove this time-off?{% endif %}')">
+                    <form method="post" class="inline" data-confirm="{% if IS_RTL %}حذف فترة التوقف هذه؟{% else %}Remove this time-off?{% endif %}">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="delete_exception">
                         <input type="hidden" name="clinic_id" value="{{ selected_clinic.id }}">
