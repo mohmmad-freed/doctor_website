@@ -1460,6 +1460,13 @@
                         {% endif %}
                     {% endwith %}
                     <span class="schedule-hint"><i class="fa-regular fa-calendar-days"></i> {% trans "جدول العمل" %}</span>
+                    <a href="{% url 'clinics:manage_doctor_ai' clinic_id=clinic.id staff_id=staff_member.id %}"
+                       class="staff-remove-btn"
+                       style="margin-top:0.35rem;color:#4f46e5;border-color:#c7d2fe;"
+                       onclick="event.stopPropagation();"
+                       title="{% trans 'إعدادات الذكاء الاصطناعي' %}">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> {% trans "الذكاء الاصطناعي" %}
+                    </a>
                     <form method="post" action="{% url 'clinics:remove_staff' clinic_id=clinic.id staff_id=staff_member.id %}"
                           style="margin-top:0.35rem;" onclick="event.stopPropagation();">
                         {% csrf_token %}

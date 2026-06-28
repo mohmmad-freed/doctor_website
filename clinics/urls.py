@@ -30,6 +30,7 @@ urlpatterns = [
     path('<int:clinic_id>/staff/add-self/', views.add_self_as_staff, name='add_self_as_staff'),
     path('<int:clinic_id>/staff/<int:staff_id>/remove/', views.remove_staff, name='remove_staff'),
     path('<int:clinic_id>/staff/<int:staff_id>/schedule/', views.doctor_schedule_panel, name='doctor_schedule_panel'),
+    path('<int:clinic_id>/staff/<int:staff_id>/ai-settings/', views.manage_doctor_ai, name='manage_doctor_ai'),
 
     # Clinic Invitations
     path('<int:clinic_id>/invitations/', views.invitations_list, name='invitations_list'),

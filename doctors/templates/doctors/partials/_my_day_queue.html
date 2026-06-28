@@ -1,0 +1,143 @@
+{# ── My Day live queue board ───────────────────────────────────────────────
+   Self-refreshing (every 30s) + swap target for the inline action buttons.
+   Context: confirmed, waiting (list of {appt, queue_pos, wait_minutes, wait_class}),
+            in_progress, *_count.
+──────────────────────────────────────────────────────────────────────────── #}
+<div id="my-day-queue"
+     hx-get="{% url 'doctors:my_day_queue' %}"
+     hx-trigger="every 30s"
+     hx-swap="outerHTML"
+     class="space-y-5">
+
+  <!-- Stats strip -->
+  <div class="grid grid-cols-3 gap-3">
+    <div class="glass-card p-4 text-center">
+      <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ waiting_count }}</p>
+      <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mt-0.5">{% if IS_RTL %}في الانتظار{% else %}Waiting{% endif %}</p>
+    </div>
+    <div class="glass-card p-4 text-center">
+      <p class="text-2xl font-bold text-violet-600 dark:text-violet-400">{{ in_progress_count }}</p>
+      <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mt-0.5">{% if IS_RTL %}مع الطبيب الآن{% else %}With me now{% endif %}</p>
+    </div>
+    <div class="glass-card p-4 text-center">
+      <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ confirmed_count }}</p>
+      <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mt-0.5">{% if IS_RTL %}قادمون اليوم{% else %}Arriving today{% endif %}</p>
+    </div>
+  </div>
+
+  <div class="grid lg:grid-cols-2 gap-4">
+
+    <!-- ── Waiting (checked-in) ── -->
+    <div class="glass-card overflow-hidden">
+      <div class="flex items-center gap-2 px-5 py-3 border-b border-gray-100 dark:border-slate-700 bg-blue-50/60 dark:bg-blue-900/10">
+        <span class="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0"></span>
+        <h2 class="text-sm font-bold text-gray-800 dark:text-gray-100">{% if IS_RTL %}قائمة الانتظار{% else %}Waiting Queue{% endif %}</h2>
+        <span class="ms-auto text-xs text-gray-400 dark:text-gray-500">{{ waiting_count }}</span>
+      </div>
+      <div class="divide-y divide-gray-50 dark:divide-slate-700/50">
+        {% for row in waiting %}
+        <div class="flex items-center gap-3 px-4 py-3">
+          <div class="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold
+                      {% if row.queue_pos == 1 %}bg-blue-600 text-white{% else %}bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300{% endif %}">
+            {{ row.queue_pos }}
+          </div>
+          <div class="flex-grow min-w-0">
+            <a href="{% url 'doctors:patient_workspace' row.appt.patient.id %}" class="font-semibold text-sm text-gray-900 dark:text-white truncate hover:text-primary-600 dark:hover:text-primary-400">{{ row.appt.patient.name }}</a>
+            <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
+              {{ row.appt.clinic.name }}{% if row.appt.appointment_type %} · {{ row.appt.appointment_type.display_name }}{% endif %}
+              {% if row.appt.is_walk_in %}· <span class="text-amber-600 dark:text-amber-400">{% if IS_RTL %}بدون موعد{% else %}walk-in{% endif %}</span>{% endif %}
+            </p>
+          </div>
+          <div class="flex-shrink-0 text-end">
+            <p class="text-xs font-bold {{ row.wait_class }} tabular-nums">{{ row.wait_minutes }}{% if IS_RTL %} د{% else %}m{% endif %}</p>
+            <p class="text-[10px] text-gray-400 dark:text-gray-500">{% if IS_RTL %}انتظار{% else %}waiting{% endif %}</p>
+          </div>
+          <form hx-post="{% url 'doctors:my_day_transition' row.appt.id %}" hx-target="#my-day-queue" hx-swap="outerHTML" class="flex-shrink-0">
+            {% csrf_token %}
+            <input type="hidden" name="status" value="IN_PROGRESS">
+            <button type="submit"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-bold transition-colors shadow-sm">
+              <i class="fa-solid fa-play text-[10px]"></i>
+              {% if row.queue_pos == 1 %}{% if IS_RTL %}التالي{% else %}Pull next{% endif %}{% else %}{% if IS_RTL %}بدء{% else %}Start{% endif %}{% endif %}
+            </button>
+          </form>
+        </div>
+        {% empty %}
+        <div class="px-4 py-10 text-center">
+          <i class="fa-regular fa-clock text-gray-300 dark:text-slate-600 text-2xl mb-2"></i>
+          <p class="text-sm text-gray-500 dark:text-gray-400">{% if IS_RTL %}لا أحد في الانتظار{% else %}No one is waiting{% endif %}</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- ── With me now (in-progress) ── -->
+    <div class="glass-card overflow-hidden">
+      <div class="flex items-center gap-2 px-5 py-3 border-b border-gray-100 dark:border-slate-700 bg-violet-50/60 dark:bg-violet-900/10">
+        <span class="w-2 h-2 rounded-full bg-violet-500 flex-shrink-0"></span>
+        <h2 class="text-sm font-bold text-gray-800 dark:text-gray-100">{% if IS_RTL %}مع الطبيب الآن{% else %}With me now{% endif %}</h2>
+        <span class="ms-auto text-xs text-gray-400 dark:text-gray-500">{{ in_progress_count }}</span>
+      </div>
+      <div class="divide-y divide-gray-50 dark:divide-slate-700/50">
+        {% for appt in in_progress %}
+        <div class="flex items-center gap-3 px-4 py-3">
+          <div class="flex-grow min-w-0">
+            <a href="{% url 'doctors:patient_workspace' appt.patient.id %}" class="font-semibold text-sm text-gray-900 dark:text-white truncate hover:text-primary-600 dark:hover:text-primary-400">{{ appt.patient.name }}</a>
+            <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
+              {{ appt.clinic.name }}{% if appt.appointment_type %} · {{ appt.appointment_type.display_name }}{% endif %}
+            </p>
+          </div>
+          <a href="{% url 'doctors:patient_workspace' appt.patient.id %}"
+             class="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-300 text-xs font-semibold hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+            <i class="fa-solid fa-folder-open text-[10px]"></i>{% if IS_RTL %}مساحة العمل{% else %}Workspace{% endif %}
+          </a>
+          <form hx-post="{% url 'doctors:my_day_transition' appt.id %}" hx-target="#my-day-queue" hx-swap="outerHTML" class="flex-shrink-0">
+            {% csrf_token %}
+            <input type="hidden" name="status" value="COMPLETED">
+            <button type="submit"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors shadow-sm">
+              <i class="fa-solid fa-check text-[10px]"></i>{% if IS_RTL %}إنهاء{% else %}Complete{% endif %}
+            </button>
+          </form>
+        </div>
+        {% empty %}
+        <div class="px-4 py-10 text-center">
+          <i class="fa-regular fa-user text-gray-300 dark:text-slate-600 text-2xl mb-2"></i>
+          <p class="text-sm text-gray-500 dark:text-gray-400">{% if IS_RTL %}لا يوجد مريض حالياً{% else %}No patient in progress{% endif %}</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Arriving today (confirmed) ── -->
+  {% if confirmed %}
+  <div class="glass-card overflow-hidden">
+    <div class="flex items-center gap-2 px-5 py-3 border-b border-gray-100 dark:border-slate-700 bg-emerald-50/60 dark:bg-emerald-900/10">
+      <span class="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0"></span>
+      <h2 class="text-sm font-bold text-gray-800 dark:text-gray-100">{% if IS_RTL %}قادمون اليوم{% else %}Arriving today{% endif %}</h2>
+      <span class="ms-auto text-xs text-gray-400 dark:text-gray-500">{{ confirmed_count }}</span>
+    </div>
+    <div class="divide-y divide-gray-50 dark:divide-slate-700/50">
+      {% for appt in confirmed %}
+      <div class="flex items-center gap-3 px-4 py-3">
+        <span class="flex-shrink-0 w-14 text-center text-sm font-bold text-gray-900 dark:text-white tabular-nums">{{ appt.appointment_time|time:"H:i" }}</span>
+        <div class="flex-grow min-w-0">
+          <p class="font-semibold text-sm text-gray-900 dark:text-white truncate">{{ appt.patient.name }}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ appt.clinic.name }}{% if appt.appointment_type %} · {{ appt.appointment_type.display_name }}{% endif %}</p>
+        </div>
+        <form hx-post="{% url 'doctors:my_day_transition' appt.id %}" hx-target="#my-day-queue" hx-swap="outerHTML" class="flex-shrink-0">
+          {% csrf_token %}
+          <input type="hidden" name="status" value="CHECKED_IN">
+          <button type="submit"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors shadow-sm">
+            <i class="fa-solid fa-right-to-bracket text-[10px]"></i>{% if IS_RTL %}تسجيل وصول{% else %}Check in{% endif %}
+          </button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>

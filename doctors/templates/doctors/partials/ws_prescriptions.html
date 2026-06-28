@@ -46,6 +46,8 @@
       <input type="hidden" name="clinic_id" value="{{ clinics.0.id }}">
       {% endif %}
 
+      {% include "doctors/partials/_medication_safety_banner.html" %}
+
       <!-- Medication rows -->
       <div>
         <div class="flex items-center justify-between mb-3">

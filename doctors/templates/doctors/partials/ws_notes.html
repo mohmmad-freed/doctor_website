@@ -5,8 +5,163 @@
 </div>
 {% endif %}
 
+{# ── AI draft status banners ── #}
+{% if ai_error %}
+<div class="mb-4 flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/40 text-red-700 dark:text-red-300 text-sm font-medium">
+  <i class="fa-solid fa-circle-exclamation"></i> {{ ai_error }}
+</div>
+{% endif %}
+{% if ai_drafted %}
+<div class="mb-4 flex items-center gap-2 px-4 py-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700/40 text-indigo-700 dark:text-indigo-300 text-sm font-medium">
+  <i class="fa-solid fa-wand-magic-sparkles"></i>
+  {% if ai_draft_empty %}{% if IS_RTL %}لم يتمكن الذكاء الاصطناعي من استخراج محتوى — راجِع النص وأعد المحاولة.{% else %}The AI couldn't extract content — review the text and try again.{% endif %}{% else %}{% if IS_RTL %}تم إنشاء المسودة — راجِعها وعدّلها قبل الحفظ. لا تُحفظ تلقائياً.{% else %}Draft ready below — review &amp; edit before saving. Nothing is saved automatically.{% endif %}{% endif %}
+</div>
+{% endif %}
+
+{# ── AI Scribe panel (only when the clinic owner enabled it for this doctor) ── #}
+{% if ai_enabled %}
+<div class="ws-card mb-5" x-data="{ open: {% if ai_error %}true{% else %}false{% endif %} }">
+  <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-slate-700 cursor-pointer select-none" @click="open = !open">
+    <div class="flex items-center gap-2">
+      <i class="fa-solid fa-wand-magic-sparkles text-indigo-500 text-sm"></i>
+      <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">{% if IS_RTL %}مسودة بالذكاء الاصطناعي{% else %}Draft with AI{% endif %}</span>
+      <span class="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
+        {% if IS_RTL %}متبقٍ:{% else %}Left:{% endif %} ${{ ai_remaining|floatformat:2 }} / ${{ ai_limit|floatformat:2 }}
+      </span>
+    </div>
+    <i class="fa-solid fa-chevron-down text-xs text-slate-400 transition-transform duration-200" :class="open ? 'rotate-180' : ''"></i>
+  </div>
+
+  <div x-show="open" x-collapse>
+    <form hx-post="{% url 'doctors:ws_note_ai_draft' patient.id %}"
+          hx-target="#tab-content" hx-swap="innerHTML"
+          x-data="{ busy: false }" @htmx:before-request="busy = true" @htmx:after-request="busy = false"
+          class="px-5 py-4 space-y-3">
+      {% csrf_token %}
+      <input type="hidden" name="clinic_id" value="{{ ai_clinic_id }}">
+
+      <div class="flex flex-wrap items-end gap-3">
+        <div class="flex flex-col gap-1">
+          <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{% if IS_RTL %}النموذج{% else %}Model{% endif %}</label>
+          <select name="ai_model_id" class="ws-select text-sm">
+            {% for m in ai_models %}
+            <option value="{{ m.id }}" {% if m.id == ai_selected_id %}selected{% endif %}>{{ m.display_name }}{% if m.is_free %} · {% if IS_RTL %}مجاني{% else %}Free{% endif %}{% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% if ai_stt_enabled %}
+        <div class="flex items-center gap-2" id="ai-rec-wrap" style="display:none;">
+          <button type="button" id="ai-record-btn"
+                  data-url="{% url 'doctors:ws_note_ai_transcribe' patient.id %}"
+                  class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+            <i class="fa-solid fa-microphone text-indigo-500" id="ai-rec-icon"></i>
+            <span id="ai-rec-label">{% if IS_RTL %}تسجيل{% else %}Record{% endif %}</span>
+          </button>
+          <span id="ai-rec-status" class="text-xs text-slate-400 dark:text-slate-500 tabular-nums"></span>
+        </div>
+        {% endif %}
+      </div>
+
+      <textarea name="transcript" id="ai-transcript" rows="4" class="ws-textarea"
+                placeholder="{% if IS_RTL %}سجّل الزيارة أو الصق/اكتب الملاحظات، ثم اضغط إنشاء...{% else %}Record the visit or paste/type the notes, then press Generate…{% endif %}"></textarea>
+
+      <p class="text-[11px] text-slate-400 dark:text-slate-500">
+        <i class="fa-solid fa-shield-halved me-1"></i>
+        {% if IS_RTL %}يُرسَل التسجيل/النص إلى مزوّد الذكاء الاصطناعي للتفريغ وإنشاء المسودة فقط؛ لا يُحفظ الصوت. راجِع دائماً قبل الحفظ.{% else %}Your recording/text is sent to the AI provider to transcribe &amp; draft only; audio is not stored. Always review before saving.{% endif %}
+      </p>
+
+      <div class="flex items-center gap-3">
+        <button type="submit" :disabled="busy" :class="busy ? 'opacity-60 cursor-not-allowed' : ''"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors shadow-sm">
+          <span class="htmx-indicator"><i class="fa-solid fa-spinner fa-spin text-xs"></i></span>
+          <i class="fa-solid fa-wand-magic-sparkles text-xs"></i> {% if IS_RTL %}إنشاء مسودة{% else %}Generate draft{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function () {
+  // Phase 2: record the visit (MediaRecorder) → upload → server STT → fill the box.
+  var wrap = document.getElementById('ai-rec-wrap');
+  var btn = document.getElementById('ai-record-btn');
+  var ta = document.getElementById('ai-transcript');
+  if (!btn || !ta || btn._wired) return;
+  if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder)) return;  // keep paste-only
+  btn._wired = true;
+  if (wrap) wrap.style.display = '';
+
+  var statusEl = document.getElementById('ai-rec-status');
+  var iconEl = document.getElementById('ai-rec-icon');
+  var labelEl = document.getElementById('ai-rec-label');
+  var form = btn.closest('form');
+  var url = btn.dataset.url;
+  var RTL = document.documentElement.dir === 'rtl';
+  function t(ar, en) { return RTL ? ar : en; }
+  function fmt(s) { var m = Math.floor(s / 60), r = s % 60; return m + ':' + (r < 10 ? '0' : '') + r; }
+  function setStatus(m) { if (statusEl) statusEl.textContent = m || ''; }
+
+  var rec = null, chunks = [], stream = null, recording = false, timer = null, secs = 0;
+
+  function stopStream() { if (stream) { stream.getTracks().forEach(function (tk) { tk.stop(); }); stream = null; } }
+
+  async function start() {
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+    catch (e) { setStatus(t('تعذّر الوصول للميكروفون', 'Microphone blocked')); return; }
+    chunks = [];
+    try { rec = new MediaRecorder(stream); }
+    catch (e) { setStatus(t('التسجيل غير مدعوم', 'Recording unsupported')); stopStream(); return; }
+    rec.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+    rec.onstop = upload;
+    rec.start();
+    recording = true; secs = 0;
+    iconEl.className = 'fa-solid fa-stop text-red-500';
+    labelEl.textContent = t('إيقاف', 'Stop');
+    btn.classList.add('ring-2', 'ring-red-400');
+    setStatus('● 0:00');
+    timer = setInterval(function () { secs++; setStatus('● ' + fmt(secs)); }, 1000);
+  }
+
+  function stop() {
+    if (timer) { clearInterval(timer); timer = null; }
+    recording = false;
+    iconEl.className = 'fa-solid fa-microphone text-indigo-500';
+    labelEl.textContent = t('تسجيل', 'Record');
+    btn.classList.remove('ring-2', 'ring-red-400');
+    try { if (rec && rec.state !== 'inactive') rec.stop(); } catch (e) {}
+  }
+
+  function upload() {
+    stopStream();
+    var blob = new Blob(chunks, { type: (chunks[0] && chunks[0].type) || 'audio/webm' });
+    if (!blob.size) { setStatus(t('لا يوجد صوت', 'No audio captured')); return; }
+    setStatus(t('جارٍ التفريغ…', 'Transcribing…'));
+    btn.disabled = true;
+    var fd = new FormData();
+    fd.append('audio', blob, 'recording.webm');
+    var clinicInput = form.querySelector('[name=clinic_id]');
+    if (clinicInput) fd.append('clinic_id', clinicInput.value);
+    var csrf = form.querySelector('[name=csrfmiddlewaretoken]');
+    fetch(url, { method: 'POST', body: fd, headers: csrf ? { 'X-CSRFToken': csrf.value } : {} })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (!res.ok || res.j.error) { setStatus(res.j.error || t('فشل التفريغ', 'Transcription failed')); return; }
+        var txt = (res.j.text || '').trim();
+        if (txt) ta.value += (ta.value ? '\n' : '') + txt;
+        setStatus(txt ? t('تم — راجِع النص ثم اضغط إنشاء', 'Done — review, then Generate') : t('لم يُلتقط كلام', 'No speech detected'));
+      })
+      .catch(function () { setStatus(t('خطأ في الشبكة', 'Network error')); })
+      .finally(function () { btn.disabled = false; });
+  }
+
+  btn.addEventListener('click', function () { recording ? stop() : start(); });
+})();
+</script>
+{% endif %}
+
 <!-- Add Note Form -->
-<div class="ws-card mb-5" x-data="{ open: '{{ request.GET.action|default:''|lower }}' === 'add' }" id="note-form-section">
+<div class="ws-card mb-5" x-data="{ open: {% if note_form_open %}true{% else %}'{{ request.GET.action|default:''|lower }}' === 'add'{% endif %} }" id="note-form-section">
   <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-slate-700 cursor-pointer select-none"
        @click="open = !open">
     <div class="flex items-center gap-2">
@@ -38,6 +193,28 @@
       {% else %}
       <input type="hidden" name="clinic_id" value="{{ clinics.0.id }}">
       {% endif %}
+
+      {# ── Copy-forward: start a new note pre-filled from a prior one ── #}
+      <div class="flex flex-wrap items-center gap-2">
+        <button type="button"
+                hx-get="{% url 'doctors:ws_note_add' patient.id %}?prefill=last"
+                hx-target="#tab-content" hx-swap="innerHTML" hx-params="none"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary-200 dark:border-primary-700/50 text-primary-600 dark:text-primary-300 bg-primary-50/60 dark:bg-primary-900/20 text-xs font-semibold hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors">
+          <i class="fa-solid fa-clipboard-list text-xs"></i>
+          {% if IS_RTL %}ابدأ من آخر ملاحظة{% else %}Start from last note{% endif %}
+        </button>
+        {% if prefill_source %}
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700/40 text-emerald-700 dark:text-emerald-300 text-xs font-medium">
+          <i class="fa-solid fa-wand-magic-sparkles text-[11px]"></i>
+          {% if IS_RTL %}نُسخت من ملاحظة {{ prefill_source.created_at|date:"d M Y" }} — راجِع وعدّل قبل الحفظ.{% else %}Copied from {{ prefill_source.created_at|date:"d M Y" }} note — review &amp; edit before saving.{% endif %}
+        </span>
+        {% elif prefill_empty %}
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 text-amber-700 dark:text-amber-300 text-xs font-medium">
+          <i class="fa-solid fa-circle-info text-[11px]"></i>
+          {% if IS_RTL %}لا توجد ملاحظة سابقة لنسخها.{% else %}No previous note to copy from.{% endif %}
+        </span>
+        {% endif %}
+      </div>
 
       {# ── Sections — rendered in the exact order defined by the active template ── #}
       {# active_note_sections is a list of dicts:                                    #}
@@ -846,9 +1023,9 @@
 
       {# ── Secretary access toggle ── #}
       <label class="flex items-start gap-3 p-3 rounded-lg bg-purple-50/70 dark:bg-purple-900/15 border border-purple-100 dark:border-purple-900/30 cursor-pointer select-none">
-        {# Default ON for new notes; on edit, reflect the note's saved state. #}
+        {# Default ON for new notes; on edit reflect the note's state; on copy-forward inherit the source note's. #}
         <input type="checkbox" name="is_secretary_allowed"
-               {% if not edit_note or edit_note.is_secretary_allowed %}checked{% endif %}
+               {% if edit_note %}{% if edit_note.is_secretary_allowed %}checked{% endif %}{% elif prefill_source %}{% if prefill_source.is_secretary_allowed %}checked{% endif %}{% else %}checked{% endif %}
                class="mt-0.5 w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-purple-600 focus:ring-purple-500 cursor-pointer">
         <span>
           <span class="block text-sm font-semibold text-slate-700 dark:text-slate-200">
@@ -930,6 +1107,13 @@ if (typeof orthoReadView === 'undefined') {
            class="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
            title="{% if IS_RTL %}طباعة / حفظ PDF{% else %}Print / Save PDF{% endif %}">
           <i class="fa-solid fa-print text-xs"></i>
+        </a>
+        <a href="{% url 'doctors:ws_note_add' patient.id %}?from_note={{ note.id }}"
+           hx-get="{% url 'doctors:ws_note_add' patient.id %}?from_note={{ note.id }}"
+           hx-target="#tab-content" hx-swap="innerHTML" hx-params="none"
+           class="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+           title="{% if IS_RTL %}استخدِم كقالب لملاحظة جديدة{% else %}Use as template for a new note{% endif %}">
+          <i class="fa-solid fa-copy text-xs"></i>
         </a>
         {% if note.doctor == doctor %}
         <div class="flex items-center gap-1" x-data="{}">

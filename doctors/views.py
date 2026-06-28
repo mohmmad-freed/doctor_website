@@ -370,6 +370,252 @@ def apply_status_transition(request, appointment, user):
     return False
 
 
+def _my_day_data(doctor, target_date):
+    """Live-queue + arrivals data for the doctor's "My Day" board on ``target_date``,
+    across ALL of the doctor's clinics. Mirrors the secretary waiting-room wait-time
+    calc (secretary/views.py) so wait colours are consistent."""
+    base = (
+        Appointment.objects
+        .filter(doctor=doctor, appointment_date=target_date)
+        .select_related("patient", "clinic", "appointment_type")
+    )
+    confirmed = list(
+        base.filter(status=Appointment.Status.CONFIRMED).order_by("appointment_time")
+    )
+    in_progress = list(
+        base.filter(status=Appointment.Status.IN_PROGRESS)
+        .order_by("checked_in_at", "appointment_time")
+    )
+    checkedin_qs = (
+        base.filter(status=Appointment.Status.CHECKED_IN)
+        .order_by("checked_in_at", "queue_priority")
+    )
+    now = timezone.now()
+    waiting = []
+    for i, appt in enumerate(checkedin_qs, start=1):
+        wait_minutes = int((now - appt.checked_in_at).total_seconds() / 60) if appt.checked_in_at else 0
+        waiting.append({
+            "appt": appt,
+            "queue_pos": i,
+            "wait_minutes": wait_minutes,
+            "wait_class": (
+                "text-red-600 dark:text-red-400" if wait_minutes >= 30
+                else "text-amber-500 dark:text-amber-400" if wait_minutes >= 15
+                else "text-emerald-600 dark:text-emerald-400"
+            ),
+        })
+    return {
+        "confirmed": confirmed,
+        "waiting": waiting,
+        "in_progress": in_progress,
+        "confirmed_count": len(confirmed),
+        "waiting_count": len(waiting),
+        "in_progress_count": len(in_progress),
+    }
+
+
+@login_required
+@doctor_required
+def my_day(request):
+    """Doctor "My Day": a live queue board (today only) + a day timeline with
+    prev/next-day navigation. No new model — reuses the appointment queue fields
+    and the doctor's own status-transition engine."""
+    from datetime import datetime as _dt, timedelta as _td
+    user = request.user
+    today = date.today()
+
+    target_date = today
+    date_str = request.GET.get("date")
+    if date_str:
+        try:
+            target_date = _dt.strptime(date_str, "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            target_date = today
+
+    is_today = target_date == today
+
+    timeline = list(
+        Appointment.objects
+        .filter(doctor=user, appointment_date=target_date)
+        .select_related("patient", "clinic", "appointment_type")
+        .order_by("appointment_time")
+    )
+
+    ctx = {
+        "target_date": target_date,
+        "is_today": is_today,
+        "today": today,
+        "prev_date": target_date - _td(days=1),
+        "next_date": target_date + _td(days=1),
+        "timeline": timeline,
+    }
+    if is_today:
+        ctx.update(_my_day_data(user, today))
+    return render(request, "doctors/my_day.html", ctx)
+
+
+@login_required
+@doctor_required
+def my_day_queue(request):
+    """HTMX partial: the live queue board for today (polled by the My Day page)."""
+    user = request.user
+    ctx = {"target_date": date.today(), "is_today": True}
+    ctx.update(_my_day_data(user, date.today()))
+    return render(request, "doctors/partials/_my_day_queue.html", ctx)
+
+
+@login_required
+@doctor_required
+def my_day_transition(request, appointment_id):
+    """POST from the My Day board: check a patient in (CONFIRMED→CHECKED_IN) or
+    start the visit (CHECKED_IN→IN_PROGRESS), then return the refreshed board.
+    Reuses ``apply_status_transition`` (whitelist + checked_in_at/queue_priority)."""
+    user = request.user
+    if request.method == "POST":
+        appointment = get_object_or_404(
+            Appointment, id=appointment_id, doctor=user, appointment_date=date.today()
+        )
+        apply_status_transition(request, appointment, user)
+    ctx = {"target_date": date.today(), "is_today": True}
+    ctx.update(_my_day_data(user, date.today()))
+    return render(request, "doctors/partials/_my_day_queue.html", ctx)
+
+
+@login_required
+@doctor_required
+def reschedule_appointment(request, appointment_id):
+    """Doctor moves one of their own appointments to a new date/time (same clinic +
+    type). Reuses the slot generator + the staff-reschedule patient notification.
+    Mirrors the secretary edit_appointment validation (past-date + slot conflict)."""
+    from datetime import datetime as _dt
+    user = request.user
+    appointment = get_object_or_404(Appointment, id=appointment_id, doctor=user)
+    is_rtl = getattr(request, "LANGUAGE_CODE", "ar") == "ar"
+
+    # Only future-facing appointments may be moved by the doctor.
+    if appointment.status not in (Appointment.Status.PENDING, Appointment.Status.CONFIRMED):
+        return render(request, "doctors/partials/_reschedule_modal.html", {
+            "appointment": appointment,
+            "today": date.today().isoformat(),
+            "blocked": "لا يمكن إعادة جدولة هذا الموعد." if is_rtl
+                       else "This appointment can no longer be rescheduled.",
+        })
+
+    if request.method == "GET":
+        return render(request, "doctors/partials/_reschedule_modal.html", {
+            "appointment": appointment,
+            "today": date.today().isoformat(),
+        })
+
+    # ── POST ──────────────────────────────────────────────────
+    date_str = request.POST.get("appointment_date", "")
+    time_str = request.POST.get("appointment_time", "")
+    errors = {}
+
+    try:
+        new_date = _dt.strptime(date_str, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        new_date = None
+        errors["date"] = "اختر تاريخاً صالحاً." if is_rtl else "Please select a valid date."
+
+    try:
+        new_time = _dt.strptime(time_str, "%H:%M").time()
+    except (ValueError, TypeError):
+        new_time = None
+        errors["time"] = "اختر وقتاً صالحاً." if is_rtl else "Please select a valid time."
+
+    # Past-date guard (mirrors secretary S-06).
+    if new_date and new_date < date.today():
+        errors["date"] = "لا يمكن الجدولة في تاريخ ماضٍ." if is_rtl else "Cannot reschedule to a past date."
+
+    # Slot-conflict guard (mirrors secretary S-05) — exclude this appointment.
+    if new_date and new_time and "date" not in errors:
+        conflict = Appointment.objects.filter(
+            doctor=user,
+            appointment_date=new_date,
+            appointment_time=new_time,
+            status__in=[
+                Appointment.Status.CONFIRMED,
+                Appointment.Status.CHECKED_IN,
+                Appointment.Status.IN_PROGRESS,
+            ],
+        ).exclude(pk=appointment.pk).exists()
+        if conflict:
+            errors["time"] = ("هذا الوقت محجوز لديك بالفعل." if is_rtl
+                              else "You already have an appointment at that time.")
+
+    if errors:
+        return render(request, "doctors/partials/_reschedule_modal.html", {
+            "appointment": appointment,
+            "today": date.today().isoformat(),
+            "errors": errors,
+            "post_data": request.POST,
+        })
+
+    old_date = appointment.appointment_date
+    old_time = appointment.appointment_time
+    appointment.appointment_date = new_date
+    appointment.appointment_time = new_time
+    appointment.save(update_fields=["appointment_date", "appointment_time", "updated_at"])
+
+    # Notify the patient (in-app + email), recording the doctor as the actor.
+    from django.db import transaction as _txn
+    from clinics.models import ClinicStaff as _CS
+    from appointments.services.appointment_notification_service import (
+        notify_appointment_rescheduled_by_staff,
+    )
+    doctor_staff = _CS.objects.filter(
+        clinic=appointment.clinic, user=user, revoked_at__isnull=True
+    ).first()
+    _txn.on_commit(
+        lambda: notify_appointment_rescheduled_by_staff(
+            appointment, old_date, old_time, clinic_staff=doctor_staff
+        )
+    )
+
+    messages.success(
+        request,
+        "تمت إعادة الجدولة وإشعار المريض." if is_rtl
+        else "Rescheduled — the patient has been notified.",
+    )
+    resp = render(request, "doctors/partials/_reschedule_success.html", {"appointment": appointment})
+    resp["HX-Redirect"] = reverse("doctors:appointment_detail", args=[appointment.id])
+    return resp
+
+
+@login_required
+@doctor_required
+def htmx_reschedule_slots(request, appointment_id):
+    """HTMX: available time-slot buttons for the reschedule modal (excludes this
+    appointment so its own slot is selectable)."""
+    from datetime import datetime as _dt
+    user = request.user
+    appointment = get_object_or_404(Appointment, id=appointment_id, doctor=user)
+    is_rtl = getattr(request, "LANGUAGE_CODE", "ar") == "ar"
+
+    try:
+        target_date = _dt.strptime(request.GET.get("appointment_date", ""), "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        return render(request, "doctors/partials/_reschedule_slots.html", {
+            "slots": [], "error": "اختر تاريخاً أولاً." if is_rtl else "Please select a date first.",
+        })
+
+    duration = 30
+    if appointment.appointment_type_id and appointment.appointment_type.duration_minutes:
+        duration = appointment.appointment_type.duration_minutes
+
+    slots = generate_slots_for_date(
+        doctor_id=user.id,
+        clinic_id=appointment.clinic_id,
+        target_date=target_date,
+        duration_minutes=duration,
+        exclude_appointment_id=appointment.id,
+    )
+    return render(request, "doctors/partials/_reschedule_slots.html", {
+        "slots": slots, "target_date": target_date,
+    })
+
+
 def _validated_next(request):
     """Return a safe internal ``next`` URL from the request, or None.
 
@@ -599,6 +845,9 @@ def appointment_detail(request, appointment_id):
         "intake_data": intake_data,
         "allowed_transitions": allowed_transitions,
         "can_cancel": Appointment.Status.CANCELLED in valid_values,
+        "can_reschedule": appointment.status in (
+            Appointment.Status.PENDING, Appointment.Status.CONFIRMED,
+        ),
         "next_url": next_url,
         "back_url": next_url or reverse("doctors:appointments"),
         "staff_doctor_notes": _appointment_doctor_notes(appointment, viewer=user),
@@ -1613,6 +1862,47 @@ def my_schedule(request):
                 messages.error(request, "Time slot not found.")
             return redirect(redirect_url)
 
+        elif action == "add_exception":
+            # Doctor self-service time-off / vacation. The slot generator already
+            # honours active exceptions (doctors/services.py), so no slot-logic change.
+            from clinics.models import DoctorAvailabilityException
+            try:
+                exc = DoctorAvailabilityException(
+                    doctor=user,
+                    clinic=selected_clinic,
+                    start_date=request.POST.get("start_date") or None,
+                    end_date=request.POST.get("end_date") or None,
+                    reason=request.POST.get("reason", "").strip(),
+                    created_by=user,
+                )
+                exc.full_clean()
+                exc.save()
+                messages.success(request, "Time off added — patients can no longer book those dates.")
+            except ValidationError as e:
+                if hasattr(e, "message_dict"):
+                    for errs in e.message_dict.values():
+                        for err in errs:
+                            messages.error(request, err)
+                else:
+                    for err in e.messages:
+                        messages.error(request, err)
+            except Exception as e:
+                messages.error(request, str(e))
+            return redirect(redirect_url)
+
+        elif action == "delete_exception":
+            from clinics.models import DoctorAvailabilityException
+            exc_id = request.POST.get("exception_id")
+            try:
+                exc = DoctorAvailabilityException.objects.get(
+                    id=exc_id, doctor=user, clinic=selected_clinic
+                )
+                exc.delete()
+                messages.success(request, "Time off removed.")
+            except DoctorAvailabilityException.DoesNotExist:
+                messages.error(request, "Time-off entry not found.")
+            return redirect(redirect_url)
+
     # Build per-day data for the template
     from clinics.models import ClinicWorkingHours
     clinic_wh_map = {}
@@ -1642,12 +1932,24 @@ def my_schedule(request):
             "clinic_has_hours": bool(whs),
         })
 
+    # Upcoming / active time-off (vacation) entries for the selected clinic.
+    exceptions = []
+    if selected_clinic:
+        from clinics.models import DoctorAvailabilityException
+        exceptions = list(
+            DoctorAvailabilityException.objects.filter(
+                doctor=user, clinic=selected_clinic,
+                is_active=True, end_date__gte=date.today(),
+            ).order_by("start_date")
+        )
+
     return render(request, "doctors/my_schedule.html", {
         "memberships": memberships,
         "selected_clinic": selected_clinic,
         "selected_clinic_id": selected_clinic.id if selected_clinic else None,
         "days_data": days_data,
         "day_choices": DoctorAvailability.DAY_CHOICES,
+        "exceptions": exceptions,
     })
 
 
@@ -2244,6 +2546,32 @@ def _ws_overview_data(patient, cids, viewer=None):
     }
 
 
+def _ws_scribe_ctx(doctor, cids):
+    """AI-scribe panel context for the notes tab.
+
+    Resolves the first clinic (among the doctor's shared clinics) where AI scribe
+    is enabled for this doctor, and exposes the allowed models + remaining budget.
+    Returns ``{"ai_enabled": False}`` when not configured/available.
+    """
+    try:
+        from ai_scribe import services as ai_services
+    except Exception:
+        return {"ai_enabled": False}
+    for cid in cids:
+        cfg = ai_services.get_config(cid, doctor)
+        if cfg:
+            return {
+                "ai_enabled": True,
+                "ai_clinic_id": cid,
+                "ai_models": ai_services.available_models(cfg),
+                "ai_selected_id": cfg.selected_model_id,
+                "ai_remaining": ai_services.remaining_budget(cfg),
+                "ai_limit": cfg.monthly_limit_usd,
+                "ai_stt_enabled": ai_services.stt_configured(),
+            }
+    return {"ai_enabled": False}
+
+
 def _ws_notes_data(patient, cids, request):
     from django.core.paginator import Paginator
     qs = (
@@ -2258,7 +2586,38 @@ def _ws_notes_data(patient, cids, request):
     _annotate_notes_with_labeled_extras(notes_list)
     notes_page.object_list = notes_list
 
-    return {"notes": notes_page, "notes_paginator": paginator}
+    data = {"notes": notes_page, "notes_paginator": paginator}
+    data.update(_ws_scribe_ctx(request.user, cids))
+    return data
+
+
+def _active_medication_labels(patient, cids):
+    """Names of the patient's currently-active medications — active prescription
+    items + pending drug orders. Surfaced in the prescribe/order safety banner so
+    the doctor can eyeball duplicates / interactions before adding another drug."""
+    labels = []
+    for name, dosage in (
+        PrescriptionItem.objects
+        .filter(prescription__patient=patient, prescription__clinic_id__in=cids,
+                prescription__is_active=True)
+        .values_list("medication_name", "dosage")
+    ):
+        labels.append(f"{name} {dosage}".strip())
+    for title, dosage in (
+        Order.objects
+        .filter(patient=patient, clinic_id__in=cids,
+                order_type=Order.OrderType.DRUG, status=Order.Status.PENDING)
+        .values_list("title", "dosage")
+    ):
+        labels.append(f"{title} {dosage}".strip())
+    # De-duplicate (case-insensitive) while preserving order.
+    seen, out = set(), []
+    for label in labels:
+        key = label.lower()
+        if label and key not in seen:
+            seen.add(key)
+            out.append(label)
+    return out
 
 
 def _ws_orders_data(patient, cids, request):
@@ -2276,6 +2635,7 @@ def _ws_orders_data(patient, cids, request):
         "order_types": Order.OrderType.choices,
         "drug_families": drug_families,
         "catalog_clinic_ids": list(cids),
+        "safety_active_meds": _active_medication_labels(patient, cids),
     }
 
 
@@ -2288,6 +2648,7 @@ def _ws_prescriptions_data(patient, cids):
     return {
         "active_prescriptions": list(qs.filter(is_active=True)),
         "inactive_prescriptions": list(qs.filter(is_active=False)),
+        "safety_active_meds": _active_medication_labels(patient, cids),
     }
 
 
@@ -2342,7 +2703,41 @@ def ws_note_add(request, patient_id):
         ctx["active_note_sections"] = active_sections
         return render(request, "doctors/partials/ws_notes.html", ctx)
 
-    return redirect("doctors:patient_workspace", patient_id=patient_id)
+    # GET — "copy forward": open the create form pre-filled from a prior note so
+    # follow-up / chronic visits don't start from scratch. Reuses the exact
+    # pre-fill mechanism the edit form uses (_get_active_note_sections(note=…)).
+    # Without a prefill request, keep the original behaviour (back to workspace).
+    prefill = request.GET.get("prefill")
+    from_note_id = request.GET.get("from_note")
+    if not (prefill or from_note_id):
+        return redirect("doctors:patient_workspace", patient_id=patient_id)
+
+    source = None
+    if from_note_id:
+        # Any note visible to this doctor in a shared clinic may be reused.
+        source = ClinicalNote.objects.filter(
+            pk=from_note_id,
+            patient_id=patient_id,
+            clinic_id__in=ctx["shared_clinic_ids"],
+        ).first()
+    elif prefill == "last":
+        # The doctor's own most recent note for this patient.
+        source = (
+            ClinicalNote.objects
+            .filter(patient_id=patient_id, doctor=ctx["doctor"])
+            .order_by("-created_at")
+            .first()
+        )
+
+    ctx.update(_ws_notes_data(ctx["patient"], ctx["shared_clinic_ids"], request))
+    # NOTE: we deliberately do NOT set ctx["edit_note"], so the pre-filled form
+    # still POSTs to ws_note_add and creates a brand-new note (source untouched).
+    ctx["active_note_sections"] = _get_active_note_sections(ctx["doctor"], note=source)
+    ctx["note_form_open"] = True
+    ctx["prefill_source"] = source
+    if source is None:
+        ctx["prefill_empty"] = True
+    return render(request, "doctors/partials/ws_notes.html", ctx)
 
 
 @login_required
@@ -2394,6 +2789,147 @@ def ws_note_delete(request, patient_id, note_id):
         return render(request, "doctors/partials/ws_notes.html", ctx)
 
     return redirect("doctors:patient_workspace", patient_id=patient_id)
+
+
+@login_required
+def ws_note_ai_draft(request, patient_id):
+    """Draft the clinical note from a transcript/dictation via the AI scribe and
+    open the note form pre-filled for the doctor to review, edit, and save.
+
+    Security: budget-enforced + per-doctor rate-limited; clinic/model resolved
+    server-side; transcript size capped; no transcript or note text is stored.
+    """
+    ctx = _ws_access(request, patient_id)
+    if ctx is None:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden()
+    if request.method != "POST":
+        return redirect("doctors:patient_workspace", patient_id=patient_id)
+
+    from django.conf import settings as _settings
+    from accounts.ratelimit import hit_rate_limit
+    from ai_scribe import services as ai_services
+
+    doctor = ctx["doctor"]
+    is_rtl = getattr(request, "LANGUAGE_CODE", "ar") == "ar"
+
+    def _render_notes(extra):
+        ctx.update(_ws_notes_data(ctx["patient"], ctx["shared_clinic_ids"], request))
+        ctx.setdefault("active_note_sections", _get_active_note_sections(doctor))
+        ctx.update(extra)
+        return render(request, "doctors/partials/ws_notes.html", ctx)
+
+    # Per-doctor rate cap (defense-in-depth + cost guard; fails open if cache down).
+    if hit_rate_limit(
+        "ai_scribe", doctor.id,
+        getattr(_settings, "AI_SCRIBE_RATE_MAX", 30),
+        getattr(_settings, "AI_SCRIBE_RATE_WINDOW_SECONDS", 600),
+    ):
+        return _render_notes({
+            "note_form_open": True,
+            "ai_error": "طلبات كثيرة جداً، انتظر قليلاً." if is_rtl else "Too many AI requests — please wait a moment.",
+        })
+
+    # Clinic must be one the doctor shares with this patient.
+    try:
+        clinic_id = int(request.POST.get("clinic_id"))
+    except (TypeError, ValueError):
+        clinic_id = None
+    if clinic_id not in ctx["shared_clinic_ids"]:
+        clinic_id = ctx["shared_clinic_ids"][0]
+
+    config = ai_services.get_config(clinic_id, doctor)
+    max_chars = getattr(_settings, "AI_SCRIBE_MAX_TRANSCRIPT_CHARS", 12000)
+    transcript = (request.POST.get("transcript") or "")[:max_chars]
+
+    try:
+        model = ai_services.resolve_model(config, request.POST.get("ai_model_id"))
+        sections = _get_active_note_sections(doctor)
+        values = ai_services.draft_note_sections(
+            config=config, model=model, sections=sections, transcript=transcript,
+        )
+    except ai_services.AIScribeError as exc:
+        return _render_notes({"note_form_open": True, "ai_error": str(exc)})
+
+    # Remember the doctor's model choice for next time.
+    if config and model and config.selected_model_id != model.id:
+        config.selected_model = model
+        config.save(update_fields=["selected_model", "updated_at"])
+
+    # Pre-fill the create form with the AI draft — the doctor reviews & saves.
+    prefilled = _get_active_note_sections(doctor)
+    for section in prefilled:
+        section["value"] = values.get(section["name"], "")
+
+    ctx.update(_ws_notes_data(ctx["patient"], ctx["shared_clinic_ids"], request))
+    ctx["active_note_sections"] = prefilled
+    ctx["note_form_open"] = True
+    ctx["ai_drafted"] = True
+    ctx["ai_draft_empty"] = not values
+    return render(request, "doctors/partials/ws_notes.html", ctx)
+
+
+@login_required
+def ws_note_ai_transcribe(request, patient_id):
+    """Phase 2: transcribe an uploaded audio recording to text (returned as JSON
+    for the doctor to review in the transcript box, then Generate as usual).
+
+    Security: STT-budget-gated + rate-limited; audio type/size validated; the
+    audio is sent to the STT provider and never stored.
+    """
+    ctx = _ws_access(request, patient_id)
+    if ctx is None:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden()
+
+    from django.http import JsonResponse
+    from django.conf import settings as _settings
+    from accounts.ratelimit import hit_rate_limit
+    from ai_scribe import services as ai_services
+
+    doctor = ctx["doctor"]
+    is_rtl = getattr(request, "LANGUAGE_CODE", "ar") == "ar"
+
+    def _err(msg, code=400):
+        return JsonResponse({"error": msg}, status=code)
+
+    if request.method != "POST":
+        return _err("Method not allowed.", 405)
+    if not ai_services.stt_configured():
+        return _err("التفريغ الصوتي غير مهيأ." if is_rtl else "Voice transcription isn't configured.", 503)
+    if hit_rate_limit(
+        "ai_stt", doctor.id,
+        getattr(_settings, "AI_SCRIBE_RATE_MAX", 30),
+        getattr(_settings, "AI_SCRIBE_RATE_WINDOW_SECONDS", 600),
+    ):
+        return _err("طلبات كثيرة جداً، انتظر قليلاً." if is_rtl else "Too many requests — please wait a moment.", 429)
+
+    try:
+        clinic_id = int(request.POST.get("clinic_id"))
+    except (TypeError, ValueError):
+        clinic_id = None
+    if clinic_id not in ctx["shared_clinic_ids"]:
+        clinic_id = ctx["shared_clinic_ids"][0]
+    config = ai_services.get_config(clinic_id, doctor)
+
+    audio = request.FILES.get("audio")
+    if not audio:
+        return _err("لا يوجد ملف صوتي." if is_rtl else "No audio received.")
+    if audio.size > int(getattr(_settings, "STT_MAX_BYTES", 25 * 1024 * 1024)):
+        return _err("التسجيل كبير جداً." if is_rtl else "Recording is too large.")
+    ctype = audio.content_type or ""
+    if not (ctype.startswith("audio/") or ctype in ("video/webm", "application/octet-stream")):
+        return _err("نوع ملف غير مدعوم." if is_rtl else "Unsupported audio type.")
+
+    try:
+        text, cost, duration = ai_services.transcribe_audio(
+            config=config, file_obj=audio, filename=audio.name,
+            content_type=ctype, language=("ar" if is_rtl else "en"),
+        )
+    except ai_services.AIScribeError as exc:
+        return _err(str(exc))
+
+    return JsonResponse({"text": text, "duration": duration})
 
 
 @login_required
@@ -2485,6 +3021,7 @@ def ws_order_add(request, patient_id):
             dosage=request.POST.get("dosage", "").strip(),
             frequency=request.POST.get("frequency", "").strip(),
             duration=request.POST.get("duration", "").strip(),
+            allergy_acknowledged_at=timezone.now() if request.POST.get("allergy_reviewed") else None,
         )
         ctx.update(_ws_orders_data(ctx["patient"], ctx["shared_clinic_ids"], request))
         ctx["order_saved"] = True
@@ -2683,6 +3220,7 @@ def ws_prescription_add(request, patient_id):
             clinic_id=clinic_id,
             doctor=ctx["doctor"],
             notes=request.POST.get("rx_notes", "").strip(),
+            allergy_acknowledged_at=timezone.now() if request.POST.get("allergy_reviewed") else None,
         )
 
         i = 1
@@ -3598,18 +4136,122 @@ def my_reviews(request):
     """
     from django.core.paginator import Paginator
     from .models import DoctorReview
-    from .services import doctor_rating_summary
+    from .services import doctor_rating_summary, doctor_rating_breakdown
 
     qs = (
         DoctorReview.objects.filter(doctor=request.user)
         .order_by("-created_at")
     )
     page = Paginator(qs, 20).get_page(request.GET.get("page"))
+
+    breakdown = doctor_rating_breakdown(request.user.id)
+    total_reviews = sum(breakdown.values())
+    rating_rows = [
+        {
+            "star": s,
+            "count": breakdown.get(s, 0),
+            "pct": round(breakdown.get(s, 0) / total_reviews * 100, 1) if total_reviews else 0,
+        }
+        for s in (5, 4, 3, 2, 1)
+    ]
+
     return render(
         request,
         "doctors/my_reviews.html",
         {
             "reviews_page": page,
             "rating": doctor_rating_summary(request.user.id),
+            "rating_rows": rating_rows,
+            "total_reviews": total_reviews,
         },
     )
+
+
+@login_required
+def doctor_analytics(request):
+    """Operational analytics for the logged-in doctor: appointment volume by
+    status, no-show / cancellation / completion rates, completed visits per
+    clinic, and the star-rating distribution. Mirrors the secretary report
+    pattern but scoped to the doctor's own appointments. Operational metrics
+    only — earnings/billing stay secretary-owned."""
+    from datetime import date, timedelta, datetime as _dt
+    from django.db.models import Count
+    from .services import doctor_rating_summary, doctor_rating_breakdown
+
+    user = _require_doctor(request)
+    if user is None:
+        return redirect("accounts:home")
+
+    today = date.today()
+
+    def _parse(value):
+        try:
+            return _dt.strptime(value, "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            return None
+
+    date_to = _parse(request.GET.get("date_to")) or today
+    date_from = _parse(request.GET.get("date_from")) or (date_to - timedelta(days=29))
+    if date_from > date_to:
+        date_from, date_to = date_to, date_from
+
+    appts = Appointment.objects.filter(
+        doctor=user, appointment_date__range=(date_from, date_to)
+    )
+    total = appts.count()
+
+    status_counts = {val: 0 for val, _label in Appointment.Status.choices}
+    for row in appts.values("status").annotate(n=Count("id")):
+        status_counts[row["status"]] = row["n"]
+
+    completed = status_counts.get(Appointment.Status.COMPLETED, 0)
+    no_show = status_counts.get(Appointment.Status.NO_SHOW, 0)
+    cancelled = status_counts.get(Appointment.Status.CANCELLED, 0)
+
+    def _pct(n):
+        return round(n / total * 100, 1) if total else 0
+
+    status_breakdown = [
+        {
+            "value": val,
+            "label": label,
+            "count": status_counts.get(val, 0),
+            "pct": _pct(status_counts.get(val, 0)),
+        }
+        for val, label in Appointment.Status.choices
+    ]
+
+    clinic_completed = list(
+        appts.filter(status=Appointment.Status.COMPLETED)
+        .values("clinic__name")
+        .annotate(n=Count("id"))
+        .order_by("-n")
+    )
+
+    breakdown = doctor_rating_breakdown(user.id)
+    total_reviews = sum(breakdown.values())
+    rating_rows = [
+        {
+            "star": s,
+            "count": breakdown.get(s, 0),
+            "pct": round(breakdown.get(s, 0) / total_reviews * 100, 1) if total_reviews else 0,
+        }
+        for s in (5, 4, 3, 2, 1)
+    ]
+
+    return render(request, "doctors/doctor_analytics.html", {
+        "date_from": date_from,
+        "date_to": date_to,
+        "total": total,
+        "completed": completed,
+        "no_show": no_show,
+        "cancelled": cancelled,
+        "no_show_rate": _pct(no_show),
+        "cancel_rate": _pct(cancelled),
+        "completion_rate": _pct(completed),
+        "status_breakdown": status_breakdown,
+        "clinic_completed": clinic_completed,
+        "rating": doctor_rating_summary(user.id),
+        "rating_rows": rating_rows,
+        "total_reviews": total_reviews,
+    })

@@ -1,0 +1,68 @@
+{% if error %}
+<p class="text-xs text-slate-400 dark:text-slate-500 italic py-1">{{ error }}</p>
+
+{% elif not slots %}
+{# No schedule on this day → free time input #}
+<div>
+  <p class="text-xs text-amber-600 dark:text-amber-400 mb-2.5 flex items-center gap-1.5">
+    <i class="fa-solid fa-circle-info text-[11px]"></i>
+    {% if IS_RTL %}لا يوجد جدول لهذا اليوم. أدخل الوقت يدوياً.{% else %}No schedule set for this day. Enter a time manually.{% endif %}
+  </p>
+  <input type="time" name="appointment_time" required
+         class="px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-colors w-36">
+</div>
+
+{% else %}
+<div>
+  <div class="flex flex-wrap gap-1.5 mb-2" id="reschedule-slot-grid">
+    {% for slot in slots %}
+    <button type="button"
+            data-time="{{ slot.time|time:'H:i' }}"
+            onclick="selectRescheduleSlot(this)"
+            class="reschedule-slot-btn px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all
+                   {% if slot.is_available %}
+                   bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600
+                   text-slate-700 dark:text-slate-200
+                   hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20
+                   cursor-pointer
+                   {% else %}
+                   bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700
+                   text-slate-400 dark:text-slate-500
+                   {% endif %}"
+            {% if not slot.is_available %}
+            title="{% if IS_RTL %}محجوز — انقر للتجاوز{% else %}Booked — click to override{% endif %}"
+            {% endif %}>
+      {{ slot.time|time:"H:i" }}
+      {% if not slot.is_available %}<i class="fa-solid fa-lock ml-1 opacity-50" style="font-size:9px;"></i>{% endif %}
+    </button>
+    {% endfor %}
+  </div>
+  <input type="hidden" name="appointment_time" id="reschedule-time-hidden" value="">
+  <p id="reschedule-slot-hint" class="text-xs text-slate-400 dark:text-slate-500 hidden">
+    <i class="fa-regular fa-clock mr-1"></i><span id="reschedule-slot-hint-text"></span>
+  </p>
+</div>
+
+<script>
+(function () {
+  function selectRescheduleSlot(btn) {
+    document.querySelectorAll('.reschedule-slot-btn').forEach(function (b) {
+      b.classList.remove('ring-2', 'ring-indigo-500', 'bg-indigo-50', 'dark:bg-indigo-900/30',
+                          'text-indigo-700', 'dark:text-indigo-300', 'border-indigo-400');
+    });
+    btn.classList.add('ring-2', 'ring-indigo-500', 'bg-indigo-50', 'dark:bg-indigo-900/30',
+                       'text-indigo-700', 'dark:text-indigo-300', 'border-indigo-400');
+    var t = btn.dataset.time;
+    var hidden = document.getElementById('reschedule-time-hidden');
+    if (hidden) hidden.value = t;
+    var hint = document.getElementById('reschedule-slot-hint');
+    var hintText = document.getElementById('reschedule-slot-hint-text');
+    if (hint && hintText) {
+      hintText.textContent = t + '{% if IS_RTL %} تم الاختيار{% else %} selected{% endif %}';
+      hint.classList.remove('hidden');
+    }
+  }
+  window.selectRescheduleSlot = selectRescheduleSlot;
+})();
+</script>
+{% endif %}

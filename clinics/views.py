@@ -463,6 +463,68 @@ def manage_staff(request, clinic_id):
 
 
 @login_required
+def manage_doctor_ai(request, clinic_id, staff_id):
+    """Clinic owner: per-doctor AI-scribe settings — enable, monthly USD cap, and
+    which models this doctor may use. Owner-guarded; never touches the API key."""
+    from decimal import Decimal, InvalidOperation
+    from django.conf import settings as _settings
+    from ai_scribe.models import AIModel, DoctorClinicAIConfig, current_period
+    from ai_scribe.services import month_spend
+
+    clinic = get_owner_clinic_or_404(request, clinic_id)
+    staff = get_object_or_404(
+        ClinicStaff, id=staff_id, clinic=clinic, is_active=True,
+        role__in=["DOCTOR", "MAIN_DOCTOR"],
+    )
+    doctor = staff.user
+
+    default_limit = Decimal(str(getattr(_settings, "AI_SCRIBE_DEFAULT_MONTHLY_LIMIT_USD", "10")))
+    config, _created = DoctorClinicAIConfig.objects.get_or_create(
+        clinic=clinic, doctor=doctor,
+        defaults={"created_by": request.user, "monthly_limit_usd": default_limit},
+    )
+
+    if request.method == "POST":
+        raw_limit = (request.POST.get("monthly_limit_usd") or "").strip()
+        try:
+            limit = Decimal(raw_limit)
+            if limit < 0:
+                raise InvalidOperation
+        except (InvalidOperation, TypeError):
+            messages.error(request, _("الحد الشهري غير صالح."))
+            return redirect("clinics:manage_doctor_ai", clinic_id=clinic.id, staff_id=staff.id)
+
+        allowed = list(
+            AIModel.objects.filter(id__in=request.POST.getlist("allowed_models"), is_active=True)
+        )
+        allowed_id_set = {m.id for m in allowed}
+
+        config.is_enabled = request.POST.get("is_enabled") == "on"
+        config.monthly_limit_usd = limit
+        # Drop the doctor's saved model choice if it's no longer permitted.
+        if config.selected_model_id and config.selected_model_id not in allowed_id_set:
+            config.selected_model = None
+        config.save()
+        config.allowed_models.set(allowed)
+
+        messages.success(request, _("تم حفظ إعدادات الذكاء الاصطناعي للطبيب."))
+        return redirect("clinics:manage_doctor_ai", clinic_id=clinic.id, staff_id=staff.id)
+
+    spent = month_spend(clinic.id, doctor)
+    return render(request, "clinics/manage_doctor_ai.html", {
+        "clinic": clinic,
+        "doctor": doctor,
+        "config": config,
+        "models": list(AIModel.objects.filter(is_active=True).order_by("sort_order", "display_name")),
+        "allowed_ids": set(config.allowed_models.values_list("id", flat=True)),
+        "spent": spent,
+        "remaining": max(Decimal("0"), Decimal(config.monthly_limit_usd) - spent),
+        "period": current_period(),
+        "openrouter_configured": bool(getattr(_settings, "OPENROUTER_API_KEY", "")),
+    })
+
+
+@login_required
 def add_staff(request, clinic_id):
     get_owner_clinic_or_404(request, clinic_id)
     return HttpResponse("Add Staff Member - Coming Soon!")

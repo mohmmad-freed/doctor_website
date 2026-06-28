@@ -94,6 +94,52 @@ TWEETSMS_API_KEY = os.environ.get("TWEETSMS_API_KEY", "")
 TWEETSMS_SENDER = os.environ.get("TWEETSMS_SENDER", "")
 TWEETSMS_BASE_URL = os.environ.get("TWEETSMS_BASE_URL", "https://tweetsms.ps/api.php")
 
+# ============================================
+# AI SCRIBE (OpenRouter)
+# ============================================
+# The OpenRouter API key is used ONLY server-side (ai_scribe/services.py) and is
+# never exposed to the browser. Leave OPENROUTER_API_KEY empty to keep the
+# feature off (the UI degrades gracefully). Set your OpenRouter account to
+# no-logging / no-training for PHI safety.
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+OPENROUTER_BASE_URL = os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+# Optional attribution headers shown on your OpenRouter dashboard.
+OPENROUTER_APP_URL = os.environ.get("OPENROUTER_APP_URL", "")
+OPENROUTER_APP_TITLE = os.environ.get("OPENROUTER_APP_TITLE", "MedPortal AI Scribe")
+# Default monthly cap (USD) used when a clinic owner first enables a doctor.
+AI_SCRIBE_DEFAULT_MONTHLY_LIMIT_USD = os.environ.get("AI_SCRIBE_DEFAULT_MONTHLY_LIMIT_USD", "10")
+# Hard cap on transcript size sent per draft (bounds cost + abuse).
+AI_SCRIBE_MAX_TRANSCRIPT_CHARS = int(os.environ.get("AI_SCRIBE_MAX_TRANSCRIPT_CHARS", "12000"))
+AI_SCRIBE_MAX_OUTPUT_TOKENS = int(os.environ.get("AI_SCRIBE_MAX_OUTPUT_TOKENS", "1500"))
+AI_SCRIBE_TIMEOUT_SECONDS = int(os.environ.get("AI_SCRIBE_TIMEOUT_SECONDS", "60"))
+# Per-doctor rate cap on draft requests (uses accounts.ratelimit cache backend).
+AI_SCRIBE_RATE_MAX = int(os.environ.get("AI_SCRIBE_RATE_MAX", "30"))
+AI_SCRIBE_RATE_WINDOW_SECONDS = int(os.environ.get("AI_SCRIBE_RATE_WINDOW_SECONDS", "600"))
+
+# ── Speech-to-text (Phase 2 — ambient capture) ──
+# STT_PROVIDER:
+#   "openrouter" (DEFAULT) → reuses OPENROUTER_API_KEY via OpenRouter's dedicated
+#       POST /api/v1/audio/transcriptions endpoint (JSON + base64). No second key.
+#   "openai"     → a separate OpenAI-compatible /audio/transcriptions endpoint
+#       (OpenAI Whisper, or Groq) using STT_API_KEY + STT_BASE_URL (multipart).
+# Voice capture turns on automatically once the chosen provider's key is present.
+STT_PROVIDER = os.environ.get("STT_PROVIDER", "openrouter")
+# Transcription model id.
+#   openrouter: an OpenRouter STT slug, e.g. "openai/whisper-large-v3",
+#               "openai/gpt-4o-mini-transcribe", "google/chirp-3" …
+#   openai:     that provider's id, e.g. "whisper-1" (OpenAI) / "whisper-large-v3" (Groq).
+STT_MODEL = os.environ.get("STT_MODEL", "openai/whisper-large-v3")
+# Only used when STT_PROVIDER="openai":
+STT_API_KEY = os.environ.get("STT_API_KEY", "")
+STT_BASE_URL = os.environ.get("STT_BASE_URL", "https://api.openai.com/v1")
+# USD per audio-minute for the "openai" provider (used to meter cost into the
+# monthly budget; 0 = don't charge, e.g. self-hosted). OpenRouter returns the
+# real cost in its response, so this is ignored for the "openrouter" provider.
+STT_PRICE_PER_MINUTE = os.environ.get("STT_PRICE_PER_MINUTE", "0")
+# Max uploaded audio size (bytes). 25 MB ≈ ~30 min of compressed Opus.
+STT_MAX_BYTES = int(os.environ.get("STT_MAX_BYTES", str(25 * 1024 * 1024)))
+STT_TIMEOUT_SECONDS = int(os.environ.get("STT_TIMEOUT_SECONDS", "120"))
+
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
 
@@ -125,6 +171,7 @@ INSTALLED_APPS = [
     "clinics",
     "compliance",
     "browse",
+    "ai_scribe",
     "rest_framework",
     "rest_framework_simplejwt",
     "django.contrib.postgres",

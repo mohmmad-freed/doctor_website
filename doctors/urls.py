@@ -6,6 +6,14 @@ app_name = "doctors"
 urlpatterns = [
     # --- Template Views (staff) ---
     path("", views.dashboard, name="dashboard"),
+    # --- "My Day": live queue board + day timeline ---
+    path("my-day/", views.my_day, name="my_day"),
+    path("my-day/queue/", views.my_day_queue, name="my_day_queue"),
+    path(
+        "my-day/<int:appointment_id>/advance/",
+        views.my_day_transition,
+        name="my_day_transition",
+    ),
     path("appointments/", views.appointments_list, name="appointments"),
     path(
         "appointments/<int:appointment_id>/",
@@ -16,6 +24,17 @@ urlpatterns = [
         "appointments/<int:appointment_id>/overview/",
         views.appointment_overview,
         name="appointment_overview",
+    ),
+    # --- Doctor-initiated reschedule (date/time only) ---
+    path(
+        "appointments/<int:appointment_id>/reschedule/",
+        views.reschedule_appointment,
+        name="reschedule_appointment",
+    ),
+    path(
+        "appointments/<int:appointment_id>/reschedule/slots/",
+        views.htmx_reschedule_slots,
+        name="htmx_reschedule_slots",
     ),
     path(
         "appointments/<int:appointment_id>/intake/",
@@ -43,6 +62,8 @@ urlpatterns = [
     # --- Patient Workspace ---
     path("patients/<int:patient_id>/", views.patient_workspace, name="patient_workspace"),
     path("patients/<int:patient_id>/notes/add/", views.ws_note_add, name="ws_note_add"),
+    path("patients/<int:patient_id>/notes/ai-draft/", views.ws_note_ai_draft, name="ws_note_ai_draft"),
+    path("patients/<int:patient_id>/notes/ai-transcribe/", views.ws_note_ai_transcribe, name="ws_note_ai_transcribe"),
     path("patients/<int:patient_id>/notes/<int:note_id>/edit/", views.ws_note_edit, name="ws_note_edit"),
     path("patients/<int:patient_id>/notes/<int:note_id>/delete/", views.ws_note_delete, name="ws_note_delete"),
     path("patients/<int:patient_id>/notes/<int:note_id>/addendum/", views.ws_note_addendum_add, name="ws_note_addendum_add"),
@@ -137,6 +158,12 @@ urlpatterns = [
         "my-reviews/",
         views.my_reviews,
         name="my_reviews",
+    ),
+    # --- Doctor practice analytics ---
+    path(
+        "my-analytics/",
+        views.doctor_analytics,
+        name="doctor_analytics",
     ),
     # --- Doctor Appointment Types (self-service) ---
     path(

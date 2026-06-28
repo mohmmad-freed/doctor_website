@@ -156,6 +156,25 @@
   </div>
   {% endif %}
 
+  {# Reschedule — doctor moves the appointment to a new date/time (same clinic + type) #}
+  {% if can_reschedule %}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-indigo-200 dark:border-indigo-800/60 overflow-hidden mb-5">
+    <div class="flex items-center gap-2 px-5 py-3.5 border-b border-indigo-100 dark:border-indigo-800/60 bg-indigo-50/60 dark:bg-indigo-900/20">
+      <i class="fa-solid fa-calendar-day text-indigo-500 text-sm"></i>
+      <span class="font-semibold text-indigo-700 dark:text-indigo-300 text-sm">{% if IS_RTL %}إعادة جدولة{% else %}Reschedule{% endif %}</span>
+    </div>
+    <div class="px-5 py-5">
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">{% if IS_RTL %}انقل الموعد إلى تاريخ/وقت آخر في نفس العيادة. سيتم إشعار المريض.{% else %}Move this appointment to a new date/time at the same clinic. The patient will be notified.{% endif %}</p>
+      <button type="button"
+              hx-get="{% url 'doctors:reschedule_appointment' appointment.id %}"
+              hx-target="#reschedule-modal-root" hx-swap="innerHTML"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-indigo-200 dark:border-indigo-900/40 bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-sm font-semibold transition-colors">
+        <i class="fa-solid fa-calendar-day text-xs"></i> {% if IS_RTL %}إعادة جدولة الموعد{% else %}Reschedule appointment{% endif %}
+      </button>
+    </div>
+  </div>
+  {% endif %}
+
   {# Cancel appointment — the only status action available to the doctor here #}
   {% if can_cancel %}
   <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border-2 border-red-200 dark:border-red-800/60 overflow-hidden">
@@ -201,6 +220,9 @@
     </div>
   </div>
   {% endif %}
+
+  {# HTMX target that hosts the reschedule modal #}
+  <div id="reschedule-modal-root"></div>
 
 </div>
 {% endblock %}

@@ -332,6 +332,10 @@ class Order(models.Model):
     frequency = models.CharField(max_length=100, blank=True)
     duration = models.CharField(max_length=100, blank=True)
 
+    # Patient-safety: set when the prescriber confirmed they reviewed the
+    # patient's allergies + active medications before placing a drug order.
+    allergy_acknowledged_at = models.DateTimeField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -365,6 +369,9 @@ class Prescription(models.Model):
     )
     notes = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
+    # Patient-safety: set when the prescriber confirmed they reviewed the
+    # patient's allergies + active medications before issuing this prescription.
+    allergy_acknowledged_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

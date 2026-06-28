@@ -141,6 +141,11 @@
         </select>
       </div>
 
+      <!-- Medication safety banner (drug orders only) -->
+      <div x-show="isDrug">
+        {% include "doctors/partials/_medication_safety_banner.html" with drug_scoped=True %}
+      </div>
+
       <!-- ── Drug Catalog Picker ─────────────────────────────── -->
       <div x-show="isDrug" class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40 p-3 space-y-2">
 

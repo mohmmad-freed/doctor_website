@@ -1,0 +1,136 @@
+{% extends "doctors/base_doctor.html" %}
+
+{% block title %}{% if IS_RTL %}إحصائياتي | بوابة الطبيب{% else %}My Analytics | Doctor Portal{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6 animate-fade-in-up">
+
+  <!-- Header + date range -->
+  <div class="glass-card p-5 md:p-6">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <i class="fa-solid fa-chart-line text-primary-500"></i>
+          {% if IS_RTL %}إحصائيات ممارستي{% else %}My Practice Analytics{% endif %}
+        </h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          {% if IS_RTL %}مقاييس تشغيلية لمواعيدك (لا تشمل البيانات المالية).{% else %}Operational metrics for your appointments (excludes financials).{% endif %}
+        </p>
+      </div>
+      <form method="get" class="flex flex-wrap items-end gap-2">
+        <div>
+          <label class="block text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">{% if IS_RTL %}من{% else %}From{% endif %}</label>
+          <input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}"
+                 class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-gray-900 dark:text-white">
+        </div>
+        <div>
+          <label class="block text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">{% if IS_RTL %}إلى{% else %}To{% endif %}</label>
+          <input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}"
+                 class="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-gray-900 dark:text-white">
+        </div>
+        <button type="submit"
+                class="px-4 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold transition-colors">
+          {% if IS_RTL %}تطبيق{% else %}Apply{% endif %}
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- KPI cards -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="glass-card p-5">
+      <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{% if IS_RTL %}إجمالي المواعيد{% else %}Total Appointments{% endif %}</p>
+      <p class="text-3xl font-bold text-gray-900 dark:text-white mt-1">{{ total }}</p>
+    </div>
+    <div class="glass-card p-5">
+      <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{% if IS_RTL %}مكتملة{% else %}Completed{% endif %}</p>
+      <p class="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{{ completed }}</p>
+      <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ completion_rate }}% {% if IS_RTL %}معدل الإكمال{% else %}completion{% endif %}</p>
+    </div>
+    <div class="glass-card p-5">
+      <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{% if IS_RTL %}عدم الحضور{% else %}No-Shows{% endif %}</p>
+      <p class="text-3xl font-bold text-red-600 dark:text-red-400 mt-1">{{ no_show }}</p>
+      <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ no_show_rate }}% {% if IS_RTL %}من المواعيد{% else %}of appointments{% endif %}</p>
+    </div>
+    <div class="glass-card p-5">
+      <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{% if IS_RTL %}ملغاة{% else %}Cancelled{% endif %}</p>
+      <p class="text-3xl font-bold text-amber-600 dark:text-amber-400 mt-1">{{ cancelled }}</p>
+      <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ cancel_rate }}% {% if IS_RTL %}من المواعيد{% else %}of appointments{% endif %}</p>
+    </div>
+  </div>
+
+  <!-- Status breakdown -->
+  <div class="glass-card p-5 md:p-6">
+    <h2 class="text-base font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+      <i class="fa-solid fa-list-check text-primary-500 text-sm"></i>
+      {% if IS_RTL %}توزيع حالات المواعيد{% else %}Appointments by Status{% endif %}
+    </h2>
+    {% if total %}
+    <div class="space-y-3">
+      {% for row in status_breakdown %}
+      <div>
+        <div class="flex items-center justify-between text-sm mb-1">
+          <span class="font-medium text-gray-700 dark:text-gray-300">{{ row.label }}</span>
+          <span class="text-gray-500 dark:text-gray-400 tabular-nums">{{ row.count }} · {{ row.pct }}%</span>
+        </div>
+        <div class="h-2.5 rounded-full bg-gray-100 dark:bg-slate-700 overflow-hidden">
+          <div class="h-full rounded-full bg-primary-500" style="width: {{ row.pct }}%"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm text-gray-400 dark:text-gray-500 py-6 text-center">{% if IS_RTL %}لا توجد مواعيد في هذه الفترة.{% else %}No appointments in this period.{% endif %}</p>
+    {% endif %}
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-4">
+    <!-- Completed per clinic -->
+    <div class="glass-card p-5 md:p-6">
+      <h2 class="text-base font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <i class="fa-solid fa-hospital text-primary-500 text-sm"></i>
+        {% if IS_RTL %}الزيارات المكتملة حسب العيادة{% else %}Completed Visits by Clinic{% endif %}
+      </h2>
+      {% if clinic_completed %}
+      <div class="space-y-2">
+        {% for c in clinic_completed %}
+        <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 dark:bg-slate-700/40">
+          <span class="text-sm text-gray-700 dark:text-gray-300 truncate">{{ c.clinic__name }}</span>
+          <span class="text-sm font-bold text-gray-900 dark:text-white tabular-nums">{{ c.n }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-sm text-gray-400 dark:text-gray-500 py-6 text-center">{% if IS_RTL %}لا توجد زيارات مكتملة بعد.{% else %}No completed visits yet.{% endif %}</p>
+      {% endif %}
+    </div>
+
+    <!-- Rating distribution -->
+    <div class="glass-card p-5 md:p-6">
+      <h2 class="text-base font-bold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
+        <i class="fa-solid fa-star text-amber-500 text-sm"></i>
+        {% if IS_RTL %}توزيع التقييمات{% else %}Rating Distribution{% endif %}
+      </h2>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+        {% if rating.avg %}<span class="text-amber-500 font-bold">★ {{ rating.avg }}</span> · {% endif %}{{ total_reviews }} {% if IS_RTL %}تقييم{% else %}reviews{% endif %}
+      </p>
+      {% if total_reviews %}
+      <div class="space-y-2">
+        {% for r in rating_rows %}
+        <div class="flex items-center gap-3">
+          <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 w-8 flex-shrink-0">{{ r.star }} ★</span>
+          <div class="flex-1 h-2.5 rounded-full bg-gray-100 dark:bg-slate-700 overflow-hidden">
+            <div class="h-full rounded-full bg-amber-400" style="width: {{ r.pct }}%"></div>
+          </div>
+          <span class="text-xs text-gray-500 dark:text-gray-400 tabular-nums w-10 text-end flex-shrink-0">{{ r.count }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-sm text-gray-400 dark:text-gray-500 py-6 text-center">{% if IS_RTL %}لا توجد تقييمات بعد.{% else %}No reviews yet.{% endif %}</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}
