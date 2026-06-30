@@ -59,111 +59,46 @@ def doctor_required(view_func):
 @login_required
 @doctor_required
 def dashboard(request):
-    """Full doctor dashboard with verification status, clinic memberships, and today's appointments."""
+    """Doctor "Today" command center: the live queue board + day timeline (with
+    prev/next-day navigation) plus a thin "needs attention" banner.
+
+    Merges the former Dashboard + My Day surfaces into one home view. The full
+    verification / clinic-credential / profile widgets now live on the
+    Verification and Profile pages — Today only surfaces actionable nudges via
+    ``action_flags`` (see :func:`_today_action_flags`)."""
+    from datetime import datetime as _dt, timedelta as _td
     user = request.user
-
-    # Identity verification
-    verification = DoctorVerification.objects.filter(user=user).first()
-
-    # Clinic memberships + credential status (deduplicated by clinic)
-    # A doctor may have multiple ClinicStaff rows for the same clinic
-    # (e.g. DOCTOR + SECRETARY). Show each clinic only once, preferring
-    # the highest-privilege role: MAIN_DOCTOR > DOCTOR > SECRETARY.
-    _role_priority = {"MAIN_DOCTOR": 0, "DOCTOR": 1, "SECRETARY": 2}
-    memberships = (
-        ClinicStaff.objects.filter(user=user, revoked_at__isnull=True)
-        .select_related("clinic")
-        .order_by("added_at")
-    )
-    _best: dict = {}
-    for m in memberships:
-        cid = m.clinic_id
-        if cid not in _best or _role_priority.get(m.role, 99) < _role_priority.get(_best[cid].role, 99):
-            _best[cid] = m
-
-    # Fetch this doctor's credentials once and group by clinic, instead of
-    # issuing a query (plus exists()/iteration) per clinic card.
-    from collections import defaultdict
-    creds_by_clinic = defaultdict(list)
-    for cred in ClinicDoctorCredential.objects.filter(doctor=user).select_related("specialty"):
-        creds_by_clinic[cred.clinic_id].append(cred)
-
-    clinic_cards = []
-    for m in _best.values():
-        credentials = creds_by_clinic.get(m.clinic_id, [])
-        all_verified = bool(credentials) and all(
-            c.credential_status == "CREDENTIALS_VERIFIED" for c in credentials
-        )
-        clinic_cards.append({
-            "membership": m,
-            "clinic": m.clinic,
-            "role": m.role,
-            "credentials": credentials,
-            "all_verified": all_verified,
-        })
-
-    # Today's appointments across all clinics
     today = date.today()
-    todays_appointments = (
-        Appointment.objects.filter(
-            doctor=user,
-            appointment_date=today,
-        )
+
+    target_date = today
+    date_str = request.GET.get("date")
+    if date_str:
+        try:
+            target_date = _dt.strptime(date_str, "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            target_date = today
+
+    is_today = target_date == today
+
+    timeline = list(
+        Appointment.objects
+        .filter(doctor=user, appointment_date=target_date)
         .select_related("patient", "clinic", "appointment_type")
         .order_by("appointment_time")
     )
 
-    # Upcoming appointments this week (next 7 days, not today)
-    from datetime import timedelta
-    week_end = today + timedelta(days=7)
-    upcoming_count = Appointment.objects.filter(
-        doctor=user,
-        appointment_date__gt=today,
-        appointment_date__lte=week_end,
-        status__in=[Appointment.Status.CONFIRMED, Appointment.Status.PENDING],
-    ).count()
-
-    # Total unique patients seen
-    from django.db.models import Count as _Count
-    total_patients_count = (
-        Appointment.objects.filter(doctor=user)
-        .exclude(status=Appointment.Status.CANCELLED)
-        .values("patient_id")
-        .distinct()
-        .count()
-    )
-
-    # Pending invitations count
-    from accounts.backends import PhoneNumberAuthBackend
-    from clinics.models import ClinicInvitation
-    normalized_phone = PhoneNumberAuthBackend.normalize_phone_number(user.phone)
-    pending_invitations_count = ClinicInvitation.objects.filter(
-        doctor_phone=normalized_phone, status="PENDING"
-    ).count()
-
-    # Profile completeness
-    profile = DoctorProfile.objects.filter(user=user).first()
-    profile_complete = bool(
-        profile and profile.bio and profile.years_of_experience
-    )
-
-    # Visibility check
-    identity_verified = bool(
-        verification and verification.identity_status == "IDENTITY_VERIFIED"
-    )
-
-    return render(request, "doctors/doctor_dashboard.html", {
-        "verification": verification,
-        "identity_verified": identity_verified,
-        "clinic_cards": clinic_cards,
-        "todays_appointments": todays_appointments,
-        "upcoming_count": upcoming_count,
-        "total_patients_count": total_patients_count,
-        "pending_invitations_count": pending_invitations_count,
-        "profile": profile,
-        "profile_complete": profile_complete,
+    ctx = {
+        "target_date": target_date,
+        "is_today": is_today,
         "today": today,
-    })
+        "prev_date": target_date - _td(days=1),
+        "next_date": target_date + _td(days=1),
+        "timeline": timeline,
+        "action_flags": _today_action_flags(user),
+    }
+    if is_today:
+        ctx.update(_my_day_data(user, today))
+    return render(request, "doctors/today.html", ctx)
 
 
 @login_required
@@ -370,6 +305,33 @@ def apply_status_transition(request, appointment, user):
     return False
 
 
+def _today_action_flags(user):
+    """Cheap "needs attention" booleans for the Today banner.
+
+    Reuses the queries the former dashboard ran, collapsed to flags. The full
+    widgets live on the Verification / Profile / Invitations pages — Today only
+    nudges. Pending invitations are read from ``pending_invitations_count``
+    (injected globally by ``doctors.context_processors``) so we don't re-query."""
+    verification = DoctorVerification.objects.filter(user=user).first()
+    identity_unverified = not (
+        verification and verification.identity_status == "IDENTITY_VERIFIED"
+    )
+    credential_pending = (
+        ClinicDoctorCredential.objects.filter(doctor=user)
+        .exclude(credential_status="CREDENTIALS_VERIFIED")
+        .exists()
+    )
+    profile = DoctorProfile.objects.filter(user=user).first()
+    profile_incomplete = not (profile and profile.bio and profile.years_of_experience)
+    return {
+        "identity_unverified": identity_unverified,
+        "identity_status": getattr(verification, "identity_status", None),
+        "credential_pending": credential_pending,
+        "profile_incomplete": profile_incomplete,
+        "any": identity_unverified or credential_pending or profile_incomplete,
+    }
+
+
 def _my_day_data(doctor, target_date):
     """Live-queue + arrivals data for the doctor's "My Day" board on ``target_date``,
     across ALL of the doctor's clinics. Mirrors the secretary waiting-room wait-time
@@ -417,41 +379,11 @@ def _my_day_data(doctor, target_date):
 @login_required
 @doctor_required
 def my_day(request):
-    """Doctor "My Day": a live queue board (today only) + a day timeline with
-    prev/next-day navigation. No new model — reuses the appointment queue fields
-    and the doctor's own status-transition engine."""
-    from datetime import datetime as _dt, timedelta as _td
-    user = request.user
-    today = date.today()
+    """Back-compat alias: the live-day board now lives at ``/doctors/`` (Today).
 
-    target_date = today
-    date_str = request.GET.get("date")
-    if date_str:
-        try:
-            target_date = _dt.strptime(date_str, "%Y-%m-%d").date()
-        except (ValueError, TypeError):
-            target_date = today
-
-    is_today = target_date == today
-
-    timeline = list(
-        Appointment.objects
-        .filter(doctor=user, appointment_date=target_date)
-        .select_related("patient", "clinic", "appointment_type")
-        .order_by("appointment_time")
-    )
-
-    ctx = {
-        "target_date": target_date,
-        "is_today": is_today,
-        "today": today,
-        "prev_date": target_date - _td(days=1),
-        "next_date": target_date + _td(days=1),
-        "timeline": timeline,
-    }
-    if is_today:
-        ctx.update(_my_day_data(user, today))
-    return render(request, "doctors/my_day.html", ctx)
+    Kept so existing links, bookmarks and tests that reverse ``doctors:my_day``
+    keep working (returns the same 200 + context as :func:`dashboard`)."""
+    return dashboard(request)
 
 
 @login_required
@@ -938,6 +870,47 @@ def appointment_intake_partial(request, appointment_id):
     intake_data = build_appointment_intake_data(appointment)
     return render(request, "doctors/partials/_appointment_intake_panel.html", {
         "intake_data": intake_data,
+    })
+
+
+@login_required
+@doctor_required
+def appointment_quickview(request, appointment_id):
+    """HTMX right-side drawer: quick-view of one appointment from the Today board.
+
+    GET renders the drawer (patient summary, intake answers, status controls,
+    staff notes, "Open Workspace" CTA). POST applies a doctor status transition,
+    then re-renders the drawer and signals the live queue to refresh via the
+    ``queue-refresh`` HX-Trigger (so the board updates without closing the drawer)."""
+    user = request.user
+    appointment = get_object_or_404(
+        Appointment.objects.select_related("patient", "clinic", "appointment_type"),
+        id=appointment_id,
+        doctor=user,
+    )
+    if request.method == "POST" and apply_status_transition(request, appointment, user):
+        resp = _render_quickview(request, appointment, user)
+        resp["HX-Trigger"] = "queue-refresh"
+        return resp
+    return _render_quickview(request, appointment, user)
+
+
+def _render_quickview(request, appointment, user):
+    """Render the appointment quick-view drawer partial (shared by GET + POST)."""
+    intake_data = build_appointment_intake_data(appointment)
+    allowed_transitions, valid_values = allowed_status_transitions(appointment)
+    workspace_url = (
+        reverse("doctors:patient_workspace", args=[appointment.patient_id])
+        + f"?tab=overview&appt={appointment.id}"
+    )
+    return render(request, "doctors/partials/_appointment_quickview.html", {
+        "appointment": appointment,
+        "patient": appointment.patient,
+        "intake_data": intake_data,
+        "allowed_transitions": allowed_transitions,
+        "can_cancel": Appointment.Status.CANCELLED in valid_values,
+        "staff_doctor_notes": _appointment_doctor_notes(appointment, viewer=user),
+        "workspace_url": workspace_url,
     })
 
 
@@ -1601,11 +1574,14 @@ def doctor_profile_view(request):
         .exclude(role__in=["SECRETARY", "MAIN_DOCTOR"])
         .select_related("clinic")
     )
+    # Completeness nudge (relocated from the old dashboard quick-actions).
+    profile_complete = bool(profile.bio and profile.years_of_experience)
 
     return render(request, "doctors/doctor_profile.html", {
         "profile": profile,
         "specialties": specialties,
         "memberships": memberships,
+        "profile_complete": profile_complete,
     })
 
 
@@ -2458,7 +2434,7 @@ def patient_workspace(request, patient_id):
         return HttpResponseForbidden("Access denied.")
 
     tab = request.GET.get("tab", "overview")
-    if tab not in {"overview", "notes", "orders", "prescriptions", "records"}:
+    if tab not in {"overview", "visits", "notes", "orders", "prescriptions", "records"}:
         tab = "overview"
 
     ctx["active_tab"] = tab
@@ -2466,6 +2442,7 @@ def patient_workspace(request, patient_id):
     _rtl = getattr(request, "LANGUAGE_CODE", "ar") == "ar"
     ctx["tabs"] = [
         ("overview",      "نظرة عامة"       if _rtl else "Overview",       "fa-solid fa-chart-pie"),
+        ("visits",        "الزيارات"         if _rtl else "Visits",         "fa-solid fa-calendar-check"),
         ("notes",         "ملاحظات طبية"     if _rtl else "Clinical Notes", "fa-solid fa-file-medical"),
         ("orders",        "الطلبات"          if _rtl else "Orders",         "fa-solid fa-flask"),
         ("prescriptions", "الوصفات"          if _rtl else "Prescriptions",  "fa-solid fa-prescription"),
@@ -2473,10 +2450,14 @@ def patient_workspace(request, patient_id):
     ]
     patient = ctx["patient"]
     cids = ctx["shared_clinic_ids"]
+    # Optional appointment context carried from the Today drawer (?appt=<id>).
+    ctx["appt_context"] = _ws_appt_context(request, patient, cids)
 
     if tab == "overview":
         ctx.update(_ws_overview_data(patient, cids, viewer=ctx["doctor"]))
         ctx["active_note_sections"] = _get_active_note_sections(ctx["doctor"])
+    elif tab == "visits":
+        ctx.update(_ws_visits_data(patient, cids, request))
     elif tab == "notes":
         ctx.update(_ws_notes_data(patient, cids, request))
         ctx["active_note_sections"] = _get_active_note_sections(ctx["doctor"])
@@ -2490,6 +2471,7 @@ def patient_workspace(request, patient_id):
     if request.headers.get("HX-Request"):
         template_map = {
             "overview":      "doctors/partials/ws_overview.html",
+            "visits":        "doctors/partials/ws_visits.html",
             "notes":         "doctors/partials/ws_notes.html",
             "orders":        "doctors/partials/ws_orders.html",
             "prescriptions": "doctors/partials/ws_prescriptions.html",
@@ -2544,6 +2526,118 @@ def _ws_overview_data(patient, cids, viewer=None):
         "lab_records":    lab_records,
         "timeline_events": events[:15],
     }
+
+
+def _ws_visits_data(patient, cids, request):
+    """Appointment/visit history for the Visits tab — the patient's appointments
+    in the doctor's shared clinics, split into upcoming/past and each annotated
+    with the clinical note(s) written for that visit.
+
+    Notes link by FK (``ClinicalNote.appointment``) authoritatively; legacy notes
+    with no appointment link fall back to a same-day, same-clinic match. One
+    appointments query + one notes query (grouped in memory) — no N+1.
+
+    This is appointment-anchored and distinct from the Overview clinical-event
+    timeline (notes/orders/rx/records)."""
+    from collections import defaultdict
+    from django.db.models import Q
+    from datetime import date as _date
+
+    today = _date.today()
+    active_statuses = [
+        Appointment.Status.PENDING,
+        Appointment.Status.CONFIRMED,
+        Appointment.Status.CHECKED_IN,
+        Appointment.Status.IN_PROGRESS,
+    ]
+    base = (
+        Appointment.objects.filter(patient=patient, clinic_id__in=cids)
+        .select_related("clinic", "appointment_type", "doctor")
+    )
+    upcoming = list(
+        base.filter(appointment_date__gte=today, status__in=active_statuses)
+        .order_by("appointment_date", "appointment_time")
+    )
+    upcoming_ids = {a.id for a in upcoming}
+    past = list(
+        base.exclude(id__in=upcoming_ids).order_by(
+            "-appointment_date", "-appointment_time"
+        )
+    )
+
+    appts = upcoming + past
+    appt_ids = [a.id for a in appts]
+    appt_dates = [a.appointment_date for a in appts]
+
+    notes = list(
+        ClinicalNote.objects.filter(patient=patient, clinic_id__in=cids)
+        .select_related("doctor", "clinic")
+        .filter(
+            Q(appointment_id__in=appt_ids)
+            | Q(appointment__isnull=True, created_at__date__in=appt_dates)
+        )
+        .order_by("-created_at")
+    )
+    by_appt = defaultdict(list)
+    by_clinic_date = defaultdict(list)
+    for n in notes:
+        if n.appointment_id:
+            by_appt[n.appointment_id].append(n)
+        else:
+            by_clinic_date[(n.clinic_id, n.created_at.date())].append(n)
+    for a in appts:
+        a.day_notes = by_appt.get(a.id) or by_clinic_date.get(
+            (a.clinic_id, a.appointment_date), []
+        )
+
+    return {
+        "visits_upcoming": upcoming,
+        "visits_past": past,
+        "visits_today": today,
+    }
+
+
+def _ws_appt_context(request, patient, cids):
+    """Resolve the optional ``?appt=<id>`` handoff from the Today drawer.
+
+    Returns the Appointment only when it belongs to this patient AND a shared
+    clinic (same scoping as :func:`_ws_access`). Any malformed / absent /
+    unauthorized value yields ``None`` so the workspace banner is simply not
+    rendered (fail closed — no 403, no information leak)."""
+    raw = request.GET.get("appt")
+    if not raw:
+        return None
+    try:
+        aid = int(raw)
+    except (TypeError, ValueError):
+        return None
+    return (
+        Appointment.objects.filter(id=aid, patient=patient, clinic_id__in=cids)
+        .select_related("appointment_type", "clinic")
+        .first()
+    )
+
+
+@login_required
+def ws_visit_intake_partial(request, patient_id, appointment_id):
+    """HTMX: render a visit's submitted intake form inside the Visits tab.
+
+    Clinic-scoped (via ``_ws_access``) so a visit owned by another doctor in a
+    shared clinic still expands — unlike ``appointment_intake_partial`` which is
+    doctor-scoped."""
+    ctx = _ws_access(request, patient_id)
+    if ctx is None:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("Access denied.")
+    appointment = get_object_or_404(
+        Appointment,
+        id=appointment_id,
+        patient=ctx["patient"],
+        clinic_id__in=ctx["shared_clinic_ids"],
+    )
+    return render(request, "doctors/partials/_appointment_intake_panel.html", {
+        "intake_data": build_appointment_intake_data(appointment),
+    })
 
 
 def _ws_scribe_ctx(doctor, cids):

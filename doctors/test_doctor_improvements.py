@@ -545,3 +545,134 @@ class RescheduleTests(DoctorViewTestBase):
         self.client.force_login(self.doctor_a)
         resp = self.client.get(reverse("doctors:reschedule_appointment", args=[theirs.id]))
         self.assertEqual(resp.status_code, 404)
+
+
+# ════════════════════════════════════════════════════════════════════
+#  Clinical-spine consolidation: Today (merged dashboard) + quick-view
+#  drawer + Workspace Visits tab + appt-context handoff.
+# ════════════════════════════════════════════════════════════════════
+
+class SpineConsolidationTests(DoctorViewTestBase):
+
+    def setUp(self):
+        super().setUp()
+        ClinicPatient.objects.get_or_create(patient=self.patient_a, clinic=self.clinic_a)
+
+    def _appt(self, doctor, clinic, patient, status, when=None, t=time(9, 0)):
+        return Appointment.objects.create(
+            patient=patient, clinic=clinic, doctor=doctor,
+            appointment_type=(self.appt_type_a if clinic == self.clinic_a else self.appt_type_b),
+            appointment_date=when or date.today(), appointment_time=t, status=status,
+        )
+
+    # ── Today (merged dashboard) ──────────────────────────────────────
+    def test_today_home_renders_queue_context(self):
+        self._appt(self.doctor_a, self.clinic_a, self.patient_a, Appointment.Status.CONFIRMED)
+        self.client.force_login(self.doctor_a)
+        resp = self.client.get(reverse("doctors:dashboard"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.context["is_today"])
+        self.assertIn("waiting", resp.context)
+        self.assertIn("action_flags", resp.context)
+
+    def test_my_day_alias_matches_dashboard(self):
+        """The my_day URL is now an alias returning the Today view (200, queue ctx)."""
+        self.client.force_login(self.doctor_a)
+        resp = self.client.get(reverse("doctors:my_day"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.context["is_today"])
+        self.assertIn("waiting", resp.context)
+
+    # ── Quick-view drawer ─────────────────────────────────────────────
+    def test_quickview_renders_with_workspace_cta(self):
+        appt = self._appt(self.doctor_a, self.clinic_a, self.patient_a, Appointment.Status.CONFIRMED)
+        self.client.force_login(self.doctor_a)
+        resp = self.client.get(reverse("doctors:appointment_quickview", args=[appt.id]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context["workspace_url"],
+                         f"/doctors/patients/{self.patient_a.id}/?tab=overview&appt={appt.id}")
+
+    def test_quickview_idor_404(self):
+        theirs = self._appt(self.doctor_b, self.clinic_b, self.patient_b, Appointment.Status.CONFIRMED)
+        self.client.force_login(self.doctor_a)
+        resp = self.client.get(reverse("doctors:appointment_quickview", args=[theirs.id]))
+        self.assertEqual(resp.status_code, 404)
+
+    def test_quickview_post_transition_triggers_queue_refresh(self):
+        appt = self._appt(self.doctor_a, self.clinic_a, self.patient_a, Appointment.Status.PENDING)
+        self.client.force_login(self.doctor_a)
+        resp = self.client.post(
+            reverse("doctors:appointment_quickview", args=[appt.id]),
+            {"status": "CONFIRMED"}, HTTP_HX_REQUEST="true",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.headers.get("HX-Trigger"), "queue-refresh")
+        appt.refresh_from_db()
+        self.assertEqual(appt.status, Appointment.Status.CONFIRMED)
+
+    # ── Visits tab ────────────────────────────────────────────────────
+    def test_visits_tab_splits_upcoming_and_past(self):
+        past = self._appt(self.doctor_a, self.clinic_a, self.patient_a,
+                          Appointment.Status.COMPLETED, when=date.today() - timedelta(days=5))
+        upcoming = self._appt(self.doctor_a, self.clinic_a, self.patient_a,
+                              Appointment.Status.CONFIRMED, when=date.today() + timedelta(days=5))
+        self.client.force_login(self.doctor_a)
+        resp = self.client.get(
+            reverse("doctors:patient_workspace", args=[self.patient_a.id]) + "?tab=visits",
+            HTTP_HX_REQUEST="true",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(past.id, [a.id for a in resp.context["visits_past"]])
+        self.assertIn(upcoming.id, [a.id for a in resp.context["visits_upcoming"]])
+
+    def test_visit_links_same_day_note_by_fk(self):
+        past = self._appt(self.doctor_a, self.clinic_a, self.patient_a,
+                          Appointment.Status.COMPLETED, when=date.today() - timedelta(days=3))
+        note = ClinicalNote.objects.create(
+            patient=self.patient_a, clinic=self.clinic_a, doctor=self.doctor_a,
+            appointment=past, assessment="VISIT_NOTE_TOKEN",
+        )
+        self.client.force_login(self.doctor_a)
+        resp = self.client.get(
+            reverse("doctors:patient_workspace", args=[self.patient_a.id]) + "?tab=visits",
+            HTTP_HX_REQUEST="true",
+        )
+        target = next(a for a in resp.context["visits_past"] if a.id == past.id)
+        self.assertIn(note, target.day_notes)
+
+    def test_visit_intake_partial_forbidden_cross_clinic(self):
+        """Doctor B shares no clinic with patient_a → 403 (clinic-scoped guard)."""
+        appt = self._appt(self.doctor_a, self.clinic_a, self.patient_a, Appointment.Status.COMPLETED)
+        self.client.force_login(self.doctor_b)
+        resp = self.client.get(
+            reverse("doctors:ws_visit_intake_partial", args=[self.patient_a.id, appt.id]),
+            HTTP_HX_REQUEST="true",
+        )
+        self.assertEqual(resp.status_code, 403)
+
+    # ── Appointment-context handoff ───────────────────────────────────
+    def test_appt_context_resolved_for_shared_clinic(self):
+        appt = self._appt(self.doctor_a, self.clinic_a, self.patient_a, Appointment.Status.CONFIRMED)
+        self.client.force_login(self.doctor_a)
+        resp = self.client.get(
+            reverse("doctors:patient_workspace", args=[self.patient_a.id])
+            + f"?tab=overview&appt={appt.id}"
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsNotNone(resp.context["appt_context"])
+        self.assertEqual(resp.context["appt_context"].id, appt.id)
+
+    def test_appt_context_none_for_invalid_or_foreign(self):
+        foreign = self._appt(self.doctor_b, self.clinic_b, self.patient_b, Appointment.Status.CONFIRMED)
+        self.client.force_login(self.doctor_a)
+        # Malformed appt → None (no error)
+        resp = self.client.get(
+            reverse("doctors:patient_workspace", args=[self.patient_a.id]) + "?appt=notanint"
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsNone(resp.context["appt_context"])
+        # Foreign-clinic appt → None (fails closed)
+        resp2 = self.client.get(
+            reverse("doctors:patient_workspace", args=[self.patient_a.id]) + f"?appt={foreign.id}"
+        )
+        self.assertIsNone(resp2.context["appt_context"])

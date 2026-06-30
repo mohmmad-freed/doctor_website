@@ -626,6 +626,28 @@
     };
   }
 
+  // ──────────────────────────────────────────────────────────────────────
+  // Appointment quick-view drawer (_appointment_quickview.html) — right-side
+  // slide-over loaded into #appt-drawer-root from the Today board. Same shape
+  // as rescheduleModal/followupModal; clears the host root on close.
+  // ──────────────────────────────────────────────────────────────────────
+  function apptDrawer() {
+    return {
+      open: false,
+      init() {
+        var self = this;
+        this.$nextTick(function () { self.open = true; });
+      },
+      close() {
+        this.open = false;
+        setTimeout(function () {
+          var root = document.getElementById('appt-drawer-root');
+          if (root) root.innerHTML = '';
+        }, 250);
+      }
+    };
+  }
+
   document.addEventListener('alpine:init', function () {
     Alpine.data('orthoWorkspace', orthoWorkspace);
     Alpine.data('orthoReadView', orthoReadView);
@@ -639,5 +661,6 @@
     Alpine.data('followupSuccess', followupSuccess);
     Alpine.data('patientRowMenu', patientRowMenu);
     Alpine.data('rescheduleModal', rescheduleModal);
+    Alpine.data('apptDrawer', apptDrawer);
   });
 })();

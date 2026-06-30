@@ -1,0 +1,36 @@
+<!-- Visits Tab — the patient's appointment/visit history (upcoming + past) -->
+<div class="space-y-5">
+
+  {# ── Upcoming ── #}
+  <div class="ws-card overflow-hidden">
+    <div class="flex items-center gap-2 px-5 py-3.5 border-b border-slate-100 dark:border-slate-700">
+      <i class="fa-regular fa-calendar-check text-emerald-500 text-sm"></i>
+      <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">{% if IS_RTL %}الزيارات القادمة{% else %}Upcoming visits{% endif %}</span>
+      <span class="ms-auto text-xs text-slate-400 dark:text-slate-500">{{ visits_upcoming|length }}</span>
+    </div>
+    {% if visits_upcoming %}
+    <div class="p-4 space-y-3">
+      {% for appt in visits_upcoming %}{% include "doctors/partials/_ws_visit_card.html" with appt=appt %}{% endfor %}
+    </div>
+    {% else %}
+    <div class="px-5 py-8 text-center text-sm text-slate-400 dark:text-slate-500">{% if IS_RTL %}لا توجد زيارات قادمة{% else %}No upcoming visits{% endif %}</div>
+    {% endif %}
+  </div>
+
+  {# ── Past ── #}
+  <div class="ws-card overflow-hidden">
+    <div class="flex items-center gap-2 px-5 py-3.5 border-b border-slate-100 dark:border-slate-700">
+      <i class="fa-solid fa-clock-rotate-left text-slate-400 text-sm"></i>
+      <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">{% if IS_RTL %}الزيارات السابقة{% else %}Past visits{% endif %}</span>
+      <span class="ms-auto text-xs text-slate-400 dark:text-slate-500">{{ visits_past|length }}</span>
+    </div>
+    {% if visits_past %}
+    <div class="p-4 space-y-3">
+      {% for appt in visits_past %}{% include "doctors/partials/_ws_visit_card.html" with appt=appt %}{% endfor %}
+    </div>
+    {% else %}
+    <div class="px-5 py-8 text-center text-sm text-slate-400 dark:text-slate-500">{% if IS_RTL %}لا توجد زيارات سابقة{% else %}No past visits{% endif %}</div>
+    {% endif %}
+  </div>
+
+</div>

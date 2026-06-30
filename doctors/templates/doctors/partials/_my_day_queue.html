@@ -6,7 +6,7 @@ Context: confirmed, waiting (list of {appt, queue_pos, wait_minutes, wait_class}
 {% endcomment %}
 <div id="my-day-queue"
      hx-get="{% url 'doctors:my_day_queue' %}"
-     hx-trigger="every 30s"
+     hx-trigger="every 30s, queue-refresh from:body"
      hx-swap="outerHTML"
      class="space-y-5">
 

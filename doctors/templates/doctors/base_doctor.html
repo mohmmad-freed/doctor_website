@@ -383,14 +383,9 @@
                 <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-slate-500 px-3 pt-1 pb-2">{% trans "المهام الرئيسية" %}</p>
 
                 <a href="{% url 'doctors:dashboard' %}"
-                   class="sidebar-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                    <i class="fa-solid fa-house-medical w-4 text-center flex-shrink-0"></i>
-                    {% trans "لوحة التحكم" %}
-                </a>
-                <a href="{% url 'doctors:my_day' %}"
-                   class="sidebar-link {% if request.resolver_match.url_name == 'my_day' %}active{% endif %}">
+                   class="sidebar-link {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'my_day' %}active{% endif %}">
                     <i class="fa-regular fa-clock w-4 text-center flex-shrink-0"></i>
-                    {% trans "يومي" %}
+                    {% trans "اليوم" %}
                 </a>
                 <a href="{% url 'doctors:appointments' %}"
                    class="sidebar-link {% if request.resolver_match.url_name == 'appointments' or request.resolver_match.url_name == 'appointment_detail' %}active{% endif %}">
@@ -627,13 +622,9 @@
 
     <!-- ═══════════════ MOBILE NAV ═══════════════ -->
     <nav class="mobile-nav-glass md:hidden">
-        <a href="{% url 'doctors:dashboard' %}" class="mob-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-            <i class="fa-solid fa-house-medical"></i>
-            <span>{% trans "لوحة التحكم" %}</span>
-        </a>
-        <a href="{% url 'doctors:my_day' %}" class="mob-item {% if request.resolver_match.url_name == 'my_day' %}active{% endif %}">
+        <a href="{% url 'doctors:dashboard' %}" class="mob-item {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'my_day' %}active{% endif %}">
             <i class="fa-regular fa-clock"></i>
-            <span>{% trans "يومي" %}</span>
+            <span>{% trans "اليوم" %}</span>
         </a>
         <a href="{% url 'doctors:appointments' %}" class="mob-item {% if request.resolver_match.url_name == 'appointments' or request.resolver_match.url_name == 'appointment_detail' %}active{% endif %}">
             <i class="fa-regular fa-calendar-check"></i>

@@ -1,0 +1,70 @@
+{% comment %}
+Thin "needs attention" banner for the Today command center. Renders only when
+there is something actionable (action_flags.* or pending_invitations_count).
+Full details live on the Verification / Profile / Invitations pages — this only
+nudges. Collapsible via the global data-toggle-hidden helper (csp_delegation.js).
+Context: action_flags (dict), pending_invitations_count (global context processor).
+{% endcomment %}
+{% if action_flags.any or pending_invitations_count %}
+<div class="rounded-2xl border border-amber-200 dark:border-amber-800/60 bg-amber-50/70 dark:bg-amber-900/15 overflow-hidden">
+  <button type="button"
+          data-toggle-hidden="today-action-body" data-rotate-chev
+          class="w-full flex items-center gap-2.5 px-5 py-3 text-start">
+    <span class="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center flex-shrink-0">
+      <i class="fa-solid fa-circle-exclamation text-amber-600 dark:text-amber-400 text-sm"></i>
+    </span>
+    <span class="font-bold text-sm text-amber-800 dark:text-amber-200">
+      {% if IS_RTL %}بنود تحتاج انتباهك{% else %}Needs your attention{% endif %}
+    </span>
+    <i class="chev fa-solid fa-chevron-down text-amber-500 dark:text-amber-400 text-xs ms-auto transition-transform"></i>
+  </button>
+
+  <div id="today-action-body" class="px-4 pb-4 space-y-2">
+
+    {% if action_flags.identity_unverified %}
+    <a href="{% url 'doctors:verification_status' %}"
+       class="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800/60 border border-amber-100 dark:border-amber-900/40 hover:border-amber-300 dark:hover:border-amber-700 transition-colors group">
+      <i class="fa-solid fa-id-card text-amber-500 w-4 text-center flex-shrink-0"></i>
+      <span class="text-sm font-semibold text-gray-700 dark:text-gray-200 flex-grow min-w-0">
+        {% if IS_RTL %}أكمل توثيق هويتك{% else %}Verify your identity{% endif %}
+      </span>
+      <i class="fa-solid fa-arrow-{% if IS_RTL %}left{% else %}right{% endif %} text-gray-300 dark:text-slate-600 text-xs group-hover:text-amber-500 transition-colors"></i>
+    </a>
+    {% endif %}
+
+    {% if action_flags.credential_pending %}
+    <a href="{% url 'doctors:verification_status' %}"
+       class="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800/60 border border-amber-100 dark:border-amber-900/40 hover:border-amber-300 dark:hover:border-amber-700 transition-colors group">
+      <i class="fa-solid fa-shield-halved text-amber-500 w-4 text-center flex-shrink-0"></i>
+      <span class="text-sm font-semibold text-gray-700 dark:text-gray-200 flex-grow min-w-0">
+        {% if IS_RTL %}بيانات اعتمادك في العيادات قيد المراجعة{% else %}Clinic credentials pending review{% endif %}
+      </span>
+      <i class="fa-solid fa-arrow-{% if IS_RTL %}left{% else %}right{% endif %} text-gray-300 dark:text-slate-600 text-xs group-hover:text-amber-500 transition-colors"></i>
+    </a>
+    {% endif %}
+
+    {% if action_flags.profile_incomplete %}
+    <a href="{% url 'doctors:doctor_profile' %}"
+       class="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800/60 border border-amber-100 dark:border-amber-900/40 hover:border-amber-300 dark:hover:border-amber-700 transition-colors group">
+      <i class="fa-solid fa-user-pen text-amber-500 w-4 text-center flex-shrink-0"></i>
+      <span class="text-sm font-semibold text-gray-700 dark:text-gray-200 flex-grow min-w-0">
+        {% if IS_RTL %}أكمل ملفك الشخصي{% else %}Complete your profile{% endif %}
+      </span>
+      <i class="fa-solid fa-arrow-{% if IS_RTL %}left{% else %}right{% endif %} text-gray-300 dark:text-slate-600 text-xs group-hover:text-amber-500 transition-colors"></i>
+    </a>
+    {% endif %}
+
+    {% if pending_invitations_count %}
+    <a href="{% url 'doctors:doctor_invitations_inbox' %}"
+       class="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800/60 border border-amber-100 dark:border-amber-900/40 hover:border-amber-300 dark:hover:border-amber-700 transition-colors group">
+      <i class="fa-regular fa-envelope text-amber-500 w-4 text-center flex-shrink-0"></i>
+      <span class="text-sm font-semibold text-gray-700 dark:text-gray-200 flex-grow min-w-0">
+        {% if IS_RTL %}لديك {{ pending_invitations_count }} دعوة معلقة{% else %}{{ pending_invitations_count }} pending clinic invitation{{ pending_invitations_count|pluralize }}{% endif %}
+      </span>
+      <span class="min-w-[20px] h-5 bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 flex-shrink-0">{{ pending_invitations_count }}</span>
+    </a>
+    {% endif %}
+
+  </div>
+</div>
+{% endif %}

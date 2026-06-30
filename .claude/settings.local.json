@@ -20,7 +20,15 @@
       "Bash(xargs grep -l \"Vital\")",
       "Bash(xargs grep -l \"sparkline\\\\|trend\\\\|chart\\\\|graph\")",
       "Bash(xargs grep \"sparkline\\\\|trend\\\\|chart\\\\|graph\")",
-      "Bash(cd \"F:\\\\ملفات الc\\\\buيsniss\\\\clink app\" && grep -r \"DoctorAvailabilityException\" secretary/ clinics/admin.py --include=\"*.py\" | head -20)"
+      "Bash(cd \"F:\\\\ملفات الc\\\\buيsniss\\\\clink app\" && grep -r \"DoctorAvailabilityException\" secretary/ clinics/admin.py --include=\"*.py\" | head -20)",
+      "Bash(find \"F:\\\\\\\\ملفات الc\\\\\\\\buisniss\\\\\\\\clink app\" -type f -name \"*.json\")",
+      "Bash(ls -la \"F:\\\\\\\\ملفات الc\\\\\\\\buisniss\\\\\\\\clink app\")",
+      "Bash(ls -la \"F:\\\\\\\\ملفات الc\\\\\\\\buisniss\\\\\\\\clink app\\\\\\\\doctors\")",
+      "Bash(find \"F:\\\\\\\\ملفات الc\\\\\\\\buisniss\\\\\\\\clink app\" -name \"urls.py\" -type f)",
+      "Bash(find \"F:\\\\\\\\ملفات الc\\\\\\\\buisniss\\\\\\\\clink app\\\\\\\\doctors\\\\\\\\templates\" -type f -name \"*.html\")",
+      "Bash(ls -la \"F:\\\\\\\\ملفات الc\\\\\\\\buisniss\\\\\\\\clink app\\\\\\\\doctors\\\\\\\\templates\\\\\\\\doctors\\\\\\\\\")",
+      "Bash(cat \"F:\\\\\\\\ملفات الc\\\\\\\\buisniss\\\\\\\\clink app\\\\\\\\package.json\")",
+      "Bash(ls \"F:\\\\\\\\ملفات الc\\\\\\\\buisniss\\\\\\\\clink app\\\\\\\\\")"
     ]
   }
 }

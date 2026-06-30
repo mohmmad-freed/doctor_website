@@ -27,6 +27,22 @@
     </div>
   </div>
 
+  {% if not profile_complete %}
+  <div class="rounded-2xl border border-amber-200 dark:border-amber-800/60 bg-amber-50/70 dark:bg-amber-900/15 p-4 mb-5 flex items-center gap-3 flex-wrap">
+    <span class="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center flex-shrink-0">
+      <i class="fa-solid fa-user-pen text-amber-600 dark:text-amber-400"></i>
+    </span>
+    <div class="flex-grow min-w-0">
+      <p class="font-bold text-sm text-amber-800 dark:text-amber-200">{% if IS_RTL %}ملفك غير مكتمل{% else %}Your profile is incomplete{% endif %}</p>
+      <p class="text-xs text-amber-700 dark:text-amber-400 mt-0.5">{% if IS_RTL %}أضف نبذة تعريفية وسنوات الخبرة لتحسين ظهورك للمرضى.{% else %}Add a bio and your years of experience to improve how patients see you.{% endif %}</p>
+    </div>
+    <a href="{% url 'doctors:doctor_edit_profile' %}"
+       class="flex-shrink-0 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold rounded-xl transition-colors">
+      {% if IS_RTL %}إكمال الملف{% else %}Complete profile{% endif %}
+    </a>
+  </div>
+  {% endif %}
+
   <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 mb-5 overflow-hidden">
     <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
       <i class="fa-solid fa-id-card text-indigo-500 text-sm"></i>

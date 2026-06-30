@@ -1,0 +1,7 @@
+{% comment %}
+HTMX host for the appointment quick-view drawer. The Today timeline rows
+hx-get the quickview partial into this root; the returned partial carries its
+own Alpine x-data ("apptDrawer") which slides in on init and clears this root
+on close (mirrors the reschedule/follow-up modal pattern).
+{% endcomment %}
+<div id="appt-drawer-root"></div>

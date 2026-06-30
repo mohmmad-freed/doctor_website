@@ -41,6 +41,12 @@ urlpatterns = [
         views.appointment_intake_partial,
         name="appointment_intake_partial",
     ),
+    # --- Appointment quick-view drawer (Today board) ---
+    path(
+        "appointments/<int:appointment_id>/quickview/",
+        views.appointment_quickview,
+        name="appointment_quickview",
+    ),
     path(
         "appointments/<int:appointment_id>/notes/add/",
         views.appointment_note_add,
@@ -61,6 +67,12 @@ urlpatterns = [
     ),
     # --- Patient Workspace ---
     path("patients/<int:patient_id>/", views.patient_workspace, name="patient_workspace"),
+    # Visits tab: clinic-scoped intake expander for a past/upcoming visit.
+    path(
+        "patients/<int:patient_id>/visits/<int:appointment_id>/intake/",
+        views.ws_visit_intake_partial,
+        name="ws_visit_intake_partial",
+    ),
     path("patients/<int:patient_id>/notes/add/", views.ws_note_add, name="ws_note_add"),
     path("patients/<int:patient_id>/notes/ai-draft/", views.ws_note_ai_draft, name="ws_note_ai_draft"),
     path("patients/<int:patient_id>/notes/ai-transcribe/", views.ws_note_ai_transcribe, name="ws_note_ai_transcribe"),
