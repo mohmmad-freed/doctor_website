@@ -23,12 +23,12 @@ action the user is returned to the notifications center.
         </button>
       </form>
       <button type="button"
-              onclick="document.getElementById('register-only-panel').classList.toggle('hidden');document.getElementById('reject-panel').classList.add('hidden');"
+              data-toggle-hidden="register-only-panel" data-hide="reject-panel"
               class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors">
         <i class="fa-solid fa-id-card text-xs"></i> {% trans "تسجيل المريض فقط" %}
       </button>
       <button type="button"
-              onclick="document.getElementById('reject-panel').classList.toggle('hidden');document.getElementById('register-only-panel').classList.add('hidden');"
+              data-toggle-hidden="reject-panel" data-hide="register-only-panel"
               class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 dark:border-red-900/40 bg-white dark:bg-slate-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-semibold transition-colors">
         <i class="fa-solid fa-user-xmark text-xs"></i> {% trans "رفض الطلب" %}
       </button>
@@ -84,7 +84,7 @@ action the user is returned to the notifications center.
         </button>
       </form>
       <button type="button"
-              onclick="document.getElementById('pending-reject-panel').classList.toggle('hidden');"
+              data-toggle-hidden="pending-reject-panel"
               class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 dark:border-red-900/40 bg-white dark:bg-slate-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-semibold transition-colors">
         <i class="fa-solid fa-xmark text-xs"></i> {% trans "رفض الموعد" %}
       </button>
@@ -113,7 +113,7 @@ action the user is returned to the notifications center.
     <i class="fa-solid fa-pen-to-square text-xs"></i> {% trans "إعادة جدولة" %}
   </a>
   <button type="button"
-          onclick="document.getElementById('confirmed-cancel-panel').classList.toggle('hidden');"
+          data-toggle-hidden="confirmed-cancel-panel"
           class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 dark:border-red-900/40 bg-white dark:bg-slate-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-semibold transition-colors">
     <i class="fa-solid fa-xmark text-xs"></i> {% trans "إلغاء الموعد" %}
   </button>
@@ -133,7 +133,7 @@ action the user is returned to the notifications center.
         {% trans "تأكيد الإلغاء" %}
       </button>
       <button type="button"
-              onclick="document.getElementById('confirmed-cancel-panel').classList.add('hidden');"
+              data-hide="confirmed-cancel-panel"
               class="px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-300 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
         {% trans "تراجع" %}
       </button>

@@ -1,8 +1,9 @@
-{# ── My Day live queue board ───────────────────────────────────────────────
-   Self-refreshing (every 30s) + swap target for the inline action buttons.
-   Context: confirmed, waiting (list of {appt, queue_pos, wait_minutes, wait_class}),
-            in_progress, *_count.
-──────────────────────────────────────────────────────────────────────────── #}
+{% comment %}
+── My Day live queue board ───────────────────────────────────────────────
+Self-refreshing (every 30s) + swap target for the inline action buttons.
+Context: confirmed, waiting (list of {appt, queue_pos, wait_minutes, wait_class}),
+         in_progress, *_count.
+{% endcomment %}
 <div id="my-day-queue"
      hx-get="{% url 'doctors:my_day_queue' %}"
      hx-trigger="every 30s"

@@ -70,14 +70,14 @@
         <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
           {% for invoice in invoices %}
           <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/40 transition-colors cursor-pointer"
-              onclick="window.location='{% url 'secretary:invoice_detail' invoice.id %}'">
+              data-href="{% url 'secretary:invoice_detail' invoice.id %}">
             <td class="px-4 py-3 font-mono text-xs text-gray-700 dark:text-gray-300">{{ invoice.invoice_number }}</td>
             <td class="px-4 py-3 font-semibold text-gray-900 dark:text-white">{{ invoice.patient.name }}</td>
             <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ invoice.created_at|date:"Y-m-d" }}</td>
             <td class="px-4 py-3 text-end font-semibold text-gray-900 dark:text-white">₪{{ invoice.total|floatformat:2 }}</td>
             <td class="px-4 py-3 text-end font-bold {% if invoice.balance_due > 0 %}text-red-600 dark:text-red-400{% else %}text-gray-400{% endif %}">₪{{ invoice.balance_due|floatformat:2 }}</td>
             <td class="px-4 py-3 text-center">{% include "secretary/billing/_invoice_status.html" %}</td>
-            <td class="px-4 py-3 text-center w-10" onclick="event.stopPropagation()">
+            <td class="px-4 py-3 text-center w-10" data-stop-propagation>
               {% if invoice.can_be_deleted %}
               <form method="post" action="{% url 'secretary:invoice_delete' invoice.id %}">
                 {% csrf_token %}

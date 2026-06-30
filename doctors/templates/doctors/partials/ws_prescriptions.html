@@ -12,12 +12,7 @@
 
 <!-- Create Prescription Form -->
 <div class="ws-card mb-6"
-     x-data="{
-       open: false,
-       meds: [{ name:'', dosage:'', frequency:'', duration:'', instructions:'' }],
-       addMed() { this.meds.push({ name:'', dosage:'', frequency:'', duration:'', instructions:'' }); },
-       removeMed(i) { if (this.meds.length > 1) this.meds.splice(i, 1); }
-     }">
+     x-data="wsRxForm" data-rx-form>
   <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-slate-700 cursor-pointer select-none"
        @click="open = !open">
     <div class="flex items-center gap-2">
@@ -103,7 +98,7 @@
                 class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors shadow-sm">
           <i class="fa-solid fa-prescription text-xs"></i> {% if IS_RTL %}حفظ الوصفة{% else %}Save Prescription{% endif %}
         </button>
-        <button type="button" @click="open = false; meds = [{ name:'', dosage:'', frequency:'', duration:'', instructions:'' }]; $el.closest('form').reset(); typeof wsDraftClearCurrent === 'function' && wsDraftClearCurrent()"
+        <button type="button" @click="cancelRx()"
                 class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
           {% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}
         </button>
@@ -138,7 +133,8 @@
   </div>
   <div id="active-rx-list"
        class="p-3 space-y-3 min-h-[72px] transition-colors"
-       data-list="active">
+       data-list="active"
+       data-empty-msg="{% if IS_RTL %}لا توجد وصفات فعّالة — اسحب وصفة هنا لتفعيلها{% else %}No active prescriptions — drag one here to activate it{% endif %}">
     {% for rx in active_prescriptions %}
     {% include "doctors/partials/_rx_card.html" with rx=rx patient=patient %}
     {% empty %}
@@ -161,7 +157,8 @@
   </div>
   <div id="inactive-rx-list"
        class="p-3 space-y-3 min-h-[72px] transition-colors"
-       data-list="inactive">
+       data-list="inactive"
+       data-empty-msg="{% if IS_RTL %}لا توجد وصفات غير فعّالة{% else %}No inactive prescriptions{% endif %}">
     {% for rx in inactive_prescriptions %}
     {% include "doctors/partials/_rx_card.html" with rx=rx patient=patient %}
     {% empty %}
@@ -179,75 +176,4 @@
 </div>
 {% endif %}
 
-<script>
-(function () {
-  const csrf = document.querySelector('#rx-csrf-form [name=csrfmiddlewaretoken]')?.value || '';
-
-  function removeEmptyState(list) {
-    list.querySelectorAll('.rx-empty-state').forEach(el => el.remove());
-  }
-
-  function addEmptyStateIfNeeded(list, message) {
-    if (list.querySelectorAll('[data-rx-id]').length === 0) {
-      const el = document.createElement('div');
-      el.className = 'rx-empty-state flex items-center justify-center h-14 text-sm text-slate-400 dark:text-slate-500 italic select-none';
-      el.textContent = message;
-      list.appendChild(el);
-    }
-  }
-
-  function initSortable() {
-    const activeList = document.getElementById('active-rx-list');
-    const inactiveList = document.getElementById('inactive-rx-list');
-    if (!activeList || !inactiveList || typeof Sortable === 'undefined') return;
-
-    const sharedOpts = {
-      group: 'rx-prescriptions',
-      animation: 150,
-      handle: '.rx-drag-handle',
-      ghostClass: 'opacity-40',
-      onAdd: function (evt) {
-        const rxId = evt.item.dataset.rxId;
-        const toggleUrl = evt.item.dataset.toggleUrl;
-        if (!rxId || !toggleUrl) return;
-
-        removeEmptyState(evt.to);
-        addEmptyStateIfNeeded(evt.from,
-          evt.from.dataset.list === 'active'
-            ? '{% if IS_RTL %}لا توجد وصفات فعّالة — اسحب وصفة هنا لتفعيلها{% else %}No active prescriptions — drag one here to activate it{% endif %}'
-            : '{% if IS_RTL %}لا توجد وصفات غير فعّالة{% else %}No inactive prescriptions{% endif %}'
-        );
-
-        // Update bullet dot colors immediately to reflect new status
-        const isNowActive = evt.to.dataset.list === 'active';
-        evt.item.querySelectorAll('.rx-med-dot').forEach(function (dot) {
-          if (isNowActive) {
-            dot.classList.remove('bg-slate-400', 'dark:bg-slate-500');
-            dot.classList.add('bg-emerald-500');
-          } else {
-            dot.classList.remove('bg-emerald-500');
-            dot.classList.add('bg-slate-400', 'dark:bg-slate-500');
-          }
-        });
-
-        fetch(toggleUrl, {
-          method: 'POST',
-          headers: { 'X-CSRFToken': csrf },
-        });
-      },
-    };
-
-    Sortable.create(activeList, sharedOpts);
-    Sortable.create(inactiveList, sharedOpts);
-  }
-
-  // Run immediately (inline scripts execute after HTMX swap)
-  initSortable();
-  // Also re-init after any subsequent HTMX swaps inside #tab-content
-  document.body.addEventListener('htmx:afterSwap', function (e) {
-    if (e.detail && e.detail.target && e.detail.target.id === 'tab-content') {
-      initSortable();
-    }
-  });
-})();
-</script>
+<!-- prescriptions drag-to-(de)activate JS externalized to doctors/js/ws_prescriptions.js (loaded once on patient_workspace.html) -->

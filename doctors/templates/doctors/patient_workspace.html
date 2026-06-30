@@ -1,10 +1,21 @@
 {% extends "doctors/base_doctor.html" %}
+{% load static %}
 {% block title %}{{ patient.name }} – {% if IS_RTL %}مساحة العمل | بوابة الطبيب{% else %}Workspace | MedPortal{% endif %}{% endblock %}
 
 {% block extra_head %}
-<script src="https://unpkg.com/htmx.org@1.9.10" crossorigin="anonymous"></script>
-<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script src="{% static 'js/vendor/htmx.min.js' %}"></script>
+{# CSP Phase 2a: self-hosted Alpine collapse plugin (powers x-collapse on the ws_* forms; was never loaded before so x-collapse silently warned). Must precede the Alpine build so its alpine:init hook registers first. #}
+<script defer src="{% static 'js/vendor/alpine-collapse.min.js' %}"></script>
+{# CSP Phase 2a: self-hosted @alpinejs/csp build (no 'unsafe-eval', drops unpkg.com). Components registered via alpine_components.js (loaded eagerly below, before this deferred build runs). #}
+<script defer src="{% static 'js/vendor/alpine-csp.min.js' %}"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+{# CSP Phase 2a: Alpine components registered via Alpine.data() on 'alpine:init' (cnPanel/orthoWorkspace/orthoReadView/noteForm + the per-tab form components). Loaded eagerly, BEFORE Alpine, so the alpine:init listener is registered in time. Required by the @alpinejs/csp build (scope excludes window globals) and works under the standard build too. #}
+<script src="{% static 'doctors/js/alpine_components.js' %}"></script>
+<script defer src="{% static 'doctors/js/ws_prescriptions.js' %}"></script>
+<script defer src="{% static 'doctors/js/followup_slots.js' %}"></script>
+{# CSP: externalized handlers for the HTMX-swapped tab partials (inline scripts there lose the nonce on re-inject). Both self-guard + re-init on swap. #}
+<script defer src="{% static 'doctors/js/ai_scribe.js' %}"></script>
+<script defer src="{% static 'doctors/js/med_safety.js' %}"></script>
 <style>
   /* ── Sticky workspace header ─────────────────────────────────────────── */
   .ws-header {
@@ -126,7 +137,7 @@
 
 {% block content %}
 {# ── Multi-Patient Workspace: inline pre-registration (runs before DOMContentLoaded) ── #}
-<script>
+<script nonce="{{ request.csp_nonce }}">
     // Set current patient ID globally so the sidebar can mark this patient as active
     window.CURRENT_PATIENT_ID = {{ patient.id }};
     // Dirty-form flag — set to true when user edits a form in the tab content area
@@ -167,7 +178,7 @@
       <div class="flex items-center gap-4 min-w-0">
         <!-- Back -->
         <a href="{% url 'doctors:patients' %}"
-           onclick="return mpwBackGuard()"
+           data-back-guard
            class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
            title="{% if IS_RTL %}رجوع إلى مرضاي{% else %}Back to My Patients{% endif %}">
           <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %} text-sm"></i>
@@ -220,19 +231,19 @@
 
       <!-- Right: Quick Actions -->
       <div class="flex items-center gap-2 flex-wrap flex-shrink-0">
-        <button onclick="switchTab('notes', true)"
+        <button type="button" data-switch-tab="notes" data-open-form
                 class="qa-btn qa-btn-primary">
           <i class="fa-solid fa-file-medical text-xs"></i> {% if IS_RTL %}إضافة ملاحظة{% else %}Add Note{% endif %}
         </button>
-        <button onclick="switchTab('orders', true)"
+        <button type="button" data-switch-tab="orders" data-open-form
                 class="qa-btn qa-btn-outline">
           <i class="fa-solid fa-flask text-xs"></i> {% if IS_RTL %}إضافة طلب{% else %}Add Order{% endif %}
         </button>
-        <button onclick="switchTab('prescriptions', true)"
+        <button type="button" data-switch-tab="prescriptions" data-open-form
                 class="qa-btn qa-btn-outline">
           <i class="fa-solid fa-prescription text-xs"></i> {% if IS_RTL %}وصفة طبية{% else %}Prescribe{% endif %}
         </button>
-        <button onclick="switchTab('records', true)"
+        <button type="button" data-switch-tab="records" data-open-form
                 class="qa-btn qa-btn-outline">
           <i class="fa-solid fa-upload text-xs"></i> {% if IS_RTL %}رفع ملف{% else %}Upload{% endif %}
         </button>
@@ -256,7 +267,7 @@
         hx-target="#tab-content"
         hx-push-url="true"
         hx-indicator="#tab-content"
-        onclick="setActiveTab('{{ tab_id }}')"
+        data-set-active-tab="{{ tab_id }}"
       >
         <i class="{{ tab_icon }} me-1.5 text-xs"></i>{{ tab_label }}
       </button>
@@ -284,115 +295,10 @@
 
 </div>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
   // ── Clinical Notes panel (Overview tab) ───────────────────────────────
-  // Defined here, in the always-loaded parent page, rather than inside the
-  // swappable ws_overview.html partial. Otherwise, when Overview is reached
-  // via an HTMX innerHTML swap (and the page first loaded on another tab),
-  // Alpine evaluates x-data="cnPanel()" before the partial's inline <script>
-  // has defined cnPanel — leaving the panel uninitialised ("reserved").
-  function cnPanel() {
-    return {
-      panelOpen: false,
-      activeMode: null,
-      activeNoteId: null,
-      openTabs: [],
-      cnActiveField: null,   // tracks the last-focused Clinical Notes textarea
-
-      openNew() {
-        this.activeMode = 'new';
-        this.activeNoteId = null;
-        this.cnActiveField = null;
-        this.panelOpen = true;
-      },
-
-      openNote(noteId) {
-        this.panelOpen = true;
-        this.activeMode = 'view';
-        this.cnActiveField = null;  // clear stale field ref when switching notes
-        if (!this.openTabs.includes(noteId)) {
-          this.openTabs.push(noteId);
-        }
-        this.activeNoteId = noteId;
-      },
-
-      // Shared reset used by closeTab / closeNewTab / closePanel
-      _resetPanel() {
-        this.panelOpen = false;
-        this.activeMode = null;
-        this.activeNoteId = null;
-        this.cnActiveField = null;
-      },
-
-      closeTab(noteId) {
-        this.openTabs = this.openTabs.filter(function(id) { return id !== noteId; });
-        if (this.activeNoteId === noteId) {
-          if (this.openTabs.length > 0) {
-            this.activeNoteId = this.openTabs[this.openTabs.length - 1];
-            this.activeMode = 'view';
-          } else if (this.activeMode === 'view') {
-            this._resetPanel();
-          }
-        }
-      },
-
-      closeNewTab() {
-        if (this.openTabs.length > 0) {
-          this.activeMode = 'view';
-          this.activeNoteId = this.openTabs[this.openTabs.length - 1];
-        } else {
-          this._resetPanel();
-        }
-      },
-
-      closePanel() {
-        this._resetPanel();
-        this.openTabs = [];
-      },
-
-      // ── Quick-insert (Prescriptions, Orders, Labs → Clinical Notes) ────────
-
-      // Called via @focusin delegation on the panel content div
-      cnTrackField(el) {
-        if (el && el.tagName === 'TEXTAREA') this.cnActiveField = el;
-      },
-
-      // Called by the window 'cn-insert' event (dispatched by insert buttons)
-      cnHandleInsert(medName) {
-        if (!this.panelOpen || this.activeMode !== 'new') {
-          // Panel not open in new-note mode — open it first, then append to Subjective
-          this.openNew();
-          this.$nextTick(() => {
-            var el = this.$root.querySelector('[name="subjective"]');
-            if (!el) return;
-            this.cnActiveField = el;
-            el.focus();
-            this._cnDoInsert(el, el.value.length, medName);
-          });
-          return;
-        }
-        // Panel already open — insert at last known cursor position
-        var el = this.cnActiveField || this.$root.querySelector('[name="subjective"]');
-        if (!el) return;
-        this._cnDoInsert(el, el.selectionStart, medName);
-      },
-
-      // Inserts `text` into `el` at character position `pos`
-      _cnDoInsert(el, pos, text) {
-        var val    = el.value;
-        var before = val.substring(0, pos);
-        var after  = val.substring(pos);
-        // Add a space separator if inserting mid-word or at end of non-whitespace
-        var sep = (before.length > 0 && !/[\s\n]$/.test(before)) ? ' ' : '';
-        el.value = before + sep + text + after;
-        var newPos = pos + sep.length + text.length;
-        el.setSelectionRange(newPos, newPos);
-        el.focus();
-        // Trigger 'input' so x-model bindings (if any) pick up the new value
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-    };
-  }
+  // cnPanel() moved to doctors/js/alpine_components.js (registered via
+  // Alpine.data on 'alpine:init') for the CSP build — see Phase 2a.
 
   // ── Tab state management ──────────────────────────────────────────────
   const PATIENT_ID = {{ patient.id }};
@@ -421,6 +327,17 @@
       htmx.ajax('GET', fullUrl, { target: '#tab-content', swap: 'innerHTML' });
     }
   }
+
+  // CSP: bind tab buttons, quick actions, and back guard (replaces inline on* handlers).
+  // Delegated on document so it also covers switchTab buttons inside HTMX-swapped tabs.
+  document.addEventListener('click', function (e) {
+    var bg = e.target.closest('[data-back-guard]');
+    if (bg && typeof mpwBackGuard === 'function' && !mpwBackGuard()) { e.preventDefault(); return; }
+    var st = e.target.closest('[data-switch-tab]');
+    if (st) { switchTab(st.getAttribute('data-switch-tab'), st.hasAttribute('data-open-form')); return; }
+    var at = e.target.closest('[data-set-active-tab]');
+    if (at) { setActiveTab(at.getAttribute('data-set-active-tab')); }
+  });
 
   // Sticky header shadow on scroll
   (function () {
@@ -473,6 +390,19 @@
     }
   });
 
+  // CSP Phase 2c: externalized the overview new-note form's inline
+  // hx-on:htmx:after-request. ws_overview.html is HTMX-swapped (its nonce is
+  // stripped on re-injection), so reload-on-save is wired here on the parent
+  // page. Reloading the overview tab re-renders a fresh cnPanel, so the
+  // original `panelOpen=false` is reproduced implicitly.
+  document.body.addEventListener('htmx:afterRequest', function (e) {
+    var form = e.detail && e.detail.elt;
+    if (e.detail.successful && form && form.matches && form.matches('[data-ws-note-form]')) {
+      var url = form.getAttribute('data-overview-reload-url');
+      if (url) htmx.ajax('GET', url, { target: '#tab-content', swap: 'innerHTML' });
+    }
+  });
+
   // Guard for back button — warns if there are unsaved changes
   window.mpwBackGuard = function () {
     if (window.wsFormDirty) {
@@ -507,8 +437,8 @@
     // Return the collapsible form container for a given tab
     function _formContainer(tab, root) {
       if (tab === 'notes')         return root.querySelector('#note-form-section');
-      if (tab === 'orders')        return root.querySelector('[x-data*="orderType"]');
-      if (tab === 'prescriptions') return root.querySelector('[x-data*="meds"]');
+      if (tab === 'orders')        return root.querySelector('[data-order-form]');
+      if (tab === 'prescriptions') return root.querySelector('[data-rx-form]');
       return null;
     }
 
@@ -526,7 +456,7 @@
 
       // Prescriptions: also snapshot the Alpine meds array
       if (tab === 'prescriptions') {
-        var rxEl = root.querySelector('[x-data*="meds"]');
+        var rxEl = root.querySelector('[data-rx-form]');
         if (rxEl && rxEl._x_dataStack) {
           var meds = rxEl._x_dataStack[0].meds || [];
           if (meds.some(function (m) { return m.name || m.dosage || m.frequency; })) {
@@ -636,7 +566,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ request.csp_nonce }}">
   // Pass tabs data to template context via view
 </script>
 {% endblock %}

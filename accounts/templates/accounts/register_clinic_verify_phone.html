@@ -140,7 +140,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ request.csp_nonce }}">
     (function () {
         var form = document.getElementById('otpForm');
         var overlay = document.getElementById('verifyOverlay');
@@ -154,7 +154,7 @@
         window.addEventListener('pageshow', function () { submitted = false; overlay.style.display = 'none'; });
     })();
 </script>
-<script>
+<script nonce="{{ request.csp_nonce }}">
     document.addEventListener('DOMContentLoaded', function () {
         const inputs = document.querySelectorAll('.otp-input');
         const hiddenInput = document.getElementById('full_otp_code');

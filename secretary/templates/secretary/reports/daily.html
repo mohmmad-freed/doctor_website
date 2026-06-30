@@ -24,7 +24,7 @@
          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
         <i class="fa-solid fa-file-csv text-emerald-600"></i> {% trans "تصدير CSV" %}
       </a>
-      <button onclick="window.print()"
+      <button type="button" data-action="print"
               class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
         <i class="fa-solid fa-print text-gray-500"></i> {% trans "طباعة" %}
       </button>
@@ -41,7 +41,7 @@
     <form method="get" class="flex items-center gap-2">
       <input type="date" name="date" value="{{ report_date|date:'Y-m-d' }}"
              max="{{ today|date:'Y-m-d' }}"
-             onchange="this.form.submit()"
+             data-autosubmit
              class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
     </form>
     {# Next day (later) — hidden when already on today #}

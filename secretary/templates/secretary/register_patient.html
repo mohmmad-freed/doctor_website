@@ -1,9 +1,9 @@
 {% extends "secretary/base_secretary.html" %}
-{% load i18n %}
+{% load i18n static %}
 {% block title %}{% trans "تسجيل مريض جديد" %}{% endblock %}
 
 {% block extra_css %}
-<script src="https://unpkg.com/htmx.org@1.9.12"></script>
+<script src="{% static 'js/vendor/htmx.min.js' %}"></script>
 <style>
   /* Step indicator */
   .step-dot {
@@ -242,7 +242,7 @@
 
 </div>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
   // Keyboard shortcut: / to focus search
   document.addEventListener('keydown', function (e) {
     if ((e.key === '/' || e.key === 'k' && (e.ctrlKey || e.metaKey)) && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
@@ -319,7 +319,10 @@
     if (target.id === 'patient-detail-section') {
       const hasContent = target.children.length > 0;
       if (hasContent) {
-        setStep(2);
+        // The patient card (and, when registrable, the registration form) has
+        // loaded → advance to step 3. Replaces the former onFormReady() ping that
+        // lived in the HTMX-swapped patient_card.html fragment.
+        setStep(3);
         // Clear search results now that the card has loaded
         document.getElementById('search-results').innerHTML = '';
       }
@@ -328,7 +331,62 @@
     }
   });
 
-  // Called by patient_card.html once registration form becomes visible
-  function onFormReady() { setStep(3); }
+  // ── Delegated handlers for the HTMX-swapped fragments ──────────────────
+  // patient_search_results.html + patient_card.html are re-injected by HTMX, so
+  // their behaviour is bound here on the always-present parent (no inline JS).
+
+  document.addEventListener('click', function (e) {
+    // Clicking a search result fills the search box with that patient's name.
+    // Read from the visible name node (textContent) so the value is correct for
+    // any name and never re-parses untrusted markup.
+    const row = e.target.closest('.result-row');
+    if (row) {
+      const nameEl = row.querySelector('[data-highlight]');
+      const input = document.getElementById('patient-search-input');
+      if (input && nameEl) input.value = nameEl.textContent.trim();
+    }
+
+    // "تغيير" / "إلغاء" buttons in patient_card.html reset the flow.
+    if (e.target.closest('[data-clear-patient-detail]')) {
+      document.getElementById('patient-detail-section').innerHTML = '';
+      const searchInput = document.getElementById('patient-search-input');
+      if (searchInput) { searchInput.value = ''; searchInput.focus(); }
+    }
+  });
+
+  // Registration form validation + submit loading-state (form is swapped in).
+  document.addEventListener('submit', function (e) {
+    if (!e.target || e.target.id !== 'registration-form') return;
+    let valid = true;
+    const nidField = document.getElementById('field-nid');
+    const nidErr = document.getElementById('err-nid');
+
+    // NID is only required if it was not pre-filled (empty value).
+    if (nidField && !nidField.value.trim()) {
+      nidField.classList.add('field-error-state');
+      if (nidErr) nidErr.classList.remove('hidden');
+      valid = false;
+    } else if (nidField) {
+      nidField.classList.remove('field-error-state');
+      if (nidErr) nidErr.classList.add('hidden');
+    }
+
+    if (!valid) { e.preventDefault(); return; }
+
+    const btn = document.getElementById('submit-btn');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<svg class="animate-spin w-4 h-4 me-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg> {% trans "جاري التسجيل..." %}';
+    }
+  });
+
+  // Clear the NID error as the user types.
+  document.addEventListener('input', function (e) {
+    if (e.target && e.target.id === 'field-nid') {
+      e.target.classList.remove('field-error-state');
+      const err = document.getElementById('err-nid');
+      if (err) err.classList.add('hidden');
+    }
+  });
 </script>
 {% endblock %}

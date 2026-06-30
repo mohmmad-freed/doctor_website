@@ -40,7 +40,7 @@
                 <div class="sm:w-56">
                     <select name="specialty_id"
                             class="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all text-sm appearance-none"
-                            onchange="document.getElementById('searchForm').submit();">
+                            data-autosubmit data-form="searchForm">
                         <option value="">{% trans "كل التخصصات" %}</option>
                         {% for spec in all_specialties %}
                         <option value="{{ spec.id }}" {% if selected_specialty and selected_specialty.id == spec.id %}selected{% endif %}>

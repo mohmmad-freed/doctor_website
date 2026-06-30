@@ -286,7 +286,7 @@
 {% block scripts %}
 {% if not error and weekly_schedule %}
 <script src="{% static 'accounts/js/calendar_widget.js' %}"></script>
-<script>
+<script nonce="{{ request.csp_nonce }}">
     var calendar = initCalendarWidget({
         rootId: 'cal-widget',
         inputId: 'date',

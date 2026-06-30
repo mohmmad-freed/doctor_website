@@ -1,16 +1,17 @@
-{# ── Medication safety banner ─────────────────────────────────────────────
-   Surfaces the patient's recorded allergies + currently-active medications at
-   prescribe/order time, with live name↔allergy matching and an acknowledgement.
+{% comment %}
+── Medication safety banner ─────────────────────────────────────────────
+Surfaces the patient's recorded allergies + currently-active medications at
+prescribe/order time, with live name↔allergy matching and an acknowledgement.
 
-   Context:
-     profile             – PatientProfile | None (uses profile.allergies)
-     safety_active_meds  – list[str] of active medication labels
-   Include vars:
-     drug_scoped         – when True the acknowledgement is required only for
-                           DRUG orders (Alpine `isDrug`); else always required.
-   Lives inside the enclosing <form>; the script scans that form's medication
-   name inputs (name="med_name_*" or name="title").
-──────────────────────────────────────────────────────────────────────────── #}
+Context:
+  profile             – PatientProfile | None (uses profile.allergies)
+  safety_active_meds  – list[str] of active medication labels
+Include vars:
+  drug_scoped         – when True the acknowledgement is required only for
+                        DRUG orders (Alpine `isDrug`); else always required.
+Lives inside the enclosing <form>; med_safety.js scans that form's medication
+name inputs (name="med_name_*" or name="title").
+{% endcomment %}
 <style>
   .med-allergy-flag { border-color:#ef4444 !important; box-shadow:0 0 0 1px #ef4444; }
 </style>
@@ -61,42 +62,4 @@
   </label>
   {% endif %}
 </div>
-
-<script>
-(function () {
-  document.querySelectorAll('[data-med-safety]').forEach(function (root) {
-    if (root._medSafetyInit) return;
-    root._medSafetyInit = true;
-    var textEl = root.querySelector('[data-allergy-text]');
-    if (!textEl) return;  // no recorded allergies → nothing to match
-    var tokens = textEl.textContent.toLowerCase()
-      .split(/[,،;\/\n]/).map(function (t) { return t.trim(); })
-      .filter(function (t) { return t.length >= 3; });
-    if (!tokens.length) return;
-    var form = root.closest('form');
-    if (!form) return;
-    var hitsBox = root.querySelector('[data-allergy-hits]');
-    var hitsList = root.querySelector('[data-allergy-hits-list]');
-    function isMedField(el) {
-      return el && el.name && (el.name.indexOf('med_name_') === 0 || el.name === 'title');
-    }
-    function scan() {
-      var hits = [];
-      form.querySelectorAll('input[name^="med_name_"], input[name="title"]').forEach(function (inp) {
-        var v = (inp.value || '').toLowerCase();
-        var matched = v && tokens.some(function (t) { return v.indexOf(t) !== -1; });
-        inp.classList.toggle('med-allergy-flag', !!matched);
-        if (matched) hits.push(inp.value.trim());
-      });
-      if (hits.length) {
-        hitsList.textContent = hits.join(', ');
-        hitsBox.classList.remove('hidden');
-      } else {
-        hitsBox.classList.add('hidden');
-      }
-    }
-    form.addEventListener('input', function (e) { if (isMedField(e.target)) scan(); });
-    scan();
-  });
-})();
-</script>
+{# Allergy matching handled by doctors/js/med_safety.js (loaded on the host workspace page); this banner is included in HTMX-swapped tab partials, so an inline script here would lose its CSP nonce. #}

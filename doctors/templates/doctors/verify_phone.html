@@ -87,7 +87,7 @@
 
 {% block scripts %}
 {% if otp_sent %}
-<script>
+<script nonce="{{ request.csp_nonce }}">
 document.addEventListener('DOMContentLoaded', function () {
   const boxes = document.querySelectorAll('.otp-box');
   const hidden = document.getElementById('full_otp_code');

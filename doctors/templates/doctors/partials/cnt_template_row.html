@@ -62,7 +62,7 @@ Variables:
         {% if IS_RTL %}تعديل{% else %}Edit{% endif %}
       </a>
       <form method="post" action="{% url 'doctors:clinical_note_template_delete' tpl.id %}"
-            onsubmit="return confirm('{% if IS_RTL %}حذف القالب {{ tpl.name|escapejs }}؟ لا يمكن التراجع عن هذا الإجراء.{% else %}Delete template {{ tpl.name|escapejs }}? This cannot be undone.{% endif %}');">
+            data-confirm="{% if IS_RTL %}حذف القالب {{ tpl.name }}؟ لا يمكن التراجع عن هذا الإجراء.{% else %}Delete template {{ tpl.name }}? This cannot be undone.{% endif %}">
         {% csrf_token %}
         <button type="submit"
                 class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 text-xs font-medium hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">

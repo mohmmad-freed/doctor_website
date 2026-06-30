@@ -18,7 +18,7 @@
     {% for slot in slots %}
     <button type="button"
             data-time="{{ slot.time|time:'H:i' }}"
-            onclick="selectRescheduleSlot(this)"
+            data-reschedule-slot
             class="reschedule-slot-btn px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all
                    {% if slot.is_available %}
                    bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600
@@ -42,27 +42,5 @@
     <i class="fa-regular fa-clock mr-1"></i><span id="reschedule-slot-hint-text"></span>
   </p>
 </div>
-
-<script>
-(function () {
-  function selectRescheduleSlot(btn) {
-    document.querySelectorAll('.reschedule-slot-btn').forEach(function (b) {
-      b.classList.remove('ring-2', 'ring-indigo-500', 'bg-indigo-50', 'dark:bg-indigo-900/30',
-                          'text-indigo-700', 'dark:text-indigo-300', 'border-indigo-400');
-    });
-    btn.classList.add('ring-2', 'ring-indigo-500', 'bg-indigo-50', 'dark:bg-indigo-900/30',
-                       'text-indigo-700', 'dark:text-indigo-300', 'border-indigo-400');
-    var t = btn.dataset.time;
-    var hidden = document.getElementById('reschedule-time-hidden');
-    if (hidden) hidden.value = t;
-    var hint = document.getElementById('reschedule-slot-hint');
-    var hintText = document.getElementById('reschedule-slot-hint-text');
-    if (hint && hintText) {
-      hintText.textContent = t + '{% if IS_RTL %} تم الاختيار{% else %} selected{% endif %}';
-      hint.classList.remove('hidden');
-    }
-  }
-  window.selectRescheduleSlot = selectRescheduleSlot;
-})();
-</script>
+{# Slot selection handled by doctors/js/reschedule.js (loaded on the host page); this partial is HTMX-swapped, so an inline script here would lose its CSP nonce. #}
 {% endif %}

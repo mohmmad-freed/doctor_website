@@ -1,5 +1,14 @@
 {% extends "doctors/base_doctor.html" %}
+{% load static %}
 {% block title %}{% if IS_RTL %}تفاصيل الموعد | بوابة الطبيب{% else %}Appointment Details | Doctor Portal{% endif %}{% endblock %}
+
+{% block extra_head %}
+{# Reschedule modal: self-hosted HTMX loads the modal/slots; @alpinejs/csp drives the modal (registered rescheduleModal, loaded eagerly before Alpine); reschedule.js delegates slot selection. No CDN/eval. #}
+<script src="{% static 'js/vendor/htmx.min.js' %}"></script>
+<script src="{% static 'doctors/js/alpine_components.js' %}"></script>
+<script defer src="{% static 'js/vendor/alpine-csp.min.js' %}"></script>
+<script defer src="{% static 'doctors/js/reschedule.js' %}"></script>
+{% endblock %}
 
 {% block content %}
 <div class="max-w-3xl mx-auto px-4 pt-5 pb-8">
@@ -184,8 +193,8 @@
     </div>
     <div class="px-5 py-5">
       {# Reveal the reason field only after the doctor opts to cancel. #}
-      <button type="button"
-              onclick="document.getElementById('doc-detail-cancel-panel').classList.toggle('hidden');this.classList.add('hidden');"
+      <button type="button" id="doc-detail-cancel-trigger"
+              data-toggle-hidden="doc-detail-cancel-panel" data-hide-self
               class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 dark:border-red-900/40 bg-white dark:bg-slate-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-semibold transition-colors">
         <i class="fa-solid fa-xmark text-xs"></i> {% if IS_RTL %}إلغاء الموعد{% else %}Cancel Appointment{% endif %}
       </button>
@@ -210,7 +219,7 @@
             {% if IS_RTL %}تأكيد الإلغاء{% else %}Confirm Cancellation{% endif %}
           </button>
           <button type="button"
-                  onclick="var f=document.getElementById('doc-detail-cancel-panel');f.classList.add('hidden');f.previousElementSibling.classList.remove('hidden');"
+                  data-hide="doc-detail-cancel-panel" data-show="doc-detail-cancel-trigger"
                   class="inline-flex items-center gap-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-medium px-5 py-2.5 rounded-xl transition-colors">
             {% if IS_RTL %}تراجع{% else %}Back{% endif %}
           </button>

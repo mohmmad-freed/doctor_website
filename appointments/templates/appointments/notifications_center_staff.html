@@ -211,7 +211,7 @@
 <div id="notification-modal-root"></div>
 
 {% trans "كل إشعاراتك مقروءة" as all_read_text %}
-<script>
+<script nonce="{{ request.csp_nonce }}">
 (function () {
     /* Keep the read/unread tallies in sync when a secretary opens an appointment
        from an unread notification card. Opening the modal marks the notification
@@ -229,6 +229,12 @@
             el.classList.add("hidden");
         }
     }
+
+    // CSP: bind notification "view" buttons (replaces inline onclick on swapped cards)
+    document.addEventListener('click', function (e) {
+        var c = e.target.closest('[data-notif-card-opened]');
+        if (c) { window.notifCardOpened(c); }
+    });
 
     window.notifCardOpened = function (btn) {
         var card = btn.closest(".notif-card");

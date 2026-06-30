@@ -524,7 +524,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ request.csp_nonce }}">
     (function () {
         var form = document.getElementById('registration-form');
         var overlay = document.getElementById('detailsOverlay');
@@ -542,7 +542,7 @@
         });
     })();
 </script>
-<script>
+<script nonce="{{ request.csp_nonce }}">
     document.addEventListener('DOMContentLoaded', function () {
 
         const nationalIdInput = document.getElementById('national_id');

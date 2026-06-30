@@ -23,13 +23,13 @@ Params:
     {# ── Add buttons ── #}
     <div class="flex flex-wrap gap-2">
       <button type="button"
-              onclick="document.getElementById('{{ id_prefix }}-doctor-form').classList.toggle('hidden');document.getElementById('{{ id_prefix }}-secretary-form').classList.add('hidden');"
+              data-toggle-hidden="{{ id_prefix }}-doctor-form" data-hide="{{ id_prefix }}-secretary-form"
               class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-violet-200 dark:border-violet-900/40 bg-white dark:bg-slate-700 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 text-sm font-semibold transition-colors">
         <i class="fa-solid fa-user-doctor text-xs"></i>
         {% if IS_RTL %}ملاحظة إلى الطبيب{% else %}Note to doctor{% endif %}
       </button>
       <button type="button"
-              onclick="document.getElementById('{{ id_prefix }}-secretary-form').classList.toggle('hidden');document.getElementById('{{ id_prefix }}-doctor-form').classList.add('hidden');"
+              data-toggle-hidden="{{ id_prefix }}-secretary-form" data-hide="{{ id_prefix }}-doctor-form"
               class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-accent-200 dark:border-accent-900/40 bg-white dark:bg-slate-700 text-accent-600 dark:text-accent-500 hover:bg-accent-50 dark:hover:bg-accent-500/10 text-sm font-semibold transition-colors">
         <i class="fa-solid fa-user-nurse text-xs"></i>
         {% if IS_RTL %}ملاحظة للسكرتارية فقط{% else %}Secretary-only note{% endif %}
@@ -56,7 +56,7 @@ Params:
             {% if IS_RTL %}إضافة الملاحظة{% else %}Add note{% endif %}
           </button>
           <button type="button"
-                  onclick="document.getElementById('{{ id_prefix }}-doctor-form').classList.add('hidden');"
+                  data-hide="{{ id_prefix }}-doctor-form"
                   class="px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-300 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
             {% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}
           </button>
@@ -84,7 +84,7 @@ Params:
             {% if IS_RTL %}إضافة الملاحظة{% else %}Add note{% endif %}
           </button>
           <button type="button"
-                  onclick="document.getElementById('{{ id_prefix }}-secretary-form').classList.add('hidden');"
+                  data-hide="{{ id_prefix }}-secretary-form"
                   class="px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-300 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
             {% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}
           </button>
@@ -116,7 +116,7 @@ Params:
           {# Only the author may delete, and only notes authored from this (secretary) portal. #}
           {% if note.author_id == request.user.id and note.author_role == 'SECRETARY' %}
           <form method="post" action="{% url delete_url_name delete_arg note.id %}" class="m-0 flex-shrink-0"
-                onsubmit="return confirm('{% if IS_RTL %}حذف هذه الملاحظة؟{% else %}Delete this note?{% endif %}');">
+                data-confirm="{% if IS_RTL %}حذف هذه الملاحظة؟{% else %}Delete this note?{% endif %}">
             {% csrf_token %}
             {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
             <button type="submit"

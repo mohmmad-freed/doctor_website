@@ -5,7 +5,7 @@
   <div class="xl:col-span-2">
 
     <!-- Clinical Notes Card (split: list + panel) -->
-    <div class="ws-card overflow-hidden" x-data="cnPanel()" id="clinical-notes-card"
+    <div class="ws-card overflow-hidden" x-data="cnPanel" id="clinical-notes-card"
          @cn-insert.window="cnHandleInsert($event.detail.text)">
       <div class="flex">
 
@@ -77,7 +77,7 @@
 
             <!-- "New Note" tab -->
             <button x-show="activeMode === 'new'"
-                    @click="activeMode = 'new'; activeNoteId = null"
+                    @click="activateNew()"
                     class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors"
                     :class="activeMode === 'new' ? 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'">
               <i class="fa-solid fa-plus text-[10px]"></i>
@@ -87,7 +87,7 @@
 
             {% for note in all_notes %}
             <button x-show="openTabs.includes({{ note.id }})"
-                    @click="activeNoteId = {{ note.id }}; activeMode = 'view'"
+                    @click="activateNote({{ note.id }})"
                     class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors"
                     :class="activeNoteId === {{ note.id }} ? 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'">
               {{ note.created_at|date:"d M Y" }}
@@ -107,7 +107,9 @@
                     action="{% url 'doctors:ws_note_add' patient.id %}"
                     hx-post="{% url 'doctors:ws_note_add' patient.id %}"
                     hx-swap="none"
-                    hx-on:htmx:after-request="if(event.detail.successful){ panelOpen=false; htmx.ajax('GET','{% url 'doctors:patient_workspace' patient.id %}?tab=overview',{target:'#tab-content',swap:'innerHTML'}); }"
+                    {# CSP Phase 2c: hx-on:htmx:after-request externalized to a delegated handler in patient_workspace.html (this partial is HTMX-swapped, so its nonce is stripped on re-inject). #}
+                    data-ws-note-form
+                    data-overview-reload-url="{% url 'doctors:patient_workspace' patient.id %}?tab=overview"
                     class="space-y-3">
                 {% csrf_token %}
                 {% if clinics|length > 1 %}
@@ -151,133 +153,9 @@
                   </div>
 
                     <script id="ortho-edit-init-overview" type="application/json">[]</script>
-                    <script>
-                    if (typeof orthoWorkspace === 'undefined') {
-                      function orthoWorkspace() {
-                        const REGIONS = [
-                          { id: 'cervical',      label: '{% if IS_RTL %}العمود الفقري العنقي{% else %}Cervical Spine{% endif %}',           labelEn: 'Cervical Spine',           group: 'spine' },
-                          { id: 'r_shoulder',    label: '{% if IS_RTL %}الكتف الأيمن{% else %}Right Shoulder{% endif %}',                   labelEn: 'Right Shoulder',           group: 'upper' },
-                          { id: 'l_shoulder',    label: '{% if IS_RTL %}الكتف الأيسر{% else %}Left Shoulder{% endif %}',                   labelEn: 'Left Shoulder',            group: 'upper' },
-                          { id: 'r_elbow',       label: '{% if IS_RTL %}الكوع الأيمن{% else %}Right Elbow{% endif %}',                     labelEn: 'Right Elbow',              group: 'upper' },
-                          { id: 'l_elbow',       label: '{% if IS_RTL %}الكوع الأيسر{% else %}Left Elbow{% endif %}',                     labelEn: 'Left Elbow',               group: 'upper' },
-                          { id: 'r_wrist',       label: '{% if IS_RTL %}الرسغ/اليد اليمنى{% else %}Right Wrist/Hand{% endif %}',          labelEn: 'Right Wrist/Hand',         group: 'upper' },
-                          { id: 'l_wrist',       label: '{% if IS_RTL %}الرسغ/اليد اليسرى{% else %}Left Wrist/Hand{% endif %}',          labelEn: 'Left Wrist/Hand',          group: 'upper' },
-                          { id: 'thoracolumbar', label: '{% if IS_RTL %}العمود الفقري الصدري/القطني{% else %}Thoracic/Lumbar Spine{% endif %}', labelEn: 'Thoracic/Lumbar Spine', group: 'spine' },
-                          { id: 'r_hip',         label: '{% if IS_RTL %}الورك الأيمن{% else %}Right Hip{% endif %}',                       labelEn: 'Right Hip',                group: 'lower' },
-                          { id: 'l_hip',         label: '{% if IS_RTL %}الورك الأيسر{% else %}Left Hip{% endif %}',                       labelEn: 'Left Hip',                 group: 'lower' },
-                          { id: 'r_knee',        label: '{% if IS_RTL %}الركبة اليمنى{% else %}Right Knee{% endif %}',                    labelEn: 'Right Knee',               group: 'lower' },
-                          { id: 'l_knee',        label: '{% if IS_RTL %}الركبة اليسرى{% else %}Left Knee{% endif %}',                    labelEn: 'Left Knee',                group: 'lower' },
-                          { id: 'r_ankle',       label: '{% if IS_RTL %}الكاحل/القدم الأيمن{% else %}Right Ankle/Foot{% endif %}',        labelEn: 'Right Ankle/Foot',         group: 'lower' },
-                          { id: 'l_ankle',       label: '{% if IS_RTL %}الكاحل/القدم الأيسر{% else %}Left Ankle/Foot{% endif %}',        labelEn: 'Left Ankle/Foot',          group: 'lower' },
-                        ];
-                        const mkFinding = (id) => ({
-                          id, pain: '', tenderness: false, swelling: false, rom: '', notes: '',
-                          instability: false, locking: false, clicking: false, weight_bearing_diff: false,
-                          active_rom: '', passive_rom: '', weakness: false, impingement: false,
-                          stiffness: false, radiation: false, numbness: false, posture_notes: ''
-                        });
-                        const PRESETS = {
-                          normal:      { pain: '0', tenderness: false, swelling: false, rom: 'Full range, painless', notes: 'No abnormality detected.' },
-                          tenderness:  { pain: '3', tenderness: true,  swelling: false, rom: 'Normal',               notes: 'Tenderness on palpation.' },
-                          swollen:     { pain: '4', tenderness: true,  swelling: true,  rom: 'Restricted',           notes: 'Swelling and tenderness present.' },
-                          painful_rom: { pain: '5', tenderness: false, swelling: false, rom: 'Painful and restricted', notes: 'Pain on ROM testing.' },
-                          post_trauma: { pain: '7', tenderness: true,  swelling: true,  rom: 'Severely restricted',  notes: 'Post-traumatic findings.' },
-                        };
-                        return {
-                          regions: REGIONS, selected: [], activeId: null, findings: {}, bodyView: 'front', open: false,
-                          init() {
-                            const el = document.getElementById('ortho-edit-init-overview');
-                            const data = el ? JSON.parse(el.textContent) : [];
-                            if (Array.isArray(data) && data.length) {
-                              data.forEach(f => { this.selected.push(f.id); this.findings[f.id] = { ...mkFinding(f.id), ...f }; });
-                              this.activeId = this.selected[0] || null; this.open = true;
-                            }
-                            const form = this.$el.closest('form');
-                            if (form) {
-                              const _this = this;
-                              form.addEventListener('formdata', function(e) {
-                                e.formData.set('ortho_findings', _this.serialized);
-                              });
-                            }
-                          },
-                          toggleRegion(id) {
-                            if (this.selected.includes(id)) {
-                              this.selected = this.selected.filter(r => r !== id); delete this.findings[id];
-                              this.activeId = this.selected.length ? this.selected[this.selected.length-1] : null;
-                            } else { this.selected.push(id); this.findings[id] = mkFinding(id); this.activeId = id; }
-                          },
-                          setActive(id) { if (this.selected.includes(id)) this.activeId = id; },
-                          get activeFinding() {
-                            if (!this.activeId) return null;
-                            if (!this.findings[this.activeId]) this.findings[this.activeId] = mkFinding(this.activeId);
-                            return this.findings[this.activeId];
-                          },
-                          getRegion(id) { return this.regions.find(r => r.id === id); },
-                          applyPreset(key) { if (!this.activeId || !PRESETS[key]) return; Object.assign(this.findings[this.activeId], PRESETS[key]); },
-                          isKnee(id)     { return id === 'r_knee' || id === 'l_knee'; },
-                          isShoulder(id) { return id === 'r_shoulder' || id === 'l_shoulder'; },
-                          isSpine(id)    { return id === 'cervical' || id === 'thoracolumbar'; },
-                          generateSummary() {
-                            if (!this.selected.length) return;
-                            const lines = [];
-                            this.selected.forEach(id => {
-                              const f = this.findings[id]; if (!f) return;
-                              const reg = this.getRegion(id); if (!reg) return;
-                              const parts = [reg.labelEn + ':'];
-                              if (f.pain !== '' && f.pain !== null) parts.push('Pain ' + f.pain + '/10');
-                              const signs = [];
-                              if (f.tenderness) signs.push('tenderness'); if (f.swelling) signs.push('swelling');
-                              if (f.instability) signs.push('instability'); if (f.locking) signs.push('locking');
-                              if (f.clicking) signs.push('clicking'); if (f.weakness) signs.push('weakness');
-                              if (f.impingement) signs.push('impingement'); if (f.stiffness) signs.push('stiffness');
-                              if (f.radiation) signs.push('radicular symptoms'); if (f.numbness) signs.push('numbness/tingling');
-                              if (signs.length) parts.push(signs.join(', '));
-                              if (f.rom) parts.push('ROM: ' + f.rom); if (f.notes) parts.push(f.notes);
-                              lines.push(parts.join(' '));
-                            });
-                            const ta = this.$el.closest('form').querySelector('[name="objective"]');
-                            if (ta) ta.value = lines.join('\n');
-                          },
-                          get serialized() {
-                            if (!this.selected.length) return '[]';
-                            return JSON.stringify(this.selected.map(id => this.findings[id]).filter(Boolean));
-                          },
-                          regionFill(id, base) {
-                            if (this.activeId === id) return '#0ea5e9';
-                            if (this.selected.includes(id)) return '#38bdf8';
-                            return base || '#e2e8f0';
-                          },
-                          regionStroke(id) { return this.selected.includes(id) ? '#0369a1' : '#cbd5e1'; },
-                          regionTextFill(id) { return this.selected.includes(id) ? '#fff' : '#64748b'; }
-                        };
-                      }
-                    }
-                    if (typeof orthoReadView === 'undefined') {
-                      function orthoReadView(findingsJson) {
-                        const FRONT_IDS = ['cervical', 'r_shoulder', 'l_shoulder', 'r_elbow', 'l_elbow', 'r_wrist', 'l_wrist', 'r_hip', 'l_hip', 'r_knee', 'l_knee', 'r_ankle', 'l_ankle'];
-                        const BACK_IDS  = ['cervical', 'thoracolumbar', 'r_shoulder', 'l_shoulder', 'r_hip', 'l_hip', 'r_knee', 'l_knee', 'r_ankle', 'l_ankle'];
-                        return {
-                          findings: findingsJson || [],
-                          get selectedIds() { return this.findings.map(f => f.id); },
-                          hasFront() { return this.findings.some(f => FRONT_IDS.includes(f.id)); },
-                          hasBack() { return this.findings.some(f => BACK_IDS.includes(f.id)); },
-                          getColor(id) {
-                            const f = this.findings.find(x => x.id === id);
-                            if (!f) return '#e2e8f0';
-                            const pain = parseInt(f.pain) || 0;
-                            if (pain >= 8) return '#ef4444';
-                            if (pain >= 5) return '#f97316';
-                            return '#2dd4bf';
-                          },
-                          getStroke(id) {
-                            return this.selectedIds.includes(id) ? 'rgba(0,0,0,0.1)' : '#cbd5e1';
-                          }
-                        };
-                      }
-                    }
-                    </script>
+                    <!-- ortho exam widget: Alpine.data('orthoWorkspace'/'orthoReadView') in doctors/js/alpine_components.js -->
 
-                    <div x-data="orthoWorkspace()" class="mt-2">
+                    <div x-data="orthoWorkspace" class="mt-2">
                       <button type="button" @click="open = !open"
                               class="flex items-center gap-2 text-xs font-semibold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-700/40 rounded-lg px-3 py-1.5 hover:bg-teal-100 dark:hover:bg-teal-900/40 transition-colors w-full">
                         <i class="fa-solid fa-person-walking-with-cane text-teal-500"></i>
@@ -300,7 +178,7 @@
                                 <button type="button" @click="setActive(id)"
                                         :class="activeId===id ? 'bg-teal-600 text-white border-teal-700' : 'bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-300 border-teal-300'"
                                         class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-medium transition-colors">
-                                  <span x-text="getRegion(id)?.label||id"></span>
+                                  <span x-text="regionLabel(id)"></span>
                                   <i class="fa-solid fa-xmark text-[9px]" @click.stop="toggleRegion(id)"></i>
                                 </button>
                               </template>
@@ -419,7 +297,7 @@
                               <template x-if="activeId">
                                 <div class="space-y-2">
                                   <div class="flex items-center justify-between">
-                                    <span class="text-[11px] font-bold text-teal-700 dark:text-teal-300" x-text="getRegion(activeId)?.label"></span>
+                                    <span class="text-[11px] font-bold text-teal-700 dark:text-teal-300" x-text="regionLabel(activeId)"></span>
                                     <button type="button" @click="toggleRegion(activeId)" class="text-red-400 hover:text-red-600 text-[10px]"><i class="fa-solid fa-trash"></i></button>
                                   </div>
                                   {# Presets #}
@@ -538,31 +416,7 @@
             </div><!-- /new note form -->
 
             <!-- Existing note viewer -->
-            <script>
-            if (typeof orthoReadView === 'undefined') {
-              function orthoReadView(findingsJson) {
-                const FRONT_IDS = ['cervical', 'r_shoulder', 'l_shoulder', 'r_elbow', 'l_elbow', 'r_wrist', 'l_wrist', 'r_hip', 'l_hip', 'r_knee', 'l_knee', 'r_ankle', 'l_ankle'];
-                const BACK_IDS  = ['cervical', 'thoracolumbar', 'r_shoulder', 'l_shoulder', 'r_hip', 'l_hip', 'r_knee', 'l_knee', 'r_ankle', 'l_ankle'];
-                return {
-                  findings: findingsJson || [],
-                  get selectedIds() { return this.findings.map(f => f.id); },
-                  hasFront() { return this.findings.some(f => FRONT_IDS.includes(f.id)); },
-                  hasBack()  { return this.findings.some(f => BACK_IDS.includes(f.id)); },
-                  getColor(id) {
-                    const f = this.findings.find(x => x.id === id);
-                    if (!f) return '#e2e8f0';
-                    const pain = parseInt(f.pain) || 0;
-                    if (pain >= 8) return '#ef4444';
-                    if (pain >= 5) return '#f97316';
-                    return '#2dd4bf';
-                  },
-                  getStroke(id) {
-                    return this.selectedIds.includes(id) ? 'rgba(0,0,0,0.1)' : '#cbd5e1';
-                  }
-                };
-              }
-            }
-            </script>
+            <!-- ortho exam widget JS externalized to doctors/js/ortho_workspace.js (loaded once on patient_workspace.html) -->
             <div x-show="activeMode === 'view'" class="p-4">
               {% for note in all_notes %}
               <div x-show="activeNoteId === {{ note.id }}">
@@ -634,7 +488,8 @@
                 {% endif %}
                 {# Orthopedic Diagram (Read-Only) ── #}
                 {% if note.ortho_findings_data %}
-                <div x-data="orthoReadView(JSON.parse('{{ note.ortho_findings_json|escapejs }}'))" class="mb-3">
+                <div x-data="orthoReadView" class="mb-3">
+                  <script type="application/json" data-ortho-findings>{{ note.ortho_findings_json|safe }}</script>
                   <div class="flex flex-wrap gap-4 items-center justify-center p-3 rounded-xl bg-teal-50/40 dark:bg-teal-900/10 border border-teal-100 dark:border-teal-900/30">
                     <div x-show="hasFront()" class="w-24 sm:w-28 flex-shrink-0">
                       <p class="text-[8px] font-bold text-teal-600 dark:text-teal-400 uppercase text-center mb-1">{% if IS_RTL %}أمامي{% else %}Front{% endif %}</p>
@@ -786,8 +641,8 @@
           <i class="fa-solid fa-prescription text-emerald-500 text-sm"></i>
           <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">{% if IS_RTL %}الوصفات الفعّالة{% else %}Active Prescriptions{% endif %}</span>
         </div>
-        <button class="text-xs text-primary-600 dark:text-primary-400 font-medium hover:underline"
-                onclick="switchTab('prescriptions')">{% if IS_RTL %}عرض الكل{% else %}View all{% endif %}</button>
+        <button type="button" class="text-xs text-primary-600 dark:text-primary-400 font-medium hover:underline"
+                data-switch-tab="prescriptions">{% if IS_RTL %}عرض الكل{% else %}View all{% endif %}</button>
       </div>
       {% if latest_rx %}
       <div class="px-4 py-4">
@@ -822,8 +677,8 @@
           <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">{% if IS_RTL %}الطلبات الفعّالة{% else %}Active Orders{% endif %}</span>
           <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 text-xs font-bold">{{ active_orders|length }}</span>
         </div>
-        <button class="text-xs text-primary-600 dark:text-primary-400 font-medium hover:underline"
-                onclick="switchTab('orders')">{% if IS_RTL %}عرض الكل{% else %}View all{% endif %}</button>
+        <button type="button" class="text-xs text-primary-600 dark:text-primary-400 font-medium hover:underline"
+                data-switch-tab="orders">{% if IS_RTL %}عرض الكل{% else %}View all{% endif %}</button>
       </div>
       <div class="divide-y divide-slate-100 dark:divide-slate-700">
         {% for order in active_orders %}
@@ -853,8 +708,8 @@
           <i class="fa-solid fa-vial text-purple-500 text-sm"></i>
           <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">{% if IS_RTL %}المختبر{% else %}Labs{% endif %}</span>
         </div>
-        <button class="text-xs text-primary-600 dark:text-primary-400 font-medium hover:underline"
-                onclick="switchTab('records')">{% if IS_RTL %}عرض الكل{% else %}View all{% endif %}</button>
+        <button type="button" class="text-xs text-primary-600 dark:text-primary-400 font-medium hover:underline"
+                data-switch-tab="records">{% if IS_RTL %}عرض الكل{% else %}View all{% endif %}</button>
       </div>
       {% if lab_records %}
       <ul class="divide-y divide-slate-100 dark:divide-slate-700">
@@ -924,5 +779,6 @@
 
 </div><!-- /grid -->
 
-{# cnPanel() is defined in patient_workspace.html's always-loaded script so it is #}
-{# available before any HTMX swap of this partial, regardless of the initial tab. #}
+{# cnPanel/orthoWorkspace/orthoReadView are registered via Alpine.data() in #}
+{# doctors/js/alpine_components.js (loaded once on patient_workspace.html, before #}
+{# Alpine) so they resolve under the @alpinejs/csp build before any HTMX swap. #}

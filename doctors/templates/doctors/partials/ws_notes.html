@@ -81,89 +81,13 @@
   </div>
 </div>
 
-<script>
-(function () {
-  // Phase 2: record the visit (MediaRecorder) → upload → server STT → fill the box.
-  var wrap = document.getElementById('ai-rec-wrap');
-  var btn = document.getElementById('ai-record-btn');
-  var ta = document.getElementById('ai-transcript');
-  if (!btn || !ta || btn._wired) return;
-  if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder)) return;  // keep paste-only
-  btn._wired = true;
-  if (wrap) wrap.style.display = '';
-
-  var statusEl = document.getElementById('ai-rec-status');
-  var iconEl = document.getElementById('ai-rec-icon');
-  var labelEl = document.getElementById('ai-rec-label');
-  var form = btn.closest('form');
-  var url = btn.dataset.url;
-  var RTL = document.documentElement.dir === 'rtl';
-  function t(ar, en) { return RTL ? ar : en; }
-  function fmt(s) { var m = Math.floor(s / 60), r = s % 60; return m + ':' + (r < 10 ? '0' : '') + r; }
-  function setStatus(m) { if (statusEl) statusEl.textContent = m || ''; }
-
-  var rec = null, chunks = [], stream = null, recording = false, timer = null, secs = 0;
-
-  function stopStream() { if (stream) { stream.getTracks().forEach(function (tk) { tk.stop(); }); stream = null; } }
-
-  async function start() {
-    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-    catch (e) { setStatus(t('تعذّر الوصول للميكروفون', 'Microphone blocked')); return; }
-    chunks = [];
-    try { rec = new MediaRecorder(stream); }
-    catch (e) { setStatus(t('التسجيل غير مدعوم', 'Recording unsupported')); stopStream(); return; }
-    rec.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
-    rec.onstop = upload;
-    rec.start();
-    recording = true; secs = 0;
-    iconEl.className = 'fa-solid fa-stop text-red-500';
-    labelEl.textContent = t('إيقاف', 'Stop');
-    btn.classList.add('ring-2', 'ring-red-400');
-    setStatus('● 0:00');
-    timer = setInterval(function () { secs++; setStatus('● ' + fmt(secs)); }, 1000);
-  }
-
-  function stop() {
-    if (timer) { clearInterval(timer); timer = null; }
-    recording = false;
-    iconEl.className = 'fa-solid fa-microphone text-indigo-500';
-    labelEl.textContent = t('تسجيل', 'Record');
-    btn.classList.remove('ring-2', 'ring-red-400');
-    try { if (rec && rec.state !== 'inactive') rec.stop(); } catch (e) {}
-  }
-
-  function upload() {
-    stopStream();
-    var blob = new Blob(chunks, { type: (chunks[0] && chunks[0].type) || 'audio/webm' });
-    if (!blob.size) { setStatus(t('لا يوجد صوت', 'No audio captured')); return; }
-    setStatus(t('جارٍ التفريغ…', 'Transcribing…'));
-    btn.disabled = true;
-    var fd = new FormData();
-    fd.append('audio', blob, 'recording.webm');
-    var clinicInput = form.querySelector('[name=clinic_id]');
-    if (clinicInput) fd.append('clinic_id', clinicInput.value);
-    var csrf = form.querySelector('[name=csrfmiddlewaretoken]');
-    fetch(url, { method: 'POST', body: fd, headers: csrf ? { 'X-CSRFToken': csrf.value } : {} })
-      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
-      .then(function (res) {
-        if (!res.ok || res.j.error) { setStatus(res.j.error || t('فشل التفريغ', 'Transcription failed')); return; }
-        var txt = (res.j.text || '').trim();
-        if (txt) ta.value += (ta.value ? '\n' : '') + txt;
-        setStatus(txt ? t('تم — راجِع النص ثم اضغط إنشاء', 'Done — review, then Generate') : t('لم يُلتقط كلام', 'No speech detected'));
-      })
-      .catch(function () { setStatus(t('خطأ في الشبكة', 'Network error')); })
-      .finally(function () { btn.disabled = false; });
-  }
-
-  btn.addEventListener('click', function () { recording ? stop() : start(); });
-})();
-</script>
+{# Voice capture handled by doctors/js/ai_scribe.js (loaded on the host workspace page); this panel is HTMX-swapped into #tab-content, so an inline script here would lose its CSP nonce. #}
 {% endif %}
 
 <!-- Add Note Form -->
-<div class="ws-card mb-5" x-data="{ open: {% if note_form_open %}true{% else %}'{{ request.GET.action|default:''|lower }}' === 'add'{% endif %} }" id="note-form-section">
+<div class="ws-card mb-5" x-data="noteForm({% if note_form_open %}true{% elif request.GET.action|lower == 'add' %}true{% else %}false{% endif %})" id="note-form-section">
   <div class="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 dark:border-slate-700 cursor-pointer select-none"
-       @click="open = !open">
+       @click="toggle()">
     <div class="flex items-center gap-2">
       <i class="fa-solid fa-plus-circle text-primary-500 text-sm"></i>
       <span class="font-semibold text-slate-800 dark:text-slate-100 text-sm">{% if IS_RTL %}إضافة ملاحظة طبية{% else %}Add Clinical Note{% endif %}</span>
@@ -270,182 +194,7 @@
           <script id="ortho-edit-init" type="application/json">[]</script>
           {% endif %}
 
-          <script>
-          function orthoWorkspace(initObjective) {
-            const REGIONS = [
-              { id: 'cervical',      label: '{% if IS_RTL %}العمود الفقري العنقي{% else %}Cervical Spine{% endif %}',      labelEn: 'Cervical Spine',      group: 'spine' },
-              { id: 'r_shoulder',    label: '{% if IS_RTL %}الكتف الأيمن{% else %}Right Shoulder{% endif %}',              labelEn: 'Right Shoulder',      group: 'upper' },
-              { id: 'l_shoulder',    label: '{% if IS_RTL %}الكتف الأيسر{% else %}Left Shoulder{% endif %}',              labelEn: 'Left Shoulder',       group: 'upper' },
-              { id: 'r_elbow',       label: '{% if IS_RTL %}الكوع الأيمن{% else %}Right Elbow{% endif %}',                labelEn: 'Right Elbow',         group: 'upper' },
-              { id: 'l_elbow',       label: '{% if IS_RTL %}الكوع الأيسر{% else %}Left Elbow{% endif %}',                labelEn: 'Left Elbow',          group: 'upper' },
-              { id: 'r_wrist',       label: '{% if IS_RTL %}الرسغ/اليد اليمنى{% else %}Right Wrist/Hand{% endif %}',     labelEn: 'Right Wrist/Hand',    group: 'upper' },
-              { id: 'l_wrist',       label: '{% if IS_RTL %}الرسغ/اليد اليسرى{% else %}Left Wrist/Hand{% endif %}',     labelEn: 'Left Wrist/Hand',     group: 'upper' },
-              { id: 'thoracolumbar', label: '{% if IS_RTL %}العمود الفقري الصدري/القطني{% else %}Thoracic/Lumbar Spine{% endif %}', labelEn: 'Thoracic/Lumbar Spine', group: 'spine' },
-              { id: 'r_hip',         label: '{% if IS_RTL %}الورك الأيمن{% else %}Right Hip{% endif %}',                  labelEn: 'Right Hip',           group: 'lower' },
-              { id: 'l_hip',         label: '{% if IS_RTL %}الورك الأيسر{% else %}Left Hip{% endif %}',                  labelEn: 'Left Hip',            group: 'lower' },
-              { id: 'r_knee',        label: '{% if IS_RTL %}الركبة اليمنى{% else %}Right Knee{% endif %}',               labelEn: 'Right Knee',          group: 'lower' },
-              { id: 'l_knee',        label: '{% if IS_RTL %}الركبة اليسرى{% else %}Left Knee{% endif %}',               labelEn: 'Left Knee',           group: 'lower' },
-              { id: 'r_ankle',       label: '{% if IS_RTL %}الكاحل/القدم الأيمن{% else %}Right Ankle/Foot{% endif %}',   labelEn: 'Right Ankle/Foot',    group: 'lower' },
-              { id: 'l_ankle',       label: '{% if IS_RTL %}الكاحل/القدم الأيسر{% else %}Left Ankle/Foot{% endif %}',   labelEn: 'Left Ankle/Foot',     group: 'lower' },
-            ];
-            const mkFinding = (id) => ({
-              id, pain: '', tenderness: false, swelling: false, rom: '', notes: '',
-              instability: false, locking: false, clicking: false, weight_bearing_diff: false,
-              active_rom: '', passive_rom: '', weakness: false, impingement: false,
-              stiffness: false, radiation: false, numbness: false, posture_notes: ''
-            });
-            const PRESETS = {
-              normal:      { pain: '0', tenderness: false, swelling: false, rom: 'Full range, painless', notes: 'No abnormality detected.' },
-              tenderness:  { pain: '3', tenderness: true,  swelling: false, rom: 'Normal',               notes: 'Tenderness on palpation.' },
-              swollen:     { pain: '4', tenderness: true,  swelling: true,  rom: 'Restricted',           notes: 'Swelling and tenderness present.' },
-              painful_rom: { pain: '5', tenderness: false, swelling: false, rom: 'Painful and restricted', notes: 'Pain on ROM testing.' },
-              post_trauma: { pain: '7', tenderness: true,  swelling: true,  rom: 'Severely restricted',  notes: 'Post-traumatic findings.' },
-            };
-            return {
-              regions: REGIONS,
-              selected: [],
-              activeId: null,
-              findings: {},
-              bodyView: 'front',
-              open: false,
-              objectiveText: initObjective || '',
-
-              init() {
-                const el = document.getElementById('ortho-edit-init');
-                const data = el ? JSON.parse(el.textContent) : [];
-                if (Array.isArray(data) && data.length) {
-                  data.forEach(f => {
-                    this.selected.push(f.id);
-                    this.findings[f.id] = { ...mkFinding(f.id), ...f };
-                  });
-                  this.activeId = this.selected[0] || null;
-                  this.open = true;
-                }
-                const form = this.$el.closest('form');
-                if (form) {
-                  const _this = this;
-                  form.addEventListener('formdata', function(e) {
-                    e.formData.set('ortho_findings', _this.serialized);
-                  });
-                }
-              },
-
-              toggleRegion(id) {
-                if (this.selected.includes(id)) {
-                  this.selected = this.selected.filter(r => r !== id);
-                  delete this.findings[id];
-                  this.activeId = this.selected.length ? this.selected[this.selected.length - 1] : null;
-                } else {
-                  this.selected.push(id);
-                  this.findings[id] = mkFinding(id);
-                  this.activeId = id;
-                }
-              },
-
-              quickPick(id) {
-                if (!this.selected.includes(id)) {
-                  this.selected.push(id);
-                  this.findings[id] = mkFinding(id);
-                }
-                this.activeId = id;
-                this.open = true;
-              },
-
-              setActive(id) { if (this.selected.includes(id)) this.activeId = id; },
-
-              get activeFinding() {
-                if (!this.activeId) return null;
-                if (!this.findings[this.activeId]) this.findings[this.activeId] = mkFinding(this.activeId);
-                return this.findings[this.activeId];
-              },
-
-              getRegion(id) { return this.regions.find(r => r.id === id); },
-
-              applyPreset(key) {
-                if (!this.activeId || !PRESETS[key]) return;
-                Object.assign(this.findings[this.activeId], PRESETS[key]);
-              },
-
-              isKnee(id)     { return id === 'r_knee' || id === 'l_knee'; },
-              isShoulder(id) { return id === 'r_shoulder' || id === 'l_shoulder'; },
-              isSpine(id)    { return id === 'cervical' || id === 'thoracolumbar'; },
-
-              get livePreview() {
-                if (!this.selected.length) return '';
-                const lines = [];
-                this.selected.forEach(id => {
-                  const f = this.findings[id];
-                  if (!f) return;
-                  const reg = this.getRegion(id);
-                  if (!reg) return;
-                  const parts = [reg.labelEn + ':'];
-                  if (f.pain !== '' && f.pain !== null) parts.push('Pain ' + f.pain + '/10');
-                  const signs = [];
-                  if (f.tenderness) signs.push('tenderness');
-                  if (f.swelling) signs.push('swelling');
-                  if (f.instability) signs.push('instability');
-                  if (f.locking) signs.push('locking');
-                  if (f.clicking) signs.push('clicking');
-                  if (f.weight_bearing_diff) signs.push('weight-bearing difficulty');
-                  if (f.weakness) signs.push('weakness');
-                  if (f.impingement) signs.push('impingement sign');
-                  if (f.stiffness) signs.push('stiffness');
-                  if (f.radiation) signs.push('radicular symptoms');
-                  if (f.numbness) signs.push('numbness/tingling');
-                  if (signs.length) parts.push(signs.join(', '));
-                  if (f.rom) parts.push('ROM: ' + f.rom);
-                  if (f.notes) parts.push(f.notes);
-                  lines.push(parts.join(' '));
-                });
-                return lines.join('\n');
-              },
-
-              applyToObjective() {
-                const preview = this.livePreview;
-                if (preview) this.objectiveText = preview;
-              },
-
-              get serialized() {
-                if (!this.selected.length) return '[]';
-                return JSON.stringify(this.selected.map(id => this.findings[id]).filter(Boolean));
-              },
-
-              regionFill(id, base) {
-                if (this.activeId === id) return '#0ea5e9';
-                if (this.selected.includes(id)) return '#38bdf8';
-                return base || '#e2e8f0';
-              },
-              regionStroke(id) {
-                if (this.selected.includes(id)) return '#0369a1';
-                return '#cbd5e1';
-              },
-              regionTextFill(id) {
-                return this.selected.includes(id) ? '#fff' : '#64748b';
-              }
-            };
-          }
-          function orthoReadView(findingsJson) {
-            const FRONT_IDS = ['cervical', 'r_shoulder', 'l_shoulder', 'r_elbow', 'l_elbow', 'r_wrist', 'l_wrist', 'r_hip', 'l_hip', 'r_knee', 'l_knee', 'r_ankle', 'l_ankle'];
-            const BACK_IDS  = ['cervical', 'thoracolumbar', 'r_shoulder', 'l_shoulder', 'r_hip', 'l_hip', 'r_knee', 'l_knee', 'r_ankle', 'l_ankle'];
-            return {
-              findings: findingsJson || [],
-              get selectedIds() { return this.findings.map(f => f.id); },
-              hasFront() { return this.findings.some(f => FRONT_IDS.includes(f.id)); },
-              hasBack() { return this.findings.some(f => BACK_IDS.includes(f.id)); },
-              getColor(id) {
-                const f = this.findings.find(x => x.id === id);
-                if (!f) return '#e2e8f0';
-                const pain = parseInt(f.pain) || 0;
-                if (pain >= 8) return '#ef4444';
-                if (pain >= 5) return '#f97316';
-                return '#2dd4bf';
-              },
-              getStroke(id) {
-                return this.selectedIds.includes(id) ? 'rgba(0,0,0,0.1)' : '#cbd5e1';
-              }
-            };
-          }
-          </script>
+          <!-- ortho exam widget: Alpine.data('orthoWorkspace'/'orthoReadView') in doctors/js/alpine_components.js -->
 
           <div x-data="orthoWorkspace('{{ section.value|escapejs }}')" class="mt-3">
 
@@ -500,7 +249,7 @@
                                   ? 'bg-teal-600 text-white border-teal-700'
                                   : 'bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-300 border-teal-300 dark:border-teal-700'"
                                 class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-colors">
-                          <span x-text="getRegion(id)?.label || id"></span>
+                          <span x-text="regionLabel(id)"></span>
                           <i class="fa-solid fa-xmark text-[9px] opacity-60 hover:opacity-100"
                              @click.stop="toggleRegion(id)"></i>
                         </button>
@@ -807,7 +556,7 @@
                       <div>
                         {# Region header + delete #}
                         <div class="flex items-center justify-between mb-3">
-                          <h4 class="text-sm font-bold text-teal-700 dark:text-teal-300" x-text="getRegion(activeId)?.label"></h4>
+                          <h4 class="text-sm font-bold text-teal-700 dark:text-teal-300" x-text="regionLabel(activeId)"></h4>
                           <button type="button" @click="toggleRegion(activeId)"
                                   class="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
                             <i class="fa-solid fa-trash text-[10px]"></i>
@@ -1043,7 +792,7 @@
                 class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold transition-colors shadow-sm">
           <i class="fa-solid fa-floppy-disk text-xs"></i> {% if IS_RTL %}حفظ الملاحظة{% else %}Save Note{% endif %}
         </button>
-        <button type="button" @click="open = false; $el.closest('form').reset(); typeof wsDraftClearCurrent === 'function' && wsDraftClearCurrent()"
+        <button type="button" @click="cancelNote()"
                 class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
           {% if IS_RTL %}إلغاء{% else %}Cancel{% endif %}
         </button>
@@ -1053,31 +802,7 @@
 </div>
 
 <!-- Notes List -->
-<script>
-if (typeof orthoReadView === 'undefined') {
-  function orthoReadView(findingsJson) {
-    const FRONT_IDS = ['cervical', 'r_shoulder', 'l_shoulder', 'r_elbow', 'l_elbow', 'r_wrist', 'l_wrist', 'r_hip', 'l_hip', 'r_knee', 'l_knee', 'r_ankle', 'l_ankle'];
-    const BACK_IDS  = ['cervical', 'thoracolumbar', 'r_shoulder', 'l_shoulder', 'r_hip', 'l_hip', 'r_knee', 'l_knee', 'r_ankle', 'l_ankle'];
-    return {
-      findings: findingsJson || [],
-      get selectedIds() { return this.findings.map(f => f.id); },
-      hasFront() { return this.findings.some(f => FRONT_IDS.includes(f.id)); },
-      hasBack()  { return this.findings.some(f => BACK_IDS.includes(f.id)); },
-      getColor(id) {
-        const f = this.findings.find(x => x.id === id);
-        if (!f) return '#e2e8f0';
-        const pain = parseInt(f.pain) || 0;
-        if (pain >= 8) return '#ef4444';
-        if (pain >= 5) return '#f97316';
-        return '#2dd4bf';
-      },
-      getStroke(id) {
-        return this.selectedIds.includes(id) ? 'rgba(0,0,0,0.1)' : '#cbd5e1';
-      }
-    };
-  }
-}
-</script>
+<!-- ortho exam widget: Alpine.data('orthoWorkspace'/'orthoReadView') in doctors/js/alpine_components.js -->
 {% if notes.object_list %}
 <div class="space-y-3">
   {% for note in notes.object_list %}
@@ -1177,7 +902,8 @@ if (typeof orthoReadView === 'undefined') {
 
       {# ── Orthopedic Diagram (Read-Only) ── #}
       {% if note.ortho_findings_data %}
-      <div x-data="orthoReadView(JSON.parse('{{ note.ortho_findings_json|escapejs }}'))" class="mb-2">
+      <div x-data="orthoReadView" class="mb-2">
+        <script type="application/json" data-ortho-findings>{{ note.ortho_findings_json|safe }}</script>
         <div class="flex flex-wrap gap-4 items-center justify-center p-3 sm:p-4 rounded-xl bg-teal-50/40 dark:bg-teal-900/10 border border-teal-100 dark:border-teal-900/30">
           
           {# Front View SVG #}

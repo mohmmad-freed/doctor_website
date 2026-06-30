@@ -1,0 +1,57 @@
+name: Security
+
+# Two deploy gates that the hardening sweep recommended wiring into CI:
+#   1. pip-audit  — fails the build on any known-vulnerable pinned dependency.
+#   2. check --deploy (production config) — fails on any Django deployment
+#      warning/error (weak SECRET_KEY, missing HSTS, disabled OTP/phone
+#      enforcement via accounts.E001/E002, etc.).
+#
+# The weekly schedule re-runs pip-audit against UNCHANGED pins so newly disclosed
+# CVEs are caught even when nobody touches requirements.txt.
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: "0 6 * * 1"  # Mondays 06:00 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pip-audit
+
+      - name: Dependency vulnerability scan (pip-audit)
+        run: pip-audit -r requirements.txt
+
+      - name: Django deployment checks (production config)
+        env:
+          # Production-representative settings so the deploy checks evaluate the
+          # real hardened config. These are throwaway CI values, not secrets:
+          # the system check performs no real crypto.
+          DEBUG: "0"
+          ENFORCE_OTP_LIMITS: "1"
+          ENFORCE_PHONE_VERIFICATION: "1"
+          ALLOWED_HOSTS: "example.com"
+          SECRET_KEY: "ci-only-throwaway-not-a-real-secret-3f9a1c8e7b2d4f6a0c5e9b3d7f1a8c2e"
+        # --fail-level WARNING turns every deploy WARNING into a build failure,
+        # not just ERRORs — so a regression like disabling HSTS or weakening a
+        # cookie flag blocks the merge.
+        run: python manage.py check --deploy --fail-level WARNING

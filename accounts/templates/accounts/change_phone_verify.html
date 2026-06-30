@@ -63,7 +63,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
+<script nonce="{{ request.csp_nonce }}">
     (function () {
         var form = document.getElementById('changePhoneOtpForm');
         var overlay = document.getElementById('changePhoneVerifyOverlay');

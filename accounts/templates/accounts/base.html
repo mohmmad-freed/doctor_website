@@ -4,7 +4,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <script>
+    <script nonce="{{ request.csp_nonce }}">
         document.documentElement.classList.add('js');
     </script>
 
@@ -207,7 +207,7 @@
 
     <!-- Scripts -->
     <script src="{% static 'accounts/js/landing.js' %}"></script>
-    <script>
+    <script nonce="{{ request.csp_nonce }}">
         (function () {
             var bar = document.getElementById('ptBar');
             var skel = document.getElementById('ptSkeleton');
@@ -261,6 +261,7 @@
     </script>
     <script src="{% static 'accounts/js/reveal.js' %}" defer></script>
     <script src="{% static 'accounts/js/phone_validator.js' %}"></script>
+    <script src="{% static 'js/csp_delegation.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 

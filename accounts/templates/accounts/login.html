@@ -53,12 +53,12 @@
                 <p class="text-body-m">{% if CURRENT_LANG == 'en' %}Don't have an account? <a href="{% url 'accounts:register' %}" class="text-primary" style="font-weight: 600;">Create a new account</a>{% else %}ليس لديك حساب؟ <a href="{% url 'accounts:register' %}" class="text-primary" style="font-weight: 600;">أنشئ حساباً جديداً</a>{% endif %}</p>
             </div>
 
+            <style>.fp-link:hover { color: var(--primary, #667eea) !important; }</style>
             <div
                 style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-default, #e2e8f0); text-align: center;">
                 <a href="{% url 'accounts:forgot_password_phone' %}"
-                    style="color: var(--text-muted, #718096); font-size: 0.9rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: color 0.2s;"
-                    onmouseover="this.style.color='var(--primary, #667eea)'"
-                    onmouseout="this.style.color='var(--text-muted, #718096)'">
+                    class="fp-link"
+                    style="color: var(--text-muted, #718096); font-size: 0.9rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: color 0.2s;">
                     <i class="fa-solid fa-key" style="font-size: 0.85rem;"></i>
                     {% if CURRENT_LANG == 'en' %}Forgot your password?{% else %}نسيت كلمة المرور؟{% endif %}
                 </a>
@@ -76,7 +76,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ request.csp_nonce }}">
     (function () {
         var form = document.getElementById('loginForm');
         var overlay = document.getElementById('loginOverlay');

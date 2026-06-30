@@ -4,7 +4,7 @@ Style-agnostic: it touches only shared hooks (.notif-select, #notif-select-all,
 #notif-delete-selected, #notif-delete-read, #notif-bulk-form), so the same script
 drives both the Tailwind centers (doctor/secretary/patient) and the CSS-var owner center.
 {% endcomment %}
-<script>
+<script nonce="{{ request.csp_nonce }}">
 (function () {
     var form = document.getElementById("notif-bulk-form");
     if (!form) return;

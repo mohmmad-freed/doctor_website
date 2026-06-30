@@ -86,7 +86,7 @@
               <p class="font-bold text-gray-800 dark:text-gray-100 text-sm" id="selected-patient-name"></p>
               <p class="text-xs text-gray-500 dark:text-gray-400" id="selected-patient-phone" dir="ltr"></p>
             </div>
-            <button type="button" onclick="clearPatient()"
+            <button type="button" data-clear-patient
                     class="text-xs text-red-500 hover:text-red-700 font-semibold">{% trans "تغيير" %}</button>
           </div>
         </div>
@@ -115,7 +115,7 @@
       </div>
 
       <div class="mt-6 flex justify-end">
-        <button type="button" onclick="goToStep(2)" id="step1-next"
+        <button type="button" data-goto-step="2" id="step1-next"
                 disabled
                 class="px-5 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
           {% trans "التالي" %} <i class="fa-solid {% if IS_RTL %}fa-arrow-left{% else %}fa-arrow-right{% endif %} text-xs me-1"></i>
@@ -282,11 +282,11 @@
       </div>
 
       <div class="mt-6 flex items-center justify-between">
-        <button type="button" onclick="goToStep(1)"
+        <button type="button" data-goto-step="1"
                 class="px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-300 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
           <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %} text-xs me-1"></i> {% trans "السابق" %}
         </button>
-        <button type="button" onclick="goToStep(3)" id="step2-next"
+        <button type="button" data-goto-step="3" id="step2-next"
                 disabled
                 class="px-5 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
           {% trans "التالي" %} <i class="fa-solid {% if IS_RTL %}fa-arrow-left{% else %}fa-arrow-right{% endif %} text-xs me-1"></i>
@@ -367,7 +367,7 @@
       </div>
 
       <div class="mt-6 flex items-center justify-between">
-        <button type="button" onclick="goToStep(2)"
+        <button type="button" data-goto-step="2"
                 class="px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-600 text-gray-600 dark:text-gray-300 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
           <i class="fa-solid {% if IS_RTL %}fa-arrow-right{% else %}fa-arrow-left{% endif %} text-xs me-1"></i> {% trans "السابق" %}
         </button>
@@ -384,7 +384,9 @@
 
 {% block extra_js %}
 <script src="{% static 'accounts/js/calendar_widget.js' %}"></script>
-<script>
+{# CSP: intake-form widgets — externalized from the HTMX-swapped partial. #}
+<script defer src="{% static 'appointments/js/intake_form.js' %}"></script>
+<script nonce="{{ request.csp_nonce }}">
 // ── State ────────────────────────────────────────────────────────────────────
 var selectedPatient = null;
 var selectedTime = null;
@@ -577,6 +579,13 @@ function clearPatient() {
   syncDoctorPatientGuard();
   input.focus();
 }
+
+// CSP: bind wizard step buttons + "change patient" (replaces inline on* handlers)
+document.addEventListener('click', function (e) {
+  var step = e.target.closest('[data-goto-step]');
+  if (step) { goToStep(parseInt(step.getAttribute('data-goto-step'), 10)); return; }
+  if (e.target.closest('[data-clear-patient]')) { clearPatient(); }
+});
 
 // Handle HTMX patient search result clicks
 document.addEventListener('htmx:afterSwap', function(e) {

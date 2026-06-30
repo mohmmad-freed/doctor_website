@@ -131,7 +131,7 @@
                         hx-get="{{ notif.modal_url }}"
                         hx-target="#notification-modal-root"
                         hx-swap="innerHTML"
-                        onclick="notifCardOpened(this)"
+                        data-notif-card-opened
                         class="inline-flex items-center gap-1.5 text-xs font-semibold
                                text-primary-600 dark:text-primary-400
                                hover:text-primary-700 dark:hover:text-primary-300

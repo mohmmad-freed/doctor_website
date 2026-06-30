@@ -328,7 +328,7 @@
 </section>
 
 {% block extra_js %}
-<script>
+<script nonce="{{ request.csp_nonce }}">
 (function () {
     var grid    = document.getElementById('specialtyGrid');
     var countEl = document.getElementById('specCount');

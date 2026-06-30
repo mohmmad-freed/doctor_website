@@ -276,13 +276,13 @@
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{% trans "الوضع الليلي أو النهاري" %}</p>
         </div>
         <div class="flex items-center gap-3 text-sm">
-          <button id="pref-theme-light"
-                  onclick="setTheme('light')"
+          <button type="button" id="pref-theme-light"
+                  data-set-theme="light"
                   class="px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors">
             <i class="fa-solid fa-sun me-1 text-amber-500"></i> {% trans "نهاري" %}
           </button>
-          <button id="pref-theme-dark"
-                  onclick="setTheme('dark')"
+          <button type="button" id="pref-theme-dark"
+                  data-set-theme="dark"
                   class="px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors">
             <i class="fa-solid fa-moon me-1 text-indigo-400"></i> {% trans "ليلي" %}
           </button>
@@ -298,7 +298,7 @@
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{% trans "كيفية عرض الوقت في كامل لوحة السكرتارية" %}</p>
         </div>
         <select name="time_format"
-                onchange="this.form.submit()"
+                data-autosubmit
                 class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
           <option value="24" {% if user.time_format == '24' %}selected{% endif %}>{% trans "24 ساعة (14:30)" %}</option>
           <option value="12" {% if user.time_format == '12' %}selected{% endif %}>{% trans "12 ساعة (2:30 م)" %}</option>
@@ -312,7 +312,7 @@
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{% trans "العرض المفضل عند فتح التقويم" %}</p>
         </div>
         <select id="pref-calendar-view"
-                onchange="savePref('secretary_cal_view', this.value)"
+                data-savepref="secretary_cal_view"
                 class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
           <option value="dayGridMonth">{% trans "شهري" %}</option>
           <option value="timeGridWeek">{% trans "أسبوعي" %}</option>
@@ -328,7 +328,7 @@
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{% trans "للاقتراح التلقائي عند الحجز" %}</p>
         </div>
         <select id="pref-appt-duration"
-                onchange="savePref('secretary_appt_duration', this.value)"
+                data-savepref="secretary_appt_duration"
                 class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-400 transition">
           <option value="15">{% trans "15 دقيقة" %}</option>
           <option value="20">{% trans "20 دقيقة" %}</option>
@@ -385,7 +385,7 @@
 
 </div>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
 // ── Preferences: read from localStorage on page load ─────────────────────────
 document.addEventListener('DOMContentLoaded', function () {
   // Theme buttons active state
@@ -450,5 +450,13 @@ function setTheme(t) {
     }
   }
 }
+
+// CSP: bind preference controls (replaces inline on* handlers)
+document.querySelectorAll('[data-set-theme]').forEach(function (b) {
+  b.addEventListener('click', function () { setTheme(b.getAttribute('data-set-theme')); });
+});
+document.querySelectorAll('[data-savepref]').forEach(function (s) {
+  s.addEventListener('change', function () { savePref(s.getAttribute('data-savepref'), s.value); });
+});
 </script>
 {% endblock %}

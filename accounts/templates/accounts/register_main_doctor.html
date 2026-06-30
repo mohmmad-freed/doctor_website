@@ -89,7 +89,7 @@
                                    maxlength="9"
                                    inputmode="numeric"
                                    dir="ltr"
-                                   oninput="checkNID(this, 'mainDrNidIndicator')">
+                                   data-check-nid="mainDrNidIndicator">
                             <div class="nid-indicator" id="mainDrNidIndicator">
                                 <span class="dot"></span>
                                 <span class="msg">9 أرقام</span>
@@ -369,7 +369,7 @@
 }
 </style>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
 (function () {
     "use strict";
 

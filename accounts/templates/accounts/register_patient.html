@@ -43,7 +43,7 @@
         <label for="national_id">National ID *</label>
         <input type="text" id="national_id" name="national_id" value="{{ form.national_id.value|default:'' }}"
             placeholder="000000000" maxlength="9" inputmode="numeric" dir="ltr" required
-            oninput="checkNID(this, 'nidIndicator')">
+            data-check-nid="nidIndicator">
         <div id="nidIndicator" style="display:flex;align-items:center;gap:0.4rem;margin-top:4px;font-size:0.8rem;font-weight:600;color:#6b7280;">
             <span id="nidDot" style="width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;"></span>
             <span id="nidMsg">9 أرقام</span>
@@ -123,7 +123,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ request.csp_nonce }}">
 function checkNID(input, indicatorId) {
     var val = input.value.replace(/\D/g, '');
     if (input.value !== val) input.value = val;

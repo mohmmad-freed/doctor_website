@@ -281,7 +281,7 @@
                 <i class="fa-solid fa-arrow-{% if IS_RTL %}right{% else %}left{% endif %}"></i> {{ clinic.name }}
             </a>
         </div>
-        <button type="button" class="btn-primary" onclick="openCreateModal()">
+        <button type="button" class="btn-primary" data-open-create-modal>
             <i class="fa-solid fa-plus"></i> {% trans "إضافة فترة عمل" %}
         </button>
     </div>
@@ -334,10 +334,10 @@
                                             data-start="{{ hour.start_time|time:'H:i' }}" 
                                             data-end="{{ hour.end_time|time:'H:i' }}" 
                                             data-closed="{{ hour.is_closed|yesno:'true,false' }}"
-                                            onclick="openUpdateModal(this)">
+                                            data-open-update-modal>
                                         <i class="fa-solid fa-pen"></i> {% trans "تعديل" %}
                                     </button>
-                                    <form method="post" action="{% url 'clinics:working_hours_delete' clinic_id=clinic.id id=hour.id %}" style="margin:0;" onsubmit="return confirm('{% trans "هل أنت متأكد من حذف هذه الفترة؟" %}');">
+                                    <form method="post" action="{% url 'clinics:working_hours_delete' clinic_id=clinic.id id=hour.id %}" style="margin:0;" data-confirm="{% trans 'هل أنت متأكد من حذف هذه الفترة؟' %}">
                                         {% csrf_token %}
                                         <button type="submit" class="btn-danger" title="{% trans 'حذف' %}">
                                             <i class="fa-solid fa-trash"></i>
@@ -347,7 +347,7 @@
                                 {% endfor %}
                             {% endif %}
                             {% if not day.is_closed %}
-                            <button type="button" class="btn-action" onclick="openCreateModalDay('{{ day.day_val }}')">
+                            <button type="button" class="btn-action" data-open-create-modal-day data-day-val="{{ day.day_val }}">
                                 <i class="fa-solid fa-plus"></i> {% trans "إضافة فترة" %}
                             </button>
                             {% endif %}
@@ -365,7 +365,7 @@
     <div class="modal-content">
         <div class="modal-header">
             <h2 id="modalTitle">{% trans "إضافة فترة عمل" %}</h2>
-            <button type="button" class="modal-close" onclick="closeModal()">&times;</button>
+            <button type="button" class="modal-close" data-close-modal>&times;</button>
         </div>
 
         <form id="workingHoursForm" method="post" action="{% url 'clinics:working_hours_create' clinic_id=clinic.id %}">
@@ -381,7 +381,7 @@
             </div>
 
             <div class="checkbox-row">
-                <input type="checkbox" name="is_closed" id="id_is_closed" onchange="toggleTimeFields()">
+                <input type="checkbox" name="is_closed" id="id_is_closed" data-toggle-time-fields>
                 <label for="id_is_closed">{% trans "تحديد اليوم كمغلق بالكامل" %}</label>
             </div>
 
@@ -397,14 +397,14 @@
             </div>
 
             <div class="modal-actions">
-                <button type="button" onclick="closeModal()" class="btn-action" style="padding:0.5rem 1rem;border-style:solid;">{% trans "إلغاء" %}</button>
+                <button type="button" data-close-modal class="btn-action" style="padding:0.5rem 1rem;border-style:solid;">{% trans "إلغاء" %}</button>
                 <button type="submit" class="btn-primary">{% trans "حفظ" %}</button>
             </div>
         </form>
     </div>
 </div>
 
-<script>
+<script nonce="{{ request.csp_nonce }}">
     const modal = document.getElementById('workingHoursModal');
     const form = document.getElementById('workingHoursForm');
     const title = document.getElementById('modalTitle');
@@ -470,5 +470,18 @@
     window.onclick = function(event) {
         if (event.target == modal) closeModal();
     }
+
+    // CSP: bind modal controls (replaces inline on* handlers)
+    document.addEventListener('click', function (e) {
+        if (e.target.closest('[data-open-create-modal]')) { openCreateModal(); return; }
+        var u = e.target.closest('[data-open-update-modal]');
+        if (u) { openUpdateModal(u); return; }
+        var d = e.target.closest('[data-open-create-modal-day]');
+        if (d) { openCreateModalDay(d.getAttribute('data-day-val')); return; }
+        if (e.target.closest('[data-close-modal]')) { closeModal(); }
+    });
+    document.addEventListener('change', function (e) {
+        if (e.target.closest('[data-toggle-time-fields]')) { toggleTimeFields(); }
+    });
 </script>
 {% endblock %}
