@@ -4,6 +4,12 @@
 {% block content %}
 <div class="max-w-2xl mx-auto px-4 pt-5 pb-8">
 
+  <a href="{% url 'doctors:dashboard' %}"
+     class="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 transition-colors mb-4">
+    <i class="fa-solid fa-arrow-{% if IS_RTL %}right{% else %}left{% endif %} text-xs"></i>
+    {% if IS_RTL %}اليوم{% else %}Today{% endif %}
+  </a>
+
   <div class="flex items-center justify-between mb-7">
     <div class="flex items-center gap-3">
       <div class="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
@@ -14,17 +20,11 @@
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{{ request.user.name }}</p>
       </div>
     </div>
-    <div class="flex items-center gap-2">
-      <a href="{% url 'doctors:doctor_edit_profile' %}"
-         class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors shadow-sm">
-        <i class="fa-solid fa-pen-to-square text-xs"></i>
-        {% if IS_RTL %}تعديل{% else %}Edit{% endif %}
-      </a>
-      <a href="{% url 'doctors:dashboard' %}"
-         class="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 transition-colors">
-        <i class="fa-solid fa-arrow-{% if IS_RTL %}right{% else %}left{% endif %}"></i>
-      </a>
-    </div>
+    <a href="{% url 'doctors:doctor_edit_profile' %}"
+       class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors shadow-sm">
+      <i class="fa-solid fa-pen-to-square text-xs"></i>
+      {% if IS_RTL %}تعديل{% else %}Edit{% endif %}
+    </a>
   </div>
 
   {% if not profile_complete %}

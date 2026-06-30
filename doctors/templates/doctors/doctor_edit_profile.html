@@ -4,18 +4,17 @@
 {% block content %}
 <div class="max-w-xl mx-auto px-4 pt-5 pb-8">
 
-  <div class="flex items-center justify-between mb-7">
-    <div class="flex items-center gap-3">
-      <div class="w-11 h-11 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
-        <i class="fa-solid fa-user-pen text-indigo-600 dark:text-indigo-400 text-lg"></i>
-      </div>
-      <h1 class="text-xl font-bold text-gray-900 dark:text-white">{% if IS_RTL %}تعديل الملف الشخصي{% else %}Edit Profile{% endif %}</h1>
+  <a href="{% url 'doctors:doctor_profile' %}"
+     class="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 transition-colors mb-4">
+    <i class="fa-solid fa-arrow-{% if IS_RTL %}right{% else %}left{% endif %} text-xs"></i>
+    {% if IS_RTL %}ملفي الشخصي{% else %}My Profile{% endif %}
+  </a>
+
+  <div class="flex items-center gap-3 mb-7">
+    <div class="w-11 h-11 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
+      <i class="fa-solid fa-user-pen text-indigo-600 dark:text-indigo-400 text-lg"></i>
     </div>
-    <a href="{% url 'doctors:doctor_profile' %}"
-       class="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 transition-colors">
-      <i class="fa-solid fa-arrow-{% if IS_RTL %}right{% else %}left{% endif %}"></i>
-      {% if IS_RTL %}ملفي الشخصي{% else %}My Profile{% endif %}
-    </a>
+    <h1 class="text-xl font-bold text-gray-900 dark:text-white">{% if IS_RTL %}تعديل الملف الشخصي{% else %}Edit Profile{% endif %}</h1>
   </div>
 
   <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -44,9 +43,11 @@
 
         <div>
           <label for="id_bio" class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
-            {{ form.bio.label }}
+            {% if IS_RTL %}نبذة تعريفية{% else %}Bio{% endif %}
           </label>
-          {{ form.bio }}
+          <textarea id="id_bio" name="bio" rows="4"
+                    placeholder="{% if IS_RTL %}اكتب نبذة مختصرة عن خبرتك وتخصصاتك...{% else %}Write a short bio about your experience and specialties...{% endif %}"
+                    class="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition resize-none">{{ form.bio.value|default_if_none:'' }}</textarea>
           {% if form.bio.errors %}
           <p class="mt-1.5 text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
             <i class="fa-solid fa-circle-exclamation"></i>{{ form.bio.errors.0 }}
@@ -56,9 +57,12 @@
 
         <div>
           <label for="id_years_of_experience" class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
-            {{ form.years_of_experience.label }}
+            {% if IS_RTL %}سنوات الخبرة{% else %}Years of Experience{% endif %}
           </label>
-          {{ form.years_of_experience }}
+          <input type="number" id="id_years_of_experience" name="years_of_experience" min="0" max="70"
+                 value="{{ form.years_of_experience.value|default_if_none:'' }}"
+                 placeholder="{% if IS_RTL %}مثال: 10{% else %}e.g. 10{% endif %}"
+                 class="w-full text-sm rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
           {% if form.years_of_experience.errors %}
           <p class="mt-1.5 text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
             <i class="fa-solid fa-circle-exclamation"></i>{{ form.years_of_experience.errors.0 }}
