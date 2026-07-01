@@ -269,7 +269,26 @@ def apply_status_transition(request, appointment, user):
             )
             update_fields += ["checked_in_at", "queue_priority"]
 
+        # Snapshot the patient's finalized debt BEFORE the save: completing the
+        # visit is what turns an open billing session into debt, so an after-save
+        # read would already include it.
+        previous_debt = None
+        if new_status == Appointment.Status.COMPLETED:
+            from secretary import billing
+            previous_debt = billing.patient_debt(
+                appointment.clinic, appointment.patient
+            )
+
         appointment.save(update_fields=update_fields)
+
+        # Mirror the secretary path's billing sync (lock the session's invoice
+        # DRAFT → ISSUED) and tell the patient if their debt changed. Never raises.
+        if new_status == Appointment.Status.COMPLETED:
+            from secretary import billing
+            billing.on_appointment_status_changed(appointment, new_status)
+            billing.notify_patient_debt_change(
+                appointment.clinic, appointment.patient, previous_debt
+            )
 
         # Notify the patient AND the clinic secretaries when the doctor cancels.
         if new_status == Appointment.Status.CANCELLED:

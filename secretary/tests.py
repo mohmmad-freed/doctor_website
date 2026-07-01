@@ -2821,3 +2821,141 @@ class SecretaryPasswordChangeHardeningTests(SecretaryTestBase):
         self.assertContains(resp, "محاولات كثيرة")
         self.secretary_a.refresh_from_db()
         self.assertTrue(self.secretary_a.check_password("pass1234"))  # unchanged
+
+
+# ════════════════════════════════════════════════════════════════════
+#  Patient debt-change notifications
+# ════════════════════════════════════════════════════════════════════
+
+class DebtNotificationTests(SecretaryTestBase):
+    """The patient gets an in-app notification when their finalized debt at a
+    clinic changes: born at completion with an unpaid balance, updated/cleared
+    by payments. Notifications fire via transaction.on_commit, so mutations are
+    wrapped in captureOnCommitCallbacks."""
+
+    def _checked_in(self, appointment_time=time(10, 0)):
+        return self._make_appointment(
+            status=Appointment.Status.CHECKED_IN, appointment_time=appointment_time,
+        )
+
+    def _complete_via_service(self, appt):
+        """Drive the visit to COMPLETED through the secretary transition service
+        (where the debt-notification hook lives)."""
+        from secretary.services import transition_appointment_status
+        transition_appointment_status(
+            appt, Appointment.Status.IN_PROGRESS, actor=self.secretary_a,
+        )
+        transition_appointment_status(
+            appt, Appointment.Status.COMPLETED, actor=self.secretary_a,
+        )
+
+    def _debt_notifications(self):
+        from appointments.models import AppointmentNotification
+        return AppointmentNotification.objects.filter(
+            notification_type=AppointmentNotification.Type.DEBT_UPDATED,
+        )
+
+    def test_notification_created_when_visit_completes_with_balance(self):
+        from secretary import billing
+        from appointments.models import AppointmentNotification
+        appt = self._checked_in()
+        billing.open_billing_session(appt, by_user=self.secretary_a)  # ₪50 unpaid
+        with self.captureOnCommitCallbacks(execute=True):
+            self._complete_via_service(appt)
+        notifs = self._debt_notifications()
+        self.assertEqual(notifs.count(), 1)
+        n = notifs.get()
+        self.assertEqual(n.patient_id, self.patient_a.id)
+        self.assertEqual(n.context_role, AppointmentNotification.ContextRole.PATIENT)
+        self.assertIsNone(n.appointment)
+        self.assertEqual(n.actor_role, "")  # system event: no staff exposed
+        self.assertEqual(n.title, "مبلغ مستحق جديد")
+        self.assertIn("50.00", n.message)
+        self.assertIn("Clinic A", n.message)
+        self.assertIn("50.00", n.message_en)
+
+    def test_no_notification_when_fully_paid_at_completion(self):
+        from secretary import billing
+        appt = self._checked_in()
+        inv = billing.open_billing_session(appt, by_user=self.secretary_a)
+        with self.captureOnCommitCallbacks(execute=True):
+            billing.record_payment(primary_invoice=inv, amount=Decimal("50.00"),
+                                   method="CASH", by_user=self.secretary_a)
+            self._complete_via_service(appt)
+        self.assertEqual(self._debt_notifications().count(), 0)
+
+    def test_payment_reducing_debt_creates_one_notification(self):
+        from secretary import billing
+        # Two completed unpaid visits → debt of ₪50 + ₪70.
+        appt1 = self._checked_in(appointment_time=time(9, 0))
+        inv1 = billing.open_billing_session(appt1, by_user=self.secretary_a)
+        with self.captureOnCommitCallbacks(execute=True):
+            self._complete_via_service(appt1)
+        appt2 = self._checked_in(appointment_time=time(10, 0))
+        inv2 = billing.open_billing_session(appt2, by_user=self.secretary_a)
+        billing.add_charge(inv2, description="إضافة", quantity=1,
+                           unit_price=Decimal("20.00"))
+        with self.captureOnCommitCallbacks(execute=True):
+            self._complete_via_service(appt2)
+
+        before = self._debt_notifications().count()
+        # One payment FIFO-settling BOTH invoices (50 fully + 10 of the 70)
+        # must produce exactly ONE notification: 120 → 60.
+        with self.captureOnCommitCallbacks(execute=True):
+            billing.record_payment(primary_invoice=inv1, amount=Decimal("60.00"),
+                                   method="CASH", by_user=self.secretary_a)
+        notifs = self._debt_notifications()
+        self.assertEqual(notifs.count(), before + 1)
+        latest = notifs.order_by("-id").first()
+        self.assertIn("120.00", latest.message)
+        self.assertIn("60.00", latest.message)
+        self.assertIn("120.00", latest.message_en)
+
+    def test_debt_cleared_wording_at_zero(self):
+        from secretary import billing
+        appt = self._checked_in()
+        inv = billing.open_billing_session(appt, by_user=self.secretary_a)
+        with self.captureOnCommitCallbacks(execute=True):
+            self._complete_via_service(appt)
+        with self.captureOnCommitCallbacks(execute=True):
+            billing.record_payment(primary_invoice=inv, amount=Decimal("50.00"),
+                                   method="CASH", by_user=self.secretary_a)
+        latest = self._debt_notifications().order_by("-id").first()
+        self.assertEqual(latest.title, "تم تسديد المستحقات")
+        self.assertIn("fully settled", latest.message_en)
+
+    def test_payment_on_open_session_creates_no_notification(self):
+        from secretary import billing
+        appt = self._checked_in()
+        inv = billing.open_billing_session(appt, by_user=self.secretary_a)
+        # Mid-visit partial payment: debt stays 0 (open sessions aren't debt).
+        with self.captureOnCommitCallbacks(execute=True):
+            billing.record_payment(primary_invoice=inv, amount=Decimal("30.00"),
+                                   method="CASH", by_user=self.secretary_a)
+        self.assertEqual(self._debt_notifications().count(), 0)
+
+    def test_cancel_of_untouched_session_creates_no_notification(self):
+        from secretary import billing
+        from secretary.services import transition_appointment_status
+        appt = self._checked_in()
+        billing.open_billing_session(appt, by_user=self.secretary_a)
+        with self.captureOnCommitCallbacks(execute=True):
+            transition_appointment_status(
+                appt, Appointment.Status.CANCELLED,
+                cancellation_reason="سبب", actor=self.secretary_a,
+            )
+        self.assertEqual(self._debt_notifications().count(), 0)
+
+    def test_localized_message_english(self):
+        from django.utils import translation
+        from secretary import billing
+        appt = self._checked_in()
+        billing.open_billing_session(appt, by_user=self.secretary_a)
+        with self.captureOnCommitCallbacks(execute=True):
+            self._complete_via_service(appt)
+        n = self._debt_notifications().get()
+        with translation.override("en"):
+            self.assertIn("outstanding balance", n.localized_message)
+            self.assertIn("New Outstanding Balance", n.localized_title)
+        with translation.override("ar"):
+            self.assertIn("مبلغ مستحق", n.localized_message)

@@ -4269,3 +4269,9 @@ msgstr "Enable two-factor authentication"
 
 msgid "اطلب رمزاً إضافياً من تطبيق مصادقة عند تسجيل الدخول لحماية بيانات العيادة والمرضى."
 msgstr "Require an extra code from an authenticator app at sign-in to protect clinic and patient data."
+
+msgid "تذكير: يوجد عليك مبلغ مستحق بقيمة ₪%(amount)s في هذه العيادة. يمكنك تسديده لدى السكرتارية خلال زيارتك."
+msgstr "Reminder: you have an outstanding balance of ₪%(amount)s at this clinic. You can settle it with the secretary during your visit."
+
+msgid "مستحقات"
+msgstr "Balance due"

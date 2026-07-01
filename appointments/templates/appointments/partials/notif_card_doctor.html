@@ -55,6 +55,7 @@
                         {% elif notif.notification_type == 'APPOINTMENT_REMINDER' %}{% trans "تذكير" %}
                         {% elif notif.notification_type == 'APPOINTMENT_STATUS_CHANGED' %}{% trans "تحديث الحالة" %}
                         {% elif notif.notification_type == 'STAFF_NOTE_FOR_DOCTOR' or notif.notification_type == 'STAFF_NOTE_FOR_SECRETARY' %}{% if IS_RTL %}ملاحظة{% else %}Note{% endif %}
+                        {% elif notif.notification_type == 'DEBT_UPDATED' %}{% trans "مستحقات" %}
                         {% else %}{% trans "إشعار" %}
                         {% endif %}
                     </span>

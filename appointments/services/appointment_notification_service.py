@@ -907,6 +907,7 @@ def notify_staff_note(note, actor_user):
                     user_id, getattr(note, "id", None), exc,
                 )
 
+
     except Exception as exc:
         logger.error("[NOTIFICATION] notify_staff_note failed: %r", exc)
 
@@ -1049,3 +1050,68 @@ def notify_doctor_new_review(review):
             "Failed to create new-review notification for doctor_id=%s",
             getattr(review, "doctor_id", None),
         )
+
+
+# ── Billing (patient debt) notifications ──────────────────────────────────────
+
+
+def notify_patient_debt_changed(patient, clinic, previous_total, new_total):
+    """
+    In-app notification to the patient when their finalized debt at a clinic
+    changes: new debt appears, the amount changes, or it is fully settled.
+
+    In-app only (no email). actor_role is left blank on purpose — this is a
+    system event and must not expose which staff member handled the money.
+
+    Safe to call from transaction.on_commit(). Never raises.
+    """
+    try:
+        from decimal import Decimal
+
+        cent = Decimal("0.01")
+        prev = (previous_total or Decimal("0")).quantize(cent)
+        new = (new_total or Decimal("0")).quantize(cent)
+        if prev == new:
+            return
+
+        clinic_name = clinic.name
+
+        if prev <= 0 < new:
+            title = "مبلغ مستحق جديد"
+            message = (
+                f"يوجد عليك مبلغ مستحق بقيمة ₪{new} في {clinic_name}. "
+                f"يمكنك تسديده لدى العيادة في زيارتك القادمة."
+            )
+            title_en = "New Outstanding Balance"
+            message_en = (
+                f"You have a new outstanding balance of ₪{new} at {clinic_name}. "
+                f"You can settle it at the clinic on your next visit."
+            )
+        elif new <= 0:
+            title = "تم تسديد المستحقات"
+            message = f"تم تسديد كامل المبلغ المستحق عليك في {clinic_name}. شكراً لك."
+            title_en = "Outstanding Balance Cleared"
+            message_en = (
+                f"Your outstanding balance at {clinic_name} has been fully settled. "
+                f"Thank you."
+            )
+        else:
+            title = "تحديث المبلغ المستحق"
+            message = f"تم تحديث المبلغ المستحق عليك في {clinic_name} من ₪{prev} إلى ₪{new}."
+            title_en = "Outstanding Balance Updated"
+            message_en = (
+                f"Your outstanding balance at {clinic_name} was updated "
+                f"from ₪{prev} to ₪{new}."
+            )
+
+        _create_notification(
+            patient=patient,
+            appointment=None,
+            notification_type=AppointmentNotification.Type.DEBT_UPDATED,
+            title=title,
+            message=message,
+            title_en=title_en,
+            message_en=message_en,
+        )
+    except Exception as exc:
+        logger.error("[NOTIFICATION] notify_patient_debt_changed failed: %r", exc)

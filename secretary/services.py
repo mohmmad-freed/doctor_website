@@ -128,6 +128,23 @@ def transition_appointment_status(
         appointment.cancellation_reason = cancellation_reason.strip()
         update_fields.append("cancellation_reason")
 
+    # Snapshot the patient's finalized debt BEFORE the save: leaving
+    # CHECKED_IN/IN_PROGRESS is what turns an open billing session into debt,
+    # so an after-save read would already include it. Only billing-relevant
+    # transitions can change debt — skip the query for the rest.
+    from secretary import billing
+    _billing_statuses = (
+        Appointment.Status.COMPLETED,
+        Appointment.Status.CANCELLED,
+        Appointment.Status.NO_SHOW,
+        Appointment.Status.CONFIRMED,
+    )
+    previous_debt = (
+        billing.patient_debt(appointment.clinic, appointment.patient)
+        if new_status in _billing_statuses
+        else None
+    )
+
     appointment.save(update_fields=update_fields)
 
     # Audit trail: who moved this appointment from `current` → `new_status`.
@@ -152,8 +169,14 @@ def transition_appointment_status(
 
     # Keep any open billing session in lockstep with the appointment: lock charges
     # on COMPLETED, auto-void an untouched session on CANCELLED/NO_SHOW. Never raises.
-    from secretary import billing
     billing.on_appointment_status_changed(appointment, new_status)
+
+    # Tell the patient if this transition changed their finalized debt (e.g. a
+    # visit completed with an unpaid balance). Never raises.
+    if previous_debt is not None:
+        billing.notify_patient_debt_change(
+            appointment.clinic, appointment.patient, previous_debt
+        )
 
     # Notify the patient that their appointment status changed.
     # Cancellations are intentionally skipped here — callers handle them via

@@ -186,6 +186,37 @@ def patient_debt(clinic, patient, exclude_invoice=None):
     return qs.aggregate(s=Sum("balance_due"))["s"] or ZERO
 
 
+def notify_patient_debt_change(clinic, patient, previous_debt):
+    """Compare the patient's finalized debt now against ``previous_debt`` and, if it
+    changed, schedule an in-app notification to the patient after commit.
+
+    Callers snapshot ``previous_debt`` via :func:`patient_debt` *before* the mutation
+    (for appointment transitions: before ``appointment.save()``, since leaving
+    CHECKED_IN/IN_PROGRESS is what turns the open session into debt). Never raises —
+    a notification failure must not block billing.
+    """
+    try:
+        new_debt = patient_debt(clinic, patient)
+        if new_debt == previous_debt:
+            return
+        from appointments.services.appointment_notification_service import (
+            notify_patient_debt_changed,
+        )
+        transaction.on_commit(
+            lambda: notify_patient_debt_changed(
+                patient=patient,
+                clinic=clinic,
+                previous_total=previous_debt,
+                new_total=new_debt,
+            )
+        )
+    except Exception:
+        logger.exception(
+            "Debt-change notification failed for patient %s",
+            getattr(patient, "id", "?"),
+        )
+
+
 def clinic_total_debt(clinic):
     """Sum of all finalized outstanding debt across the clinic's patients."""
     return _debt_qs(clinic).aggregate(s=Sum("balance_due"))["s"] or ZERO
@@ -440,6 +471,10 @@ def record_payment(*, primary_invoice, amount, method, reference="", breakdown="
     # here and so can never receive an allocation.
     locked_primary = next((inv for inv in locked if inv.pk == primary_invoice.pk), None)
 
+    # Snapshot the finalized debt inside the lock so the before/after diff (for the
+    # patient's debt-change notification) sees a serialized view.
+    previous_debt = patient_debt(clinic, patient)
+
     max_payable = sum((inv.balance_due or ZERO for inv in locked), ZERO)
     if amount > max_payable:
         raise BillingError(
@@ -500,6 +535,7 @@ def record_payment(*, primary_invoice, amount, method, reference="", breakdown="
                 ],
             },
         )
+        notify_patient_debt_change(clinic, patient, previous_debt)
 
     return payments
 

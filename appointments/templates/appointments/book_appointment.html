@@ -29,6 +29,16 @@
         </div>
     </div>
 
+    {% if debt_amount > 0 %}
+    <!-- Debt reminder: the patient owes this clinic — remind them before they book again -->
+    <div class="glass-card p-4 flex items-start gap-3" style="border-inline-start:4px solid #f59e0b;">
+        <i class="fa-solid fa-circle-exclamation text-amber-500 mt-0.5"></i>
+        <div class="text-sm text-gray-700 dark:text-gray-300">
+            {% blocktrans with amount=debt_amount|floatformat:"2u" %}تذكير: يوجد عليك مبلغ مستحق بقيمة ₪{{ amount }} في هذه العيادة. يمكنك تسديده لدى السكرتارية خلال زيارتك.{% endblocktrans %}
+        </div>
+    </div>
+    {% endif %}
+
     {% if selected_type_id or prefill_date %}
     <!-- Resume banner: a guest who picked a slot before signing in lands here pre-filled -->
     <div class="glass-card p-4 flex items-start gap-3" style="border-inline-start:4px solid var(--color-secondary-500,#14b8a6);">

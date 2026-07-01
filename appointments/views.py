@@ -226,6 +226,10 @@ def book_appointment_view(request, clinic_id):
         except (TypeError, ValueError):
             pass
 
+    # Outstanding-debt reminder: if the patient owes this clinic (any doctor),
+    # the booking page shows a banner asking them to settle it during the visit.
+    from secretary.billing import patient_debt
+
     context = {
         "clinic": clinic,
         "doctors": doctors,
@@ -235,6 +239,7 @@ def book_appointment_view(request, clinic_id):
         "selected_type_id": selected_type_id,
         "prefill_date": (request.GET.get("prefill_date") or "").strip(),
         "prefill_time": (request.GET.get("prefill_time") or "").strip(),
+        "debt_amount": patient_debt(clinic, request.user),
     }
     return render(request, "appointments/book_appointment.html", context)
 

@@ -343,9 +343,10 @@ class AppointmentNotification(models.Model):
       delete so notifications outlive the staff record.
 
     Duplicate prevention:
-      UniqueConstraint on (appointment, notification_type) enforced at DB
-      level. The service also guards against cancelling a CANCELLED appointment
-      before notification fires, providing a logical second line of defence.
+      Handled in the service layer (e.g. guarding against cancelling a
+      CANCELLED appointment before notification fires); the old DB-level
+      UniqueConstraint on (appointment, notification_type) was removed so
+      repeat notifications (reminders, debt updates) are allowed.
 
     Channel rules:
     - In-app: ALWAYS created with is_delivered=True.
@@ -366,6 +367,7 @@ class AppointmentNotification(models.Model):
         PURCHASE_REQUEST_APPROVED = "PURCHASE_REQUEST_APPROVED", "Purchase Request Approved"
         PURCHASE_REQUEST_REJECTED = "PURCHASE_REQUEST_REJECTED", "Purchase Request Rejected"
         DOCTOR_REVIEW_RECEIVED = "DOCTOR_REVIEW_RECEIVED", "Doctor Review Received"
+        DEBT_UPDATED = "DEBT_UPDATED", "Debt Updated"
 
     class ContextRole(models.TextChoices):
         PATIENT = "PATIENT", "Patient Context"

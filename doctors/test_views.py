@@ -471,3 +471,70 @@ class DoctorPatientsListTests(DoctorViewTestBase):
         resp = self.client.get(reverse("doctors:patients"))
         stats = {p["patient_id"]: p for p in resp.context["patient_page"].object_list}
         self.assertEqual(stats[self.patient_a.id]["total_visits"], 2)
+
+
+# ════════════════════════════════════════════════════════════════════
+#  Doctor-portal completion: billing sync + patient debt notification
+# ════════════════════════════════════════════════════════════════════
+
+class DoctorDebtNotificationTest(DoctorViewTestBase):
+    """Completing a visit from the doctor portal must lock the billing session
+    (DRAFT → ISSUED, mirroring the secretary path) and notify the patient that
+    they now owe the unpaid balance."""
+
+    def test_doctor_completion_creates_debt_notification(self):
+        from secretary import billing
+        from secretary.models import Invoice
+        from appointments.models import AppointmentNotification
+
+        appt = self._make_appt(
+            self.doctor_a, self.clinic_a, self.patient_a, self.appt_type_a,
+            status=Appointment.Status.IN_PROGRESS,
+        )
+        inv = billing.open_billing_session(appt, by_user=self.doctor_a)  # ₪50 unpaid
+
+        self.client.force_login(self.doctor_a)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(
+                reverse("doctors:appointment_detail", args=[appt.id]),
+                {"status": "COMPLETED", "notes": ""},
+            )
+
+        appt.refresh_from_db()
+        inv.refresh_from_db()
+        self.assertEqual(appt.status, Appointment.Status.COMPLETED)
+        self.assertEqual(inv.status, Invoice.Status.ISSUED)  # parity with secretary path
+
+        notifs = AppointmentNotification.objects.filter(
+            notification_type=AppointmentNotification.Type.DEBT_UPDATED,
+            patient=self.patient_a,
+        )
+        self.assertEqual(notifs.count(), 1)
+        n = notifs.get()
+        self.assertEqual(n.context_role, AppointmentNotification.ContextRole.PATIENT)
+        self.assertIn("50.00", n.message)
+
+    def test_doctor_completion_fully_paid_creates_no_notification(self):
+        from secretary import billing
+        from appointments.models import AppointmentNotification
+
+        appt = self._make_appt(
+            self.doctor_a, self.clinic_a, self.patient_a, self.appt_type_a,
+            status=Appointment.Status.IN_PROGRESS,
+        )
+        inv = billing.open_billing_session(appt, by_user=self.doctor_a)
+        billing.record_payment(primary_invoice=inv, amount=Decimal("50.00"),
+                               method="CASH", by_user=self.doctor_a)
+
+        self.client.force_login(self.doctor_a)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(
+                reverse("doctors:appointment_detail", args=[appt.id]),
+                {"status": "COMPLETED", "notes": ""},
+            )
+
+        self.assertFalse(
+            AppointmentNotification.objects.filter(
+                notification_type=AppointmentNotification.Type.DEBT_UPDATED,
+            ).exists()
+        )

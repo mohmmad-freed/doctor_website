@@ -161,6 +161,10 @@
             {% with icon_class="fa-solid fa-arrows-rotate" color_bg="bg-indigo-100 dark:bg-indigo-900/30" color_text="text-indigo-600 dark:text-indigo-400" badge_bg="bg-indigo-50 dark:bg-indigo-900/20" badge_text="text-indigo-700 dark:text-indigo-400" %}
             {% include "appointments/partials/notif_card_doctor.html" %}
             {% endwith %}
+        {% elif notif.notification_type == 'DEBT_UPDATED' %}
+            {% with icon_class="fa-solid fa-file-invoice-dollar" color_bg="bg-amber-100 dark:bg-amber-900/30" color_text="text-amber-600 dark:text-amber-400" badge_bg="bg-amber-50 dark:bg-amber-900/20" badge_text="text-amber-700 dark:text-amber-400" %}
+            {% include "appointments/partials/notif_card_doctor.html" %}
+            {% endwith %}
         {% else %}
             {% with icon_class="fa-solid fa-circle-info" color_bg="bg-violet-100 dark:bg-violet-900/30" color_text="text-violet-600 dark:text-violet-400" badge_bg="bg-violet-50 dark:bg-violet-900/20" badge_text="text-violet-700 dark:text-violet-400" %}
             {% include "appointments/partials/notif_card_doctor.html" %}
